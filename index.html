@@ -17,9 +17,14 @@
     <link rel="stylesheet" href="svp.css">
     <link rel="stylesheet" href="dropdown-hover.css">
     <style>
-        .sv-grid-articles .title a.is-active {
-            color: var(--sv-primary);
-            text-decoration: underline;
+        .sv-article-feed {
+            padding: 1rem;
+        }
+        .sv-article-feed .sv-article {
+            margin-bottom: 1rem;
+        }
+        .sv-article-feed .sv-article:last-child {
+            margin-bottom: 0;
         }
         .sv-article__cover {
             width: 100%;
@@ -109,7 +114,7 @@
         <!-- Left col -->
         <div class="col-lg-8">
 
-            <!-- Bài viết mới nhất (thumbnail grid) -->
+            <!-- Bài viết mới nhất (toàn bài + ảnh) -->
             <div class="sv-card mb-3">
                 <div class="sv-card__hd d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <span><i class="fa-regular fa-newspaper me-2 text-primary"></i>Bài Viết Mới Nhất</span>
@@ -117,44 +122,8 @@
                         <i class="fa-solid fa-pen-nib me-1"></i>Đăng bài viết...
                     </a>
                 </div>
-                <div class="sv-grid-articles">
-                    <div class="item">
-                        <div class="thumb" style="background-image:url('https://images.unsplash.com/photo-1465447142348-e9952c393450?q=80&w=800&auto=format&fit=crop');"></div>
-                        <div>
-                            <div class="title"><a class="sv-article-link" href="#sv-article-detail" data-article-id="delf-b2">Kinh Nghiệm Thi DELF B2</a></div>
-                            <div class="sv-meta">Ngôn ngữ • 12 phút trước</div>
-                        </div>
-                    </div>
-                    <div class="item">
-                        <div class="thumb" style="background-image:url('https://images.unsplash.com/photo-1529336953121-a0bdc9e2fd19?q=80&w=800&auto=format&fit=crop');"></div>
-                        <div>
-                            <div class="title"><a class="sv-article-link" href="#sv-article-detail" data-article-id="lo-trinh-it">Lộ Trình Lựa Chọn Ngành IT tại Pháp</a></div>
-                            <div class="sv-meta">Hướng nghiệp • 1 giờ trước</div>
-                        </div>
-                    </div>
-                    <div class="item">
-                        <div class="thumb" style="background-image:url('https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=800&auto=format&fit=crop');"></div>
-                        <div>
-                            <div class="title"><a class="sv-article-link" href="#sv-article-detail" data-article-id="phong-van-visa">Phỏng Vấn Visa Pháp: Những Điều Cần Lưu Ý</a></div>
-                            <div class="sv-meta">Chia sẻ • Hôm nay</div>
-                        </div>
-                    </div>
-                </div>
+                <div id="sv-article-feed" class="sv-article-feed" aria-live="polite"></div>
             </div>
-
-            <!-- Toan van bai viet -->
-            <article id="sv-article-detail" class="sv-article mb-3" aria-live="polite">
-                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                    <span id="sv-article-category" class="sv-pill"><i class="fa-regular fa-folder-open"></i>Học Tập &amp; Nghiên Cứu</span>
-                    <span id="sv-article-read-time" class="sv-meta">12 phút đọc</span>
-                </div>
-                <h2 id="sv-article-title" class="sv-article__title">Kinh Nghiệm Thi DELF B2</h2>
-                <div id="sv-article-meta" class="sv-article__meta">Bởi Lan Anh • Cập nhật 10/02/2026</div>
-                <p id="sv-article-lead" class="sv-article__lead">Bài viết tổng hợp lộ trình ôn thi DELF B2 thực tế, cách phân bổ thời gian và bộ tài nguyên hữu ích cho từng kỹ năng.</p>
-                <div id="sv-article-cover" class="sv-article__cover"></div>
-                <div id="sv-article-content" class="sv-article__content"></div>
-                <div id="sv-article-tags" class="sv-article__tags"></div>
-            </article>
         </div>
 
         <!-- Right col (sidebar) -->
@@ -187,6 +156,61 @@
                             <div class="sv-meta">07/04/2026 • Toulouse</div>
                         </div>
                         <span class="sv-badge">Mới</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Chuyên mục -->
+            <div class="sv-card mb-3">
+                <div class="sv-card__hd d-flex align-items-center justify-content-between gap-2">
+                    <span><i class="fa-solid fa-layer-group me-2 text-primary"></i>Chuyên Mục</span>
+                    <a class="btn btn-sm btn-outline-primary" href="categories.html">Xem tất cả</a>
+                </div>
+                <ul class="sv-list">
+                    <li>
+                        <div>
+                            <a href="categories.html"><i class="fa-solid fa-graduation-cap me-2 text-primary"></i>Học tập và nghiên cứu tại Pháp</a>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="categories.html"><i class="fa-solid fa-award me-2 text-primary"></i>Kinh nghiệm xin học bổng và du học</a>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="categories.html"><i class="fa-solid fa-map-location-dot me-2 text-primary"></i>Cuộc sống tại Pháp</a>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="categories.html"><i class="fa-solid fa-briefcase me-2 text-primary"></i>Cơ hội việc làm và thực tập</a>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="categories.html"><i class="fa-solid fa-scale-balanced me-2 text-primary"></i>Các vấn đề pháp lý, quốc tịch và thuế khóa</a>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="categories.html"><i class="fa-solid fa-language me-2 text-primary"></i>Văn hóa và ngôn ngữ Pháp</a>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="categories.html"><i class="fa-solid fa-users me-2 text-primary"></i>Sự kiện và giao lưu</a>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="categories.html"><i class="fa-solid fa-house me-2 text-primary"></i>Nhà cửa</a>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="categories.html"><i class="fa-solid fa-cart-shopping me-2 text-primary"></i>Mua bán, rao vặt</a>
+                        </div>
                     </li>
                 </ul>
             </div>
@@ -329,18 +353,8 @@
     })();
 
     (function () {
-        const articleLinks = Array.from(document.querySelectorAll('.sv-article-link'));
-        const detailEl = document.getElementById('sv-article-detail');
-        const categoryEl = document.getElementById('sv-article-category');
-        const readTimeEl = document.getElementById('sv-article-read-time');
-        const titleEl = document.getElementById('sv-article-title');
-        const metaEl = document.getElementById('sv-article-meta');
-        const leadEl = document.getElementById('sv-article-lead');
-        const coverEl = document.getElementById('sv-article-cover');
-        const contentEl = document.getElementById('sv-article-content');
-        const tagsEl = document.getElementById('sv-article-tags');
-
-        if (!articleLinks.length || !detailEl || !categoryEl || !readTimeEl || !titleEl || !metaEl || !leadEl || !coverEl || !contentEl || !tagsEl) {
+        const feedEl = document.getElementById('sv-article-feed');
+        if (!feedEl) {
             return;
         }
 
@@ -409,40 +423,34 @@
             return `<p>${escapeHtml(block.text)}</p>`;
         }).join('');
 
-        const renderArticle = (articleId, shouldScroll) => {
-            const fallbackId = articleLinks[0].dataset.articleId;
-            const resolvedArticleId = articles[articleId] ? articleId : fallbackId;
-            const article = articles[resolvedArticleId] || articles[fallbackId];
-            if (!article) return;
+        const renderArticleCard = (article) => {
+            const safeCategory = escapeHtml(article.category);
+            const safeReadTime = escapeHtml(article.readTime);
+            const safeTitle = escapeHtml(article.title);
+            const safeAuthor = escapeHtml(article.author);
+            const safeDate = escapeHtml(article.date);
+            const safeLead = escapeHtml(article.lead);
+            const safeCover = escapeHtml(article.cover);
+            const tagsHtml = article.tags.map((tag) => `<span class="sv-tag">${escapeHtml(tag)}</span>`).join('');
 
-            categoryEl.innerHTML = `<i class="fa-regular fa-folder-open"></i>${escapeHtml(article.category)}`;
-            readTimeEl.textContent = article.readTime;
-            titleEl.textContent = article.title;
-            metaEl.textContent = `Bởi ${article.author} • Cập nhật ${article.date}`;
-            leadEl.textContent = article.lead;
-            coverEl.style.backgroundImage = `url('${article.cover}')`;
-            contentEl.innerHTML = renderBlocks(article.blocks);
-            tagsEl.innerHTML = article.tags.map((tag) => `<span class="sv-tag">${escapeHtml(tag)}</span>`).join('');
-
-            articleLinks.forEach((link) => {
-                link.classList.toggle('is-active', link.dataset.articleId === resolvedArticleId);
-            });
-
-            if (shouldScroll) {
-                detailEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
+            return `
+                <article class="sv-article">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                        <span class="sv-pill"><i class="fa-regular fa-folder-open"></i>${safeCategory}</span>
+                        <span class="sv-meta">${safeReadTime}</span>
+                    </div>
+                    <h2 class="sv-article__title">${safeTitle}</h2>
+                    <div class="sv-article__meta">Bởi ${safeAuthor} • Cập nhật ${safeDate}</div>
+                    <p class="sv-article__lead">${safeLead}</p>
+                    <div class="sv-article__cover" style="background-image:url('${safeCover}')"></div>
+                    <div class="sv-article__content">${renderBlocks(article.blocks)}</div>
+                    <div class="sv-article__tags">${tagsHtml}</div>
+                </article>
+            `;
         };
 
-        articleLinks.forEach((link) => {
-            link.addEventListener('click', (event) => {
-                event.preventDefault();
-                const articleId = link.dataset.articleId || '';
-                renderArticle(articleId, true);
-            });
-        });
-
-        const urlArticleId = new URLSearchParams(window.location.search).get('article') || '';
-        renderArticle(urlArticleId, false);
+        const articleCards = Object.values(articles).map((article) => renderArticleCard(article)).join('');
+        feedEl.innerHTML = articleCards;
     })();
 </script>
 </body>

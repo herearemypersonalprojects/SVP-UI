@@ -3,89 +3,76 @@
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Minh Anh | Trang cá nhân</title>
+    <title>Minh Anh | Blog Văn Học</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <style>
         :root {
-            --fb-blue: #1877f2;
-            --fb-bg: #f0f2f5;
-            --fb-text: #1c1e21;
-            --fb-muted: #65676b;
-            --fb-border: #d8dadf;
-            --fb-card: #ffffff;
+            --paper: #f6f0e7;
+            --ink: #2b2117;
+            --brown: #7a4d2f;
+            --wood: #c89f73;
+            --muted: #7e6f60;
+            --line: #e5d9ca;
+            --card: #fffdfa;
         }
 
         * { box-sizing: border-box; }
         body {
             margin: 0;
-            background: var(--fb-bg);
-            color: var(--fb-text);
-            font-family: Helvetica, Arial, sans-serif;
+            background:
+                radial-gradient(circle at 10% 10%, #fffaf4 0%, transparent 30%),
+                radial-gradient(circle at 85% 20%, #f2e4d3 0%, transparent 35%),
+                var(--paper);
+            color: var(--ink);
+            font-family: Georgia, "Times New Roman", serif;
         }
 
-        .fb-topbar {
+        .topbar {
             position: sticky;
             top: 0;
             z-index: 50;
-            background: #fff;
-            border-bottom: 1px solid var(--fb-border);
+            background: rgba(255, 252, 247, .92);
+            border-bottom: 1px solid var(--line);
+            backdrop-filter: blur(6px);
         }
-        .fb-topbar-inner {
-            max-width: 1240px;
+        .topbar-inner {
+            max-width: 1180px;
             margin: 0 auto;
-            padding: 8px 16px;
+            padding: 12px 16px;
             display: flex;
             align-items: center;
             justify-content: space-between;
             gap: 16px;
         }
-        .fb-logo {
-            width: 40px;
-            height: 40px;
-            border-radius: 999px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            background: var(--fb-blue);
-            color: #fff;
-            font-size: 24px;
+        .brand {
+            font-size: 18px;
             font-weight: 700;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            color: var(--brown);
         }
-        .fb-search {
-            border: 0;
-            border-radius: 999px;
-            background: var(--fb-bg);
-            padding: 10px 14px;
-            min-width: 280px;
-            outline: none;
-        }
-        .fb-nav {
+        .top-links {
             display: flex;
-            align-items: center;
-            gap: 12px;
-            color: #606770;
-            font-size: 20px;
+            gap: 16px;
+            font-size: 14px;
         }
-        .fb-nav span {
-            width: 40px;
-            height: 40px;
-            border-radius: 999px;
-            background: #e4e6eb;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
+        .top-links a {
+            color: var(--muted);
+            text-decoration: none;
+            font-weight: 600;
         }
+        .top-links a:hover { color: var(--brown); }
 
         .profile-wrap {
-            max-width: 1240px;
-            margin: 0 auto 24px;
+            max-width: 1180px;
+            margin: 0 auto 28px;
             padding: 0 16px;
         }
         .profile-header {
             background: #fff;
             border-radius: 0 0 12px 12px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+            box-shadow: 0 8px 24px rgba(68, 45, 21, .08);
             overflow: hidden;
             margin-bottom: 16px;
         }
@@ -119,123 +106,110 @@
             box-shadow: 0 2px 6px rgba(0, 0, 0, .2);
         }
         .profile-name h1 {
-            font-size: 32px;
+            font-size: 34px;
             font-weight: 700;
             margin: 0;
         }
         .profile-name p {
             margin: 4px 0 0;
-            color: var(--fb-muted);
-            font-weight: 600;
+            color: var(--muted);
+            font-style: italic;
         }
         .action-buttons {
             display: flex;
             gap: 8px;
         }
         .btn-primary-fb {
-            background: var(--fb-blue);
-            border: 1px solid var(--fb-blue);
+            background: var(--brown);
+            border: 1px solid var(--brown);
             color: #fff;
             border-radius: 6px;
             padding: 8px 14px;
             font-weight: 600;
         }
         .btn-gray-fb {
-            background: #e4e6eb;
-            border: 1px solid #e4e6eb;
-            color: #050505;
+            background: #f3e8d8;
+            border: 1px solid #eadbc6;
+            color: var(--ink);
             border-radius: 6px;
             padding: 8px 14px;
             font-weight: 600;
         }
-        .profile-menu {
+        .blog-menu {
             margin-top: 14px;
             padding-top: 12px;
-            border-top: 1px solid var(--fb-border);
+            border-top: 1px solid var(--line);
             display: flex;
             flex-wrap: wrap;
             gap: 8px;
         }
-        .profile-menu a {
+        .blog-menu a {
             padding: 10px 14px;
             border-radius: 6px;
-            color: var(--fb-muted);
+            color: var(--muted);
             font-weight: 600;
             text-decoration: none;
         }
-        .profile-menu a.active {
-            color: var(--fb-blue);
-            background: #e7f3ff;
+        .blog-menu a.active {
+            color: var(--brown);
+            background: #f3e8d8;
         }
 
         .content-grid {
             display: grid;
-            grid-template-columns: 1.05fr 1.6fr;
+            grid-template-columns: 1.05fr 1.65fr;
             gap: 16px;
         }
         .card-fb {
-            background: var(--fb-card);
+            background: var(--card);
             border-radius: 10px;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, .08);
+            box-shadow: 0 6px 18px rgba(68, 45, 21, .07);
             padding: 16px;
+            border: 1px solid #f1e6d7;
         }
         .card-fb h3 {
             margin: 0 0 12px;
-            font-size: 21px;
+            font-size: 23px;
             font-weight: 700;
         }
         .intro-item {
             display: flex;
             gap: 8px;
             margin-bottom: 10px;
-            color: #050505;
+            color: var(--ink);
         }
         .intro-item i {
             width: 18px;
-            color: var(--fb-muted);
+            color: var(--brown);
             margin-top: 3px;
         }
-        .photo-grid {
+        .book-list {
             display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 6px;
+            gap: 10px;
         }
-        .photo-grid div {
-            width: 100%;
-            aspect-ratio: 1 / 1;
-            border-radius: 8px;
-            background-size: cover;
-            background-position: center;
-        }
-        .composer-top {
+        .book-item {
             display: flex;
+            justify-content: space-between;
             align-items: center;
             gap: 10px;
-            margin-bottom: 12px;
+            padding: 10px 12px;
+            border-radius: 8px;
+            background: #f8efe3;
+            border: 1px solid #ecdcc6;
         }
-        .composer-avatar {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            background: url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=500&auto=format&fit=crop') center/cover no-repeat;
+        .book-item span {
+            color: var(--muted);
+            font-size: 13px;
         }
-        .composer-input {
-            width: 100%;
-            border: none;
-            background: var(--fb-bg);
-            border-radius: 999px;
-            padding: 10px 14px;
-            color: #050505;
-        }
-        .composer-actions {
-            display: flex;
-            justify-content: space-around;
-            gap: 6px;
-            border-top: 1px solid var(--fb-border);
-            padding-top: 10px;
-            color: var(--fb-muted);
-            font-weight: 600;
-            font-size: 14px;
+        .quote-box {
+            font-size: 18px;
+            line-height: 1.7;
+            font-style: italic;
+            color: #5b4330;
+            padding: 14px;
+            background: #fff7ed;
+            border-left: 4px solid var(--wood);
+            border-radius: 8px;
         }
         .post-header {
             display: flex;
@@ -255,7 +229,7 @@
             background: url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=500&auto=format&fit=crop') center/cover no-repeat;
         }
         .post-meta strong { display: block; font-size: 15px; }
-        .post-meta span { color: var(--fb-muted); font-size: 13px; }
+        .post-meta span { color: var(--muted); font-size: 13px; }
         .post-text { margin-bottom: 12px; }
         .post-image {
             width: 100%;
@@ -266,17 +240,18 @@
         }
         .post-stats {
             margin-top: 10px;
-            color: var(--fb-muted);
+            color: var(--muted);
             font-size: 14px;
         }
-        .post-actions {
-            margin-top: 10px;
-            border-top: 1px solid var(--fb-border);
-            padding-top: 8px;
-            display: flex;
-            justify-content: space-around;
-            color: var(--fb-muted);
-            font-weight: 600;
+        .post-tag {
+            display: inline-block;
+            margin-top: 8px;
+            padding: 5px 10px;
+            border-radius: 999px;
+            background: #f3e8d8;
+            color: #6f4b2f;
+            font-size: 12px;
+            font-weight: 700;
         }
 
         @media (max-width: 992px) {
@@ -285,25 +260,23 @@
             .avatar { width: 140px; height: 140px; }
         }
         @media (max-width: 640px) {
-            .fb-search { min-width: 0; width: 160px; }
             .profile-main { padding: 0 12px 12px; }
             .profile-name h1 { font-size: 26px; }
             .avatar { width: 118px; height: 118px; }
+            .top-links { gap: 10px; font-size: 13px; }
         }
     </style>
 </head>
 <body>
-<header class="fb-topbar">
-    <div class="fb-topbar-inner">
-        <div class="d-flex align-items-center gap-2">
-            <div class="fb-logo">f</div>
-            <input class="fb-search" type="text" placeholder="Tìm kiếm trên Facebook giả lập">
+<header class="topbar">
+    <div class="topbar-inner">
+        <div class="brand">
+            Nhật Ký Chữ Nghĩa
         </div>
-        <div class="fb-nav">
-            <span><i class="fa-solid fa-house"></i></span>
-            <span><i class="fa-solid fa-user-group"></i></span>
-            <span><i class="fa-solid fa-bell"></i></span>
-            <span><i class="fa-solid fa-message"></i></span>
+        <div class="top-links">
+            <a href="#"><i class="fa-solid fa-feather-pointed me-1"></i>Tác phẩm</a>
+            <a href="#"><i class="fa-solid fa-book-open-reader me-1"></i>Tản văn</a>
+            <a href="#"><i class="fa-solid fa-envelope me-1"></i>Liên hệ</a>
         </div>
     </div>
 </header>
@@ -317,22 +290,22 @@
                     <div class="avatar"></div>
                     <div class="profile-name">
                         <h1>Minh Anh</h1>
-                        <p>4.8K người theo dõi</p>
+                        <p>"Viết để lưu giữ những điều mình từng đi qua."</p>
                     </div>
                 </div>
                 <div class="action-buttons">
-                    <button class="btn-primary-fb"><i class="fa-solid fa-user-plus me-1"></i>Thêm bạn bè</button>
-                    <button class="btn-gray-fb"><i class="fa-brands fa-facebook-messenger me-1"></i>Nhắn tin</button>
+                    <button class="btn-primary-fb"><i class="fa-solid fa-pen-nib me-1"></i>Đọc tác phẩm mới</button>
+                    <button class="btn-gray-fb"><i class="fa-solid fa-bookmark me-1"></i>Lưu tuyển tập</button>
                 </div>
             </div>
 
-            <nav class="profile-menu">
-                <a class="active" href="#">Bài viết</a>
+            <nav class="blog-menu">
+                <a class="active" href="#">Trang chủ</a>
                 <a href="#">Giới thiệu</a>
-                <a href="#">Bạn bè</a>
-                <a href="#">Ảnh</a>
-                <a href="#">Reels</a>
-                <a href="#">Khác</a>
+                <a href="#">Tản văn</a>
+                <a href="#">Thơ</a>
+                <a href="#">Truyện ngắn</a>
+                <a href="#">Sổ tay đọc</a>
             </nav>
         </div>
     </section>
@@ -340,37 +313,47 @@
     <section class="content-grid">
         <div class="left-col">
             <div class="card-fb">
-                <h3>Giới thiệu</h3>
-                <div class="intro-item"><i class="fa-solid fa-graduation-cap"></i><span>Nghiên cứu sinh tại Sorbonne Université</span></div>
-                <div class="intro-item"><i class="fa-solid fa-briefcase"></i><span>Mentor học bổng và định hướng du học</span></div>
-                <div class="intro-item"><i class="fa-solid fa-house"></i><span>Sống tại Paris, France</span></div>
-                <div class="intro-item"><i class="fa-solid fa-heart"></i><span>Quan tâm: Giáo dục, Công nghệ, Cộng đồng SVP</span></div>
+                <h3>Về tác giả</h3>
+                <div class="intro-item"><i class="fa-solid fa-feather"></i><span>Viết tản văn và truyện ngắn về ký ức, quê nhà, và tuổi trẻ xa xứ.</span></div>
+                <div class="intro-item"><i class="fa-solid fa-location-dot"></i><span>Viết từ Paris, gửi về những người đọc ở nhiều múi giờ.</span></div>
+                <div class="intro-item"><i class="fa-solid fa-book"></i><span>Phong cách: nhẹ, chậm, giàu chi tiết đời thường.</span></div>
+                <div class="intro-item"><i class="fa-solid fa-paper-plane"></i><span>Mỗi tuần một bài mới vào tối Chủ nhật.</span></div>
             </div>
 
             <div class="card-fb mt-3">
-                <h3>Ảnh</h3>
-                <div class="photo-grid">
-                    <div style="background-image:url('https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=400&auto=format&fit=crop');"></div>
-                    <div style="background-image:url('https://images.unsplash.com/photo-1517048676732-d65bc937f952?q=80&w=400&auto=format&fit=crop');"></div>
-                    <div style="background-image:url('https://images.unsplash.com/photo-1521737604893-d14cc237f11d?q=80&w=400&auto=format&fit=crop');"></div>
-                    <div style="background-image:url('https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?q=80&w=400&auto=format&fit=crop');"></div>
-                    <div style="background-image:url('https://images.unsplash.com/photo-1511632765486-a01980e01a18?q=80&w=400&auto=format&fit=crop');"></div>
-                    <div style="background-image:url('https://images.unsplash.com/photo-1531545514256-b1400bc00f31?q=80&w=400&auto=format&fit=crop');"></div>
+                <h3>Tuyển tập nổi bật</h3>
+                <div class="book-list">
+                    <div class="book-item">
+                        <div><strong>Mùa Đi Qua Mái Hiên</strong><br><span>Tản văn</span></div>
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    </div>
+                    <div class="book-item">
+                        <div><strong>Những Lá Thư Không Gửi</strong><br><span>Truyện ngắn</span></div>
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    </div>
+                    <div class="book-item">
+                        <div><strong>Một Đời Gió Thổi</strong><br><span>Thơ tự do</span></div>
+                        <i class="fa-solid fa-arrow-up-right-from-square"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card-fb mt-3">
+                <h3>Trích đoạn yêu thích</h3>
+                <div class="quote-box">
+                    "Có những ngày Paris mưa ngang vai, tôi chỉ muốn ngồi thật lâu bên khung cửa, nghe tiếng xe điện và nhớ về mùi cơm mới ở nhà."
                 </div>
             </div>
         </div>
 
         <div class="right-col">
             <div class="card-fb">
-                <div class="composer-top">
-                    <div class="composer-avatar"></div>
-                    <input class="composer-input" type="text" placeholder="Minh Anh ơi, bạn đang nghĩ gì thế?">
-                </div>
-                <div class="composer-actions">
-                    <span><i class="fa-solid fa-video text-danger me-1"></i>Video trực tiếp</span>
-                    <span><i class="fa-solid fa-image text-success me-1"></i>Ảnh/video</span>
-                    <span><i class="fa-regular fa-face-smile text-warning me-1"></i>Cảm xúc</span>
-                </div>
+                <h3 style="margin-bottom:8px;">Lời mở đầu</h3>
+                <p style="margin:0;color:var(--muted);line-height:1.7;">
+                    Đây là căn phòng chữ của mình. Mỗi bài viết là một lát cắt nhỏ của đời sống:
+                    một ga tàu, một mùa thi, một cuộc chia tay, hay chỉ là mùi nắng vương trên áo.
+                    Cảm ơn bạn đã ghé đọc.
+                </p>
             </div>
 
             <article class="card-fb mt-3">
@@ -379,21 +362,20 @@
                         <div class="mini-avatar"></div>
                         <div class="post-meta">
                             <strong>Minh Anh</strong>
-                            <span>2 giờ · <i class="fa-solid fa-earth-asia"></i></span>
+                            <span>Tản văn mới · 12/02/2026</span>
                         </div>
                     </div>
-                    <i class="fa-solid fa-ellipsis"></i>
+                    <i class="fa-solid fa-book-open"></i>
                 </div>
                 <div class="post-text">
-                    Hôm nay mình vừa hoàn thành buổi chia sẻ về săn học bổng cho các bạn SVP. Cảm ơn mọi người đã tham gia rất nhiệt tình.
+                    <h4 style="font-size:24px;margin-top:0;">Bên Kia Khung Cửa Mùa Đông</h4>
+                    Tối nay trời lạnh sâu, con phố trước nhà im như một đoạn văn chưa kịp chấm câu.
+                    Tôi pha trà nóng, mở lại cuốn sổ cũ, đọc những dòng ghi cách đây ba năm.
+                    Hóa ra điều khiến ta trưởng thành không phải những ngày thắng lợi, mà là khả năng đi qua những buổi tối rất buồn mà vẫn giữ lòng dịu dàng.
                 </div>
                 <div class="post-image" style="background-image:url('https://images.unsplash.com/photo-1523240795612-9a054b0db644?q=80&w=1400&auto=format&fit=crop');"></div>
-                <div class="post-stats">1.2K lượt thích · 148 bình luận · 37 lượt chia sẻ</div>
-                <div class="post-actions">
-                    <span><i class="fa-regular fa-thumbs-up me-1"></i>Thích</span>
-                    <span><i class="fa-regular fa-comment me-1"></i>Bình luận</span>
-                    <span><i class="fa-solid fa-share me-1"></i>Chia sẻ</span>
-                </div>
+                <div class="post-stats">8 phút đọc · 1.203 lượt xem</div>
+                <span class="post-tag">TẢN VĂN</span>
             </article>
 
             <article class="card-fb mt-3">
@@ -402,20 +384,20 @@
                         <div class="mini-avatar"></div>
                         <div class="post-meta">
                             <strong>Minh Anh</strong>
-                            <span>Hôm qua · <i class="fa-solid fa-earth-asia"></i></span>
+                            <span>Truyện ngắn · 09/02/2026</span>
                         </div>
                     </div>
-                    <i class="fa-solid fa-ellipsis"></i>
+                    <i class="fa-solid fa-pen-fancy"></i>
                 </div>
                 <div class="post-text">
-                    Bộ tài liệu hướng dẫn chuẩn bị hồ sơ du học Pháp mình đã cập nhật bản mới. Bạn nào cần mình gửi link nhé.
+                    <h4 style="font-size:24px;margin-top:0;">Những Lá Thư Không Gửi</h4>
+                    Cậu ấy cất những lá thư vào ngăn bàn, không đề tên người nhận.
+                    Mỗi lần thành phố đổi mùa, cậu lại viết thêm một bức. Có bức chỉ vỏn vẹn hai dòng:
+                    “Mình vẫn ổn. Chỉ là đôi lúc nhớ một người đã rời đi bằng im lặng.”
+                    Đến năm thứ năm, chiếc ngăn kéo chật kín, còn cậu học được cách mỉm cười khi nhắc về quá khứ.
                 </div>
-                <div class="post-stats">860 lượt thích · 95 bình luận</div>
-                <div class="post-actions">
-                    <span><i class="fa-regular fa-thumbs-up me-1"></i>Thích</span>
-                    <span><i class="fa-regular fa-comment me-1"></i>Bình luận</span>
-                    <span><i class="fa-solid fa-share me-1"></i>Chia sẻ</span>
-                </div>
+                <div class="post-stats">12 phút đọc · 2.041 lượt xem</div>
+                <span class="post-tag">TRUYỆN NGẮN</span>
             </article>
         </div>
     </section>

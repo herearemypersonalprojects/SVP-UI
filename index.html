@@ -358,80 +358,35 @@
             return;
         }
 
-        const articles = {
-            'delf-b2': {
-                title: 'Kinh Nghiệm Thi DELF B2',
-                author: 'Lan Anh',
-                date: '10/02/2026',
-                category: 'Học Tập & Nghiên Cứu',
-                readTime: '12 phút đọc',
-                lead: 'Bài viết tổng hợp lộ trình ôn thi DELF B2 thực tế, cách phân bổ thời gian và bộ tài nguyên hữu ích cho từng kỹ năng.',
-                cover: 'https://images.unsplash.com/photo-1465447142348-e9952c393450?q=80&w=1400&auto=format&fit=crop',
-                tags: ['DELF', 'Ngôn ngữ', 'Kinh nghiệm'],
-                blocks: [
-                    { type: 'p', text: 'Sai lầm lớn nhất khi chuẩn bị DELF B2 là học dàn trải. Thay vì cố làm thật nhiều đề, bạn nên chia theo 4 kỹ năng với mục tiêu cụ thể cho từng tuần.' },
-                    { type: 'p', text: 'Ở phần nghe, hãy ưu tiên nghe tài liệu thời sự tốc độ tự nhiên mỗi ngày 20 đến 30 phút. Việc nghe thụ động liên tục trong 6 tuần giúp tăng đáng kể khả năng bắt ý chính.' },
-                    { type: 'quote', text: 'Điểm bứt phá nằm ở kỷ luật luyện đều và phản hồi ngay sau mỗi đề thử.' },
-                    { type: 'p', text: 'Với viết luận, bạn nên xây bộ khung mở bài - thân bài - kết luận cố định, sau đó thay luận điểm theo đề. Cách này giảm áp lực thời gian và tăng độ mạch lạc.' }
-                ]
-            },
-            'lo-trinh-it': {
-                title: 'Lộ Trình Lựa Chọn Ngành IT tại Pháp',
-                author: 'Quang Huy',
-                date: '10/02/2026',
-                category: 'Kinh Nghiệm Việc Làm',
-                readTime: '9 phút đọc',
-                lead: 'Phân tích từng hướng đi phổ biến trong ngành IT tại Pháp, từ Data, Dev Web đến an toàn thông tin theo nhu cầu tuyển dụng.',
-                cover: 'https://images.unsplash.com/photo-1529336953121-a0bdc9e2fd19?q=80&w=1400&auto=format&fit=crop',
-                tags: ['IT', 'Hướng nghiệp', 'Thực tập'],
-                blocks: [
-                    { type: 'p', text: 'Nếu mục tiêu của bạn là tìm việc sớm, Dev Web và Data Analyst thường có số lượng thực tập lớn hơn các nhánh chuyên sâu như AI Research.' },
-                    { type: 'p', text: 'Từ năm nhất Master, nên bắt đầu xây hồ sơ với 2 dự án có sản phẩm chạy thật và có tài liệu kỹ thuật. Nhà tuyển dụng đánh giá cao tính hoàn thiện hơn số lượng dự án.' },
-                    { type: 'quote', text: 'Một CV IT tốt tại Pháp luôn thể hiện kết quả định lượng: tăng hiệu năng, giảm lỗi, hoặc cải thiện trải nghiệm người dùng.' },
-                    { type: 'p', text: 'Bạn nên theo dõi song song các job board quốc gia và nhóm cộng đồng kỹ sư Việt tại Pháp để nắm cơ hội theo từng thành phố.' }
-                ]
-            },
-            'phong-van-visa': {
-                title: 'Phỏng Vấn Visa Pháp: Những Điều Cần Lưu Ý',
-                author: 'Minh Đức',
-                date: '10/02/2026',
-                category: 'Cuộc Sống Tại Pháp',
-                readTime: '7 phút đọc',
-                lead: 'Checklist những câu hỏi thường gặp khi phỏng vấn visa và cách chuẩn bị hồ sơ rõ ràng, nhất quán.',
-                cover: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1400&auto=format&fit=crop',
-                tags: ['Visa', 'Thủ tục', 'Checklist'],
-                blocks: [
-                    { type: 'p', text: 'Hội đồng thường đánh giá tính nhất quán giữa kế hoạch học tập, nguồn tài chính và lộ trình sau tốt nghiệp. Vì vậy, mọi thông tin trong hồ sơ cần đồng bộ.' },
-                    { type: 'p', text: 'Bạn nên luyện trả lời theo cấu trúc ngắn gọn: nêu mục tiêu, lý do chọn trường, và kế hoạch tài chính theo từng năm học.' },
-                    { type: 'quote', text: 'Chuẩn bị tốt không phải là trả lời dài, mà là trả lời đúng trọng tâm và có chứng cứ trong hồ sơ.' },
-                    { type: 'p', text: 'Sau buổi phỏng vấn, hãy lưu lại các điểm còn thiếu để bổ sung ngay nếu cơ quan xét duyệt yêu cầu thêm giấy tờ.' }
-                ]
-            }
-        };
+        const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
 
-        const escapeHtml = (value) => String(value)
+        const escapeHtml = (value) => String(value ?? '')
             .replaceAll('&', '&amp;')
             .replaceAll('<', '&lt;')
             .replaceAll('>', '&gt;')
             .replaceAll('"', '&quot;')
             .replaceAll("'", '&#039;');
 
-        const renderBlocks = (blocks) => blocks.map((block) => {
-            if (block.type === 'quote') {
-                return `<div class="sv-article__quote">${escapeHtml(block.text)}</div>`;
+        const formatDate = (isoDate) => {
+            const parsed = new Date(isoDate);
+            if (Number.isNaN(parsed.getTime())) {
+                return 'N/A';
             }
-            return `<p>${escapeHtml(block.text)}</p>`;
-        }).join('');
+            return new Intl.DateTimeFormat('vi-VN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            }).format(parsed);
+        };
 
         const renderArticleCard = (article) => {
-            const safeCategory = escapeHtml(article.category);
-            const safeReadTime = escapeHtml(article.readTime);
-            const safeTitle = escapeHtml(article.title);
-            const safeAuthor = escapeHtml(article.author);
-            const safeDate = escapeHtml(article.date);
-            const safeLead = escapeHtml(article.lead);
-            const safeCover = escapeHtml(article.cover);
-            const tagsHtml = article.tags.map((tag) => `<span class="sv-tag">${escapeHtml(tag)}</span>`).join('');
+            const safeCategory = escapeHtml(article.category || 'Chưa phân loại');
+            const safeReadTime = escapeHtml(article.readTime || '1 phút đọc');
+            const safeTitle = escapeHtml(article.title || 'Chưa có tiêu đề');
+            const safeAuthor = escapeHtml(article.author || 'Ẩn danh');
+            const safeDate = escapeHtml(formatDate(article.createdAt));
+            const safeLead = escapeHtml(article.lead || 'Bài viết đang được cập nhật nội dung.');
+            const safeCover = escapeHtml(article.cover || '');
 
             return `
                 <article class="sv-article">
@@ -443,14 +398,46 @@
                     <div class="sv-article__meta">Bởi ${safeAuthor} • Cập nhật ${safeDate}</div>
                     <p class="sv-article__lead">${safeLead}</p>
                     <div class="sv-article__cover" style="background-image:url('${safeCover}')"></div>
-                    <div class="sv-article__content">${renderBlocks(article.blocks)}</div>
-                    <div class="sv-article__tags">${tagsHtml}</div>
+                    <div class="sv-article__tags">
+                        <span class="sv-tag">${safeCategory}</span>
+                    </div>
                 </article>
             `;
         };
 
-        const articleCards = Object.values(articles).map((article) => renderArticleCard(article)).join('');
-        feedEl.innerHTML = articleCards;
+        const renderEmptyState = (message) => {
+            feedEl.innerHTML = `<div class="sv-meta">${escapeHtml(message)}</div>`;
+        };
+
+        const loadLatestArticles = async () => {
+            renderEmptyState('Đang tải bài viết mới nhất...');
+            try {
+                const response = await fetch(`${API_BASE_URL}/posts/latest-articles`, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`API responded with status ${response.status}`);
+                }
+
+                const payload = await response.json();
+                const items = Array.isArray(payload.items) ? payload.items : [];
+
+                if (items.length === 0) {
+                    renderEmptyState('Chưa có bài viết phù hợp để hiển thị.');
+                    return;
+                }
+
+                feedEl.innerHTML = items.map((article) => renderArticleCard(article)).join('');
+            } catch (error) {
+                console.error('Cannot load latest articles:', error);
+                renderEmptyState('Không thể tải bài viết mới nhất. Vui lòng thử lại sau.');
+            }
+        };
+
+        loadLatestArticles();
     })();
 </script>
 </body>

@@ -1,0 +1,591 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP)</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="svp.css">
+    <link rel="stylesheet" href="dropdown-hover.css">
+    <style>
+        .sv-thread-header {
+            background: #fff;
+            border: 1px solid var(--sv-border);
+            border-radius: 12px;
+            padding: 1.25rem 1.4rem;
+        }
+        .sv-thread-header__meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .6rem 1rem;
+            color: var(--sv-muted);
+            font-size: .9rem;
+        }
+        .sv-thread-header__title {
+            font-family: var(--sv-title-font);
+            font-size: 1.9rem;
+            font-weight: 800;
+            color: #1e3a8a;
+            margin: .45rem 0 .75rem;
+        }
+        .sv-thread-tools {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .55rem;
+            margin-top: .9rem;
+        }
+        .sv-forum-post {
+            display: grid;
+            grid-template-columns: 170px minmax(0, 1fr);
+            border-bottom: 1px solid #edf2f7;
+            background: #fff;
+        }
+        .sv-forum-post:last-child {
+            border-bottom: 0;
+        }
+        .sv-forum-post__author {
+            border-right: 1px solid #edf2f7;
+            padding: .95rem .8rem;
+            background: #f8fafc;
+            text-align: center;
+        }
+        .sv-forum-post__avatar {
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            margin: 0 auto .5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            font-weight: 800;
+            font-size: 1.3rem;
+            background: linear-gradient(135deg, #1a73e8, #1558b0);
+        }
+        .sv-forum-post__name {
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+        .sv-forum-post__role {
+            margin-top: .3rem;
+            color: var(--sv-muted);
+            font-size: .84rem;
+        }
+        .sv-forum-post__stats {
+            margin-top: .45rem;
+            color: var(--sv-muted);
+            font-size: .8rem;
+            line-height: 1.5;
+        }
+        .sv-forum-post__body {
+            padding: .7rem 1rem .95rem;
+        }
+        .sv-forum-post__meta {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .5rem;
+            color: var(--sv-muted);
+            font-size: .84rem;
+            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: .45rem;
+            margin-bottom: .55rem;
+        }
+        .sv-forum-post__index {
+            color: #64748b;
+            font-weight: 700;
+        }
+        .sv-forum-post__content {
+            color: #1f2937;
+        }
+        .sv-forum-post__content p {
+            margin-bottom: .65rem;
+        }
+        .sv-forum-post__quote {
+            border-left: 3px solid var(--sv-primary);
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: .6rem .8rem;
+            margin-top: .5rem;
+            color: #0f172a;
+            font-weight: 600;
+        }
+        .sv-forum-post__actions {
+            margin-top: .5rem;
+            display: flex;
+            gap: .7rem;
+            flex-wrap: wrap;
+            font-size: .84rem;
+        }
+        .sv-forum-post__actions button {
+            border: 0;
+            background: transparent;
+            color: var(--sv-primary);
+            padding: 0;
+            font-weight: 700;
+        }
+        .sv-forum-post__actions button:hover {
+            color: var(--sv-primary-d);
+            text-decoration: underline;
+        }
+        .sv-char-count {
+            color: var(--sv-muted);
+            font-size: .84rem;
+            text-align: right;
+            margin-top: .35rem;
+        }
+        .sv-sticky-sidebar {
+            position: sticky;
+            top: 1rem;
+        }
+        @media (max-width: 768px) {
+            .sv-forum-post {
+                grid-template-columns: 1fr;
+            }
+            .sv-forum-post__author {
+                border-right: 0;
+                border-bottom: 1px solid #edf2f7;
+                text-align: left;
+                display: flex;
+                align-items: center;
+                gap: .7rem;
+            }
+            .sv-forum-post__avatar {
+                margin: 0;
+                width: 44px;
+                height: 44px;
+                font-size: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Top brand + auth -->
+<div class="sv-topbar pt-2 pb-1">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="sv-brand">
+            <img class="sv-brand__logo-img" src="assets/icons/logo_svp.png" alt="SVP" width="102" height="112" />
+            <div class="sv-brand__title">
+                <h1>DIỄN ĐÀN SINH VIÊN & TRI THỨC VIỆT TẠI PHÁP <span class="sv-brand__accent">(SVP)</span></h1>
+                <div class="sv-brand__divider"></div>
+                <small class="sv-brand__tagline">Kết Nối – Chia Sẻ – Thành Công</small>
+            </div>
+        </div>
+
+        <div class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary">Đăng Ký</button>
+            <button class="btn btn-primary">Đăng Nhập</button>
+        </div>
+    </div>
+</div>
+
+<!-- Main nav -->
+<div class="sv-nav">
+    <div class="container d-flex align-items-center justify-content-between">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link" href="index.html">Trang Chủ</a></li>
+            <li class="nav-item"><a class="nav-link active" href="forum.html">Diễn Đàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="categories.html">Khám Phá Chủ Đề</a></li>
+            <li class="nav-item"><a class="nav-link" href="events.html">Sự Kiện & Lễ Hội</a></li>
+            <li class="nav-item"><a class="nav-link" href="about.html">Giới Thiệu</a></li>
+        </ul>
+
+        <div class="sv-search position-relative my-2 my-md-0" style="width:min(320px, 60vw);">
+            <i class="fa fa-magnifying-glass"></i>
+            <input class="form-control" type="search" placeholder="Tìm kiếm..." />
+        </div>
+    </div>
+</div>
+<main class="container my-3 my-md-4">
+    <div class="sv-breadcrumb">
+        <a href="index.html">Trang chủ</a> / <a href="forum.html">Diễn đàn</a> / <span id="thread-breadcrumb">Chi tiết chủ đề</span>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <section class="sv-thread-header mb-3">
+                <div class="sv-thread-header__meta">
+                    <span><i class="fa-solid fa-layer-group me-1 text-primary"></i><span id="thread-category">Học tập</span></span>
+                    <span><i class="fa-regular fa-clock me-1 text-primary"></i><span id="thread-updated">Cập nhật 20 phút trước</span></span>
+                    <span><i class="fa-regular fa-eye me-1 text-primary"></i><span id="thread-views">0 lượt xem</span></span>
+                    <span><i class="fa-regular fa-message me-1 text-primary"></i><span id="thread-replies">0 phản hồi</span></span>
+                </div>
+                <h2 id="thread-title" class="sv-thread-header__title">Tiêu đề chủ đề</h2>
+                <div id="thread-author" class="sv-meta">Khởi tạo bởi Admin</div>
+                <div id="thread-tags" class="d-flex flex-wrap gap-2 mt-3"></div>
+                <div class="sv-thread-tools">
+                    <button id="btn-scroll-form" class="btn btn-primary btn-sm"><i class="fa-solid fa-reply me-1"></i>Viết phản hồi</button>
+                    <button class="btn btn-outline-secondary btn-sm"><i class="fa-regular fa-bookmark me-1"></i>Lưu chủ đề</button>
+                    <button class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-share-nodes me-1"></i>Chia sẻ</button>
+                </div>
+            </section>
+
+            <section class="sv-card mb-3">
+                <div class="sv-card__hd d-flex justify-content-between align-items-center">
+                    <span><i class="fa-solid fa-comments me-2 text-primary"></i>Trao Đổi</span>
+                    <span id="comments-count" class="sv-meta">0 bài phản hồi</span>
+                </div>
+                <div id="discussion-list"></div>
+            </section>
+
+            <section id="reply-form" class="sv-card sv-form">
+                <div class="sv-card__hd"><i class="fa-solid fa-pen me-2 text-primary"></i>Thêm Ý Kiến Mới</div>
+                <form id="comment-form" class="p-3">
+                    <p class="sv-meta mb-3">Ai cũng có thể gửi phản hồi, chỉ cần cung cấp tên và email.</p>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label for="comment-name" class="form-label">Tên hiển thị</label>
+                            <input id="comment-name" class="form-control" type="text" placeholder="Ví dụ: Minh Duc" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="comment-email" class="form-label">Email</label>
+                            <input id="comment-email" class="form-control" type="email" placeholder="ban@example.com" required>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label for="comment-message" class="form-label">Nội dung trao đổi</label>
+                        <textarea id="comment-message" class="form-control" rows="5" maxlength="1000" placeholder="Chia sẻ kinh nghiệm, câu hỏi hoặc góp ý của bạn..." required></textarea>
+                        <div id="char-count" class="sv-char-count">0/1000 ký tự</div>
+                    </div>
+                    <div class="mt-3 d-flex flex-wrap gap-2">
+                        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-paper-plane me-2"></i>Gửi phản hồi</button>
+                        <button id="btn-clear-form" class="btn btn-outline-secondary" type="button">Xóa nội dung</button>
+                    </div>
+                </form>
+            </section>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="sv-sticky-sidebar">
+                <section class="sv-card mb-3">
+                    <div class="sv-card__hd"><i class="fa-solid fa-arrow-up-right-dots me-2 text-primary"></i>Thảo Luận Liên Quan</div>
+                    <ul class="sv-list" id="related-list"></ul>
+                </section>
+
+                <section class="sv-card mb-3">
+                    <div class="sv-card__hd"><i class="fa-solid fa-user-group me-2 text-primary"></i>Thành Viên Đang Theo Dõi</div>
+                    <div class="sv-members">
+                        <div class="member">
+                            <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=300&auto=format&fit=crop');"></div>
+                            <div>
+                                <div class="name">Minh Anh</div>
+                                <div class="role">Online 5 phút trước</div>
+                            </div>
+                        </div>
+                        <div class="member">
+                            <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=300&auto=format&fit=crop');"></div>
+                            <div>
+                                <div class="name">Quang Huy</div>
+                                <div class="role">Online 12 phút trước</div>
+                            </div>
+                        </div>
+                        <div class="member">
+                            <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1544005316-6e8b9f502d04?q=80&w=300&auto=format&fit=crop');"></div>
+                            <div>
+                                <div class="name">Thuy Duong</div>
+                                <div class="role">Online 21 phút trước</div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="sv-card">
+                    <div class="sv-card__hd"><i class="fa-solid fa-shield-heart me-2 text-primary"></i>Lưu Ý Thảo Luận</div>
+                    <ul class="sv-list">
+                        <li><div><strong>Tập trung vào giải pháp</strong><div class="sv-meta">Nêu rõ bối cảnh và câu hỏi.</div></div></li>
+                        <li><div><strong>Tôn trọng khác biệt</strong><div class="sv-meta">Không công kích cá nhân.</div></div></li>
+                        <li><div><strong>Thông tin có nguồn</strong><div class="sv-meta">Khuyến khích đính kèm link chính thức.</div></div></li>
+                    </ul>
+                </section>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="container py-4">
+    <div class="row">
+        <div class="col-md">
+            <div class="sv-brand d-flex align-items-center mb-2">
+                <div class="sv-brand__logo" style="width:36px; height:36px; font-size:14px;">SVP</div>
+                <strong class="ms-2">SVP - Kết Nối • Chia Sẻ • Thành Công</strong>
+            </div>
+            <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
+        </div>
+        <div class="col-md text-md-end mt-2 mt-md-0">
+            <a class="me-3" href="/terms.html">Điều khoản</a>
+            <a class="me-3" href="/security.html">Bảo mật</a>
+            <a href="/contact.html">Liên hệ</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    (function () {
+        const topics = {
+            1: {
+                title: "Kinh nghiệm gia hạn titre de sejour tại Paris năm 2026",
+                category: "Visa - The tam tru",
+                updated: "20 phut truoc",
+                views: 1248,
+                replies: 12,
+                author: "Ngoc Ha - Master 2, Paris Saclay",
+                authorName: "Ngoc Ha",
+                authorRole: "Chu tho",
+                authorPosts: 86,
+                tags: ["Thu tuc", "OFII", "Paris"],
+                lead: "Minh tong hop quy trinh gia han the tam tru theo lich hen prefecture, danh sach giay to va cac loi ho so hay bi tra ve.",
+                content: [
+                    "Buoc dau tien la dat lich hen som, uu tien truoc ngay het han toi thieu 6-8 tuan. Neu doi sat ngay, nguy co bi tre giay hen rat cao.",
+                    "Ho so can scan ro rang va dat ten file nhat quan. Minh de dang ten theo mau: passport.pdf, attestation_scolarite.pdf, justificatif_domicile.pdf.",
+                    "Khi nop online, nen chup man hinh tung buoc de co bang chung neu he thong loi. Co 2 ban be cua minh duoc yeu cau nop lai vi file qua nang.",
+                    "Neu ban da co alternance hoac stage dai han, nho bo sung giay xac nhan tu cong ty de tranh bi hoi them ve tai chinh."
+                ]
+            },
+            2: {
+                title: "Lam sao can bang hoc Master va viec part-time 20h/tuan?",
+                category: "Hoc tap - Nghien cuu",
+                updated: "48 phut truoc",
+                views: 863,
+                replies: 8,
+                author: "Hoang Nam - M1 Data Science",
+                authorName: "Hoang Nam",
+                authorRole: "Chu tho",
+                authorPosts: 43,
+                tags: ["Quan ly thoi gian", "Part-time", "Master"],
+                lead: "Can bang hoc va lam la bai toan kho voi du hoc sinh. Chu de nay tong hop cach sap lich hoc, dich vu truong va cach tranh qua tai.",
+                content: [
+                    "Minh chia lich theo block 2 gio, trong do 3 buoi toi/tuan danh cho viec lam. Cac buoi con lai uu tien bai tap nhom va doc tai lieu.",
+                    "Neu mon hoc co attendance cao, ban nen xin shift co dinh de tranh doi lich lien tuc. Chu dong thong bao voi quan ly ngay tu dau.",
+                    "Su dung mot bang theo doi nang luong hang tuan rat hieu qua: ngu du 7h, tap nhe 3 lan/tuan, va de 1 buoi trong de nghi.",
+                    "Loi pho bien la nhan qua nhieu ca vao ky giua ky. Ban nen dat gioi han ro rang: toi da 2 ca ngay thuong."
+                ]
+            }
+        };
+
+        const commentsSeed = {
+            1: [
+                {
+                    id: 1,
+                    name: "Minh Duc",
+                    role: "Thanh vien SVP",
+                    posts: 27,
+                    time: "15 phut truoc",
+                    message: "Cam on ban, minh vua gap van de file qua dung luong. Ban co moc gio nao prefecture thuong mo slot moi khong?"
+                },
+                {
+                    id: 2,
+                    name: "Linh Chi",
+                    role: "Moderator",
+                    posts: 192,
+                    time: "10 phut truoc",
+                    message: "Kinh nghiem cua minh la refresh vao dau gio sang thu 2 va thu 4. Ngoai ra nho kiem tra email spam de tranh bo lo hen."
+                },
+                {
+                    id: 3,
+                    name: "Bao Anh",
+                    role: "M2 Marketing",
+                    posts: 58,
+                    time: "Vua xong",
+                    message: "Minh bo sung them: ban co the xin giay hen tam thoi neu visa sap het han. Nhieu ban quen muc nay nen rat bi dong."
+                }
+            ],
+            2: [
+                {
+                    id: 1,
+                    name: "Thuy Duong",
+                    role: "Alumni",
+                    posts: 134,
+                    time: "22 phut truoc",
+                    message: "Ban nen gom viec assignment theo sprint 2 tuan, dung de deadline don vao cung mot tuan voi lich lam."
+                }
+            ]
+        };
+
+        const relatedThreads = [
+            { title: "Checklist ho so CAF cho tan du hoc sinh", link: "thread.html?topic=1", meta: "Visa - 3 gio truoc" },
+            { title: "Nen chon M1 hay PGE neu muon lam tai chinh?", link: "thread.html?topic=2", meta: "Hoc tap - 4 gio truoc" },
+            { title: "CV tieng Phap: loi khien ho so bi loai som", link: "thread.html?topic=2", meta: "Viec lam - 6 gio truoc" }
+        ];
+
+        const getTopicId = () => {
+            const params = new URLSearchParams(window.location.search);
+            const id = Number(params.get("topic"));
+            if (Number.isNaN(id) || !topics[id]) return 1;
+            return id;
+        };
+
+        const topicId = getTopicId();
+        const topic = topics[topicId];
+        const comments = commentsSeed[topicId] ? [...commentsSeed[topicId]] : [];
+
+        const threadBreadcrumbEl = document.getElementById("thread-breadcrumb");
+        const threadCategoryEl = document.getElementById("thread-category");
+        const threadUpdatedEl = document.getElementById("thread-updated");
+        const threadViewsEl = document.getElementById("thread-views");
+        const threadRepliesEl = document.getElementById("thread-replies");
+        const threadTitleEl = document.getElementById("thread-title");
+        const threadAuthorEl = document.getElementById("thread-author");
+        const threadTagsEl = document.getElementById("thread-tags");
+        const commentsCountEl = document.getElementById("comments-count");
+        const discussionListEl = document.getElementById("discussion-list");
+        const relatedListEl = document.getElementById("related-list");
+        const formEl = document.getElementById("comment-form");
+        const nameEl = document.getElementById("comment-name");
+        const emailEl = document.getElementById("comment-email");
+        const messageEl = document.getElementById("comment-message");
+        const charCountEl = document.getElementById("char-count");
+        const clearBtn = document.getElementById("btn-clear-form");
+        const scrollFormBtn = document.getElementById("btn-scroll-form");
+
+        const getInitial = (name) => (name || "?").trim().charAt(0).toUpperCase();
+
+        const escapeHtml = (value) => value
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+
+        const renderThread = () => {
+            threadBreadcrumbEl.textContent = topic.title;
+            threadCategoryEl.textContent = topic.category;
+            threadUpdatedEl.textContent = `Cap nhat ${topic.updated}`;
+            threadViewsEl.textContent = `${topic.views} luot xem`;
+            threadRepliesEl.textContent = `${comments.length} phan hoi`;
+            threadTitleEl.textContent = topic.title;
+            threadAuthorEl.textContent = `Khoi tao boi ${topic.author}`;
+            threadTagsEl.innerHTML = topic.tags.map((tag) => `<span class="sv-tag">${escapeHtml(tag)}</span>`).join("");
+        };
+
+        const renderDiscussion = () => {
+            commentsCountEl.textContent = `${comments.length} bai phan hoi`;
+            const openerPost = {
+                id: 1,
+                name: topic.authorName || topic.author,
+                badgeText: topic.authorRole || "Chu tho",
+                posts: topic.authorPosts || 0,
+                time: topic.updated,
+                isOp: true,
+                paragraphs: [topic.lead, ...topic.content],
+                quote: "Meo nho: Luon du phong 1 ban ho so in cung va 1 folder scan cloud de xu ly nhanh khi can bo sung."
+            };
+
+            const posts = [openerPost, ...comments.map((comment) => ({
+                id: comment.id,
+                name: comment.name,
+                badgeText: comment.email || comment.role || "Thanh vien",
+                posts: comment.posts || 0,
+                time: comment.time,
+                isOp: false,
+                paragraphs: [comment.message]
+            }))];
+
+            discussionListEl.innerHTML = posts.map((post, idx) => `
+                <article class="sv-forum-post">
+                    <aside class="sv-forum-post__author">
+                        <div class="sv-forum-post__avatar">${escapeHtml(getInitial(post.name))}</div>
+                        <div class="sv-forum-post__name">${escapeHtml(post.name)}</div>
+                        <div class="sv-forum-post__role">${escapeHtml(post.badgeText)}${post.isOp ? ' • <span class="sv-tag">Chu de</span>' : ""}</div>
+                        <div class="sv-forum-post__stats">
+                            Bai dang: <strong>${post.posts}</strong><br>
+                            Danh so: <strong>#${idx + 1}</strong>
+                        </div>
+                    </aside>
+                    <div class="sv-forum-post__body">
+                        <div class="sv-forum-post__meta">
+                            <span>${escapeHtml(post.time)}</span>
+                            <span class="sv-forum-post__index">#${idx + 1}</span>
+                        </div>
+                        <div class="sv-forum-post__content">
+                            ${post.paragraphs.map((text) => `<p>${escapeHtml(text)}</p>`).join("")}
+                            ${post.quote ? `<div class="sv-forum-post__quote">${escapeHtml(post.quote)}</div>` : ""}
+                        </div>
+                        <div class="sv-forum-post__actions">
+                            <button type="button" data-reply="${escapeHtml(post.name)}">Tra loi</button>
+                            <button type="button">Cam on</button>
+                            <button type="button">Trich dan</button>
+                        </div>
+                    </div>
+                </article>
+            `).join("");
+            threadRepliesEl.textContent = `${comments.length} phan hoi`;
+        };
+
+        const renderRelated = () => {
+            relatedListEl.innerHTML = relatedThreads.map((item) => `
+                <li>
+                    <div>
+                        <a href="${escapeHtml(item.link)}">${escapeHtml(item.title)}</a>
+                        <div class="sv-meta">${escapeHtml(item.meta)}</div>
+                    </div>
+                </li>
+            `).join("");
+        };
+
+        messageEl.addEventListener("input", () => {
+            charCountEl.textContent = `${messageEl.value.length}/1000 ky tu`;
+        });
+
+        clearBtn.addEventListener("click", () => {
+            formEl.reset();
+            charCountEl.textContent = "0/1000 ky tu";
+        });
+
+        scrollFormBtn.addEventListener("click", () => {
+            document.getElementById("reply-form").scrollIntoView({ behavior: "smooth", block: "start" });
+            messageEl.focus();
+        });
+
+        discussionListEl.addEventListener("click", (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLButtonElement)) return;
+            const replyTo = target.dataset.reply;
+            if (!replyTo) return;
+            const prefix = `@${replyTo} `;
+            if (!messageEl.value.startsWith(prefix)) {
+                messageEl.value = `${prefix}${messageEl.value}`;
+            }
+            charCountEl.textContent = `${messageEl.value.length}/1000 ky tu`;
+            document.getElementById("reply-form").scrollIntoView({ behavior: "smooth", block: "start" });
+            messageEl.focus();
+        });
+
+        formEl.addEventListener("submit", (event) => {
+            event.preventDefault();
+            const name = nameEl.value.trim();
+            const email = emailEl.value.trim();
+            const message = messageEl.value.trim();
+            if (!name || !email || !message) return;
+
+            comments.unshift({
+                id: Date.now(),
+                name,
+                email,
+                posts: Math.floor(Math.random() * 60) + 5,
+                time: "Vua xong",
+                message
+            });
+
+            renderDiscussion();
+            formEl.reset();
+            charCountEl.textContent = "0/1000 ky tu";
+        });
+
+        renderThread();
+        renderDiscussion();
+        renderRelated();
+    })();
+</script>
+</body>
+</html>
+
+
+

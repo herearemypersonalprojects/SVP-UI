@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP)</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="svp.css">
+    <link rel="stylesheet" href="dropdown-hover.css">
+    <style>
+        .sv-editor-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .45rem;
+            margin-bottom: .6rem;
+        }
+        .sv-editor-toolbar .btn {
+            border-radius: 8px;
+            min-width: 38px;
+        }
+        .sv-upload-box {
+            margin-top: .6rem;
+            border: 1px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: .85rem .95rem;
+            background: #f8fafc;
+            color: #475569;
+            font-size: .9rem;
+        }
+        .sv-preview-cover {
+            width: 100%;
+            aspect-ratio: 16 / 8;
+            border-radius: 10px;
+            background: linear-gradient(120deg, #dbeafe, #bfdbfe);
+            border: 1px solid #dbe7ff;
+            margin-bottom: .8rem;
+            background-size: cover;
+            background-position: center;
+        }
+        .sv-category-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Top brand + auth -->
+<div class="sv-topbar pt-2 pb-1">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="sv-brand">
+            <img class="sv-brand__logo-img" src="assets/icons/logo_svp.png" alt="SVP" width="102" height="112" />
+            <div class="sv-brand__title">
+                <h1>DIỄN ĐÀN SINH VIÊN & TRI THỨC VIỆT TẠI PHÁP <span class="sv-brand__accent">(SVP)</span></h1>
+                <div class="sv-brand__divider"></div>
+                <small class="sv-brand__tagline">Kết Nối – Chia Sẻ – Thành Công</small>
+            </div>
+        </div>
+
+        <div class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary">Đăng Ký</button>
+            <button class="btn btn-primary">Đăng Nhập</button>
+        </div>
+    </div>
+</div>
+
+<!-- Main nav -->
+<div class="sv-nav">
+    <div class="container d-flex align-items-center justify-content-between">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link" href="index.html">Trang Chủ</a></li>
+            <li class="nav-item"><a class="nav-link" href="forum.html">Diễn Đàn</a></li>
+            <li class="nav-item"><a class="nav-link active" href="categories.html">Khám Phá Chủ Đề</a></li>
+            <li class="nav-item"><a class="nav-link" href="events.html">Sự Kiện & Lễ Hội</a></li>
+            <li class="nav-item"><a class="nav-link" href="about.html">Giới Thiệu</a></li>
+        </ul>
+
+        <div class="sv-search position-relative my-2 my-md-0" style="width:min(320px, 60vw);">
+            <i class="fa fa-magnifying-glass"></i>
+            <input class="form-control" type="search" placeholder="Tìm kiếm..." />
+        </div>
+    </div>
+</div>
+<main class="container my-3 my-md-4">
+    <div class="sv-breadcrumb">
+        <a href="index.html">Trang chủ</a> / <span>Đăng bài viết</span>
+    </div>
+
+    <section class="sv-page-hero mb-3">
+        <div class="sv-page-hero__eyebrow">Trình soạn thảo tạp chí</div>
+        <h2 class="sv-page-hero__title">Đăng bài viết dài có ảnh</h2>
+        <p class="sv-page-hero__subtitle">Mẫu soạn thảo dành cho bài viết chuyên sâu dạng tạp chí. Bạn có thể thêm ảnh đại diện, đoạn mở đầu và nội dung dài nhiều phần.</p>
+    </section>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <section class="sv-card">
+                <div class="sv-card__hd d-flex justify-content-between align-items-center gap-2">
+                    <span><i class="fa-solid fa-pen-nib me-2 text-primary"></i>Nội Dung Bài Viết</span>
+                    <span class="sv-meta">Bản nháp chưa xuất bản</span>
+                </div>
+                <form id="article-form" class="sv-form p-3">
+                    <div class="mb-3">
+                        <label for="article-title" class="form-label">Tiêu đề bài viết</label>
+                        <input id="article-title" class="form-control" type="text" placeholder="Ví dụ: Lộ trình săn học bổng Master tại Pháp" required>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-7">
+                            <label for="article-category" class="form-label">Danh mục (dùng chung với Diễn đàn)</label>
+                            <select id="article-category" class="form-select">
+                                <option value="Học Tập & Nghiên Cứu">Học Tập & Nghiên Cứu</option>
+                                <option value="Kinh Nghiệm Việc Làm">Kinh Nghiệm Việc Làm</option>
+                                <option value="Đầu Tư Tại Pháp">Đầu Tư Tại Pháp</option>
+                                <option value="Sự Kiện & Lễ Hội">Sự Kiện & Lễ Hội</option>
+                                <option value="Tìm & Cho Thuê Nhà">Tìm & Cho Thuê Nhà</option>
+                            </select>
+                        </div>
+                        <div class="col-md-5">
+                            <label for="article-read-time" class="form-label">Thời lượng đọc (phút)</label>
+                            <input id="article-read-time" class="form-control" type="number" min="1" value="8">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="article-cover-url" class="form-label">URL ảnh đại diện</label>
+                        <input id="article-cover-url" class="form-control" type="url" placeholder="https://...">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="article-cover-file" class="form-label">Hoặc tải ảnh từ máy</label>
+                        <input id="article-cover-file" class="form-control" type="file" accept="image/*">
+                        <div class="sv-upload-box">
+                            Ảnh ngang tỉ lệ 16:9 được ưu tiên để hiển thị đẹp trên trang chủ và trong phần đọc toàn bài.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="article-lead" class="form-label">Đoạn mở đầu (Lead)</label>
+                        <textarea id="article-lead" class="form-control" rows="3" placeholder="Tóm tắt 2-3 câu nêu trọng tâm bài viết..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="article-content" class="form-label">Nội dung bài viết</label>
+                        <div class="sv-editor-toolbar">
+                            <button type="button" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-bold"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-italic"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-list-ul"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-quote-left"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary"><i class="fa-regular fa-image"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-link"></i></button>
+                        </div>
+                        <textarea id="article-content" class="form-control" rows="12" placeholder="Viết nội dung dài kiểu tạp chí ở đây..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="article-tags" class="form-label">Tags</label>
+                        <input id="article-tags" class="form-control" type="text" placeholder="Ví dụ: du-hoc, hoc-bong, kinh-nghiem">
+                    </div>
+
+                    <div class="d-flex flex-wrap justify-content-between gap-2">
+                        <button type="button" class="btn btn-outline-secondary"><i class="fa-regular fa-floppy-disk me-2"></i>Lưu nháp</button>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane me-2"></i>Đăng bài viết</button>
+                    </div>
+                    <div id="article-submit-feedback" class="sv-meta mt-3" aria-live="polite"></div>
+                </form>
+            </section>
+        </div>
+
+        <div class="col-lg-4">
+            <section class="sv-card mb-3">
+                <div class="sv-card__hd"><i class="fa-regular fa-eye me-2 text-primary"></i>Xem Nhanh Bản Nháp</div>
+                <div class="p-3">
+                    <div id="article-preview-cover" class="sv-preview-cover"></div>
+                    <div id="article-preview-title" class="fw-bold mb-2">Tiêu đề bài viết sẽ hiển thị tại đây</div>
+                    <div id="article-preview-lead" class="sv-meta mb-2">Đoạn mở đầu chưa có nội dung.</div>
+                    <span id="article-preview-category" class="sv-pill"><i class="fa-regular fa-folder-open"></i>Học Tập &amp; Nghiên Cứu</span>
+                </div>
+            </section>
+
+            <section class="sv-card">
+                <div class="sv-card__hd"><i class="fa-solid fa-layer-group me-2 text-primary"></i>Danh Mục Dùng Chung</div>
+                <div class="p-3">
+                    <p class="sv-meta mb-2">Trang chủ bài viết và diễn đàn thảo luận dùng cùng hệ danh mục để dễ quản trị nội dung:</p>
+                    <div class="sv-category-list">
+                        <span class="sv-tag">Học Tập &amp; Nghiên Cứu</span>
+                        <span class="sv-tag">Kinh Nghiệm Việc Làm</span>
+                        <span class="sv-tag">Đầu Tư Tại Pháp</span>
+                        <span class="sv-tag">Sự Kiện &amp; Lễ Hội</span>
+                        <span class="sv-tag">Tìm &amp; Cho Thuê Nhà</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+
+<footer class="container py-4">
+    <div class="row">
+        <div class="col-md">
+            <div class="sv-brand d-flex align-items-center mb-2">
+                <div class="sv-brand__logo" style="width:36px; height:36px; font-size:14px;">SVP</div>
+                <strong class="ms-2">SVP - Kết Nối • Chia Sẻ • Thành Công</strong>
+            </div>
+            <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
+        </div>
+        <div class="col-md text-md-end mt-2 mt-md-0">
+            <a class="me-3" href="/terms.html">Điều khoản</a>
+            <a class="me-3" href="/security.html">Bảo mật</a>
+            <a href="/contact.html">Liên hệ</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    (function () {
+        const form = document.getElementById('article-form');
+        const titleInput = document.getElementById('article-title');
+        const leadInput = document.getElementById('article-lead');
+        const coverUrlInput = document.getElementById('article-cover-url');
+        const coverFileInput = document.getElementById('article-cover-file');
+        const categoryInput = document.getElementById('article-category');
+        const previewTitle = document.getElementById('article-preview-title');
+        const previewLead = document.getElementById('article-preview-lead');
+        const previewCover = document.getElementById('article-preview-cover');
+        const previewCategory = document.getElementById('article-preview-category');
+        const feedback = document.getElementById('article-submit-feedback');
+
+        if (!form || !titleInput || !leadInput || !coverUrlInput || !coverFileInput || !categoryInput || !previewTitle || !previewLead || !previewCover || !previewCategory || !feedback) {
+            return;
+        }
+
+        const updatePreview = () => {
+            const title = titleInput.value.trim();
+            const lead = leadInput.value.trim();
+            const category = categoryInput.value;
+            const coverUrl = coverUrlInput.value.trim();
+
+            previewTitle.textContent = title || 'Tiêu đề bài viết sẽ hiển thị tại đây';
+            previewLead.textContent = lead || 'Đoạn mở đầu chưa có nội dung.';
+            previewCategory.innerHTML = `<i class="fa-regular fa-folder-open"></i>${category}`;
+
+            if (coverUrl) {
+                previewCover.style.backgroundImage = `url('${coverUrl}')`;
+            } else {
+                previewCover.style.backgroundImage = 'linear-gradient(120deg, #dbeafe, #bfdbfe)';
+            }
+        };
+
+        coverFileInput.addEventListener('change', () => {
+            const [file] = coverFileInput.files || [];
+            if (!file) return;
+            const objectUrl = URL.createObjectURL(file);
+            previewCover.style.backgroundImage = `url('${objectUrl}')`;
+        });
+
+        [titleInput, leadInput, coverUrlInput, categoryInput].forEach((element) => {
+            element.addEventListener('input', updatePreview);
+            element.addEventListener('change', updatePreview);
+        });
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            feedback.textContent = 'Bản demo giao diện: bài viết đã sẵn sàng để gửi lên hệ thống xuất bản.';
+        });
+
+        updatePreview();
+    })();
+</script>
+</body>
+</html>
+
+
+

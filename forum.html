@@ -1,0 +1,608 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP)</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="svp.css">
+    <link rel="stylesheet" href="dropdown-hover.css">
+    <style>
+        .sv-filter-btn.active {
+            background: var(--sv-primary);
+            color: #fff;
+            border-color: var(--sv-primary);
+        }
+        .sv-pagination {
+            display: flex;
+            gap: .4rem;
+            flex-wrap: wrap;
+            justify-content: center;
+            padding: 1rem;
+            border-top: 1px dashed #edf2f7;
+        }
+        .sv-pagination .btn {
+            min-width: 38px;
+        }
+        .sv-empty {
+            padding: 1.2rem 1rem;
+            color: var(--sv-muted);
+            text-align: center;
+        }
+        .sv-page-hero {
+            background: #dbeafe url('assets/img/forum_svp_background.png?q=80&w=1600&auto=format&fit=crop') center/cover no-repeat;
+        }
+        .sv-cta-advanced {
+            background: #e53935;
+            border-color: #e53935;
+            color: #fff;
+        }
+        .sv-cta-advanced:hover,
+        .sv-cta-advanced:focus {
+            background: #c81d1d;
+            border-color: #c81d1d;
+            color: #fff;
+        }
+        .sv-filter-btn .fa-layer-group { color: #2563eb; }
+        .sv-filter-btn .fa-graduation-cap { color: #22c55e; }
+        .sv-filter-btn .fa-briefcase { color: #8b5cf6; }
+        .sv-filter-btn .fa-chart-line { color: #0ea5e9; }
+        .sv-filter-btn .fa-calendar-days { color: #f97316; }
+        .sv-filter-btn .fa-house-chimney { color: #06b6d4; }
+    </style>
+</head>
+<body>
+
+<!-- Top brand + auth -->
+<div class="sv-topbar pt-2 pb-1">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="sv-brand">
+            <img class="sv-brand__logo-img" src="assets/icons/logo_svp.png" alt="SVP" width="102" height="112" />
+            <div class="sv-brand__title">
+                <h1>DIỄN ĐÀN SINH VIÊN & TRI THỨC VIỆT TẠI PHÁP <span class="sv-brand__accent">(SVP)</span></h1>
+                <div class="sv-brand__divider"></div>
+                <small class="sv-brand__tagline">Kết Nối – Chia Sẻ – Thành Công</small>
+            </div>
+        </div>
+
+        <div class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary">Đăng Ký</button>
+            <button class="btn btn-primary">Đăng Nhập</button>
+        </div>
+    </div>
+</div>
+
+<!-- Main nav -->
+<div class="sv-nav">
+    <div class="container d-flex align-items-center justify-content-between">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link" href="index.html">Trang Chủ</a></li>
+            <li class="nav-item"><a class="nav-link active" href="forum.html">Diễn Đàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="categories.html">Khám Phá Chủ Đề</a></li>
+            <li class="nav-item"><a class="nav-link" href="events.html">Sự Kiện & Lễ Hội</a></li>
+            <li class="nav-item"><a class="nav-link" href="about.html">Giới Thiệu</a></li>
+        </ul>
+
+        <div class="sv-search position-relative my-2 my-md-0" style="width:min(320px, 60vw);">
+            <i class="fa fa-magnifying-glass"></i>
+            <input class="form-control" type="search" placeholder="Tìm kiếm..." />
+        </div>
+    </div>
+</div>
+<main class="container my-3 my-md-4">
+    <div class="sv-breadcrumb">
+        <a href="index.html">Trang chủ</a> / <span>Diễn đàn</span>
+    </div>
+
+    <section class="sv-page-hero mb-3">
+        <div class="sv-page-hero__eyebrow">Khu vực thảo luận</div>
+        <h2 class="sv-page-hero__title">Diễn đàn SVP</h2>
+        <p class="sv-page-hero__subtitle">Chia sẻ kinh nghiệm cuộc sống thường ngày.</p>
+        <div class="sv-page-hero__actions">
+            <a class="btn btn-primary" href="create_new_discussion.html"><i class="fa-solid fa-pen-to-square me-2"></i>Tạo chủ đề mới</a>
+            <button class="btn sv-cta-advanced"><i class="fa-solid fa-filter me-2"></i>Bộ lọc nâng cao</button>
+        </div>
+    </section>
+
+    <section class="sv-soft-card mb-3">
+        <div class="d-flex flex-wrap gap-2 align-items-center">
+            <button class="btn btn-sm btn-outline-secondary sv-filter-btn active" data-filter="all"><i class="fa-solid fa-layer-group me-1"></i>Tất cả</button>
+            <button class="btn btn-sm btn-outline-secondary sv-filter-btn" data-filter="study"><i class="fa-solid fa-graduation-cap me-1"></i>Học tập - Nghiên cứu</button>
+            <button class="btn btn-sm btn-outline-secondary sv-filter-btn" data-filter="job"><i class="fa-solid fa-briefcase me-1"></i>Việc làm - Thực tập</button>
+            <button class="btn btn-sm btn-outline-secondary sv-filter-btn" data-filter="invest"><i class="fa-solid fa-chart-line me-1"></i>Đầu tư tại Pháp</button>
+            <button class="btn btn-sm btn-outline-secondary sv-filter-btn" data-filter="event"><i class="fa-solid fa-calendar-days me-1"></i>Mua bán - Rao vặt</button>
+            <button class="btn btn-sm btn-outline-secondary sv-filter-btn" data-filter="house"><i class="fa-solid fa-house-chimney me-1"></i>Tìm &amp; cho thuê nhà</button>
+            <button class="btn btn-sm btn-outline-secondary sv-filter-btn" data-filter="house"><i class="fa-solid fa-house-chimney me-1"></i>Cuộc sống tại Pháp</button>
+            <button class="btn btn-sm btn-outline-secondary sv-filter-btn" data-filter="house"><i class="fa-solid fa-house-chimney me-1"></i>Chém gió, tán gẫu</button>
+        </div>
+    </section>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <div class="sv-card mb-3">
+                <div class="sv-card__hd d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span><i class="fa-solid fa-comments me-2 text-primary"></i>Thảo Luận Mới Nhất</span>
+                    <div class="d-flex align-items-center gap-2">
+                        <span id="forum-count" class="sv-meta">0 chủ đề</span>
+                        <label for="forum-sort" class="sv-meta mb-0">Sắp xếp:</label>
+                        <select id="forum-sort" class="form-select form-select-sm" style="width:165px;">
+                            <option value="newest">Mới nhất</option>
+                            <option value="hot">Hot nhất</option>
+                            <option value="replies">Nhiều phản hồi</option>
+                            <option value="views">Nhiều lượt xem</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div id="forum-thread-list"></div>
+                <div id="forum-pagination" class="sv-pagination"></div>
+            </div>
+
+            <div class="sv-card">
+                <div class="sv-card__hd"><i class="fa-solid fa-chart-line me-2 text-primary"></i>Chủ Đề Đang Tăng Tương Tác</div>
+                <ul class="sv-list">
+                    <li>
+                        <div>
+                            <a href="thread.html?topic=2">Checklist nhập học cho kỳ Fall 2026</a>
+                            <div class="sv-meta">12 bình luận mới trong 24h</div>
+                        </div>
+                        <span class="sv-badge">+12</span>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="thread.html?topic=2">Những lỗi thường gặp khi viết motivation letter</a>
+                            <div class="sv-meta">9 bình luận mới trong 24h</div>
+                        </div>
+                        <span class="sv-badge">+9</span>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="thread.html?topic=1">So sánh thẻ Imagine R và Navigo cho sinh viên</a>
+                            <div class="sv-meta">7 bình luận mới trong 24h</div>
+                        </div>
+                        <span class="sv-badge">+7</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="sv-card mb-3">
+                <div class="sv-card__hd"><i class="fa-solid fa-fire me-2 text-primary"></i>Chủ Đề Nổi Bật</div>
+                <ul class="sv-list">
+                    <li>
+                        <div>
+                            <a href="thread.html?topic=1">Cẩm nang mở tài khoản ngân hàng tại Pháp</a>
+                            <div class="sv-meta">2.5k lượt xem</div>
+                        </div>
+                        <span class="sv-badge">Top</span>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="thread.html?topic=2">Tổng hợp mẫu CV tiếng Pháp cho sinh viên</a>
+                            <div class="sv-meta">1.8k lượt xem</div>
+                        </div>
+                        <span class="sv-badge">Hot</span>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="thread.html?topic=1">Lịch sự kiện cộng đồng SVP quý II/2026</a>
+                            <div class="sv-meta">1.3k lượt xem</div>
+                        </div>
+                        <span class="sv-badge">Mới</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="sv-card mb-3">
+                <div class="sv-card__hd"><i class="fa-solid fa-circle-info me-2 text-primary"></i>Quy Tắc Diễn Đàn</div>
+                <ul class="sv-list">
+                    <li>
+                        <div>
+                            <div class="fw-semibold">Tôn trọng và lịch sự</div>
+                            <div class="sv-meta">Không công kích cá nhân</div>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <div class="fw-semibold">Đăng đúng chuyên mục</div>
+                            <div class="sv-meta">Giúp thành viên dễ tìm nội dung</div>
+                        </div>
+                    </li>
+                    <li>
+                        <div>
+                            <div class="fw-semibold">Ưu tiên thông tin xác thực</div>
+                            <div class="sv-meta">Đính kèm nguồn khi cần thiết</div>
+                        </div>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="sv-card sv-members">
+                <div class="sv-card__hd"><i class="fa-solid fa-user-group me-2 text-primary"></i>Điều Hành Viên Tích Cực</div>
+
+                <div class="member">
+                    <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=300&auto=format&fit=crop');"></div>
+                    <div>
+                        <div class="name">Minh Anh</div>
+                        <div class="role">Quản trị học bổng</div>
+                    </div>
+                </div>
+                <div class="member">
+                    <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=300&auto=format&fit=crop');"></div>
+                    <div>
+                        <div class="name">Quang Huy</div>
+                        <div class="role">Việc làm và thực tập</div>
+                    </div>
+                </div>
+                <div class="member">
+                    <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1544005316-6e8b9f502d04?q=80&w=300&auto=format&fit=crop');"></div>
+                    <div>
+                        <div class="name">Thuy Duong</div>
+                        <div class="role">Đời sống tại Pháp</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="container py-4">
+    <div class="row">
+        <div class="col-md">
+            <div class="sv-brand d-flex align-items-center mb-2">
+                <div class="sv-brand__logo" style="width:36px; height:36px; font-size:14px;">SVP</div>
+                <strong class="ms-2">SVP - Kết Nối • Chia Sẻ • Thành Công</strong>
+            </div>
+            <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
+        </div>
+        <div class="col-md text-md-end mt-2 mt-md-0">
+            <a class="me-3" href="/terms.html">Điều khoản</a>
+            <a class="me-3" href="/security.html">Bảo mật</a>
+            <a href="/contact.html">Liên hệ</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    (function () {
+        const threads = [
+            {
+                id: 1,
+                title: "Kinh nghiệm gia hạn titre de sejour tại Paris năm 2026",
+                author: "Ngoc Ha",
+                link: "thread.html?topic=1",
+                category: "study",
+                avatar: "https://images.unsplash.com/photo-1487412720507-e7ab37603c6f?q=80&w=220&auto=format&fit=crop",
+                replies: 38,
+                views: 1200,
+                updatedMinutes: 20,
+                updatedLabel: "20 phút trước",
+                tags: ["Thủ tục", "Nóng"]
+            },
+            {
+                id: 2,
+                title: "Làm sao cân bằng học Master và việc part-time 20h/tuần?",
+                author: "Hoang Nam",
+                link: "thread.html?topic=2",
+                category: "study",
+                avatar: "https://images.unsplash.com/photo-1500648767791-00dcc994a43e?q=80&w=220&auto=format&fit=crop",
+                replies: 24,
+                views: 830,
+                updatedMinutes: 48,
+                updatedLabel: "48 phút trước",
+                tags: ["Học tập"]
+            },
+            {
+                id: 3,
+                title: "Review khu vực nhà ở phù hợp cho sinh viên mới tại Lyon",
+                author: "Thuy Duong",
+                link: "thread.html?topic=1",
+                category: "house",
+                avatar: "https://images.unsplash.com/photo-1494790108377-be9c29b29330?q=80&w=220&auto=format&fit=crop",
+                replies: 19,
+                views: 674,
+                updatedMinutes: 120,
+                updatedLabel: "2 giờ trước",
+                tags: ["Đời sống", "Lyon"]
+            },
+            {
+                id: 4,
+                title: "Danh sách học bổng chính phủ Pháp mở đơn trong tháng 3",
+                author: "Linh Chi",
+                link: "thread.html?topic=2",
+                category: "study",
+                avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=220&auto=format&fit=crop",
+                replies: 41,
+                views: 1900,
+                updatedMinutes: 60,
+                updatedLabel: "1 giờ trước",
+                tags: ["Học bổng", "Cập nhật mới"]
+            },
+            {
+                id: 5,
+                title: "Kinh nghiệm tìm thực tập data analyst tại Toulouse",
+                author: "Bao Tran",
+                link: "thread.html?topic=2",
+                category: "job",
+                avatar: "https://images.unsplash.com/photo-1521572267360-ee0c2909d518?q=80&w=220&auto=format&fit=crop",
+                replies: 27,
+                views: 940,
+                updatedMinutes: 95,
+                updatedLabel: "1 giờ 35 phút trước",
+                tags: ["Thực tập", "Data"]
+            },
+            {
+                id: 6,
+                title: "Checklist hồ sơ CAF cho tân du học sinh",
+                author: "Minh Duc",
+                link: "thread.html?topic=1",
+                category: "house",
+                avatar: "https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=220&auto=format&fit=crop",
+                replies: 33,
+                views: 1520,
+                updatedMinutes: 180,
+                updatedLabel: "3 giờ trước",
+                tags: ["CAF", "Hướng dẫn"]
+            },
+            {
+                id: 7,
+                title: "Nên chọn M1 hay PGE nếu muốn làm tài chính tại Pháp?",
+                author: "Ha Linh",
+                link: "thread.html?topic=2",
+                category: "invest",
+                avatar: "https://images.unsplash.com/photo-1544005316-6e8b9f502d04?q=80&w=220&auto=format&fit=crop",
+                replies: 16,
+                views: 705,
+                updatedMinutes: 255,
+                updatedLabel: "4 giờ 15 phút trước",
+                tags: ["Định hướng", "Tài chính"]
+            },
+            {
+                id: 8,
+                title: "Kết nối cộng đồng SVP tại Marseille cuối tuần này",
+                author: "Quang Huy",
+                link: "thread.html?topic=1",
+                category: "event",
+                avatar: "https://images.unsplash.com/photo-1524504388940-b1c1722653e1?q=80&w=220&auto=format&fit=crop",
+                replies: 11,
+                views: 560,
+                updatedMinutes: 300,
+                updatedLabel: "5 giờ trước",
+                tags: ["Sự kiện", "Marseille"]
+            },
+            {
+                id: 9,
+                title: "CV tiếng Pháp: các lỗi khiến hồ sơ bị loại sớm",
+                author: "Viet Hoang",
+                link: "thread.html?topic=2",
+                category: "job",
+                avatar: "https://images.unsplash.com/photo-1542206395-9feb3edaa68d?q=80&w=220&auto=format&fit=crop",
+                replies: 29,
+                views: 1110,
+                updatedMinutes: 360,
+                updatedLabel: "6 giờ trước",
+                tags: ["CV", "Kinh nghiệm"]
+            },
+            {
+                id: 10,
+                title: "Chia sẻ lộ trình học tiếng Pháp từ A2 lên B2 trong 8 tháng",
+                author: "Lan Anh",
+                link: "thread.html?topic=2",
+                category: "study",
+                avatar: "https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=220&auto=format&fit=crop",
+                replies: 45,
+                views: 2400,
+                updatedMinutes: 540,
+                updatedLabel: "9 giờ trước",
+                tags: ["Ngôn ngữ", "DELF"]
+            }
+        ];
+
+        const pageSize = 4;
+        const allowedFilters = new Set(["all", "study", "job", "invest", "event", "house"]);
+        const allowedSorts = new Set(["newest", "hot", "replies", "views"]);
+
+        const params = new URLSearchParams(window.location.search);
+        let selectedFilter = allowedFilters.has(params.get("filter")) ? params.get("filter") : "all";
+        let selectedSort = allowedSorts.has(params.get("sort")) ? params.get("sort") : "newest";
+        let currentPage = Number(params.get("page")) || 1;
+        let query = params.get("q") || "";
+
+        const listEl = document.getElementById("forum-thread-list");
+        const paginationEl = document.getElementById("forum-pagination");
+        const countEl = document.getElementById("forum-count");
+        const filterButtons = Array.from(document.querySelectorAll(".sv-filter-btn"));
+        const sortEl = document.getElementById("forum-sort");
+        const searchEl = document.getElementById("forum-search-input");
+        
+        const syncUrlState = () => {
+            const nextParams = new URLSearchParams();
+            if (selectedFilter !== "all") nextParams.set("filter", selectedFilter);
+            if (selectedSort !== "newest") nextParams.set("sort", selectedSort);
+            if (query.trim()) nextParams.set("q", query.trim());
+            if (currentPage > 1) nextParams.set("page", String(currentPage));
+
+            const queryString = nextParams.toString();
+            const nextUrl = queryString ? `${window.location.pathname}?${queryString}` : window.location.pathname;
+            window.history.replaceState({}, "", nextUrl);
+        };
+
+        const syncUiState = () => {
+            filterButtons.forEach((button) => {
+                const isActive = (button.dataset.filter || "all") === selectedFilter;
+                button.classList.toggle("active", isActive);
+            });
+            sortEl.value = selectedSort;
+            searchEl.value = query;
+        };
+
+        const getHotScore = (item) => item.replies * 3 + item.views / 60 - item.updatedMinutes / 30;
+
+        const formatViews = (value) => {
+            if (value >= 1000) {
+                return `${(value / 1000).toFixed(1)}k`;
+            }
+            return `${value}`;
+        };
+
+        const escapeHtml = (value) => value
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+
+        const applyFilters = () => {
+            const normalizedQuery = query.trim().toLowerCase();
+            return threads.filter((item) => {
+                const passCategory = selectedFilter === "all" || item.category === selectedFilter;
+                if (!passCategory) return false;
+
+                if (!normalizedQuery) return true;
+                const haystack = `${item.title} ${item.author} ${item.tags.join(" ")}`.toLowerCase();
+                return haystack.includes(normalizedQuery);
+            });
+        };
+
+        const applySort = (items) => {
+            const sorted = [...items];
+            switch (selectedSort) {
+                case "hot":
+                    sorted.sort((a, b) => getHotScore(b) - getHotScore(a));
+                    break;
+                case "replies":
+                    sorted.sort((a, b) => b.replies - a.replies);
+                    break;
+                case "views":
+                    sorted.sort((a, b) => b.views - a.views);
+                    break;
+                case "newest":
+                default:
+                    sorted.sort((a, b) => a.updatedMinutes - b.updatedMinutes);
+                    break;
+            }
+            return sorted;
+        };
+
+        const renderThreads = (items) => {
+            if (items.length === 0) {
+                listEl.innerHTML = '<div class="sv-empty">Không tìm thấy thảo luận phù hợp. Hãy thử bộ lọc hoặc từ khóa khác.</div>';
+                return;
+            }
+
+            listEl.innerHTML = items.map((item) => {
+                const tagsHtml = item.tags.map((tag) => `<span class="sv-tag">${escapeHtml(tag)}</span>`).join("");
+                return `
+                    <div class="sv-thread">
+                        <div class="sv-thread__main">
+                            <div class="sv-thread__avatar" style="background-image:url('${escapeHtml(item.avatar)}');"></div>
+                            <div>
+                                <a class="sv-thread__title" href="${escapeHtml(item.link)}">${escapeHtml(item.title)}</a>
+                                <div class="sv-thread__meta">Khởi tạo bởi <strong>${escapeHtml(item.author)}</strong> • ${escapeHtml(item.updatedLabel)}</div>
+                                <div class="mt-2 d-flex gap-2 flex-wrap">${tagsHtml}</div>
+                            </div>
+                        </div>
+                        <div class="sv-thread__stats">
+                            <div><strong>${item.replies}</strong> phản hồi</div>
+                            <div><strong>${formatViews(item.views)}</strong> lượt xem</div>
+                            <div>Cập nhật ${escapeHtml(item.updatedLabel)}</div>
+                        </div>
+                    </div>
+                `;
+            }).join("");
+        };
+
+        const renderPagination = (totalPages) => {
+            if (totalPages <= 1) {
+                paginationEl.innerHTML = "";
+                return;
+            }
+
+            const pageButtons = [];
+            for (let i = 1; i <= totalPages; i += 1) {
+                const activeClass = i === currentPage ? "btn-primary" : "btn-outline-secondary";
+                pageButtons.push(`<button class="btn btn-sm ${activeClass}" data-page="${i}">${i}</button>`);
+            }
+
+            paginationEl.innerHTML = `
+                <button class="btn btn-sm btn-outline-secondary" data-page="prev" ${currentPage === 1 ? "disabled" : ""}>Truoc</button>
+                ${pageButtons.join("")}
+                <button class="btn btn-sm btn-outline-secondary" data-page="next" ${currentPage === totalPages ? "disabled" : ""}>Sau</button>
+            `;
+        };
+
+        const render = () => {
+            const filtered = applySort(applyFilters());
+            const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
+            if (currentPage > totalPages) currentPage = totalPages;
+            if (currentPage < 1 || Number.isNaN(currentPage)) currentPage = 1;
+            if (countEl) {
+                countEl.textContent = `${filtered.length} chủ đề`;
+            }
+
+            const start = (currentPage - 1) * pageSize;
+            const paginated = filtered.slice(start, start + pageSize);
+
+            renderThreads(paginated);
+            renderPagination(totalPages);
+            syncUrlState();
+        };
+
+        filterButtons.forEach((button) => {
+            button.addEventListener("click", () => {
+                selectedFilter = button.dataset.filter || "all";
+                currentPage = 1;
+                syncUiState();
+                render();
+            });
+        });
+
+        sortEl.addEventListener("change", (event) => {
+            selectedSort = event.target.value;
+            currentPage = 1;
+            render();
+        });
+
+        searchEl.addEventListener("input", (event) => {
+            query = event.target.value || "";
+            currentPage = 1;
+            render();
+        });
+
+        paginationEl.addEventListener("click", (event) => {
+            const target = event.target;
+            if (!(target instanceof HTMLButtonElement)) return;
+
+            const page = target.dataset.page;
+            if (!page) return;
+
+            const filteredCount = applyFilters().length;
+            const totalPages = Math.max(1, Math.ceil(filteredCount / pageSize));
+
+            if (page === "prev") {
+                currentPage = Math.max(1, currentPage - 1);
+            } else if (page === "next") {
+                currentPage = Math.min(totalPages, currentPage + 1);
+            } else {
+                currentPage = Number(page);
+            }
+
+            render();
+        });
+
+        syncUiState();
+        render();
+    })();
+</script>
+</body>
+</html>
+
+
+

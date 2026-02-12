@@ -1,0 +1,416 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP)</title>
+
+    <link
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css"
+      rel="stylesheet"
+    />
+    <link
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"
+      rel="stylesheet"
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="svp.css" />
+    <style>
+      .sv-topic-block {
+        background: #fff;
+        border: 1px solid var(--sv-border);
+        border-radius: 12px;
+        padding: 1rem 1.1rem;
+        height: 100%;
+      }
+      .sv-topic-title {
+        color: #1e3a8a;
+        font-weight: 800;
+        margin-bottom: 0.45rem;
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+      }
+      .sv-topic-body {
+        color: #334155;
+        margin: 0;
+      }
+      .sv-topic-body ul {
+        margin-bottom: 0;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- Top brand + auth -->
+    <div class="sv-topbar pt-2 pb-1">
+      <div class="container d-flex align-items-center justify-content-between">
+        <div class="sv-brand">
+          <img
+            class="sv-brand__logo-img"
+            src="assets/icons/logo_svp.png"
+            alt="SVP"
+            width="102"
+            height="112"
+          />
+          <div class="sv-brand__title">
+            <h1>
+              DIỄN ĐÀN SINH VIÊN & TRI THỨC VIỆT TẠI PHÁP
+              <span class="sv-brand__accent">(SVP)</span>
+            </h1>
+            <div class="sv-brand__divider"></div>
+            <small class="sv-brand__tagline"
+              >Kết Nối – Chia Sẻ – Thành Công</small
+            >
+          </div>
+        </div>
+
+        <div class="sv-auth d-none d-md-flex align-items-center gap-2">
+          <button class="btn btn-outline-secondary">Đăng Ký</button>
+          <button class="btn btn-primary">Đăng Nhập</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main nav -->
+    <div class="sv-nav">
+      <div class="container d-flex align-items-center justify-content-between">
+        <ul class="nav">
+          <li class="nav-item">
+            <a class="nav-link" href="index.html">Trang Chủ</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="forum.html">Diễn Đàn</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link active" href="categories.html"
+              >Khám Phá Chủ Đề</a
+            >
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="events.html">Sự Kiện & Lễ Hội</a>
+          </li>
+          <li class="nav-item">
+            <a class="nav-link" href="about.html">Giới Thiệu</a>
+          </li>
+        </ul>
+
+        <div
+          class="sv-search position-relative my-2 my-md-0"
+          style="width: min(320px, 60vw)"
+        >
+          <i class="fa fa-magnifying-glass"></i>
+          <input class="form-control" type="search" placeholder="Tìm kiếm..." />
+        </div>
+      </div>
+    </div>
+    <main class="container my-3 my-md-4">
+      <div class="sv-breadcrumb">
+        <a href="index.html">Trang chủ</a> / <span>Khám phá chủ đề</span>
+      </div>
+
+      <section class="sv-page-hero mb-3">
+        <div class="sv-page-hero__eyebrow">Toàn bộ chuyên mục</div>
+        <h2 class="sv-page-hero__title">Khám Phá Chủ Đề SVP</h2>
+        <p class="sv-page-hero__subtitle">
+          Nội dung tổng hợp từ README.md để bạn định hướng thảo luận nhanh theo
+          các mảng học tập, công việc, đời sống, kỹ năng và cộng đồng tại Pháp.
+        </p>
+      </section>
+
+      <section class="mb-3">
+        <h3 class="sv-section-title">
+          <i class="fa-solid fa-layer-group text-primary"></i>Các chủ đề chính
+        </h3>
+        <div class="row g-3">
+          <div class="col-md-6">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">🎓 Học tập và nghiên cứu tại Pháp</h4>
+              <p class="sv-topic-body">
+                Chia sẻ về chương trình đào tạo, kinh nghiệm theo học đại học,
+                master, tiến sĩ, phương pháp học tập, nghiên cứu khoa học và
+                trao đổi học thuật.
+              </p>
+            </article>
+          </div>
+          <div class="col-md-6">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">
+                🎓 Kinh nghiệm xin học bổng và du học
+              </h4>
+              <p class="sv-topic-body">
+                Hồ sơ du học, phỏng vấn, các loại học bổng tại Pháp và quốc tế,
+                Campus France, CVEC, CROUS và kinh nghiệm chuẩn bị trước khi
+                sang Pháp.
+              </p>
+            </article>
+          </div>
+          <div class="col-md-6">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">🇫🇷 Cuộc sống tại Pháp</h4>
+              <p class="sv-topic-body">
+                Sinh hoạt hàng ngày, y tế, bảo hiểm, CAF, ngân hàng, giao thông,
+                cùng những khác biệt văn hóa và tình huống thực tế người Việt
+                thường gặp.
+              </p>
+            </article>
+          </div>
+          <div class="col-md-6">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">💼 Cơ hội việc làm và thực tập</h4>
+              <p class="sv-topic-body">
+                Thực tập, CDD, CDI, freelance, tìm việc sau tốt nghiệp, luật lao
+                động, chia sẻ kinh nghiệm phỏng vấn và hòa nhập môi trường làm
+                việc tại Pháp.
+              </p>
+            </article>
+          </div>
+          <div class="col-md-6">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">
+                ⚖️ Các vấn đề pháp lý, quốc tịch và thuế khóa
+              </h4>
+              <p class="sv-topic-body">
+                Visa, titre de séjour, thay đổi tình trạng cư trú, quốc tịch
+                Pháp, quyền và nghĩa vụ pháp lý của sinh viên và người lao động.
+              </p>
+            </article>
+          </div>
+          <div class="col-md-6">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">🗣️ Văn hóa và ngôn ngữ Pháp</h4>
+              <p class="sv-topic-body">
+                Tiếng Pháp trong học tập và công việc, giao tiếp hàng ngày, văn
+                hóa Pháp trong đời sống, hành chính và môi trường chuyên nghiệp.
+              </p>
+            </article>
+          </div>
+          <div class="col-md-6">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">🤝 Sự kiện và giao lưu</h4>
+              <p class="sv-topic-body">
+                Thông tin về hội thảo, gặp gỡ sinh viên, cựu sinh viên đã thành
+                công, hoạt động học thuật, văn hóa và kết nối cộng đồng người
+                Việt tại Pháp.
+              </p>
+            </article>
+          </div>
+          <div class="col-md-6">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">🏠 Nhà cửa</h4>
+              <p class="sv-topic-body">
+                Kinh nghiệm thuê nhà, ký túc xá, hợp đồng thuê, chia sẻ thông
+                tin chỗ ở và cách tránh rủi ro.
+              </p>
+            </article>
+          </div>
+          <div class="col-md-6">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">🛒 Mua bán, rao vặt</h4>
+              <p class="sv-topic-body">
+                Mua bán đồ dùng học tập và sinh hoạt, trao đổi dịch vụ, hỗ trợ
+                lẫn nhau trong cộng đồng.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section>
+        <h3 class="sv-section-title">
+          <i class="fa-solid fa-compass-drafting text-primary"></i>Các chủ đề mở
+          rộng
+        </h3>
+        <div class="row g-3">
+          <div class="col-12">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">💰 Đầu tư tại Pháp</h4>
+              <div class="sv-topic-body">
+                <p>
+                  Không chỉ là nơi chia sẻ kiến thức học tập và cuộc sống, SVP
+                  còn dành một không gian để trao đổi về tài chính cá nhân và
+                  đầu tư tại Pháp, ở mức độ phù hợp, thận trọng và có trách
+                  nhiệm.
+                </p>
+                <ul>
+                  <li>
+                    Lương bao nhiêu là “sống ổn” tại Pháp, tùy theo khu vực và
+                    hoàn cảnh cá nhân.
+                  </li>
+                  <li>
+                    Cách hiểu và so sánh lương brut / net, TJM, các khoản khấu
+                    trừ và quyền lợi đi kèm.
+                  </li>
+                  <li>
+                    So sánh chi phí sinh hoạt giữa Paris và các vùng khác, từ
+                    tiền nhà, giao thông đến sinh hoạt hàng ngày.
+                  </li>
+                  <li>
+                    Kinh nghiệm quản lý chi tiêu và tiết kiệm tiền khi còn là
+                    sinh viên hoặc người mới đi làm.
+                  </li>
+                </ul>
+                <p class="mt-2 mb-0">
+                  SVP không thay thế tư vấn tài chính chuyên nghiệp. Mọi thông
+                  tin được chia sẻ nhằm mục đích tham khảo, học hỏi lẫn nhau và
+                  nâng cao hiểu biết.
+                </p>
+              </div>
+            </article>
+          </div>
+          <div class="col-12">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">
+                ✍️ Chia sẻ trải nghiệm, câu chuyện cá nhân
+              </h4>
+              <div class="sv-topic-body">
+                <p>
+                  SVP là nơi lưu giữ những trải nghiệm thật của người Việt khi
+                  học tập, làm việc và sinh sống tại Pháp.
+                </p>
+                <ul>
+                  <li>
+                    Sốc văn hóa và khủng hoảng tinh thần khi thích nghi với môi
+                    trường mới.
+                  </li>
+                  <li>
+                    Cảm giác cô đơn, trầm cảm khi sống xa gia đình và mạng lưới
+                    hỗ trợ quen thuộc.
+                  </li>
+                  <li>
+                    Áp lực học tập, nghiên cứu và mất phương hướng sau tốt
+                    nghiệp.
+                  </li>
+                  <li>Cảm giác tự ti, khó hòa nhập vì rào cản ngôn ngữ.</li>
+                </ul>
+              </div>
+            </article>
+          </div>
+          <div class="col-md-6">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">
+                💡 Công nghệ, kỹ năng và tri thức mở
+              </h4>
+              <p class="sv-topic-body">
+                Chia sẻ về công nghệ, kỹ năng số, AI, dữ liệu, kỹ năng mềm như
+                viết CV, thuyết trình, làm việc nhóm và học tập suốt đời.
+              </p>
+            </article>
+          </div>
+          <div class="col-md-6">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">🎮 Giải trí, du lịch</h4>
+              <div class="sv-topic-body">
+                <ul>
+                  <li>
+                    Phim Pháp hay nên xem và sách Pháp dễ đọc cho người học
+                    tiếng.
+                  </li>
+                  <li>
+                    Triển lãm, bảo tàng, địa điểm văn hóa đáng đi ở Paris và các
+                    thành phố khác.
+                  </li>
+                  <li>
+                    Điểm du lịch cuối tuần, kinh nghiệm khám phá Pháp gần gũi và
+                    tiết kiệm.
+                  </li>
+                  <li>So sánh văn hóa Pháp - Việt qua trải nghiệm thực tế.</li>
+                </ul>
+              </div>
+            </article>
+          </div>
+          <div class="col-md-6">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">🎨 Góc văn học và nghệ thuật</h4>
+              <p class="sv-topic-body">
+                Không gian dành cho viết lách, thơ, tản văn, nhiếp ảnh, hội họa
+                và cảm nhận về sách, phim, triển lãm.
+              </p>
+            </article>
+          </div>
+          <div class="col-md-6">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">❤️ Nơi gặp gỡ, hẹn hò nghiêm túc</h4>
+              <div class="sv-topic-body">
+                <ul>
+                  <li>
+                    Yêu xa và cách duy trì mối quan hệ khi khoảng cách địa lý là
+                    thử thách.
+                  </li>
+                  <li>
+                    Khác biệt văn hóa trong tình yêu, hôn nhân và xây dựng gia
+                    đình hai quốc tịch.
+                  </li>
+                  <li>
+                    Trao đổi nghiêm túc, tôn trọng và minh bạch về các mối quan
+                    hệ lâu dài.
+                  </li>
+                </ul>
+              </div>
+            </article>
+          </div>
+          <div class="col-md-6">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">💬 Chém gió, tán gẫu</h4>
+              <div class="sv-topic-body">
+                <ul>
+                  <li>
+                    Trò chuyện về đời sống, góc nhìn cá nhân và các xu hướng xã
+                    hội.
+                  </li>
+                  <li>
+                    Chia sẻ câu chuyện vui, giảm căng thẳng sau học tập và làm
+                    việc.
+                  </li>
+                  <li>
+                    Khuyến khích trao đổi xây dựng, tôn trọng khác biệt và tránh
+                    công kích.
+                  </li>
+                </ul>
+              </div>
+            </article>
+          </div>
+          <div class="col-md-6">
+            <article class="sv-topic-block">
+              <h4 class="sv-topic-title">🛠️ Góp ý xây dựng SVP</h4>
+              <p class="sv-topic-body">
+                Không gian để thành viên đóng góp ý kiến, đề xuất cải tiến và
+                phản hồi về nội dung, cách vận hành diễn đàn.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="container py-4">
+      <div class="row">
+        <div class="col-md">
+          <div class="sv-brand d-flex align-items-center mb-2">
+            <div
+              class="sv-brand__logo"
+              style="width: 36px; height: 36px; font-size: 14px"
+            >
+              SVP
+            </div>
+            <strong class="ms-2">SVP - Kết Nối • Chia Sẻ • Thành Công</strong>
+          </div>
+          <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
+        </div>
+        <div class="col-md text-md-end mt-2 mt-md-0">
+          <a class="me-3" href="/terms.html">Điều khoản</a>
+          <a class="me-3" href="/security.html">Bảo mật</a>
+          <a href="/contact.html">Liên hệ</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+  </body>
+</html>
+
+

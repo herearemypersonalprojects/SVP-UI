@@ -1,0 +1,324 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP)</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="svp.css">
+    <link rel="stylesheet" href="dropdown-hover.css">
+    <style>
+        .sv-event-helper {
+            border: 1px solid #bfdbfe;
+            background: #eff6ff;
+            border-radius: 10px;
+            padding: .75rem .85rem;
+            color: #1e3a8a;
+            font-size: .9rem;
+        }
+        .sv-event-preview {
+            border: 1px dashed #cbd5e1;
+            border-radius: 10px;
+            padding: .9rem;
+            background: #f8fafc;
+        }
+        .sv-event-cover {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border-radius: 10px;
+            margin-bottom: .7rem;
+            border: 1px solid #dbe7ff;
+            background: linear-gradient(120deg, #dbeafe, #bfdbfe);
+            background-size: cover;
+            background-position: center;
+        }
+        .sv-upload-note {
+            margin-top: .5rem;
+            font-size: .88rem;
+            color: #475569;
+        }
+        .sv-event-meta {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .65rem;
+        }
+        @media (max-width: 575px) {
+            .sv-event-meta {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Top brand + auth -->
+<div class="sv-topbar pt-2 pb-1">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="sv-brand">
+            <img class="sv-brand__logo-img" src="assets/icons/logo_svp.png" alt="SVP" width="102" height="112" />
+            <div class="sv-brand__title">
+                <h1>DIỄN ĐÀN SINH VIÊN & TRI THỨC VIỆT TẠI PHÁP <span class="sv-brand__accent">(SVP)</span></h1>
+                <div class="sv-brand__divider"></div>
+                <small class="sv-brand__tagline">Kết Nối – Chia Sẻ – Thành Công</small>
+            </div>
+        </div>
+
+        <div class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary">Đăng Ký</button>
+            <button class="btn btn-primary">Đăng Nhập</button>
+        </div>
+    </div>
+</div>
+
+<!-- Main nav -->
+<div class="sv-nav">
+    <div class="container d-flex align-items-center justify-content-between">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link" href="index.html">Trang Chủ</a></li>
+            <li class="nav-item"><a class="nav-link" href="forum.html">Diễn Đàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="categories.html">Khám Phá Chủ Đề</a></li>
+            <li class="nav-item"><a class="nav-link active" href="events.html">Sự Kiện & Lễ Hội</a></li>
+            <li class="nav-item"><a class="nav-link" href="about.html">Giới Thiệu</a></li>
+        </ul>
+
+        <div class="sv-search position-relative my-2 my-md-0" style="width:min(320px, 60vw);">
+            <i class="fa fa-magnifying-glass"></i>
+            <input class="form-control" type="search" placeholder="Tìm kiếm..." />
+        </div>
+    </div>
+</div>
+<main class="container my-3 my-md-4">
+    <div class="sv-breadcrumb">
+        <a href="index.html">Trang chủ</a> / <a href="events.html">Sự kiện</a> / <span>Tạo sự kiện mới</span>
+    </div>
+
+    <section class="sv-page-hero mb-3">
+        <div class="sv-page-hero__eyebrow">Trình tạo sự kiện</div>
+        <h2 class="sv-page-hero__title">Tạo Sự Kiện Mới</h2>
+        <p class="sv-page-hero__subtitle">Điền thông tin sự kiện để hiển thị trên trang danh sách sự kiện. Mẫu này là bản demo giao diện trước khi nối API.</p>
+    </section>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <section class="sv-card">
+                <div class="sv-card__hd"><i class="fa-solid fa-calendar-plus me-2 text-primary"></i>Thông Tin Sự Kiện</div>
+                <form id="event-form" class="sv-form p-3">
+                    <div class="mb-3">
+                        <label for="event-title" class="form-label">Tên sự kiện</label>
+                        <input id="event-title" class="form-control" type="text" placeholder="Ví dụ: Talkshow định hướng nghề nghiệp IT tại Pháp" required>
+                    </div>
+
+                    <div class="sv-event-meta mb-3">
+                        <div>
+                            <label for="event-date" class="form-label">Ngày diễn ra</label>
+                            <input id="event-date" class="form-control" type="date" required>
+                        </div>
+                        <div>
+                            <label for="event-time" class="form-label">Giờ bắt đầu</label>
+                            <input id="event-time" class="form-control" type="time" required>
+                        </div>
+                    </div>
+
+                    <div class="sv-event-meta mb-3">
+                        <div>
+                            <label for="event-location" class="form-label">Địa điểm</label>
+                            <input id="event-location" class="form-control" type="text" placeholder="Paris / Online / Lyon..." required>
+                        </div>
+                        <div>
+                            <label for="event-capacity" class="form-label">Số lượng chỗ</label>
+                            <input id="event-capacity" class="form-control" type="number" min="1" value="60">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="event-type" class="form-label">Loại sự kiện</label>
+                        <select id="event-type" class="form-select">
+                            <option>Hội thảo</option>
+                            <option>Giao lưu cộng đồng</option>
+                            <option>Workshop</option>
+                            <option>Networking</option>
+                            <option>Khác</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="event-image-url" class="form-label">Link ảnh sự kiện (tùy chọn)</label>
+                        <input id="event-image-url" class="form-control" type="url" placeholder="https://...">
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="event-image-file" class="form-label">Hoặc upload ảnh sự kiện</label>
+                        <input id="event-image-file" class="form-control" type="file" accept="image/*">
+                        <div class="sv-upload-note">Ưu tiên ảnh ngang tỉ lệ 16:9 để hiển thị đẹp trong ô xem trước.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="event-description" class="form-label">Mô tả sự kiện</label>
+                        <textarea id="event-description" class="form-control" rows="6" placeholder="Nội dung chính, đối tượng tham gia, quyền lợi người tham dự..."></textarea>
+                        <div class="sv-event-helper mt-2">
+                            <i class="fa-solid fa-circle-info me-1"></i>
+                            Mẹo: mô tả rõ agenda và đối tượng tham gia để tăng tỷ lệ đăng ký.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="event-tags" class="form-label">Tags</label>
+                        <input id="event-tags" class="form-control" type="text" placeholder="Ví dụ: du-hoc, workshop, networking">
+                    </div>
+
+                    <div class="d-flex flex-wrap justify-content-between gap-2">
+                        <button type="button" class="btn btn-outline-secondary"><i class="fa-regular fa-floppy-disk me-2"></i>Lưu nháp</button>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-2"></i>Tạo sự kiện</button>
+                    </div>
+                    <div id="event-submit-feedback" class="sv-meta mt-3" aria-live="polite"></div>
+                </form>
+            </section>
+        </div>
+
+        <div class="col-lg-4">
+            <section class="sv-card mb-3">
+                <div class="sv-card__hd"><i class="fa-regular fa-eye me-2 text-primary"></i>Xem Trước Sự Kiện</div>
+                <div class="p-3">
+                    <div id="event-preview-cover" class="sv-event-cover"></div>
+                    <div id="event-preview-title" class="fw-bold mb-2">Tên sự kiện sẽ hiển thị tại đây</div>
+                    <div class="sv-meta mb-2" id="event-preview-datetime">Ngày giờ: Chưa cập nhật</div>
+                    <div class="sv-meta mb-2" id="event-preview-location">Địa điểm: Chưa cập nhật</div>
+                    <div class="sv-event-preview" id="event-preview-description">Mô tả sự kiện sẽ xuất hiện ở đây sau khi bạn nhập.</div>
+                </div>
+            </section>
+
+            <section class="sv-card">
+                <div class="sv-card__hd"><i class="fa-solid fa-list-check me-2 text-primary"></i>Checklist Nhanh</div>
+                <div class="p-3">
+                    <ul class="sv-list mb-0">
+                        <li><span>Tiêu đề rõ mục tiêu sự kiện</span></li>
+                        <li><span>Ngày giờ và địa điểm chính xác</span></li>
+                        <li><span>Mô tả ngắn gọn, dễ đăng ký</span></li>
+                    </ul>
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+
+<footer class="container py-4">
+    <div class="row">
+        <div class="col-md">
+            <div class="sv-brand d-flex align-items-center mb-2">
+                <div class="sv-brand__logo" style="width:36px; height:36px; font-size:14px;">SVP</div>
+                <strong class="ms-2">SVP - Kết Nối • Chia Sẻ • Thành Công</strong>
+            </div>
+            <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
+        </div>
+        <div class="col-md text-md-end mt-2 mt-md-0">
+            <a class="me-3" href="/terms.html">Điều khoản</a>
+            <a class="me-3" href="/security.html">Bảo mật</a>
+            <a href="/contact.html">Liên hệ</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    (function () {
+        const form = document.getElementById('event-form');
+        const titleInput = document.getElementById('event-title');
+        const dateInput = document.getElementById('event-date');
+        const timeInput = document.getElementById('event-time');
+        const locationInput = document.getElementById('event-location');
+        const imageUrlInput = document.getElementById('event-image-url');
+        const imageFileInput = document.getElementById('event-image-file');
+        const descriptionInput = document.getElementById('event-description');
+
+        const previewCover = document.getElementById('event-preview-cover');
+        const previewTitle = document.getElementById('event-preview-title');
+        const previewDatetime = document.getElementById('event-preview-datetime');
+        const previewLocation = document.getElementById('event-preview-location');
+        const previewDescription = document.getElementById('event-preview-description');
+        const feedback = document.getElementById('event-submit-feedback');
+
+        if (!form || !titleInput || !dateInput || !timeInput || !locationInput || !imageUrlInput || !imageFileInput || !descriptionInput || !previewCover || !previewTitle || !previewDatetime || !previewLocation || !previewDescription || !feedback) {
+            return;
+        }
+
+        const defaultCover = 'linear-gradient(120deg, #dbeafe, #bfdbfe)';
+        let fileObjectUrl = '';
+
+        const toVnDate = (value) => {
+            if (!value) return 'Chưa cập nhật';
+            const [year, month, day] = value.split('-');
+            if (!year || !month || !day) return 'Chưa cập nhật';
+            return `${day}/${month}/${year}`;
+        };
+
+        const setCover = (url) => {
+            if (url) {
+                previewCover.style.backgroundImage = `url('${url}')`;
+            } else {
+                previewCover.style.backgroundImage = defaultCover;
+            }
+        };
+
+        const updatePreview = () => {
+            const title = titleInput.value.trim();
+            const date = toVnDate(dateInput.value);
+            const time = timeInput.value || 'Chưa cập nhật';
+            const location = locationInput.value.trim();
+            const description = descriptionInput.value.trim();
+            const imageUrl = imageUrlInput.value.trim();
+
+            previewTitle.textContent = title || 'Tên sự kiện sẽ hiển thị tại đây';
+            previewDatetime.textContent = `Ngày giờ: ${date} ${time !== 'Chưa cập nhật' ? `• ${time}` : ''}`.trim();
+            previewLocation.textContent = `Địa điểm: ${location || 'Chưa cập nhật'}`;
+            previewDescription.textContent = description || 'Mô tả sự kiện sẽ xuất hiện ở đây sau khi bạn nhập.';
+
+            if (imageUrl) {
+                setCover(imageUrl);
+                return;
+            }
+
+            if (fileObjectUrl) {
+                setCover(fileObjectUrl);
+                return;
+            }
+
+            setCover('');
+        };
+
+        imageFileInput.addEventListener('change', () => {
+            const [file] = imageFileInput.files || [];
+            if (fileObjectUrl) {
+                URL.revokeObjectURL(fileObjectUrl);
+                fileObjectUrl = '';
+            }
+            if (!file) {
+                updatePreview();
+                return;
+            }
+            fileObjectUrl = URL.createObjectURL(file);
+            updatePreview();
+        });
+
+        [titleInput, dateInput, timeInput, locationInput, imageUrlInput, descriptionInput].forEach((element) => {
+            element.addEventListener('input', updatePreview);
+            element.addEventListener('change', updatePreview);
+        });
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            feedback.textContent = 'Bản demo giao diện: sự kiện đã sẵn sàng để gửi lên hệ thống.';
+        });
+
+        updatePreview();
+    })();
+</script>
+</body>
+</html>
+
+
+

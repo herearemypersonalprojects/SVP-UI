@@ -1,0 +1,495 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP)</title>
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
+
+    <link rel="stylesheet" href="svp.css">
+    <link rel="stylesheet" href="dropdown-hover.css">
+    <style>
+        .sv-grid-articles .title a.is-active {
+            color: var(--sv-primary);
+            text-decoration: underline;
+        }
+        .sv-article__cover {
+            width: 100%;
+            aspect-ratio: 16 / 7;
+            border-radius: 12px;
+            margin-bottom: 1rem;
+            background: #e2e8f0 center/cover no-repeat;
+            border: 1px solid #e5e7eb;
+        }
+        .sv-article__tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Top brand + auth -->
+<!-- Top brand + auth -->
+<div class="sv-topbar pt-2 pb-1">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="sv-brand">
+            <img class="sv-brand__logo-img" src="assets/icons/logo_svp.png" alt="SVP" width="102" height="112" />
+            <div class="sv-brand__title">
+                <h1>DIỄN ĐÀN SINH VIÊN & TRI THỨC VIỆT TẠI PHÁP <span class="sv-brand__accent">(SVP)</span></h1>
+                <div class="sv-brand__divider"></div>
+                <small class="sv-brand__tagline">Kết Nối – Chia Sẻ – Thành Công</small>
+            </div>
+        </div>
+
+        <div class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary">Đăng Ký</button>
+            <button class="btn btn-primary">Đăng Nhập</button>
+        </div>
+    </div>
+</div>
+
+<!-- Main nav -->
+<div class="sv-nav">
+    <div class="container d-flex align-items-center justify-content-between">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link active" href="index.html">Trang Chủ</a></li>
+            <li class="nav-item"><a class="nav-link" href="forum.html">Diễn Đàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="categories.html">Khám Phá Chủ Đề</a></li>
+            <li class="nav-item"><a class="nav-link" href="events.html">Sự Kiện & Lễ Hội</a></li>
+            <li class="nav-item"><a class="nav-link" href="about.html">Giới Thiệu</a></li>
+        </ul>
+
+        <div class="sv-search position-relative my-2 my-md-0" style="width:min(320px, 60vw);">
+            <i class="fa fa-magnifying-glass"></i>
+            <input class="form-control" type="search" placeholder="Tìm kiếm..." />
+        </div>
+    </div>
+</div>
+<main class="container my-3 my-md-4">
+    <!-- Hero -->
+    <section class="sv-hero">
+        <div class="sv-hero__image"></div>
+        <div class="sv-hero__actions">
+            <a class="sv-hero__btn sv-hero__btn--red" href="forum.html">
+                <span>Tham Gia Thảo Luận</span>
+                <span class="sv-hero__arrow"><i class="fa fa-caret-right"></i></span>
+            </a>
+            <a class="sv-hero__btn sv-hero__btn--blue" href="categories.html">
+                <span>Khám Phá Chủ Đề</span>
+                <span class="sv-hero__arrow"><i class="fa fa-caret-right"></i></span>
+            </a>
+        </div>
+    </section>
+
+    <!-- Category tabs -->
+    <section class="sv-cats mt-3">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link active" href="kinh-nghiem-du-hoc.html"><img class="sv-cat__icon" src="assets/icons/icon_kinh_nghiem_du_hoc.png" alt=""> Học Tập & Nghiên Cứu</a></li>
+            <li class="nav-item"><a class="nav-link sv-cats__primary" href="viec-lam-thuc-tap.html"><img class="sv-cat__icon" src="assets/icons/icon_viec_lam_thuc_tap.png" alt=""> Việc Làm</a></li>
+            <li class="nav-item"><a class="nav-link sv-cats__primary" href="hoc-tap-nghien-cuu.html"><img class="sv-cat__icon" src="assets/icons/icon_hoc_tap_nghien_cuu.png" alt=""> Ngôn Ngữ & Văn Hóa Pháp</a></li>
+
+            <li class="nav-item"><a class="nav-link sv-cats__primary" href="su-kien-giao-luu.html"><img class="sv-cat__icon sv-cat__icon--event" src="assets/icons/icon_su_kien_giao_luu.png" alt=""> Cuộc Sống Tại Pháp</a></li>
+            <li class="nav-item"><a class="nav-link sv-cats__primary" href="nha-cua.html"><img class="sv-cat__icon" src="assets/icons/icon_nha_cu.png" alt=""> Du Lịch, Giải Trí</a></li>
+        </ul>
+    </section>
+
+    <!-- Main grid -->
+    <div class="row g-3 mt-1">
+        <!-- Left col -->
+        <div class="col-lg-8">
+
+            <!-- Chủ đề nổi bật -->
+            <div class="sv-card mb-3">
+                <div class="sv-card__hd"><i class="fa-solid fa-star me-2 text-primary"></i>Chủ Đề Nổi Bật</div>
+                <ul class="sv-list">
+                    <li>
+                        <div class="sv-topic">
+                            <i class="fa fa-id-card sv-topic__icon sv-topic__icon--visa" aria-hidden="true"></i>
+                            <div>
+                                <a href="chu-de-visa-the-tam-tru.html">Hướng Dẫn Xin Visa &amp; Thẻ Tạm Trú</a>
+                                <div class="sv-meta">Cập nhật gần đây • Bởi Admin</div>
+                            </div>
+                        </div>
+                        <span class="sv-badge">230</span>
+                    </li>
+                    <li>
+                        <div class="sv-topic">
+                            <i class="fa fa-trophy sv-topic__icon sv-topic__icon--scholar" aria-hidden="true"></i>
+                            <div>
+                                <a href="chu-de-hoc-bong.html">Chia Sẻ Kinh Nghiệm Học Bổng</a>
+                                <div class="sv-meta">Chủ đề dài • Bởi Minh Anh</div>
+                            </div>
+                        </div>
+                        <span class="sv-badge">185</span>
+                    </li>
+                    <li>
+                        <div class="sv-topic">
+                            <i class="fa fa-users sv-topic__icon sv-topic__icon--community" aria-hidden="true"></i>
+                            <div>
+                                <a href="chu-de-cong-dong-paris.html">Sinh Hoạt Cộng Đồng Tại Paris</a>
+                                <div class="sv-meta">Hỏi đáp • Bởi Quang Huy</div>
+                            </div>
+                        </div>
+                        <span class="sv-badge">142</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Bài viết mới nhất (thumbnail grid) -->
+            <div class="sv-card mb-3">
+                <div class="sv-card__hd d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <span><i class="fa-regular fa-newspaper me-2 text-primary"></i>Bài Viết Mới Nhất</span>
+                    <a class="btn btn-sm btn-primary" href="create_new_article.html">
+                        <i class="fa-solid fa-pen-nib me-1"></i>Đăng bài viết...
+                    </a>
+                </div>
+                <div class="sv-grid-articles">
+                    <div class="item">
+                        <div class="thumb" style="background-image:url('https://images.unsplash.com/photo-1465447142348-e9952c393450?q=80&w=800&auto=format&fit=crop');"></div>
+                        <div>
+                            <div class="title"><a class="sv-article-link" href="#sv-article-detail" data-article-id="delf-b2">Kinh Nghiệm Thi DELF B2</a></div>
+                            <div class="sv-meta">Ngôn ngữ • 12 phút trước</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <div class="thumb" style="background-image:url('https://images.unsplash.com/photo-1529336953121-a0bdc9e2fd19?q=80&w=800&auto=format&fit=crop');"></div>
+                        <div>
+                            <div class="title"><a class="sv-article-link" href="#sv-article-detail" data-article-id="lo-trinh-it">Lộ Trình Lựa Chọn Ngành IT tại Pháp</a></div>
+                            <div class="sv-meta">Hướng nghiệp • 1 giờ trước</div>
+                        </div>
+                    </div>
+                    <div class="item">
+                        <div class="thumb" style="background-image:url('https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=800&auto=format&fit=crop');"></div>
+                        <div>
+                            <div class="title"><a class="sv-article-link" href="#sv-article-detail" data-article-id="phong-van-visa">Phỏng Vấn Visa Pháp: Những Điều Cần Lưu Ý</a></div>
+                            <div class="sv-meta">Chia sẻ • Hôm nay</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Toan van bai viet -->
+            <article id="sv-article-detail" class="sv-article mb-3" aria-live="polite">
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
+                    <span id="sv-article-category" class="sv-pill"><i class="fa-regular fa-folder-open"></i>Học Tập &amp; Nghiên Cứu</span>
+                    <span id="sv-article-read-time" class="sv-meta">12 phút đọc</span>
+                </div>
+                <h2 id="sv-article-title" class="sv-article__title">Kinh Nghiệm Thi DELF B2</h2>
+                <div id="sv-article-meta" class="sv-article__meta">Bởi Lan Anh • Cập nhật 10/02/2026</div>
+                <p id="sv-article-lead" class="sv-article__lead">Bài viết tổng hợp lộ trình ôn thi DELF B2 thực tế, cách phân bổ thời gian và bộ tài nguyên hữu ích cho từng kỹ năng.</p>
+                <div id="sv-article-cover" class="sv-article__cover"></div>
+                <div id="sv-article-content" class="sv-article__content"></div>
+                <div id="sv-article-tags" class="sv-article__tags"></div>
+            </article>
+        </div>
+
+        <!-- Right col (sidebar) -->
+        <div class="col-lg-4">
+
+            <!-- Sự kiện sắp tới -->
+            <div class="sv-card mb-3">
+                <div class="sv-card__hd d-flex align-items-center justify-content-between gap-2">
+    <span><i class="fa-solid fa-calendar-days me-2 text-primary"></i>Sự Kiện Sắp Tới</span>
+    <a class="btn btn-sm btn-outline-primary" href="/events.html">Tất cả</a>
+</div>
+                <ul class="sv-list">
+                    <li>
+                        <div>
+                            <a href="su-kien-du-hoc-phap-2026.html"><i class="fa fa-calendar-day me-2 text-primary"></i>Hội Thảo Du Học Pháp 2026</a>
+                            <div class="sv-meta">15/03/2026 • Paris</div>
+                        </div>
+                        <span class="sv-badge">Free</span>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="su-kien-gap-go-doanh-nghiep.html"><i class="fa fa-briefcase me-2 text-primary"></i>Gặp Gỡ Doanh Nghiệp</a>
+                            <div class="sv-meta">28/03/2026 • Lyon</div>
+                        </div>
+                        <span class="sv-badge">60 chỗ</span>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="su-kien-ket-noi-tan-sinh-vien.html"><i class="fa fa-users me-2 text-primary"></i>Kết Nối Tân Sinh Viên</a>
+                            <div class="sv-meta">07/04/2026 • Toulouse</div>
+                        </div>
+                        <span class="sv-badge">Mới</span>
+                    </li>
+                </ul>
+            </div>
+
+            <!-- Nhận tin mới -->
+            <div class="sv-card mb-3 sv-newsletter">
+                <div class="sv-card__hd">
+                    <i class="fa-solid fa-bell text-primary"></i>
+                    Nhận Tin Mới
+                </div>
+                <div class="p-3">
+                    <p class="sv-meta mb-2">Nhập email để nhận thông báo bài viết mới theo chủ đề bạn quan tâm.</p>
+                    <div class="mb-2">
+                        <input id="sv-newsletter-email" class="form-control sv-newsletter__input" type="email" placeholder="Email của bạn" />
+                    </div>
+                    <div id="sv-newsletter-categories" class="sv-newsletter__categories" aria-hidden="true">
+                        <div class="sv-newsletter__head">
+                            <span class="sv-meta" style="font-weight:700;">Chọn chủ đề:</span>
+                            <button id="sv-newsletter-toggle" class="sv-newsletter__all" type="button">Chọn tất cả</button>
+                        </div>
+                        <div class="sv-newsletter__grid">
+                            <label class="sv-newsletter__item">
+                                <input class="form-check-input" type="checkbox"> Kinh Nghiệm Du Học
+                            </label>
+                            <label class="sv-newsletter__item">
+                                <input class="form-check-input" type="checkbox"> Học Tập &amp; Nghiên Cứu
+                            </label>
+                            <label class="sv-newsletter__item">
+                                <input class="form-check-input" type="checkbox"> Cơ Hội Việc Làm &amp; Thực Tập
+                            </label>
+                            <label class="sv-newsletter__item">
+                                <input class="form-check-input" type="checkbox"> Sự Kiện &amp; Giao Lưu
+                            </label>
+                            <label class="sv-newsletter__item">
+                                <input class="form-check-input" type="checkbox"> Cuộc Sống Tại Pháp
+                            </label>
+                            <label class="sv-newsletter__item">
+                                <input class="form-check-input" type="checkbox"> Văn Hóa &amp; Ngôn Ngữ
+                            </label>
+                        </div>
+                    </div>
+                    <button class="btn btn-primary w-100 mt-3" type="button">Đăng Ký Nhận Tin</button>
+                    <div class="sv-newsletter__note">Bạn có thể hủy đăng ký bất cứ lúc nào.</div>
+                </div>
+            </div>
+
+            <!-- Thành viên tiêu biểu -->
+            <div class="sv-card sv-members mb-3">
+                <div class="sv-card__hd"><i class="fa-solid fa-user-group me-2 text-primary"></i>Thành Viên Tiêu Biểu</div>
+
+                <div class="member">
+                    <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=300&auto=format&fit=crop');"></div>
+                    <div>
+                        <div class="name">Minh Anh</div>
+                        <div class="role">Chia sẻ học bổng</div>
+                    </div>
+                </div>
+
+                <div class="member">
+                    <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=300&auto=format&fit=crop');"></div>
+                    <div>
+                        <div class="name">Quang Huy</div>
+                        <div class="role">Hướng nghiệp IT</div>
+                    </div>
+                </div>
+
+                <div class="member">
+                    <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1544005316-6e8b9f502d04?q=80&w=300&auto=format&fit=crop');"></div>
+                    <div>
+                        <div class="name">Thùy Dung</div>
+                        <div class="role">Đời sống tại Pháp</div>
+                    </div>
+                </div>
+
+                <div class="member">
+                    <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1542206395-9feb3edaa68d?q=80&w=300&auto=format&fit=crop');"></div>
+                    <div>
+                        <div class="name">Việt Hoàng</div>
+                        <div class="role">Sự kiện – Giao lưu</div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+</main>
+
+<footer class="container py-4">
+    <div class="row">
+        <div class="col-md">
+            <div class="sv-brand d-flex align-items-center mb-2">
+                <div class="sv-brand__logo" style="width:36px; height:36px; font-size:14px;">SVP</div>
+                <strong class="ms-2">SVP – Kết Nối • Chia Sẻ • Thành Công</strong>
+            </div>
+            <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
+        </div>
+        <div class="col-md text-md-end mt-2 mt-md-0">
+            <a class="me-3" href="/terms.html">Điều khoản</a>
+            <a class="me-3" href="/security.html">Bảo mật</a>
+            <a href="/contact.html">Liên hệ</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    (function () {
+        const emailInput = document.getElementById('sv-newsletter-email');
+        const categories = document.getElementById('sv-newsletter-categories');
+        const toggleAllBtn = document.getElementById('sv-newsletter-toggle');
+        if (!emailInput || !categories) return;
+        const checkboxes = Array.from(categories.querySelectorAll('input[type="checkbox"]'));
+
+        const toggleCategories = () => {
+            const isOpen = emailInput.value.trim().length > 0;
+            categories.classList.toggle('is-open', isOpen);
+            categories.setAttribute('aria-hidden', (!isOpen).toString());
+        };
+
+        const updateToggleLabel = () => {
+            if (!toggleAllBtn) return;
+            const allChecked = checkboxes.length > 0 && checkboxes.every((cb) => cb.checked);
+            toggleAllBtn.textContent = allChecked ? 'Bỏ chọn tất cả' : 'Chọn tất cả';
+        };
+
+        if (toggleAllBtn) {
+            toggleAllBtn.addEventListener('click', () => {
+                const allChecked = checkboxes.length > 0 && checkboxes.every((cb) => cb.checked);
+                checkboxes.forEach((cb) => {
+                    cb.checked = !allChecked;
+                });
+                updateToggleLabel();
+            });
+        }
+
+        checkboxes.forEach((cb) => cb.addEventListener('change', updateToggleLabel));
+        emailInput.addEventListener('input', toggleCategories);
+        toggleCategories();
+        updateToggleLabel();
+    })();
+
+    (function () {
+        const articleLinks = Array.from(document.querySelectorAll('.sv-article-link'));
+        const detailEl = document.getElementById('sv-article-detail');
+        const categoryEl = document.getElementById('sv-article-category');
+        const readTimeEl = document.getElementById('sv-article-read-time');
+        const titleEl = document.getElementById('sv-article-title');
+        const metaEl = document.getElementById('sv-article-meta');
+        const leadEl = document.getElementById('sv-article-lead');
+        const coverEl = document.getElementById('sv-article-cover');
+        const contentEl = document.getElementById('sv-article-content');
+        const tagsEl = document.getElementById('sv-article-tags');
+
+        if (!articleLinks.length || !detailEl || !categoryEl || !readTimeEl || !titleEl || !metaEl || !leadEl || !coverEl || !contentEl || !tagsEl) {
+            return;
+        }
+
+        const articles = {
+            'delf-b2': {
+                title: 'Kinh Nghiệm Thi DELF B2',
+                author: 'Lan Anh',
+                date: '10/02/2026',
+                category: 'Học Tập & Nghiên Cứu',
+                readTime: '12 phút đọc',
+                lead: 'Bài viết tổng hợp lộ trình ôn thi DELF B2 thực tế, cách phân bổ thời gian và bộ tài nguyên hữu ích cho từng kỹ năng.',
+                cover: 'https://images.unsplash.com/photo-1465447142348-e9952c393450?q=80&w=1400&auto=format&fit=crop',
+                tags: ['DELF', 'Ngôn ngữ', 'Kinh nghiệm'],
+                blocks: [
+                    { type: 'p', text: 'Sai lầm lớn nhất khi chuẩn bị DELF B2 là học dàn trải. Thay vì cố làm thật nhiều đề, bạn nên chia theo 4 kỹ năng với mục tiêu cụ thể cho từng tuần.' },
+                    { type: 'p', text: 'Ở phần nghe, hãy ưu tiên nghe tài liệu thời sự tốc độ tự nhiên mỗi ngày 20 đến 30 phút. Việc nghe thụ động liên tục trong 6 tuần giúp tăng đáng kể khả năng bắt ý chính.' },
+                    { type: 'quote', text: 'Điểm bứt phá nằm ở kỷ luật luyện đều và phản hồi ngay sau mỗi đề thử.' },
+                    { type: 'p', text: 'Với viết luận, bạn nên xây bộ khung mở bài - thân bài - kết luận cố định, sau đó thay luận điểm theo đề. Cách này giảm áp lực thời gian và tăng độ mạch lạc.' }
+                ]
+            },
+            'lo-trinh-it': {
+                title: 'Lộ Trình Lựa Chọn Ngành IT tại Pháp',
+                author: 'Quang Huy',
+                date: '10/02/2026',
+                category: 'Kinh Nghiệm Việc Làm',
+                readTime: '9 phút đọc',
+                lead: 'Phân tích từng hướng đi phổ biến trong ngành IT tại Pháp, từ Data, Dev Web đến an toàn thông tin theo nhu cầu tuyển dụng.',
+                cover: 'https://images.unsplash.com/photo-1529336953121-a0bdc9e2fd19?q=80&w=1400&auto=format&fit=crop',
+                tags: ['IT', 'Hướng nghiệp', 'Thực tập'],
+                blocks: [
+                    { type: 'p', text: 'Nếu mục tiêu của bạn là tìm việc sớm, Dev Web và Data Analyst thường có số lượng thực tập lớn hơn các nhánh chuyên sâu như AI Research.' },
+                    { type: 'p', text: 'Từ năm nhất Master, nên bắt đầu xây hồ sơ với 2 dự án có sản phẩm chạy thật và có tài liệu kỹ thuật. Nhà tuyển dụng đánh giá cao tính hoàn thiện hơn số lượng dự án.' },
+                    { type: 'quote', text: 'Một CV IT tốt tại Pháp luôn thể hiện kết quả định lượng: tăng hiệu năng, giảm lỗi, hoặc cải thiện trải nghiệm người dùng.' },
+                    { type: 'p', text: 'Bạn nên theo dõi song song các job board quốc gia và nhóm cộng đồng kỹ sư Việt tại Pháp để nắm cơ hội theo từng thành phố.' }
+                ]
+            },
+            'phong-van-visa': {
+                title: 'Phỏng Vấn Visa Pháp: Những Điều Cần Lưu Ý',
+                author: 'Minh Đức',
+                date: '10/02/2026',
+                category: 'Cuộc Sống Tại Pháp',
+                readTime: '7 phút đọc',
+                lead: 'Checklist những câu hỏi thường gặp khi phỏng vấn visa và cách chuẩn bị hồ sơ rõ ràng, nhất quán.',
+                cover: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?q=80&w=1400&auto=format&fit=crop',
+                tags: ['Visa', 'Thủ tục', 'Checklist'],
+                blocks: [
+                    { type: 'p', text: 'Hội đồng thường đánh giá tính nhất quán giữa kế hoạch học tập, nguồn tài chính và lộ trình sau tốt nghiệp. Vì vậy, mọi thông tin trong hồ sơ cần đồng bộ.' },
+                    { type: 'p', text: 'Bạn nên luyện trả lời theo cấu trúc ngắn gọn: nêu mục tiêu, lý do chọn trường, và kế hoạch tài chính theo từng năm học.' },
+                    { type: 'quote', text: 'Chuẩn bị tốt không phải là trả lời dài, mà là trả lời đúng trọng tâm và có chứng cứ trong hồ sơ.' },
+                    { type: 'p', text: 'Sau buổi phỏng vấn, hãy lưu lại các điểm còn thiếu để bổ sung ngay nếu cơ quan xét duyệt yêu cầu thêm giấy tờ.' }
+                ]
+            }
+        };
+
+        const escapeHtml = (value) => String(value)
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+
+        const renderBlocks = (blocks) => blocks.map((block) => {
+            if (block.type === 'quote') {
+                return `<div class="sv-article__quote">${escapeHtml(block.text)}</div>`;
+            }
+            return `<p>${escapeHtml(block.text)}</p>`;
+        }).join('');
+
+        const renderArticle = (articleId, shouldScroll) => {
+            const fallbackId = articleLinks[0].dataset.articleId;
+            const resolvedArticleId = articles[articleId] ? articleId : fallbackId;
+            const article = articles[resolvedArticleId] || articles[fallbackId];
+            if (!article) return;
+
+            categoryEl.innerHTML = `<i class="fa-regular fa-folder-open"></i>${escapeHtml(article.category)}`;
+            readTimeEl.textContent = article.readTime;
+            titleEl.textContent = article.title;
+            metaEl.textContent = `Bởi ${article.author} • Cập nhật ${article.date}`;
+            leadEl.textContent = article.lead;
+            coverEl.style.backgroundImage = `url('${article.cover}')`;
+            contentEl.innerHTML = renderBlocks(article.blocks);
+            tagsEl.innerHTML = article.tags.map((tag) => `<span class="sv-tag">${escapeHtml(tag)}</span>`).join('');
+
+            articleLinks.forEach((link) => {
+                link.classList.toggle('is-active', link.dataset.articleId === resolvedArticleId);
+            });
+
+            if (shouldScroll) {
+                detailEl.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        };
+
+        articleLinks.forEach((link) => {
+            link.addEventListener('click', (event) => {
+                event.preventDefault();
+                const articleId = link.dataset.articleId || '';
+                renderArticle(articleId, true);
+            });
+        });
+
+        const urlArticleId = new URLSearchParams(window.location.search).get('article') || '';
+        renderArticle(urlArticleId, false);
+    })();
+</script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+

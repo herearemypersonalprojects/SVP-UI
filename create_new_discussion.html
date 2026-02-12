@@ -1,0 +1,220 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP)</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="svp.css">
+    <link rel="stylesheet" href="dropdown-hover.css">
+    <style>
+        .sv-discussion-tip {
+            border: 1px solid #bfdbfe;
+            background: #eff6ff;
+            border-radius: 10px;
+            padding: .75rem .85rem;
+            color: #1e3a8a;
+            font-size: .9rem;
+        }
+        .sv-first-comment-preview {
+            padding: .8rem;
+            border: 1px dashed #cbd5e1;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+        .sv-discussion-category-list {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+        }
+    </style>
+</head>
+<body>
+
+<!-- Top brand + auth -->
+<div class="sv-topbar pt-2 pb-1">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="sv-brand">
+            <img class="sv-brand__logo-img" src="assets/icons/logo_svp.png" alt="SVP" width="102" height="112" />
+            <div class="sv-brand__title">
+                <h1>DIỄN ĐÀN SINH VIÊN & TRI THỨC VIỆT TẠI PHÁP <span class="sv-brand__accent">(SVP)</span></h1>
+                <div class="sv-brand__divider"></div>
+                <small class="sv-brand__tagline">Kết Nối – Chia Sẻ – Thành Công</small>
+            </div>
+        </div>
+
+        <div class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary">Đăng Ký</button>
+            <button class="btn btn-primary">Đăng Nhập</button>
+        </div>
+    </div>
+</div>
+
+<!-- Main nav -->
+<div class="sv-nav">
+    <div class="container d-flex align-items-center justify-content-between">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link" href="index.html">Trang Chủ</a></li>
+            <li class="nav-item"><a class="nav-link active" href="forum.html">Diễn Đàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="categories.html">Khám Phá Chủ Đề</a></li>
+            <li class="nav-item"><a class="nav-link" href="events.html">Sự Kiện & Lễ Hội</a></li>
+            <li class="nav-item"><a class="nav-link" href="about.html">Giới Thiệu</a></li>
+        </ul>
+
+        <div class="sv-search position-relative my-2 my-md-0" style="width:min(320px, 60vw);">
+            <i class="fa fa-magnifying-glass"></i>
+            <input class="form-control" type="search" placeholder="Tìm kiếm..." />
+        </div>
+    </div>
+</div>
+<main class="container my-3 my-md-4">
+    <div class="sv-breadcrumb">
+        <a href="index.html">Trang chủ</a> / <a href="forum.html">Diễn đàn</a> / <span>Tạo chủ đề mới</span>
+    </div>
+
+    <section class="sv-page-hero mb-3">
+        <div class="sv-page-hero__eyebrow">Trình tạo thảo luận</div>
+        <h2 class="sv-page-hero__title">Tạo Chủ Đề Mới</h2>
+        <p class="sv-page-hero__subtitle">Khởi tạo một cuộc thảo luận mới cho cộng đồng. Luồng này dùng chung danh mục với trang bài viết để nội dung nhất quán.</p>
+    </section>
+
+    <div class="row g-3">
+        <div class="col-lg-8">
+            <section class="sv-card">
+                <div class="sv-card__hd"><i class="fa-solid fa-comments me-2 text-primary"></i>Thông Tin Chủ Đề</div>
+                <form id="discussion-form" class="sv-form p-3">
+                    <div class="mb-3">
+                        <label for="discussion-title" class="form-label">Tiêu đề chủ đề</label>
+                        <input id="discussion-title" class="form-control" type="text" placeholder="Ví dụ: Xin kinh nghiệm gia hạn visa ở Lyon" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="discussion-category" class="form-label">Danh mục (dùng chung với Trang Chủ)</label>
+                        <select id="discussion-category" class="form-select">
+                            <option value="Học Tập & Nghiên Cứu">Học Tập & Nghiên Cứu</option>
+                            <option value="Kinh Nghiệm Việc Làm">Kinh Nghiệm Việc Làm</option>
+                            <option value="Đầu Tư Tại Pháp">Đầu Tư Tại Pháp</option>
+                            <option value="Sự Kiện & Lễ Hội">Sự Kiện & Lễ Hội</option>
+                            <option value="Tìm & Cho Thuê Nhà">Tìm & Cho Thuê Nhà</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="discussion-subject" class="form-label">Subject (nội dung mở đầu)</label>
+                        <textarea id="discussion-subject" class="form-control" rows="6" placeholder="Viết nội dung bạn muốn mở đầu cuộc thảo luận..."></textarea>
+                        <div class="sv-discussion-tip mt-2">
+                            <i class="fa-solid fa-circle-info me-1"></i>
+                            Nội dung trong trường Subject sẽ tự động trở thành comment đầu tiên sau khi tạo chủ đề.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="discussion-tags" class="form-label">Tags</label>
+                        <input id="discussion-tags" class="form-control" type="text" placeholder="Ví dụ: visa, lyon, thu-tuc">
+                    </div>
+
+                    <div class="d-flex flex-wrap justify-content-between gap-2">
+                        <button type="button" class="btn btn-outline-secondary"><i class="fa-regular fa-floppy-disk me-2"></i>Lưu nháp</button>
+                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus me-2"></i>Tạo chủ đề mới</button>
+                    </div>
+                    <div id="discussion-submit-feedback" class="sv-meta mt-3" aria-live="polite"></div>
+                </form>
+            </section>
+        </div>
+
+        <div class="col-lg-4">
+            <section class="sv-card mb-3">
+                <div class="sv-card__hd"><i class="fa-regular fa-eye me-2 text-primary"></i>Xem Trước Chủ Đề</div>
+                <div class="p-3">
+                    <div id="discussion-preview-title" class="fw-bold mb-2">Tiêu đề chủ đề sẽ hiển thị tại đây</div>
+                    <div class="sv-meta mb-2">Danh mục: <strong id="discussion-preview-category">Học Tập &amp; Nghiên Cứu</strong></div>
+                    <div class="sv-first-comment-preview">
+                        <div class="sv-meta mb-1"><i class="fa-solid fa-comment-dots me-1"></i>Comment đầu tiên (từ Subject)</div>
+                        <div id="discussion-preview-subject">Nội dung Subject sẽ xuất hiện ở đây sau khi bạn nhập.</div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="sv-card">
+                <div class="sv-card__hd"><i class="fa-solid fa-layer-group me-2 text-primary"></i>Danh Mục Dùng Chung</div>
+                <div class="p-3">
+                    <p class="sv-meta mb-2">Các chủ đề thảo luận và bài viết tạp chí cùng dùng bộ danh mục sau:</p>
+                    <div class="sv-discussion-category-list">
+                        <span class="sv-tag">Học Tập &amp; Nghiên Cứu</span>
+                        <span class="sv-tag">Kinh Nghiệm Việc Làm</span>
+                        <span class="sv-tag">Đầu Tư Tại Pháp</span>
+                        <span class="sv-tag">Sự Kiện &amp; Lễ Hội</span>
+                        <span class="sv-tag">Tìm &amp; Cho Thuê Nhà</span>
+                    </div>
+                </div>
+            </section>
+        </div>
+    </div>
+</main>
+
+<footer class="container py-4">
+    <div class="row">
+        <div class="col-md">
+            <div class="sv-brand d-flex align-items-center mb-2">
+                <div class="sv-brand__logo" style="width:36px; height:36px; font-size:14px;">SVP</div>
+                <strong class="ms-2">SVP - Kết Nối • Chia Sẻ • Thành Công</strong>
+            </div>
+            <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
+        </div>
+        <div class="col-md text-md-end mt-2 mt-md-0">
+            <a class="me-3" href="/terms.html">Điều khoản</a>
+            <a class="me-3" href="/security.html">Bảo mật</a>
+            <a href="/contact.html">Liên hệ</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    (function () {
+        const form = document.getElementById('discussion-form');
+        const titleInput = document.getElementById('discussion-title');
+        const categoryInput = document.getElementById('discussion-category');
+        const subjectInput = document.getElementById('discussion-subject');
+        const previewTitle = document.getElementById('discussion-preview-title');
+        const previewCategory = document.getElementById('discussion-preview-category');
+        const previewSubject = document.getElementById('discussion-preview-subject');
+        const feedback = document.getElementById('discussion-submit-feedback');
+
+        if (!form || !titleInput || !categoryInput || !subjectInput || !previewTitle || !previewCategory || !previewSubject || !feedback) {
+            return;
+        }
+
+        const updatePreview = () => {
+            const title = titleInput.value.trim();
+            const category = categoryInput.value;
+            const subject = subjectInput.value.trim();
+
+            previewTitle.textContent = title || 'Tiêu đề chủ đề sẽ hiển thị tại đây';
+            previewCategory.textContent = category;
+            previewSubject.textContent = subject || 'Nội dung Subject sẽ xuất hiện ở đây sau khi bạn nhập.';
+        };
+
+        [titleInput, categoryInput, subjectInput].forEach((element) => {
+            element.addEventListener('input', updatePreview);
+            element.addEventListener('change', updatePreview);
+        });
+
+        form.addEventListener('submit', (event) => {
+            event.preventDefault();
+            feedback.textContent = 'Bản demo giao diện: chủ đề đã sẵn sàng tạo và Subject sẽ là comment đầu tiên.';
+        });
+
+        updatePreview();
+    })();
+</script>
+</body>
+</html>
+
+
+

@@ -1,0 +1,5 @@
+.sv-nav .dropdown-item:hover,
+.sv-nav .dropdown-item:focus {
+    background-color: #0d6efd; /* Couleur bleue de Bootstrap */
+    color: white;
+}

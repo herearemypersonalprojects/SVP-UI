@@ -135,7 +135,7 @@
     <span><i class="fa-solid fa-calendar-days me-2 text-primary"></i>Sự Kiện Sắp Tới</span>
     <a class="btn btn-sm btn-outline-primary" href="/events.html">Tất cả</a>
 </div>
-                <ul class="sv-list">
+                <ul id="sv-upcoming-events" class="sv-list" aria-live="polite">
                     <li>
                         <div>
                             <a href="su-kien-du-hoc-phap-2026.html"><i class="fa fa-calendar-day me-2 text-primary"></i>Hội Thảo Du Học Pháp 2026</a>
@@ -350,6 +350,84 @@
         emailInput.addEventListener('input', toggleCategories);
         toggleCategories();
         updateToggleLabel();
+    })();
+
+    (function () {
+        const eventsEl = document.getElementById('sv-upcoming-events');
+        if (!eventsEl) {
+            return;
+        }
+
+        const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+
+        const escapeHtml = (value) => String(value ?? '')
+            .replaceAll('&', '&amp;')
+            .replaceAll('<', '&lt;')
+            .replaceAll('>', '&gt;')
+            .replaceAll('"', '&quot;')
+            .replaceAll("'", '&#039;');
+
+        const formatEventDate = (isoDate) => {
+            const parsed = new Date(isoDate);
+            if (Number.isNaN(parsed.getTime())) {
+                return 'N/A';
+            }
+            return new Intl.DateTimeFormat('vi-VN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            }).format(parsed);
+        };
+
+        const renderEventItem = (event) => {
+            const safeTitle = escapeHtml(event.title || 'Sự kiện mới');
+            const safeAddress = escapeHtml(event.address || 'Địa điểm cập nhật sau');
+            const safeBadge = escapeHtml(event.badge || 'Mới');
+            const safeDate = escapeHtml(formatEventDate(event.eventTime));
+            const safeHref = `events.html#event-${encodeURIComponent(event.eventId ?? '')}`;
+
+            return `
+                <li>
+                    <div>
+                        <a href="${safeHref}"><i class="fa fa-calendar-day me-2 text-primary"></i>${safeTitle}</a>
+                        <div class="sv-meta">${safeDate} • ${safeAddress}</div>
+                    </div>
+                    <span class="sv-badge">${safeBadge}</span>
+                </li>
+            `;
+        };
+
+        const renderEventMessage = (message) => {
+            eventsEl.innerHTML = `<li><div class="sv-meta">${escapeHtml(message)}</div></li>`;
+        };
+
+        const loadUpcomingEvents = async () => {
+            renderEventMessage('Đang tải sự kiện...');
+            try {
+                const response = await fetch(`${API_BASE_URL}/events/upcoming`, {
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+                if (!response.ok) {
+                    throw new Error(`API responded with status ${response.status}`);
+                }
+
+                const payload = await response.json();
+                const items = Array.isArray(payload.items) ? payload.items : [];
+                if (items.length === 0) {
+                    renderEventMessage('Chưa có sự kiện sắp tới.');
+                    return;
+                }
+
+                eventsEl.innerHTML = items.map((event) => renderEventItem(event)).join('');
+            } catch (error) {
+                console.error('Cannot load upcoming events:', error);
+                renderEventMessage('Không thể tải sự kiện. Vui lòng thử lại sau.');
+            }
+        };
+
+        loadUpcomingEvents();
     })();
 
     (function () {

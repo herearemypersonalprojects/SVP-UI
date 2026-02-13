@@ -104,8 +104,8 @@
             <li class="nav-item"><a class="nav-link sv-cats__primary" href="viec-lam-thuc-tap.html"><img class="sv-cat__icon" src="assets/icons/icon_viec_lam_thuc_tap.png" alt=""> Việc Làm</a></li>
             <li class="nav-item"><a class="nav-link sv-cats__primary" href="hoc-tap-nghien-cuu.html"><img class="sv-cat__icon" src="assets/icons/icon_hoc_tap_nghien_cuu.png" alt=""> Ngôn Ngữ & Văn Hóa</a></li>
 
-            <li class="nav-item"><a class="nav-link sv-cats__primary" href="su-kien-giao-luu.html"><img class="sv-cat__icon sv-cat__icon--event" src="assets/icons/icon_su_kien_giao_luu.png" alt=""> Cuộc Sống Tại Pháp</a></li>
-            <li class="nav-item"><a class="nav-link sv-cats__primary" href="nha-cua.html"><img class="sv-cat__icon" src="assets/icons/icon_nha_cu.png" alt=""> Du Lịch, Giải Trí</a></li>
+            <li class="nav-item"><a class="nav-link sv-cats__primary" href="su-kien-giao-luu.html"><img class="sv-cat__icon sv-cat__icon--event" src="assets/icons/icon_cuoc_song_tai_phap.png" alt=""> Cuộc Sống Tại Pháp</a></li>
+            <li class="nav-item"><a class="nav-link sv-cats__primary" href="nha-cua.html"><img class="sv-cat__icon" src="assets/icons/icon_du_lich_giai_tri.png" alt=""> Du Lịch, Giải Trí</a></li>
         </ul>
     </section>
 
@@ -167,47 +167,47 @@
                     <a class="btn btn-sm btn-outline-primary" href="categories.html">Xem tất cả</a>
                 </div>
                 <ul class="sv-list">
-                    <li>
+                    <li data-category-id="1">
                         <div>
                             <a href="categories.html"><i class="fa-solid fa-graduation-cap me-2 text-primary"></i>Học tập và nghiên cứu tại Pháp</a>
                         </div>
                     </li>
-                    <li>
+                    <li data-category-id="2">
                         <div>
                             <a href="categories.html"><i class="fa-solid fa-award me-2 text-primary"></i>Kinh nghiệm xin học bổng và du học</a>
                         </div>
                     </li>
-                    <li>
+                    <li data-category-id="3">
                         <div>
                             <a href="categories.html"><i class="fa-solid fa-map-location-dot me-2 text-primary"></i>Cuộc sống tại Pháp</a>
                         </div>
                     </li>
-                    <li>
+                    <li data-category-id="4">
                         <div>
                             <a href="categories.html"><i class="fa-solid fa-briefcase me-2 text-primary"></i>Cơ hội việc làm và thực tập</a>
                         </div>
                     </li>
-                    <li>
+                    <li data-category-id="5">
                         <div>
                             <a href="categories.html"><i class="fa-solid fa-scale-balanced me-2 text-primary"></i>Các vấn đề pháp lý, quốc tịch và thuế khóa</a>
                         </div>
                     </li>
-                    <li>
+                    <li data-category-id="6">
                         <div>
                             <a href="categories.html"><i class="fa-solid fa-language me-2 text-primary"></i>Văn hóa và ngôn ngữ Pháp</a>
                         </div>
                     </li>
-                    <li>
+                    <li data-category-id="13">
                         <div>
-                            <a href="categories.html"><i class="fa-solid fa-users me-2 text-primary"></i>Sự kiện và giao lưu</a>
+                            <a href="categories.html"><i class="fa-solid fa-gamepad me-2 text-primary"></i>Giải trí, du lịch</a>
                         </div>
                     </li>
-                    <li>
+                    <li data-category-id="8">
                         <div>
                             <a href="categories.html"><i class="fa-solid fa-house me-2 text-primary"></i>Nhà cửa</a>
                         </div>
                     </li>
-                    <li>
+                    <li data-category-id="9">
                         <div>
                             <a href="categories.html"><i class="fa-solid fa-cart-shopping me-2 text-primary"></i>Mua bán, rao vặt</a>
                         </div>
@@ -361,11 +361,11 @@
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
 
         const escapeHtml = (value) => String(value ?? '')
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#039;');
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
 
         const formatEventDate = (isoDate) => {
             const parsed = new Date(isoDate);
@@ -381,8 +381,12 @@
 
         const renderEventItem = (event) => {
             const safeTitle = escapeHtml(event.title || 'Sự kiện mới');
-            const safeAddress = escapeHtml(event.address || 'Địa điểm cập nhật sau');
-            const safeBadge = escapeHtml(event.badge || 'Mới');
+            const safeAddress = escapeHtml(event.address || (event.online ? 'Online' : 'Địa điểm cập nhật sau'));
+            const rawPrice = Number(event.price);
+            const badge = Number.isFinite(rawPrice) && rawPrice > 0
+                ? `${rawPrice.toLocaleString('vi-VN')}€`
+                : (event.online ? 'Online' : 'Free');
+            const safeBadge = escapeHtml(badge);
             const safeDate = escapeHtml(formatEventDate(event.eventTime));
             const safeHref = `events.html#event-${encodeURIComponent(event.eventId ?? '')}`;
 
@@ -437,13 +441,14 @@
         }
 
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+        const WORDS_PER_MINUTE = 220;
 
         const escapeHtml = (value) => String(value ?? '')
-            .replaceAll('&', '&amp;')
-            .replaceAll('<', '&lt;')
-            .replaceAll('>', '&gt;')
-            .replaceAll('"', '&quot;')
-            .replaceAll("'", '&#039;');
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
 
         const formatDate = (isoDate) => {
             const parsed = new Date(isoDate);
@@ -457,14 +462,50 @@
             }).format(parsed);
         };
 
+        const toPlainText = (html) => String(html ?? '')
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/\s+/g, ' ')
+            .trim();
+
+        const estimateReadTime = (article) => {
+            const plainText = toPlainText(article.contentHtml || '');
+            if (!plainText) {
+                return '1 phút đọc';
+            }
+            const wordCount = plainText.split(/\s+/).length;
+            const minutes = Math.max(1, Math.ceil(wordCount / WORDS_PER_MINUTE));
+            return `${minutes} phút đọc`;
+        };
+
+        const buildLead = (article) => {
+            const plainText = toPlainText(article.contentHtml || '');
+            if (!plainText) {
+                return 'Bài viết đang được cập nhật nội dung.';
+            }
+            return plainText.length <= 220 ? plainText : `${plainText.slice(0, 219).trim()}...`;
+        };
+
+        const extractCover = (article) => {
+            const html = String(article.contentHtml || '');
+            const match = html.match(/<img[^>]*src\s*=\s*['"]([^'"]+)['"][^>]*>/i);
+            if (match && match[1]) {
+                return match[1];
+            }
+            return 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1400&auto=format&fit=crop';
+        };
+
         const renderArticleCard = (article) => {
             const safeCategory = escapeHtml(article.category || 'Chưa phân loại');
-            const safeReadTime = escapeHtml(article.readTime || '1 phút đọc');
+            const safeReadTime = escapeHtml(estimateReadTime(article));
             const safeTitle = escapeHtml(article.title || 'Chưa có tiêu đề');
             const safeAuthor = escapeHtml(article.author || 'Ẩn danh');
             const safeDate = escapeHtml(formatDate(article.createdAt));
-            const safeLead = escapeHtml(article.lead || 'Bài viết đang được cập nhật nội dung.');
-            const safeCover = escapeHtml(article.cover || '');
+            const safeLead = escapeHtml(buildLead(article));
+            const safeCover = escapeHtml(extractCover(article));
 
             return `
                 <article class="sv-article">

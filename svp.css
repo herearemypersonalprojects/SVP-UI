@@ -334,7 +334,7 @@
             transition: max-height .35s ease, opacity .2s ease, transform .2s ease, padding .2s ease;
         }
         .sv-newsletter__categories.is-open{
-            max-height:260px;
+            max-height:1000px;
             opacity:1;
             transform: translateY(0);
             padding:.75rem;

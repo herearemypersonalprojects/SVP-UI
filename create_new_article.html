@@ -47,6 +47,46 @@
             flex-wrap: wrap;
             gap: .5rem;
         }
+        .sv-editor {
+            min-height: 320px;
+            border: 1px solid var(--sv-border);
+            border-radius: 10px;
+            padding: .85rem 1rem;
+            background: #fff;
+            line-height: 1.65;
+            outline: none;
+        }
+        .sv-editor:focus {
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 .2rem rgba(59,130,246,.15);
+        }
+        .sv-editor:empty::before {
+            content: attr(data-placeholder);
+            color: #94a3b8;
+        }
+        .sv-editor img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            margin: 1rem auto;
+            border-radius: 8px;
+        }
+        .sv-embed-video {
+            position: relative;
+            width: 100%;
+            padding-top: 56.25%;
+            margin: 1rem 0;
+            border-radius: 8px;
+            overflow: hidden;
+            background: #0f172a;
+        }
+        .sv-embed-video iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: 0;
+        }
     </style>
 </head>
 <body>
@@ -95,7 +135,7 @@
     <section class="sv-page-hero mb-3">
         <div class="sv-page-hero__eyebrow">Trình soạn thảo tạp chí</div>
         <h2 class="sv-page-hero__title">Đăng bài viết dài có ảnh</h2>
-        <p class="sv-page-hero__subtitle">Mẫu soạn thảo dành cho bài viết chuyên sâu dạng tạp chí. Bạn có thể thêm ảnh đại diện, đoạn mở đầu và nội dung dài nhiều phần.</p>
+        <p class="sv-page-hero__subtitle">Mẫu soạn thảo dành cho bài viết chuyên sâu dạng tạp chí. Bạn có thể thêm ảnh đại diện và biên tập nội dung dài nhiều phần với trình soạn thảo trực quan.</p>
     </section>
 
     <div class="row g-3">
@@ -142,21 +182,18 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="article-lead" class="form-label">Đoạn mở đầu (Lead)</label>
-                        <textarea id="article-lead" class="form-control" rows="3" placeholder="Tóm tắt 2-3 câu nêu trọng tâm bài viết..."></textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label for="article-content" class="form-label">Nội dung bài viết</label>
+                        <label for="article-content-editor" class="form-label">Nội dung bài viết</label>
                         <div class="sv-editor-toolbar">
-                            <button type="button" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-bold"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-italic"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-list-ul"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-quote-left"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary"><i class="fa-regular fa-image"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary"><i class="fa-solid fa-link"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-command="bold" title="In đậm"><i class="fa-solid fa-bold"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-command="italic" title="In nghiêng"><i class="fa-solid fa-italic"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-command="insertUnorderedList" title="Danh sách"><i class="fa-solid fa-list-ul"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-command="formatBlock" data-value="blockquote" title="Trích dẫn"><i class="fa-solid fa-quote-left"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="insert-image-url" title="Chèn ảnh từ URL"><i class="fa-regular fa-image"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="insert-youtube" title="Chèn video YouTube"><i class="fa-brands fa-youtube"></i></button>
+                            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="create-link" title="Chèn liên kết"><i class="fa-solid fa-link"></i></button>
                         </div>
-                        <textarea id="article-content" class="form-control" rows="12" placeholder="Viết nội dung dài kiểu tạp chí ở đây..."></textarea>
+                        <div id="article-content-editor" class="sv-editor" contenteditable="true" data-placeholder="Viết nội dung dài kiểu tạp chí ở đây..."></div>
+                        <input id="article-content" type="hidden" name="article-content">
                     </div>
 
                     <div class="mb-3">
@@ -179,7 +216,7 @@
                 <div class="p-3">
                     <div id="article-preview-cover" class="sv-preview-cover"></div>
                     <div id="article-preview-title" class="fw-bold mb-2">Tiêu đề bài viết sẽ hiển thị tại đây</div>
-                    <div id="article-preview-lead" class="sv-meta mb-2">Đoạn mở đầu chưa có nội dung.</div>
+                    <div id="article-preview-snippet" class="sv-meta mb-2">Đoạn trích nội dung sẽ hiển thị tại đây.</div>
                     <span id="article-preview-category" class="sv-pill"><i class="fa-regular fa-folder-open"></i>Học Tập &amp; Nghiên Cứu</span>
                 </div>
             </section>
@@ -223,29 +260,163 @@
     (function () {
         const form = document.getElementById('article-form');
         const titleInput = document.getElementById('article-title');
-        const leadInput = document.getElementById('article-lead');
+        const contentEditor = document.getElementById('article-content-editor');
+        const contentHiddenInput = document.getElementById('article-content');
         const coverUrlInput = document.getElementById('article-cover-url');
         const coverFileInput = document.getElementById('article-cover-file');
         const categoryInput = document.getElementById('article-category');
         const previewTitle = document.getElementById('article-preview-title');
-        const previewLead = document.getElementById('article-preview-lead');
+        const previewSnippet = document.getElementById('article-preview-snippet');
         const previewCover = document.getElementById('article-preview-cover');
         const previewCategory = document.getElementById('article-preview-category');
         const feedback = document.getElementById('article-submit-feedback');
+        const toolbarButtons = Array.from(document.querySelectorAll('.sv-editor-toolbar button'));
+        let savedRange = null;
 
-        if (!form || !titleInput || !leadInput || !coverUrlInput || !coverFileInput || !categoryInput || !previewTitle || !previewLead || !previewCover || !previewCategory || !feedback) {
+        if (!form || !titleInput || !contentEditor || !contentHiddenInput || !coverUrlInput || !coverFileInput || !categoryInput || !previewTitle || !previewSnippet || !previewCover || !previewCategory || !feedback) {
             return;
         }
 
+        const sanitizeUrl = (url) => {
+            const value = (url || '').trim();
+            if (!value) return '';
+            if (/^https?:\/\//i.test(value)) return value;
+            return '';
+        };
+
+        const saveSelection = () => {
+            const selection = window.getSelection();
+            if (!selection || selection.rangeCount === 0) return;
+            const range = selection.getRangeAt(0);
+            if (!contentEditor.contains(range.commonAncestorContainer)) return;
+            savedRange = range.cloneRange();
+        };
+
+        const restoreSelection = () => {
+            const selection = window.getSelection();
+            if (!selection) return;
+            if (savedRange) {
+                selection.removeAllRanges();
+                selection.addRange(savedRange);
+            } else {
+                const range = document.createRange();
+                range.selectNodeContents(contentEditor);
+                range.collapse(false);
+                selection.removeAllRanges();
+                selection.addRange(range);
+            }
+        };
+
+        const insertImageAtCursor = (url) => {
+            const safeUrl = sanitizeUrl(url);
+            if (!safeUrl) return;
+            contentEditor.focus();
+            restoreSelection();
+            const selection = window.getSelection();
+            if (!selection || selection.rangeCount === 0) return;
+            const range = selection.getRangeAt(0);
+            const image = document.createElement('img');
+            image.src = safeUrl;
+            image.alt = 'Article illustration';
+            range.insertNode(image);
+            range.setStartAfter(image);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            saveSelection();
+        };
+
+        const parseYoutubeTimeToSeconds = (value) => {
+            const raw = (value || '').trim().toLowerCase();
+            if (!raw) return '';
+            if (/^\d+$/.test(raw)) return raw;
+            const match = raw.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/);
+            if (!match) return '';
+            const hours = Number(match[1] || 0);
+            const minutes = Number(match[2] || 0);
+            const seconds = Number(match[3] || 0);
+            const total = (hours * 3600) + (minutes * 60) + seconds;
+            return total > 0 ? String(total) : '';
+        };
+
+        const getYoutubeEmbedUrl = (url) => {
+            const safeUrl = sanitizeUrl(url);
+            if (!safeUrl) return '';
+            let videoId = '';
+            const embedParams = new URLSearchParams();
+
+            try {
+                const parsed = new URL(safeUrl);
+                const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
+                if (host === 'youtube.com' || host === 'm.youtube.com') {
+                    if (parsed.pathname === '/watch') {
+                        videoId = parsed.searchParams.get('v') || '';
+                    } else if (parsed.pathname.startsWith('/shorts/')) {
+                        videoId = parsed.pathname.split('/')[2] || '';
+                    } else if (parsed.pathname.startsWith('/embed/')) {
+                        videoId = parsed.pathname.split('/')[2] || '';
+                    }
+                } else if (host === 'youtu.be') {
+                    videoId = parsed.pathname.replace('/', '').trim();
+                }
+
+                const si = parsed.searchParams.get('si');
+                if (si) embedParams.set('si', si);
+
+                const start = parsed.searchParams.get('start') || parsed.searchParams.get('t');
+                const startSeconds = parseYoutubeTimeToSeconds(start || '');
+                if (startSeconds) embedParams.set('start', startSeconds);
+            } catch (error) {
+                return '';
+            }
+
+            videoId = videoId.replace(/[^a-zA-Z0-9_-]/g, '');
+            if (!videoId) return '';
+            const query = embedParams.toString();
+            return `https://www.youtube.com/embed/${videoId}${query ? `?${query}` : ''}`;
+        };
+
+        const insertYoutubeAtCursor = (url) => {
+            const embedUrl = getYoutubeEmbedUrl(url);
+            if (!embedUrl) return false;
+            contentEditor.focus();
+            restoreSelection();
+            const selection = window.getSelection();
+            if (!selection || selection.rangeCount === 0) return false;
+            const range = selection.getRangeAt(0);
+            const wrapper = document.createElement('div');
+            wrapper.className = 'sv-embed-video';
+            const iframe = document.createElement('iframe');
+            iframe.src = embedUrl;
+            iframe.title = 'YouTube video player';
+            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
+            iframe.allowFullscreen = true;
+            iframe.referrerPolicy = 'strict-origin-when-cross-origin';
+            wrapper.appendChild(iframe);
+            range.insertNode(wrapper);
+            range.setStartAfter(wrapper);
+            range.collapse(true);
+            selection.removeAllRanges();
+            selection.addRange(range);
+            saveSelection();
+            return true;
+        };
+
+        const getSnippet = () => {
+            const plainText = contentEditor.textContent.replace(/\s+/g, ' ').trim();
+            if (!plainText) return 'Đoạn trích nội dung sẽ hiển thị tại đây.';
+            return plainText.length > 180 ? `${plainText.slice(0, 177)}...` : plainText;
+        };
+
         const updatePreview = () => {
             const title = titleInput.value.trim();
-            const lead = leadInput.value.trim();
             const category = categoryInput.value;
             const coverUrl = coverUrlInput.value.trim();
 
             previewTitle.textContent = title || 'Tiêu đề bài viết sẽ hiển thị tại đây';
-            previewLead.textContent = lead || 'Đoạn mở đầu chưa có nội dung.';
+            previewSnippet.textContent = getSnippet();
             previewCategory.innerHTML = `<i class="fa-regular fa-folder-open"></i>${category}`;
+            contentHiddenInput.value = contentEditor.innerHTML;
 
             if (coverUrl) {
                 previewCover.style.backgroundImage = `url('${coverUrl}')`;
@@ -261,13 +432,67 @@
             previewCover.style.backgroundImage = `url('${objectUrl}')`;
         });
 
-        [titleInput, leadInput, coverUrlInput, categoryInput].forEach((element) => {
+        [titleInput, coverUrlInput, categoryInput].forEach((element) => {
             element.addEventListener('input', updatePreview);
             element.addEventListener('change', updatePreview);
+        });
+        ['keyup', 'mouseup', 'blur'].forEach((eventName) => {
+            contentEditor.addEventListener(eventName, saveSelection);
+        });
+        contentEditor.addEventListener('input', updatePreview);
+
+        toolbarButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                const action = button.getAttribute('data-action');
+                const command = button.getAttribute('data-command');
+                const value = button.getAttribute('data-value') || null;
+
+                if (action === 'insert-image-url') {
+                    const imageUrl = prompt('Nhập URL ảnh (http/https):');
+                    if (imageUrl) insertImageAtCursor(imageUrl);
+                    updatePreview();
+                    return;
+                }
+
+                if (action === 'insert-youtube') {
+                    const videoUrl = prompt('Nhập URL YouTube (watch, shorts hoặc youtu.be):');
+                    if (videoUrl) {
+                        const inserted = insertYoutubeAtCursor(videoUrl);
+                        if (!inserted) {
+                            alert('URL YouTube không hợp lệ.');
+                        }
+                    }
+                    updatePreview();
+                    return;
+                }
+
+                if (action === 'create-link') {
+                    const linkUrl = sanitizeUrl(prompt('Nhập URL liên kết (http/https):'));
+                    if (!linkUrl) return;
+                    contentEditor.focus();
+                    restoreSelection();
+                    document.execCommand('createLink', false, linkUrl);
+                    saveSelection();
+                    updatePreview();
+                    return;
+                }
+
+                if (!command) return;
+                contentEditor.focus();
+                restoreSelection();
+                if (command === 'formatBlock' && value) {
+                    document.execCommand(command, false, value);
+                } else {
+                    document.execCommand(command, false, null);
+                }
+                saveSelection();
+                updatePreview();
+            });
         });
 
         form.addEventListener('submit', (event) => {
             event.preventDefault();
+            contentHiddenInput.value = contentEditor.innerHTML;
             feedback.textContent = 'Bản demo giao diện: bài viết đã sẵn sàng để gửi lên hệ thống xuất bản.';
         });
 

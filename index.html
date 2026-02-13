@@ -133,6 +133,9 @@
                     </a>
                 </div>
                 <div id="sv-article-feed" class="sv-article-feed" aria-live="polite"></div>
+                <div class="px-3 pb-3">
+                    <button id="sv-load-more-posts" class="btn btn-outline-primary w-100" type="button">Xem thêm...</button>
+                </div>
             </div>
         </div>
 
@@ -337,7 +340,8 @@
         const feedEl = document.getElementById('sv-article-feed');
         const eventsEl = document.getElementById('sv-upcoming-events');
         const membersEl = document.getElementById('sv-featured-members');
-        if (!feedEl || !eventsEl || !membersEl) {
+        const loadMoreBtn = document.getElementById('sv-load-more-posts');
+        if (!feedEl || !eventsEl || !membersEl || !loadMoreBtn) {
             return;
         }
 
@@ -419,6 +423,13 @@
         };
 
         const getCategoryName = (categoryId) => CATEGORY_NAMES[categoryId] || `Chuyên mục #${categoryId ?? 'N/A'}`;
+        const HOME_POSTS_LIMIT = 10;
+        const MORE_POSTS_LIMIT = 5;
+        let loadedPosts = [];
+        let hasMorePosts = true;
+        let beforeCreatedAt = null;
+        let beforePostId = null;
+        let isLoadingMore = false;
 
         const renderArticleCard = (post) => {
             const author = post.author || {};
@@ -530,10 +541,11 @@
             const latestPosts = Array.isArray(payload.latestPosts) ? payload.latestPosts : [];
             const upcomingEvents = Array.isArray(payload.upcomingEvents) ? payload.upcomingEvents : [];
 
-            if (latestPosts.length === 0) {
+            loadedPosts = latestPosts.slice();
+            if (loadedPosts.length === 0) {
                 feedEl.innerHTML = `<div class="sv-meta">Chưa có bài viết phù hợp để hiển thị.</div>`;
             } else {
-                feedEl.innerHTML = latestPosts.map((post) => renderArticleCard(post)).join('');
+                feedEl.innerHTML = loadedPosts.map((post) => renderArticleCard(post)).join('');
             }
 
             if (upcomingEvents.length === 0) {
@@ -542,24 +554,79 @@
                 eventsEl.innerHTML = upcomingEvents.map((event) => renderEventItem(event)).join('');
             }
 
-            const topMembers = collectTopMembers(latestPosts);
+            const topMembers = collectTopMembers(loadedPosts);
             if (topMembers.length === 0) {
                 membersEl.innerHTML = `<div class="p-3 sv-meta">Chưa có thành viên nổi bật.</div>`;
             } else {
                 membersEl.innerHTML = topMembers.map((member) => renderMember(member)).join('');
             }
+
+            const lastPost = loadedPosts[loadedPosts.length - 1];
+            beforeCreatedAt = lastPost?.createdAt || null;
+            beforePostId = Number.isFinite(lastPost?.postId) ? lastPost.postId : null;
+            hasMorePosts = loadedPosts.length >= HOME_POSTS_LIMIT;
+            loadMoreBtn.style.display = hasMorePosts ? 'block' : 'none';
+            loadMoreBtn.disabled = !hasMorePosts;
         };
 
         const renderError = () => {
             feedEl.innerHTML = `<div class="sv-meta">Không thể tải dữ liệu trang chủ.</div>`;
             eventsEl.innerHTML = `<li><div class="sv-meta">Không thể tải sự kiện.</div></li>`;
             membersEl.innerHTML = `<div class="p-3 sv-meta">Không thể tải thành viên.</div>`;
+            loadMoreBtn.style.display = 'none';
+        };
+
+        const loadMorePosts = async () => {
+            if (isLoadingMore || !hasMorePosts || !beforeCreatedAt || !beforePostId) {
+                return;
+            }
+            isLoadingMore = true;
+            loadMoreBtn.disabled = true;
+            const previousLabel = loadMoreBtn.textContent;
+            loadMoreBtn.textContent = 'Đang tải...';
+            try {
+                const params = new URLSearchParams({
+                    limit: String(MORE_POSTS_LIMIT),
+                    beforeCreatedAt,
+                    beforePostId: String(beforePostId)
+                });
+                const response = await fetch(`${API_BASE_URL}/posts/latest-articles?${params.toString()}`, {
+                    headers: { Accept: 'application/json' }
+                });
+                if (!response.ok) {
+                    throw new Error(`API responded with status ${response.status}`);
+                }
+                const payload = await response.json();
+                const newItems = Array.isArray(payload.items) ? payload.items : [];
+                if (newItems.length === 0) {
+                    hasMorePosts = false;
+                } else {
+                    loadedPosts = loadedPosts.concat(newItems);
+                    feedEl.innerHTML = loadedPosts.map((post) => renderArticleCard(post)).join('');
+                    const topMembers = collectTopMembers(loadedPosts);
+                    membersEl.innerHTML = topMembers.length === 0
+                        ? `<div class="p-3 sv-meta">Chưa có thành viên nổi bật.</div>`
+                        : topMembers.map((member) => renderMember(member)).join('');
+                    const lastPost = loadedPosts[loadedPosts.length - 1];
+                    beforeCreatedAt = lastPost?.createdAt || null;
+                    beforePostId = Number.isFinite(lastPost?.postId) ? lastPost.postId : null;
+                    hasMorePosts = newItems.length >= MORE_POSTS_LIMIT;
+                }
+            } catch (error) {
+                console.error('Cannot load more posts:', error);
+            } finally {
+                isLoadingMore = false;
+                loadMoreBtn.textContent = previousLabel;
+                loadMoreBtn.disabled = !hasMorePosts;
+                loadMoreBtn.style.display = hasMorePosts ? 'block' : 'none';
+            }
         };
 
         const loadHome = async () => {
             feedEl.innerHTML = `<div class="sv-meta">Đang tải bài viết mới nhất...</div>`;
             eventsEl.innerHTML = `<li><div class="sv-meta">Đang tải sự kiện...</div></li>`;
             membersEl.innerHTML = `<div class="p-3 sv-meta">Đang tải thành viên...</div>`;
+            loadMoreBtn.style.display = 'none';
             try {
                 const response = await fetch(`${API_BASE_URL}/api/home`, {
                     headers: { Accept: 'application/json' }
@@ -575,6 +642,7 @@
             }
         };
 
+        loadMoreBtn.addEventListener('click', loadMorePosts);
         loadHome();
     })();
 </script>

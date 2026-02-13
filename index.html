@@ -168,6 +168,7 @@
             <li class="nav-item"><a class="nav-link" href="forum.html">Diễn Đàn</a></li>
             <li class="nav-item"><a class="nav-link" href="categories.html">Khám Phá Chủ Đề</a></li>
             <li class="nav-item"><a class="nav-link" href="events.html">Sự Kiện & Lễ Hội</a></li>
+            <li class="nav-item"><a class="nav-link" href="ban-do-viet.html">Bản Đồ Việt</a></li>
             <li class="nav-item"><a class="nav-link" href="about.html">Giới Thiệu</a></li>
         </ul>
 
@@ -737,7 +738,7 @@
             const rawPrice = Number(event.price);
             const badge = Number.isFinite(rawPrice) && rawPrice > 0
                 ? `${rawPrice.toLocaleString('vi-VN')}€`
-                : (event.online ? 'Online' : 'Free');
+                : (event.online ? 'Online' : 'Gratuit');
             const safeDate = escapeHtml(formatDate(event.eventTime));
             const safeBadge = escapeHtml(badge);
             const safeHref = `events.html#event-${encodeURIComponent(event.eventId ?? '')}`;
@@ -951,6 +952,7 @@
 </script>
 </body>
 </html>
+
 
 
 

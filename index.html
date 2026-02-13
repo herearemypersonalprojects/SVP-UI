@@ -855,6 +855,10 @@
                 return;
             }
             isLoadingMore = true;
+            const scrollYBeforeLoad = window.scrollY;
+            if (document.activeElement === loadMoreBtn) {
+                loadMoreBtn.blur();
+            }
             loadMoreBtn.disabled = true;
             const previousLabel = loadMoreBtn.textContent;
             loadMoreBtn.textContent = 'Đang tải...';
@@ -876,8 +880,7 @@
                     hasMorePosts = false;
                 } else {
                     loadedPosts = loadedPosts.concat(newItems);
-                    feedEl.innerHTML = loadedPosts.map((post) => renderArticleCard(post)).join('');
-                    expandedCard = null;
+                    feedEl.insertAdjacentHTML('beforeend', newItems.map((post) => renderArticleCard(post)).join(''));
                     const topMembers = collectTopMembers(loadedPosts);
                     membersEl.innerHTML = topMembers.length === 0
                         ? `<div class="p-3 sv-meta">Chưa có thành viên nổi bật.</div>`
@@ -886,6 +889,7 @@
                     beforeCreatedAt = lastPost?.createdAt || null;
                     beforePostId = Number.isFinite(lastPost?.postId) ? lastPost.postId : null;
                     hasMorePosts = newItems.length >= MORE_POSTS_LIMIT;
+                    window.scrollTo(0, scrollYBeforeLoad);
                 }
             } catch (error) {
                 console.error('Cannot load more posts:', error);

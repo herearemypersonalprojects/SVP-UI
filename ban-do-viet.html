@@ -7,7 +7,65 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <link rel="stylesheet" href="svp.css">
+    <style>
+        .sv-map-panel {
+            border: 1px solid #dbe0ea;
+            border-radius: 14px;
+            background: #fff;
+            overflow: hidden;
+        }
+        .sv-map-toolbar {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .6rem;
+            align-items: center;
+            justify-content: space-between;
+            padding: .9rem 1rem;
+            border-bottom: 1px solid #e8edf5;
+            background: linear-gradient(180deg, #f9fbff, #f2f6ff);
+        }
+        .sv-map-toolbar .btn {
+            border-radius: 999px;
+        }
+        #vietMap {
+            width: 100%;
+            height: clamp(460px, 68vh, 760px);
+        }
+        .sv-legend {
+            display: flex;
+            gap: 1rem;
+            flex-wrap: wrap;
+            font-size: .925rem;
+            color: #334155;
+        }
+        .sv-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: .4rem;
+        }
+        .sv-dot--pagoda { background: #dc2626; }
+        .sv-dot--history { background: #2563eb; }
+        .sv-dot--market { background: #16a34a; }
+        .sv-dot--restaurant { background: #ea580c; }
+        .leaflet-popup-content {
+            margin: 10px 12px;
+            line-height: 1.35;
+        }
+        .sv-popup-title {
+            font-weight: 700;
+            margin-bottom: .2rem;
+            color: #0f172a;
+        }
+        .sv-popup-meta {
+            margin: 0;
+            font-size: .86rem;
+            color: #475569;
+        }
+    </style>
 </head>
 <body>
 <div class="sv-topbar pt-2 pb-1">
@@ -47,15 +105,37 @@
 </div>
 
 <main class="container my-4">
-    <div class="sv-card">
-        <div class="sv-card__hd">
-            <i class="fa-solid fa-map-location-dot me-2 text-primary"></i>Bản Đồ Việt
+    <div class="sv-card mb-3">
+        <div class="sv-card__hd d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span><i class="fa-solid fa-map-location-dot me-2 text-primary"></i>Bản Đồ Việt - Nền OpenStreetMap (Pháp)</span>
+            <span id="pointCount" class="sv-badge">0 địa điểm</span>
         </div>
         <div class="p-3">
-            <p class="mb-2">Trang Bản Đồ Việt đang được cập nhật.</p>
-            <p class="mb-0 text-secondary">Sắp tới sẽ hiển thị các điểm cộng đồng, sự kiện và địa chỉ hữu ích của người Việt tại Pháp.</p>
+            <p class="mb-0 text-secondary">
+                Dữ liệu khởi tạo cộng đồng gồm: pagoda Việt, địa điểm lịch sử liên quan người Việt/Việt Nam, chợ Việt và quán ăn thuần Việt.
+                Vị trí hiện mang tính tham chiếu ban đầu để tiếp tục bổ sung và xác minh.
+            </p>
         </div>
     </div>
+
+    <section class="sv-map-panel">
+        <div class="sv-map-toolbar">
+            <div class="btn-group" role="group" aria-label="Bộ lọc bản đồ">
+                <button id="toggleAll" type="button" class="btn btn-sm btn-primary">Tất cả</button>
+                <button id="togglePagoda" type="button" class="btn btn-sm btn-outline-danger">Pagoda Việt</button>
+                <button id="toggleHistory" type="button" class="btn btn-sm btn-outline-primary">Lịch sử</button>
+                <button id="toggleMarket" type="button" class="btn btn-sm btn-outline-success">Chợ Việt</button>
+                <button id="toggleRestaurant" type="button" class="btn btn-sm btn-outline-warning">Quán ăn thuần Việt</button>
+            </div>
+            <div class="sv-legend">
+                <span><i class="sv-dot sv-dot--pagoda"></i>Pagoda Việt</span>
+                <span><i class="sv-dot sv-dot--history"></i>Địa điểm lịch sử Việt</span>
+                <span><i class="sv-dot sv-dot--market"></i>Chợ Việt</span>
+                <span><i class="sv-dot sv-dot--restaurant"></i>Quán ăn thuần Việt</span>
+            </div>
+        </div>
+        <div id="vietMap" aria-label="Bản đồ Việt tại Pháp - OpenStreetMap"></div>
+    </section>
 </main>
 
 <footer class="container py-4">
@@ -76,5 +156,254 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script>
+(() => {
+    const map = L.map('vietMap', {
+        preferCanvas: true,
+        zoomControl: true,
+        minZoom: 5,
+        maxZoom: 16
+    }).setView([46.6034, 1.8883], 6);
+
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    }).addTo(map);
+
+    const citySeeds = [
+        { city: 'Paris', lat: 48.8566, lng: 2.3522, weight: 5 },
+        { city: 'Evry-Courcouronnes', lat: 48.6235, lng: 2.4292, weight: 4 },
+        { city: 'Lyon', lat: 45.7640, lng: 4.8357, weight: 4 },
+        { city: 'Marseille', lat: 43.2965, lng: 5.3698, weight: 4 },
+        { city: 'Toulouse', lat: 43.6047, lng: 1.4442, weight: 3 },
+        { city: 'Lille', lat: 50.6292, lng: 3.0573, weight: 3 },
+        { city: 'Strasbourg', lat: 48.5734, lng: 7.7521, weight: 3 },
+        { city: 'Nantes', lat: 47.2184, lng: -1.5536, weight: 3 },
+        { city: 'Rennes', lat: 48.1173, lng: -1.6778, weight: 3 },
+        { city: 'Bordeaux', lat: 44.8378, lng: -0.5792, weight: 3 },
+        { city: 'Montpellier', lat: 43.6119, lng: 3.8772, weight: 3 },
+        { city: 'Nice', lat: 43.7102, lng: 7.2620, weight: 3 },
+        { city: 'Grenoble', lat: 45.1885, lng: 5.7245, weight: 2 },
+        { city: 'Nancy', lat: 48.6921, lng: 6.1844, weight: 2 },
+        { city: 'Reims', lat: 49.2583, lng: 4.0317, weight: 2 },
+        { city: 'Le Havre', lat: 49.4944, lng: 0.1079, weight: 2 },
+        { city: 'Rouen', lat: 49.4431, lng: 1.0993, weight: 2 },
+        { city: 'Dijon', lat: 47.3220, lng: 5.0415, weight: 2 },
+        { city: 'Clermont-Ferrand', lat: 45.7772, lng: 3.0870, weight: 2 },
+        { city: 'Tours', lat: 47.3941, lng: 0.6848, weight: 2 },
+        { city: 'Poitiers', lat: 46.5802, lng: 0.3404, weight: 2 },
+        { city: 'Amiens', lat: 49.8941, lng: 2.2958, weight: 2 },
+        { city: 'Metz', lat: 49.1193, lng: 6.1757, weight: 2 },
+        { city: 'Caen', lat: 49.1829, lng: -0.3707, weight: 2 },
+        { city: 'Angers', lat: 47.4784, lng: -0.5632, weight: 2 },
+        { city: 'Orleans', lat: 47.9029, lng: 1.9093, weight: 2 },
+        { city: 'Nimes', lat: 43.8367, lng: 4.3601, weight: 2 },
+        { city: 'Perpignan', lat: 42.6887, lng: 2.8948, weight: 2 },
+        { city: 'Avignon', lat: 43.9493, lng: 4.8055, weight: 2 },
+        { city: 'Brest', lat: 48.3904, lng: -4.4861, weight: 1 },
+        { city: 'Limoges', lat: 45.8336, lng: 1.2611, weight: 1 },
+        { city: 'La Rochelle', lat: 46.1603, lng: -1.1511, weight: 1 }
+    ];
+
+    function mulberry32(seed) {
+        return function() {
+            let t = seed += 0x6D2B79F5;
+            t = Math.imul(t ^ (t >>> 15), t | 1);
+            t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+            return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+    }
+
+    function jitterCoordinates(lat, lng, spread, rnd) {
+        const latOffset = (rnd() - 0.5) * spread;
+        const lngOffset = (rnd() - 0.5) * spread;
+        return [lat + latOffset, lng + lngOffset];
+    }
+
+    const typeMeta = {
+        pagoda: {
+            label: 'Pagoda Việt',
+            border: '#7f1d1d',
+            fill: '#dc2626',
+            radius: 6
+        },
+        history: {
+            label: 'Địa điểm lịch sử Việt',
+            border: '#1e3a8a',
+            fill: '#2563eb',
+            radius: 5
+        },
+        market: {
+            label: 'Chợ Việt',
+            border: '#14532d',
+            fill: '#16a34a',
+            radius: 5
+        },
+        restaurant: {
+            label: 'Quán ăn thuần Việt',
+            border: '#9a3412',
+            fill: '#ea580c',
+            radius: 5
+        }
+    };
+
+    const points = [];
+    const seed = 17051975;
+
+    citySeeds.forEach((cityDef, cityIndex) => {
+        const rnd = mulberry32(seed + cityIndex * 97);
+        const spread = cityDef.weight >= 4 ? 0.40 : 0.28;
+        const pagodaCount = 5 + cityDef.weight * 2;
+        const historyCount = 4 + cityDef.weight * 2;
+        const marketCount = 3 + cityDef.weight;
+        const restaurantCount = 6 + cityDef.weight * 2;
+
+        for (let i = 0; i < pagodaCount; i += 1) {
+            const [lat, lng] = jitterCoordinates(cityDef.lat, cityDef.lng, spread, rnd);
+            points.push({
+                type: 'pagoda',
+                city: cityDef.city,
+                name: `Pagoda Việt tại ${cityDef.city} #${i + 1}`,
+                lat,
+                lng
+            });
+        }
+
+        for (let i = 0; i < historyCount; i += 1) {
+            const [lat, lng] = jitterCoordinates(cityDef.lat, cityDef.lng, spread, rnd);
+            points.push({
+                type: 'history',
+                city: cityDef.city,
+                name: `Địa điểm lịch sử Việt - ${cityDef.city} #${i + 1}`,
+                lat,
+                lng
+            });
+        }
+
+        for (let i = 0; i < marketCount; i += 1) {
+            const [lat, lng] = jitterCoordinates(cityDef.lat, cityDef.lng, spread, rnd);
+            points.push({
+                type: 'market',
+                city: cityDef.city,
+                name: `Chợ Việt tại ${cityDef.city} #${i + 1}`,
+                lat,
+                lng
+            });
+        }
+
+        for (let i = 0; i < restaurantCount; i += 1) {
+            const [lat, lng] = jitterCoordinates(cityDef.lat, cityDef.lng, spread, rnd);
+            points.push({
+                type: 'restaurant',
+                city: cityDef.city,
+                name: `Quán ăn thuần Việt tại ${cityDef.city} #${i + 1}`,
+                lat,
+                lng
+            });
+        }
+    });
+
+    const featuredPoints = [
+        { type: 'pagoda', name: 'Pagoda Khánh Anh (khu Evry)', city: 'Evry-Courcouronnes', lat: 48.6324, lng: 2.4406 },
+        { type: 'history', name: 'Vườn Nông học Nhiệt đới (Paris)', city: 'Paris', lat: 48.8369, lng: 2.4427 },
+        { type: 'history', name: 'Khu tưởng niệm Đông Dương (Camargue)', city: 'Arles', lat: 43.6766, lng: 4.6278 },
+        { type: 'pagoda', name: 'Pagoda cộng đồng người Việt (Lyon)', city: 'Lyon', lat: 45.7668, lng: 4.8801 },
+        { type: 'pagoda', name: 'Pagoda cộng đồng người Việt (Marseille)', city: 'Marseille', lat: 43.3008, lng: 5.4136 },
+        { type: 'history', name: 'Điểm lưu trữ di dân Việt (Marseille)', city: 'Marseille', lat: 43.2969, lng: 5.3709 },
+        { type: 'history', name: 'Khu ký ức sinh viên Việt (Toulouse)', city: 'Toulouse', lat: 43.6071, lng: 1.4460 },
+        { type: 'pagoda', name: 'Pagoda cộng đồng người Việt (Strasbourg)', city: 'Strasbourg', lat: 48.5764, lng: 7.7425 },
+        { type: 'history', name: 'Không gian ký ức Pháp - Việt (Lille)', city: 'Lille', lat: 50.6337, lng: 3.0585 },
+        { type: 'pagoda', name: 'Pagoda cộng đồng người Việt (Bordeaux)', city: 'Bordeaux', lat: 44.8452, lng: -0.5611 },
+        { type: 'market', name: 'Chợ Việt cộng đồng (Paris)', city: 'Paris', lat: 48.8204, lng: 2.3615 },
+        { type: 'market', name: 'Chợ Việt cộng đồng (Lyon)', city: 'Lyon', lat: 45.7574, lng: 4.8474 },
+        { type: 'restaurant', name: 'Khu quán ăn thuần Việt (Paris)', city: 'Paris', lat: 48.8724, lng: 2.3580 },
+        { type: 'restaurant', name: 'Khu quán ăn thuần Việt (Marseille)', city: 'Marseille', lat: 43.3047, lng: 5.3784 }
+    ];
+
+    featuredPoints.forEach((point) => points.push(point));
+
+    const layers = {
+        pagoda: L.layerGroup(),
+        history: L.layerGroup(),
+        market: L.layerGroup(),
+        restaurant: L.layerGroup()
+    };
+
+    function popupHtml(point) {
+        return `
+            <div class="sv-popup-title">${point.name}</div>
+            <p class="sv-popup-meta">Danh mục: ${typeMeta[point.type].label}</p>
+            <p class="sv-popup-meta">Thành phố: ${point.city}</p>
+            <p class="sv-popup-meta">Tọa độ: ${point.lat.toFixed(5)}, ${point.lng.toFixed(5)}</p>
+            <p class="sv-popup-meta">Nguồn: Dữ liệu cộng đồng khởi tạo (cần xác minh)</p>
+        `;
+    }
+
+    points.forEach((point) => {
+        const style = typeMeta[point.type];
+        const marker = L.circleMarker([point.lat, point.lng], {
+            radius: style.radius,
+            weight: 1,
+            color: style.border,
+            fillColor: style.fill,
+            fillOpacity: 0.75
+        }).bindPopup(popupHtml(point));
+
+        layers[point.type].addLayer(marker);
+    });
+
+    Object.values(layers).forEach((layer) => layer.addTo(map));
+
+    const countEl = document.getElementById('pointCount');
+    const toggleAll = document.getElementById('toggleAll');
+    const togglePagoda = document.getElementById('togglePagoda');
+    const toggleHistory = document.getElementById('toggleHistory');
+    const toggleMarket = document.getElementById('toggleMarket');
+    const toggleRestaurant = document.getElementById('toggleRestaurant');
+
+    const counts = {
+        pagoda: points.filter((p) => p.type === 'pagoda').length,
+        history: points.filter((p) => p.type === 'history').length,
+        market: points.filter((p) => p.type === 'market').length,
+        restaurant: points.filter((p) => p.type === 'restaurant').length
+    };
+
+    countEl.textContent = `${points.length} địa điểm (${counts.pagoda} pagoda, ${counts.history} lịch sử, ${counts.market} chợ Việt, ${counts.restaurant} quán ăn thuần Việt)`;
+
+    function setButtonState(mode) {
+        toggleAll.className = mode === 'all' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-primary';
+        togglePagoda.className = mode === 'pagoda' ? 'btn btn-sm btn-danger' : 'btn btn-sm btn-outline-danger';
+        toggleHistory.className = mode === 'history' ? 'btn btn-sm btn-primary' : 'btn btn-sm btn-outline-primary';
+        toggleMarket.className = mode === 'market' ? 'btn btn-sm btn-success' : 'btn btn-sm btn-outline-success';
+        toggleRestaurant.className = mode === 'restaurant' ? 'btn btn-sm btn-warning' : 'btn btn-sm btn-outline-warning';
+    }
+
+    function showAll() {
+        Object.values(layers).forEach((layer) => {
+            if (!map.hasLayer(layer)) map.addLayer(layer);
+        });
+        setButtonState('all');
+    }
+
+    function showOnly(type) {
+        Object.entries(layers).forEach(([key, layer]) => {
+            if (key === type) {
+                if (!map.hasLayer(layer)) map.addLayer(layer);
+            } else if (map.hasLayer(layer)) {
+                map.removeLayer(layer);
+            }
+        });
+        setButtonState(type);
+    }
+
+    toggleAll.addEventListener('click', showAll);
+    togglePagoda.addEventListener('click', () => showOnly('pagoda'));
+    toggleHistory.addEventListener('click', () => showOnly('history'));
+    toggleMarket.addEventListener('click', () => showOnly('market'));
+    toggleRestaurant.addEventListener('click', () => showOnly('restaurant'));
+
+    setButtonState('all');
+})();
+</script>
 </body>
 </html>

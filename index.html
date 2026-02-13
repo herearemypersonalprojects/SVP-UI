@@ -40,6 +40,16 @@
             gap: .5rem;
             margin-top: 1rem;
         }
+        .sv-members .avatar--initial {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #cbd5e1 !important;
+            color: #0f172a;
+            font-weight: 800;
+            font-size: 1rem;
+            text-transform: uppercase;
+        }
     </style>
 </head>
 <body>
@@ -260,37 +270,8 @@
             <!-- Thành viên tiêu biểu -->
             <div class="sv-card sv-members mb-3">
                 <div class="sv-card__hd"><i class="fa-solid fa-user-group me-2 text-primary"></i>Thành Viên Tiêu Biểu</div>
-
-                <div class="member">
-                    <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=300&auto=format&fit=crop');"></div>
-                    <div>
-                        <div class="name"><a href="minhanh.html">Minh Anh</a></div>
-                        <div class="role">Chia sẻ học bổng</div>
-                    </div>
-                </div>
-
-                <div class="member">
-                    <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=300&auto=format&fit=crop');"></div>
-                    <div>
-                        <div class="name">Quang Huy</div>
-                        <div class="role">Hướng nghiệp IT</div>
-                    </div>
-                </div>
-
-                <div class="member">
-                    <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1544005316-6e8b9f502d04?q=80&w=300&auto=format&fit=crop');"></div>
-                    <div>
-                        <div class="name">Thùy Dung</div>
-                        <div class="role">Đời sống tại Pháp</div>
-                    </div>
-                </div>
-
-                <div class="member">
-                    <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1542206395-9feb3edaa68d?q=80&w=300&auto=format&fit=crop');"></div>
-                    <div>
-                        <div class="name">Việt Hoàng</div>
-                        <div class="role">Sự kiện – Giao lưu</div>
-                    </div>
+                <div id="sv-featured-members">
+                    <div class="p-3 sv-meta">Đang tải thành viên...</div>
                 </div>
             </div>
 
@@ -353,95 +334,34 @@
     })();
 
     (function () {
-        const eventsEl = document.getElementById('sv-upcoming-events');
-        if (!eventsEl) {
-            return;
-        }
-
-        const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
-
-        const escapeHtml = (value) => String(value ?? '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-
-        const formatEventDate = (isoDate) => {
-            const parsed = new Date(isoDate);
-            if (Number.isNaN(parsed.getTime())) {
-                return 'N/A';
-            }
-            return new Intl.DateTimeFormat('vi-VN', {
-                day: '2-digit',
-                month: '2-digit',
-                year: 'numeric'
-            }).format(parsed);
-        };
-
-        const renderEventItem = (event) => {
-            const safeTitle = escapeHtml(event.title || 'Sự kiện mới');
-            const safeAddress = escapeHtml(event.address || (event.online ? 'Online' : 'Địa điểm cập nhật sau'));
-            const rawPrice = Number(event.price);
-            const badge = Number.isFinite(rawPrice) && rawPrice > 0
-                ? `${rawPrice.toLocaleString('vi-VN')}€`
-                : (event.online ? 'Online' : 'Free');
-            const safeBadge = escapeHtml(badge);
-            const safeDate = escapeHtml(formatEventDate(event.eventTime));
-            const safeHref = `events.html#event-${encodeURIComponent(event.eventId ?? '')}`;
-
-            return `
-                <li>
-                    <div>
-                        <a href="${safeHref}"><i class="fa fa-calendar-day me-2 text-primary"></i>${safeTitle}</a>
-                        <div class="sv-meta">${safeDate} • ${safeAddress}</div>
-                    </div>
-                    <span class="sv-badge">${safeBadge}</span>
-                </li>
-            `;
-        };
-
-        const renderEventMessage = (message) => {
-            eventsEl.innerHTML = `<li><div class="sv-meta">${escapeHtml(message)}</div></li>`;
-        };
-
-        const loadUpcomingEvents = async () => {
-            renderEventMessage('Đang tải sự kiện...');
-            try {
-                const response = await fetch(`${API_BASE_URL}/events/upcoming`, {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-                if (!response.ok) {
-                    throw new Error(`API responded with status ${response.status}`);
-                }
-
-                const payload = await response.json();
-                const items = Array.isArray(payload.items) ? payload.items : [];
-                if (items.length === 0) {
-                    renderEventMessage('Chưa có sự kiện sắp tới.');
-                    return;
-                }
-
-                eventsEl.innerHTML = items.map((event) => renderEventItem(event)).join('');
-            } catch (error) {
-                console.error('Cannot load upcoming events:', error);
-                renderEventMessage('Không thể tải sự kiện. Vui lòng thử lại sau.');
-            }
-        };
-
-        loadUpcomingEvents();
-    })();
-
-    (function () {
         const feedEl = document.getElementById('sv-article-feed');
-        if (!feedEl) {
+        const eventsEl = document.getElementById('sv-upcoming-events');
+        const membersEl = document.getElementById('sv-featured-members');
+        if (!feedEl || !eventsEl || !membersEl) {
             return;
         }
 
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
         const WORDS_PER_MINUTE = 220;
+        const CATEGORY_NAMES = {
+            1: 'Học tập và nghiên cứu tại Pháp',
+            2: 'Kinh nghiệm xin học bổng và du học',
+            3: 'Cuộc sống tại Pháp',
+            4: 'Cơ hội việc làm và thực tập',
+            5: 'Các vấn đề pháp lý, quốc tịch và thuế khóa',
+            6: 'Văn hóa và ngôn ngữ Pháp',
+            7: 'Sự kiện và giao lưu',
+            8: 'Nhà cửa',
+            9: 'Mua bán, rao vặt',
+            10: 'Đầu tư tại Pháp',
+            11: 'Chia sẻ trải nghiệm, câu chuyện cá nhân',
+            12: 'Công nghệ, kỹ năng và tri thức mở',
+            13: 'Giải trí, du lịch',
+            14: 'Góc văn học và nghệ thuật',
+            15: 'Nơi gặp gỡ, hẹn hò nghiêm túc',
+            16: 'Chém gió, tán gẫu',
+            17: 'Góp ý xây dựng SVP'
+        };
 
         const escapeHtml = (value) => String(value ?? '')
             .replace(/&/g, '&amp;')
@@ -471,8 +391,8 @@
             .replace(/\s+/g, ' ')
             .trim();
 
-        const estimateReadTime = (article) => {
-            const plainText = toPlainText(article.contentHtml || '');
+        const estimateReadTime = (contentHtml) => {
+            const plainText = toPlainText(contentHtml);
             if (!plainText) {
                 return '1 phút đọc';
             }
@@ -481,16 +401,16 @@
             return `${minutes} phút đọc`;
         };
 
-        const buildLead = (article) => {
-            const plainText = toPlainText(article.contentHtml || '');
+        const buildLead = (contentHtml) => {
+            const plainText = toPlainText(contentHtml);
             if (!plainText) {
                 return 'Bài viết đang được cập nhật nội dung.';
             }
             return plainText.length <= 220 ? plainText : `${plainText.slice(0, 219).trim()}...`;
         };
 
-        const extractCover = (article) => {
-            const html = String(article.contentHtml || '');
+        const extractCover = (contentHtml) => {
+            const html = String(contentHtml || '');
             const match = html.match(/<img[^>]*src\s*=\s*['"]([^'"]+)['"][^>]*>/i);
             if (match && match[1]) {
                 return match[1];
@@ -498,14 +418,17 @@
             return 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1400&auto=format&fit=crop';
         };
 
-        const renderArticleCard = (article) => {
-            const safeCategory = escapeHtml(article.category || 'Chưa phân loại');
-            const safeReadTime = escapeHtml(estimateReadTime(article));
-            const safeTitle = escapeHtml(article.title || 'Chưa có tiêu đề');
-            const safeAuthor = escapeHtml(article.author || 'Ẩn danh');
-            const safeDate = escapeHtml(formatDate(article.createdAt));
-            const safeLead = escapeHtml(buildLead(article));
-            const safeCover = escapeHtml(extractCover(article));
+        const getCategoryName = (categoryId) => CATEGORY_NAMES[categoryId] || `Chuyên mục #${categoryId ?? 'N/A'}`;
+
+        const renderArticleCard = (post) => {
+            const author = post.author || {};
+            const safeCategory = escapeHtml(getCategoryName(post.categoryId));
+            const safeReadTime = escapeHtml(estimateReadTime(post.contentHtml));
+            const safeTitle = escapeHtml(post.title || 'Chưa có tiêu đề');
+            const safeAuthor = escapeHtml(author.displayName || author.nickname || 'Ẩn danh');
+            const safeDate = escapeHtml(formatDate(post.createdAt));
+            const safeLead = escapeHtml(buildLead(post.contentHtml));
+            const safeCover = escapeHtml(extractCover(post.contentHtml));
 
             return `
                 <article class="sv-article">
@@ -524,39 +447,135 @@
             `;
         };
 
-        const renderEmptyState = (message) => {
-            feedEl.innerHTML = `<div class="sv-meta">${escapeHtml(message)}</div>`;
+        const renderEventItem = (event) => {
+            const safeTitle = escapeHtml(event.title || 'Sự kiện mới');
+            const safeAddress = escapeHtml(event.address || (event.online ? 'Online' : 'Địa điểm cập nhật sau'));
+            const rawPrice = Number(event.price);
+            const badge = Number.isFinite(rawPrice) && rawPrice > 0
+                ? `${rawPrice.toLocaleString('vi-VN')}€`
+                : (event.online ? 'Online' : 'Free');
+            const safeDate = escapeHtml(formatDate(event.eventTime));
+            const safeBadge = escapeHtml(badge);
+            const safeHref = `events.html#event-${encodeURIComponent(event.eventId ?? '')}`;
+            return `
+                <li>
+                    <div>
+                        <a href="${safeHref}"><i class="fa fa-calendar-day me-2 text-primary"></i>${safeTitle}</a>
+                        <div class="sv-meta">${safeDate} • ${safeAddress}</div>
+                    </div>
+                    <span class="sv-badge">${safeBadge}</span>
+                </li>
+            `;
         };
 
-        const loadLatestArticles = async () => {
-            renderEmptyState('Đang tải bài viết mới nhất...');
-            try {
-                const response = await fetch(`${API_BASE_URL}/posts/latest-articles`, {
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`API responded with status ${response.status}`);
+        const collectTopMembers = (posts) => {
+            const byUser = new Map();
+            posts.forEach((post) => {
+                const author = post.author || {};
+                const userId = author.userId || post.userId || `post-${post.postId}`;
+                if (!byUser.has(userId)) {
+                    byUser.set(userId, {
+                        author,
+                        postCount: 0,
+                        categoryIds: new Set()
+                    });
                 }
-
-                const payload = await response.json();
-                const items = Array.isArray(payload.items) ? payload.items : [];
-
-                if (items.length === 0) {
-                    renderEmptyState('Chưa có bài viết phù hợp để hiển thị.');
-                    return;
+                const item = byUser.get(userId);
+                item.postCount += 1;
+                if (Number.isFinite(post.categoryId)) {
+                    item.categoryIds.add(post.categoryId);
                 }
+            });
 
-                feedEl.innerHTML = items.map((article) => renderArticleCard(article)).join('');
-            } catch (error) {
-                console.error('Cannot load latest articles:', error);
-                renderEmptyState('Không thể tải bài viết mới nhất. Vui lòng thử lại sau.');
+            return Array.from(byUser.values())
+                .sort((a, b) => b.postCount - a.postCount)
+                .slice(0, 4);
+        };
+
+        const renderMember = (member) => {
+            const author = member.author || {};
+            const displayName = author.displayName || author.nickname || 'Ẩn danh';
+            const safeName = escapeHtml(displayName);
+            const categoryLabels = Array.from(member.categoryIds)
+                .map((categoryId) => getCategoryName(categoryId))
+                .slice(0, 2);
+            const safeRole = escapeHtml(
+                categoryLabels.length > 0
+                    ? categoryLabels.join(', ')
+                    : 'Đang cập nhật chủ đề'
+            );
+            const profileHref = `forum.html?author=${encodeURIComponent(author.nickname || author.userId || '')}`;
+
+            let avatarHtml;
+            if (author.avatarUrl && String(author.avatarUrl).trim().length > 0) {
+                const safeAvatarUrl = escapeHtml(author.avatarUrl);
+                avatarHtml = `<div class="avatar" style="background-image:url('${safeAvatarUrl}');"></div>`;
+            } else {
+                const initial = escapeHtml(displayName.trim().charAt(0) || 'U');
+                avatarHtml = `<div class="avatar avatar--initial">${initial}</div>`;
+            }
+
+            return `
+                <div class="member">
+                    ${avatarHtml}
+                    <div>
+                        <div class="name"><a href="${profileHref}">${safeName}</a></div>
+                        <div class="role">${safeRole}</div>
+                    </div>
+                </div>
+            `;
+        };
+
+        const renderHomeData = (payload) => {
+            const latestPosts = Array.isArray(payload.latestPosts) ? payload.latestPosts : [];
+            const upcomingEvents = Array.isArray(payload.upcomingEvents) ? payload.upcomingEvents : [];
+
+            if (latestPosts.length === 0) {
+                feedEl.innerHTML = `<div class="sv-meta">Chưa có bài viết phù hợp để hiển thị.</div>`;
+            } else {
+                feedEl.innerHTML = latestPosts.map((post) => renderArticleCard(post)).join('');
+            }
+
+            if (upcomingEvents.length === 0) {
+                eventsEl.innerHTML = `<li><div class="sv-meta">Chưa có sự kiện sắp tới.</div></li>`;
+            } else {
+                eventsEl.innerHTML = upcomingEvents.map((event) => renderEventItem(event)).join('');
+            }
+
+            const topMembers = collectTopMembers(latestPosts);
+            if (topMembers.length === 0) {
+                membersEl.innerHTML = `<div class="p-3 sv-meta">Chưa có thành viên nổi bật.</div>`;
+            } else {
+                membersEl.innerHTML = topMembers.map((member) => renderMember(member)).join('');
             }
         };
 
-        loadLatestArticles();
+        const renderError = () => {
+            feedEl.innerHTML = `<div class="sv-meta">Không thể tải dữ liệu trang chủ.</div>`;
+            eventsEl.innerHTML = `<li><div class="sv-meta">Không thể tải sự kiện.</div></li>`;
+            membersEl.innerHTML = `<div class="p-3 sv-meta">Không thể tải thành viên.</div>`;
+        };
+
+        const loadHome = async () => {
+            feedEl.innerHTML = `<div class="sv-meta">Đang tải bài viết mới nhất...</div>`;
+            eventsEl.innerHTML = `<li><div class="sv-meta">Đang tải sự kiện...</div></li>`;
+            membersEl.innerHTML = `<div class="p-3 sv-meta">Đang tải thành viên...</div>`;
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/home`, {
+                    headers: { Accept: 'application/json' }
+                });
+                if (!response.ok) {
+                    throw new Error(`API responded with status ${response.status}`);
+                }
+                const payload = await response.json();
+                renderHomeData(payload);
+            } catch (error) {
+                console.error('Cannot load home data:', error);
+                renderError();
+            }
+        };
+
+        loadHome();
     })();
 </script>
 </body>

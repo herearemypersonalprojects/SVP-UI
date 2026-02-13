@@ -55,6 +55,21 @@
             background: #e2e8f0 center/cover no-repeat;
             border: 1px solid #e5e7eb;
         }
+        .sv-article__detail-panel {
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+            transition: max-height .55s cubic-bezier(.22, 1, .36, 1), opacity .3s ease, margin-top .55s cubic-bezier(.22, 1, .36, 1);
+            margin-top: 0;
+        }
+        .sv-article__detail-panel.is-open {
+            opacity: 1;
+            margin-top: .85rem;
+        }
+        .sv-article__detail-inner {
+            border-top: 1px solid #e5e7eb;
+            padding-top: .9rem;
+        }
         .sv-article__tags {
             display: flex;
             flex-wrap: wrap;
@@ -534,6 +549,8 @@
         let beforeCreatedAt = null;
         let beforePostId = null;
         let isLoadingMore = false;
+        let expandedCard = null;
+        const detailCache = new Map();
 
         const renderArticleCard = (post) => {
             const author = post.author || {};
@@ -557,6 +574,11 @@
                     <div class="sv-article__cover" style="background-image:url('${safeCover}')"></div>
                     <div class="sv-article__tags">
                         <span class="sv-tag">${safeCategory}</span>
+                    </div>
+                    <div class="sv-article__detail-panel" aria-hidden="true">
+                        <div class="sv-article__detail-inner">
+                            <div class="sv-meta">Chi tiết bài viết sẽ hiển thị tại đây.</div>
+                        </div>
                     </div>
                 </article>
             `;
@@ -593,13 +615,7 @@
             `;
         };
 
-        const renderPostDetail = (post, comments) => {
-            const author = post.author || {};
-            const safeCategory = escapeHtml(getCategoryName(post.categoryId));
-            const safeTitle = escapeHtml(post.title || 'Chưa có tiêu đề');
-            const safeAuthor = escapeHtml(author.displayName || author.nickname || post.authorName || 'Ẩn danh');
-            const safeDate = escapeHtml(formatDate(post.createdAt));
-            const safeCover = escapeHtml(extractCover(post.contentHtml || post.content || ''));
+        const renderPostDetailContent = (post, comments) => {
             const safeBody = post.contentHtml && String(post.contentHtml).trim().length > 0
                 ? String(post.contentHtml)
                 : `<p>${escapeHtml(toPlainText(post.content || 'Nội dung đang được cập nhật.'))}</p>`;
@@ -612,14 +628,7 @@
                 : `<div class="sv-comment-list">${comments.map((item) => renderCommentItem(item)).join('')}</div>`;
 
             return `
-                <article class="sv-article sv-article-detail">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                        <span class="sv-pill"><i class="fa-regular fa-folder-open"></i>${safeCategory}</span>
-                        <span class="sv-meta">Cập nhật ${safeDate}</span>
-                    </div>
-                    <h2 class="sv-article__title">${safeTitle}</h2>
-                    <div class="sv-article__meta">Bởi ${safeAuthor}</div>
-                    <div class="sv-article__cover" style="background-image:url('${safeCover}')"></div>
+                <div class="sv-article-detail">
                     <div class="sv-article-detail__stats">
                         <span class="sv-article-detail__stat"><i class="fa-regular fa-eye"></i>${views.toLocaleString('vi-VN')} lượt xem</span>
                         <span class="sv-article-detail__stat"><i class="fa-regular fa-thumbs-up"></i>${likes.toLocaleString('vi-VN')} lượt thích</span>
@@ -630,20 +639,76 @@
                         <h3 class="h5 mb-3">Bình luận chi tiết</h3>
                         ${commentsHtml}
                     </section>
-                </article>
+                </div>
             `;
         };
 
-        const showDetailError = () => {
-            feedEl.innerHTML = `<div class="sv-meta">Không thể tải chi tiết bài viết.</div>`;
-        };
-
-        const openPostDetail = async (postId) => {
-            if (!Number.isFinite(postId)) {
+        const setPanelState = (panel, isOpen) => {
+            if (!panel) {
                 return;
             }
-            feedEl.innerHTML = `<div class="sv-meta">Đang tải chi tiết bài viết...</div>`;
-            loadMoreBtn.style.display = 'none';
+            if (isOpen) {
+                panel.classList.add('is-open');
+                panel.setAttribute('aria-hidden', 'false');
+                panel.style.maxHeight = `${panel.scrollHeight}px`;
+            } else {
+                panel.style.maxHeight = `${panel.scrollHeight}px`;
+                requestAnimationFrame(() => {
+                    panel.classList.remove('is-open');
+                    panel.setAttribute('aria-hidden', 'true');
+                    panel.style.maxHeight = '0px';
+                });
+            }
+        };
+
+        const renderPanelMessage = (panel, message) => {
+            if (!panel) {
+                return;
+            }
+            panel.innerHTML = `
+                <div class="sv-article__detail-inner">
+                    <div class="sv-meta">${escapeHtml(message)}</div>
+                </div>
+            `;
+        };
+
+        const closeExpandedCard = () => {
+            if (!expandedCard) {
+                return;
+            }
+            const panel = expandedCard.querySelector('.sv-article__detail-panel');
+            setPanelState(panel, false);
+            expandedCard = null;
+        };
+
+        const openPostDetail = async (cardEl, postId) => {
+            if (!cardEl || !Number.isFinite(postId)) {
+                return;
+            }
+            const panel = cardEl.querySelector('.sv-article__detail-panel');
+            if (!panel) {
+                return;
+            }
+
+            if (expandedCard && expandedCard !== cardEl) {
+                closeExpandedCard();
+            }
+            if (expandedCard === cardEl && panel.classList.contains('is-open')) {
+                closeExpandedCard();
+                return;
+            }
+
+            renderPanelMessage(panel, 'Đang tải chi tiết bài viết...');
+            setPanelState(panel, true);
+            expandedCard = cardEl;
+
+            if (detailCache.has(postId)) {
+                const cached = detailCache.get(postId);
+                panel.innerHTML = `<div class="sv-article__detail-inner">${renderPostDetailContent(cached.post, cached.comments)}</div>`;
+                panel.style.maxHeight = `${panel.scrollHeight}px`;
+                return;
+            }
+
             try {
                 const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
                     headers: { Accept: 'application/json' }
@@ -656,10 +721,13 @@
                 if (!detail) {
                     throw new Error('Invalid payload');
                 }
-                feedEl.innerHTML = renderPostDetail(detail.post, detail.comments);
+                detailCache.set(postId, detail);
+                panel.innerHTML = `<div class="sv-article__detail-inner">${renderPostDetailContent(detail.post, detail.comments)}</div>`;
+                panel.style.maxHeight = `${panel.scrollHeight}px`;
             } catch (error) {
                 console.error('Cannot load post detail:', error);
-                showDetailError();
+                renderPanelMessage(panel, 'Không thể tải chi tiết bài viết.');
+                panel.style.maxHeight = `${panel.scrollHeight}px`;
             }
         };
 
@@ -745,6 +813,7 @@
         const renderHomeData = (payload) => {
             const latestPosts = Array.isArray(payload.latestPosts) ? payload.latestPosts : [];
             const upcomingEvents = Array.isArray(payload.upcomingEvents) ? payload.upcomingEvents : [];
+            expandedCard = null;
 
             loadedPosts = latestPosts.slice();
             if (loadedPosts.length === 0) {
@@ -808,6 +877,7 @@
                 } else {
                     loadedPosts = loadedPosts.concat(newItems);
                     feedEl.innerHTML = loadedPosts.map((post) => renderArticleCard(post)).join('');
+                    expandedCard = null;
                     const topMembers = collectTopMembers(loadedPosts);
                     membersEl.innerHTML = topMembers.length === 0
                         ? `<div class="p-3 sv-meta">Chưa có thành viên nổi bật.</div>`
@@ -853,8 +923,12 @@
             if (!clickable || !feedEl.contains(clickable)) {
                 return;
             }
+            const detailZone = event.target.closest('.sv-article__detail-panel');
+            if (detailZone && clickable.contains(detailZone)) {
+                return;
+            }
             const postId = Number(clickable.getAttribute('data-post-id'));
-            openPostDetail(postId);
+            openPostDetail(clickable, postId);
         });
         feedEl.addEventListener('keydown', (event) => {
             if (event.key !== 'Enter' && event.key !== ' ') {
@@ -866,7 +940,7 @@
             }
             event.preventDefault();
             const postId = Number(clickable.getAttribute('data-post-id'));
-            openPostDetail(postId);
+            openPostDetail(clickable, postId);
         });
         loadHome();
     })();

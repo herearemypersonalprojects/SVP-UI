@@ -19,13 +19,15 @@
             --muted: #667085;
             --line: #d6dbe5;
             --gold: #d08b28;
+            --highlight-bg: #ffe082;
+            --highlight-ink: #4a2a00;
         }
         body {
             color: var(--ink);
             background:
-                radial-gradient(circle at 10% 10%, rgba(208, 139, 40, .16), transparent 34%),
-                radial-gradient(circle at 86% 12%, rgba(13, 97, 141, .11), transparent 36%),
-                linear-gradient(180deg, #f8f4ec, #efe9de);
+                    radial-gradient(circle at 10% 10%, rgba(208, 139, 40, .16), transparent 34%),
+                    radial-gradient(circle at 86% 12%, rgba(13, 97, 141, .11), transparent 36%),
+                    linear-gradient(180deg, #f8f4ec, #efe9de);
         }
         .sv-paris-wrap {
             display: grid;
@@ -40,6 +42,7 @@
             background: var(--card);
             overflow: hidden;
             box-shadow: 0 12px 26px rgba(15, 23, 42, .08);
+            content-visibility: auto;
         }
         .sv-map-head,
         .sv-detail-head {
@@ -70,6 +73,11 @@
             color: #475569;
             margin-top: .55rem;
         }
+        .sv-toolbar__hint {
+            margin-top: .45rem;
+            font-size: .84rem;
+            color: #64748b;
+        }
         #parisMap {
             width: 100%;
             height: clamp(540px, 76vh, 860px);
@@ -78,6 +86,7 @@
             display: grid;
             gap: .8rem;
             padding: 1rem;
+            overscroll-behavior: contain;
         }
         .sv-detail-image {
             width: 100%;
@@ -124,6 +133,7 @@
         .sv-detail-actions .btn {
             border-radius: 999px;
             font-weight: 700;
+            min-height: 44px;
         }
         .sv-empty {
             color: #b91c1c;
@@ -160,6 +170,33 @@
             color: #475569;
             font-size: .86rem;
         }
+        .sv-highlight {
+            background: var(--highlight-bg);
+            color: var(--highlight-ink);
+            font-weight: 700;
+            padding: 0 .12rem;
+            border-radius: .25rem;
+        }
+
+        /* NEW: tile warning banner */
+        .sv-tile-warning {
+            display: none;
+            margin-top: .6rem;
+            padding: .55rem .75rem;
+            border-radius: 12px;
+            border: 1px solid #fecaca;
+            background: #fff1f2;
+            color: #9f1239;
+            font-weight: 700;
+            font-size: .9rem;
+        }
+        .sv-tile-warning small {
+            display: block;
+            font-weight: 600;
+            color: #7f1d1d;
+            margin-top: .25rem;
+        }
+
         @media (max-width: 991.98px) {
             .sv-paris-wrap {
                 grid-template-columns: 1fr;
@@ -168,7 +205,22 @@
                 grid-template-columns: 1fr;
             }
             #parisMap {
-                height: clamp(420px, 62vh, 700px);
+                height: clamp(360px, 58vh, 620px);
+            }
+            .sv-detail-desc {
+                max-height: 220px;
+            }
+        }
+        @media (min-width: 992px) {
+            .sv-detail-card {
+                position: sticky;
+                top: 1rem;
+                align-self: start;
+                max-height: calc(100vh - 2rem);
+            }
+            .sv-detail-body {
+                max-height: calc(100vh - 12rem);
+                overflow: auto;
             }
         }
     </style>
@@ -225,7 +277,8 @@
             <div class="sv-toolbar">
                 <div class="position-relative">
                     <i class="fa-solid fa-magnifying-glass position-absolute text-secondary" style="left:14px; top:50%; transform:translateY(-50%);"></i>
-                    <input id="fulltextSearch" class="form-control ps-5" type="search" placeholder="Tìm kiếm tên, địa chỉ, mô tả, danh mục..." />
+                    <input id="fulltextSearch" class="form-control ps-5" type="search" placeholder="Tìm kiếm tên, địa chỉ, mô tả, danh mục... (nhấn Enter)"
+                           enterkeyhint="search" autocomplete="off" spellcheck="false" />
                 </div>
                 <select id="categoryFilter" class="form-select">
                     <option value="">Bộ lọc: Tất cả danh mục</option>
@@ -242,7 +295,14 @@
                     <option value="1">1 sao</option>
                 </select>
             </div>
+            <div class="sv-toolbar__hint">Mẹo: nhập từ khóa và nhấn <strong>Enter</strong> để bắt đầu tìm kiếm.</div>
             <div id="resultMeta" class="sv-toolbar__meta">Đang tải dữ liệu...</div>
+
+            <!-- NEW: tile warning -->
+            <div id="tileWarning" class="sv-tile-warning">
+                Không tải được nền bản đồ (map tiles) — thường do bị chặn mạng / adblock / rate-limit.
+                <small>Gợi ý: thử tắt adblock, đổi mạng, hoặc dùng VPN. Trang sẽ tự chuyển sang tile dự phòng nếu có.</small>
+            </div>
         </div>
     </div>
 
@@ -288,703 +348,844 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
-(() => {
-    const map = L.map('parisMap', {
-        preferCanvas: true,
-        zoomControl: true,
-        zoomAnimation: false,
-        fadeAnimation: false,
-        markerZoomAnimation: false,
-        minZoom: 10,
-        maxZoom: 19
-    }).setView([48.8566, 2.3522], 12);
+    (() => {
+        const map = L.map('parisMap', {
+            preferCanvas: true,
+            zoomControl: true,
+            zoomAnimation: false,
+            fadeAnimation: false,
+            markerZoomAnimation: false,
+            minZoom: 10,
+            maxZoom: 19
+        }).setView([48.8566, 2.3522], 12);
 
-    const baseTiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-    });
-    const backupOsmTiles = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
-    });
-    let switchedToBackupTiles = false;
-    baseTiles.on('tileerror', () => {
-        if (switchedToBackupTiles) {
-            return;
-        }
-        switchedToBackupTiles = true;
-        map.removeLayer(baseTiles);
-        backupOsmTiles.addTo(map);
-    });
-    baseTiles.addTo(map);
+        // ========= NEW: Robust basemap failover + diagnostics =========
+        const tileWarningEl = document.getElementById('tileWarning');
 
-    const cluster = L.markerClusterGroup({
-        chunkedLoading: true,
-        spiderfyOnMaxZoom: true,
-        showCoverageOnHover: false
-    });
-    map.addLayer(cluster);
-    map.whenReady(() => {
-        setTimeout(() => map.invalidateSize(), 0);
-    });
-    window.addEventListener('resize', () => map.invalidateSize());
-
-    const detailBody = document.getElementById('detailBody');
-    const slideIndexEl = document.getElementById('slideIndex');
-    const countEl = document.getElementById('monumentCount');
-    const searchInput = document.getElementById('fulltextSearch');
-    const categoryFilter = document.getElementById('categoryFilter');
-    const areaFilter = document.getElementById('areaFilter');
-    const starFilter = document.getElementById('starFilter');
-    const resultMeta = document.getElementById('resultMeta');
-
-    let allMonuments = [];
-    let monuments = [];
-    let markers = [];
-    let currentIndex = 0;
-    let activeMarker = null;
-    let suppressUrlSync = false;
-    const fallbackImage =
-        "data:image/svg+xml;utf8," +
-        encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 500'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='#e2e8f0'/><stop offset='100%' stop-color='#cbd5e1'/></linearGradient></defs><rect width='800' height='500' fill='url(#g)'/><g fill='#334155'><circle cx='350' cy='220' r='34'/><rect x='302' y='260' width='96' height='84' rx='10'/><rect x='416' y='210' width='90' height='134' rx='10'/></g><text x='400' y='420' text-anchor='middle' font-size='30' fill='#475569' font-family='Arial,sans-serif'>Khong co anh di tich</text></svg>");
-
-    function normalizeText(value) {
-        return (value || '')
-            .toString()
-            .normalize('NFD')
-            .replace(/[\u0300-\u036f]/g, '')
-            .toLowerCase();
-    }
-
-    const CATEGORY_GROUPS = [
-        'Tôn giáo',
-        'Khách sạn',
-        'Nhà ở dân dụng',
-        'Tòa nhà công cộng',
-        'Giáo dục',
-        'Y tế',
-        'Văn hóa nghệ thuật',
-        'Thương mại dịch vụ',
-        'Ẩm thực',
-        'Giao thông',
-        'Hạ tầng kỹ thuật',
-        'Công nghiệp thủ công',
-        'Quân sự phòng thủ',
-        'Tưởng niệm tượng đài',
-        'Di chỉ khảo cổ tiền sử',
-        'Cảnh quan vườn',
-        'Thể thao giải trí',
-        'Hành chính pháp lý',
-        'Khoa học nghiên cứu',
-        'Khác'
-    ];
-
-    function mapCategoryToGroup(categoryRaw) {
-        const text = normalizeText(categoryRaw);
-
-        if (!text) return 'Khác';
-        if (text.includes('nha tho') || text.includes('tu vien') || text.includes('giao duong') || text.includes('nha nguyen')) return 'Tôn giáo';
-        if (text.includes('khach san')) return 'Khách sạn';
-        if (text.includes('ngoi nha') || text.includes('biet thu') || text.includes('nha o') || text.includes('can ho')) return 'Nhà ở dân dụng';
-        if (text.includes('toa nha') || text.includes('cung') || text.includes('dinh') || text.includes('nha hat') || text.includes('bao tang') || text.includes('thu vien')) return 'Tòa nhà công cộng';
-        if (text.includes('truong') || text.includes('hoc vien') || text.includes('dai hoc') || text.includes('lycee') || text.includes('college')) return 'Giáo dục';
-        if (text.includes('benh vien') || text.includes('nha thuong') || text.includes('phong kham') || text.includes('y te')) return 'Y tế';
-        if (text.includes('rap') || text.includes('nha hat') || text.includes('phong trung bay') || text.includes('trien lam') || text.includes('van hoa')) return 'Văn hóa nghệ thuật';
-        if (text.includes('cua hang') || text.includes('cho') || text.includes('trung tam thuong mai') || text.includes('thuong mai') || text.includes('dich vu')) return 'Thương mại dịch vụ';
-        if (text.includes('nha hang') || text.includes('quan ca phe') || text.includes('tiem banh') || text.includes('quan an') || text.includes('bar')) return 'Ẩm thực';
-        if (text.includes('ga') || text.includes('tau') || text.includes('metro') || text.includes('ben') || text.includes('tram') || text.includes('san bay')) return 'Giao thông';
-        if (text.includes('cau') || text.includes('cong') || text.includes('duong ham') || text.includes('ha tang') || text.includes('thuy loi')) return 'Hạ tầng kỹ thuật';
-        if (text.includes('xuong') || text.includes('nha may') || text.includes('cong nghiep') || text.includes('thu cong') || text.includes('kho')) return 'Công nghiệp thủ công';
-        if (text.includes('phao dai') || text.includes('quan su') || text.includes('don') || text.includes('thanh luy') || text.includes('bo phong thu')) return 'Quân sự phòng thủ';
-        if (text.includes('tuong dai') || text.includes('dai phun') || text.includes('dai ky niem') || text.includes('lang mo')) return 'Tưởng niệm tượng đài';
-        if (text.includes('menhir') || text.includes('dolmen') || text.includes('khao co') || text.includes('di chi')) return 'Di chỉ khảo cổ tiền sử';
-        if (text.includes('vuon') || text.includes('cong vien') || text.includes('canh quan') || text.includes('thao cam')) return 'Cảnh quan vườn';
-        if (text.includes('san van dong') || text.includes('the thao') || text.includes('giai tri') || text.includes('nha thi dau')) return 'Thể thao giải trí';
-        if (text.includes('toa an') || text.includes('hanh chinh') || text.includes('cong vu') || text.includes('thanh pho') || text.includes('phap ly')) return 'Hành chính pháp lý';
-        if (text.includes('phong thi nghiem') || text.includes('nghien cuu') || text.includes('khoa hoc') || text.includes('vien')) return 'Khoa học nghiên cứu';
-
-        return 'Khác';
-    }
-
-    function getSearchBlob(item) {
-        return normalizeText([
-            item.name_vn,
-            item.address_vn,
-            item.description_vn,
-            item.story_vn,
-            item.category_vn,
-            item.domaine_vn,
-            item.periode,
-            item.commune_forme_index
-        ].filter(Boolean).join(' '));
-    }
-
-    function getStarCount(scoreRaw) {
-        const s = Number.isFinite(Number(scoreRaw)) ? Math.max(0, Math.min(1, Number(scoreRaw))) : 0;
-        const stars = Math.round(s * 5);
-        return Math.max(1, Math.min(5, stars || 1));
-    }
-
-    function normalizeAreaKey(value) {
-        return normalizeText(value).replace(/[^a-z0-9]+/g, ' ').trim();
-    }
-
-    function resolveAreaLabel(item) {
-        const commune = (item.commune_forme_index || '').toString().trim();
-        if (commune) {
-            return commune;
-        }
-        const address = (item.address_vn || '').toString().trim();
-        if (!address) {
-            return 'Không rõ khu vực';
-        }
-        const parts = address.split(',').map((p) => p.trim()).filter(Boolean);
-        return parts.length ? parts[parts.length - 1] : address;
-    }
-
-    function buildFilterOptions() {
-        const areaMap = new Map();
-        allMonuments.forEach((item) => {
-            const key = item.__areaKey || '';
-            if (!key) {
-                return;
+        const TILE_PROVIDERS = [
+            {
+                id: 'osm',
+                label: 'OpenStreetMap (abc)',
+                layer: L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                    subdomains: 'abc',
+                    maxZoom: 19,
+                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+                })
+            },
+            {
+                id: 'osmfr',
+                label: 'OSM France',
+                layer: L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+                    subdomains: 'abc',
+                    maxZoom: 20,
+                    attribution: '&copy; OpenStreetMap contributors'
+                })
+            },
+            {
+                // CARTO basemap: thường ổn định, hay dùng như fallback
+                id: 'carto',
+                label: 'CARTO Light',
+                layer: L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+                    subdomains: 'abcd',
+                    maxZoom: 20,
+                    attribution: '&copy; OpenStreetMap contributors &copy; CARTO'
+                })
             }
-            if (!areaMap.has(key)) {
-                areaMap.set(key, { label: item.__areaLabel || key, count: 0 });
-            }
-            areaMap.get(key).count += 1;
-        });
+        ];
 
-        const areas = Array.from(areaMap.entries())
-            .map(([key, meta]) => ({ key, label: meta.label }))
-            .sort((a, b) => a.label.localeCompare(b.label, 'vi'));
+        let activeTileIndex = 0;
+        let tileErrorCount = 0;
+        let tileErrorCooldown = false;
 
-        categoryFilter.innerHTML = '<option value="">Bộ lọc: Tất cả danh mục</option>';
-        CATEGORY_GROUPS.forEach((cat) => {
-            const option = document.createElement('option');
-            option.value = cat;
-            option.textContent = `Danh mục: ${cat}`;
-            categoryFilter.appendChild(option);
-        });
-
-        areaFilter.innerHTML = '<option value="">Bộ lọc: Tất cả khu vực</option>';
-        areas.forEach((area) => {
-            const option = document.createElement('option');
-            option.value = area.key;
-            option.textContent = `Khu vực: ${area.label}`;
-            areaFilter.appendChild(option);
-        });
-    }
-
-    function parseLooseParams(raw) {
-        if (!raw) {
-            return new URLSearchParams();
+        function showTileWarning(show) {
+            if (!tileWarningEl) return;
+            tileWarningEl.style.display = show ? 'block' : 'none';
         }
-        const cleaned = raw.replace(/^[?#&]+/, '');
-        return new URLSearchParams(cleaned);
-    }
 
-    function getMergedUrlParams() {
-        const merged = new URLSearchParams(window.location.search);
+        function attachTileErrorHandler(layer) {
+            if (layer.__svHasErrorHandler) return;
+            layer.__svHasErrorHandler = true;
 
-        const path = window.location.pathname || '';
-        const htmlPos = path.indexOf('.html');
-        if (htmlPos >= 0) {
-            const tail = path.slice(htmlPos + 5);
-            const loose = parseLooseParams(tail);
-            for (const [key, value] of loose.entries()) {
-                if (!merged.has(key)) {
-                    merged.set(key, value);
+            layer.on('tileerror', () => {
+                tileErrorCount += 1;
+                // Nếu tile bắt đầu lỗi, bật cảnh báo
+                showTileWarning(true);
+
+                // Tránh “spin” đổi layer quá nhanh (throttle)
+                if (tileErrorCooldown) return;
+
+                // Sau 6 lỗi, thử chuyển provider
+                if (tileErrorCount >= 6) {
+                    tileErrorCooldown = true;
+                    setTimeout(() => (tileErrorCooldown = false), 1200);
+                    switchToNextTiles();
+                }
+            });
+
+            // Nếu tile load OK thì tắt cảnh báo dần
+            layer.on('load', () => {
+                // 'load' có thể gọi nhiều lần; chỉ cần “hạ nhiệt” lỗi
+                tileErrorCount = Math.max(0, tileErrorCount - 1);
+                if (tileErrorCount === 0) {
+                    showTileWarning(false);
+                }
+            });
+        }
+
+        function switchToTiles(index) {
+            const nextIndex = ((index % TILE_PROVIDERS.length) + TILE_PROVIDERS.length) % TILE_PROVIDERS.length;
+            const current = TILE_PROVIDERS[activeTileIndex]?.layer;
+            if (current && map.hasLayer(current)) {
+                map.removeLayer(current);
+            }
+
+            activeTileIndex = nextIndex;
+            tileErrorCount = 0;
+
+            const next = TILE_PROVIDERS[activeTileIndex].layer;
+            attachTileErrorHandler(next);
+            next.addTo(map);
+
+            // Force refresh tiles
+            setTimeout(() => map.invalidateSize(), 0);
+        }
+
+        function switchToNextTiles() {
+            switchToTiles(activeTileIndex + 1);
+        }
+
+        // Init tiles
+        switchToTiles(0);
+        // ============================================================
+
+        const cluster = L.markerClusterGroup({
+            chunkedLoading: true,
+            spiderfyOnMaxZoom: true,
+            showCoverageOnHover: false,
+            removeOutsideVisibleBounds: true
+        });
+        map.addLayer(cluster);
+
+        map.whenReady(() => {
+            setTimeout(() => map.invalidateSize(), 0);
+        });
+        let resizeRaf = 0;
+        window.addEventListener('resize', () => {
+            if (resizeRaf) return;
+            resizeRaf = requestAnimationFrame(() => {
+                resizeRaf = 0;
+                map.invalidateSize();
+            });
+        });
+
+        const detailBody = document.getElementById('detailBody');
+        const slideIndexEl = document.getElementById('slideIndex');
+        const countEl = document.getElementById('monumentCount');
+        const searchInput = document.getElementById('fulltextSearch');
+        const categoryFilter = document.getElementById('categoryFilter');
+        const areaFilter = document.getElementById('areaFilter');
+        const starFilter = document.getElementById('starFilter');
+        const resultMeta = document.getElementById('resultMeta');
+
+        let allMonuments = [];
+        let sortedMonuments = [];
+        let monuments = [];
+        let markers = [];
+        let currentIndex = 0;
+        let activeMarker = null;
+        let suppressUrlSync = false;
+        let activeQueryTerms = [];
+        let filterFrameId = 0;
+        let pendingFilterRequest = null;
+        const markerCache = new Map();
+        const iconCache = new Map();
+
+        const fallbackImage =
+            "data:image/svg+xml;utf8," +
+            encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 500'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='#e2e8f0'/><stop offset='100%' stop-color='#cbd5e1'/></linearGradient></defs><rect width='800' height='500' fill='url(#g)'/><g fill='#334155'><circle cx='350' cy='220' r='34'/><rect x='302' y='260' width='96' height='84' rx='10'/><rect x='416' y='210' width='90' height='134' rx='10'/></g><text x='400' y='420' text-anchor='middle' font-size='30' fill='#475569' font-family='Arial,sans-serif'>Khong co anh di tich</text></svg>");
+
+        function normalizeText(value) {
+            return (value || '')
+                .toString()
+                .normalize('NFD')
+                .replace(/[\u0300-\u036f]/g, '')
+                .toLowerCase();
+        }
+
+        function escapeHtml(value) {
+            return (value || '')
+                .toString()
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+
+        function splitQueryTerms(raw) {
+            if (!raw) return [];
+            const unique = new Set();
+            normalizeText(raw).split(/\s+/).forEach((term) => {
+                const t = term.trim();
+                if (t) unique.add(t);
+            });
+            return Array.from(unique);
+        }
+
+        function buildNormalizedIndex(text) {
+            const source = (text || '').toString();
+            let normalized = '';
+            const indexMap = [];
+
+            for (let i = 0; i < source.length; i += 1) {
+                const folded = normalizeText(source[i]);
+                if (!folded) continue;
+                for (let j = 0; j < folded.length; j += 1) {
+                    normalized += folded[j];
+                    indexMap.push(i);
                 }
             }
+            return { source, normalized, indexMap };
         }
 
-        if (window.location.hash) {
-            const hashParams = parseLooseParams(window.location.hash);
-            for (const [key, value] of hashParams.entries()) {
-                if (!merged.has(key)) {
-                    merged.set(key, value);
+        function getHighlightRanges(text, terms) {
+            if (!text || !terms || !terms.length) return [];
+
+            const { normalized, indexMap } = buildNormalizedIndex(text);
+            if (!normalized || !indexMap.length) return [];
+
+            const ranges = [];
+
+            terms.forEach((term) => {
+                if (!term) return;
+                let start = 0;
+                while (start < normalized.length) {
+                    const found = normalized.indexOf(term, start);
+                    if (found < 0) break;
+                    const from = indexMap[found];
+                    const to = indexMap[Math.min(found + term.length - 1, indexMap.length - 1)] + 1;
+                    if (Number.isInteger(from) && Number.isInteger(to) && to > from) {
+                        ranges.push([from, to]);
+                    }
+                    start = found + term.length;
+                }
+            });
+
+            if (!ranges.length) return [];
+            ranges.sort((a, b) => (a[0] - b[0]) || (a[1] - b[1]));
+
+            const merged = [ranges[0].slice()];
+            for (let i = 1; i < ranges.length; i += 1) {
+                const current = ranges[i];
+                const last = merged[merged.length - 1];
+                if (current[0] <= last[1]) {
+                    last[1] = Math.max(last[1], current[1]);
+                } else {
+                    merged.push(current.slice());
                 }
             }
+            return merged;
         }
 
-        return merged;
-    }
+        function highlightText(text, terms) {
+            const source = (text || '').toString();
+            if (!source) return '';
+            if (!terms || !terms.length) return escapeHtml(source);
 
-    function getUrlTarget() {
-        const params = getMergedUrlParams();
-        const reference = params.get('id') || '';
-        const name = params.get('name') || '';
+            const ranges = getHighlightRanges(source, terms);
+            if (!ranges.length) return escapeHtml(source);
 
-        return {
-            reference: reference.trim(),
-            name: name.trim()
-        };
-    }
+            let cursor = 0;
+            let output = '';
 
-    function getUrlFilterState() {
-        const params = getMergedUrlParams();
-        return {
-            query: (params.get('q') || '').trim(),
-            category: (params.get('category') || '').trim(),
-            area: (params.get('area') || '').trim(),
-            stars: (params.get('stars') || '').trim()
-        };
-    }
+            ranges.forEach(([start, end]) => {
+                output += escapeHtml(source.slice(cursor, start));
+                output += `<mark class="sv-highlight">${escapeHtml(source.slice(start, end))}</mark>`;
+                cursor = end;
+            });
 
-    function setSelectValueSafe(selectEl, value) {
-        if (!value) {
-            selectEl.value = '';
-            return;
-        }
-        const exists = Array.from(selectEl.options).some((opt) => opt.value === value);
-        selectEl.value = exists ? value : '';
-    }
-
-    function setAreaFilterValueSafe(value) {
-        if (!value) {
-            areaFilter.value = '';
-            return;
-        }
-        const directExists = Array.from(areaFilter.options).some((opt) => opt.value === value);
-        if (directExists) {
-            areaFilter.value = value;
-            return;
-        }
-        const normalized = normalizeAreaKey(value);
-        const normalizedExists = Array.from(areaFilter.options).some((opt) => opt.value === normalized);
-        areaFilter.value = normalizedExists ? normalized : '';
-    }
-
-    function buildRequestedUrl(item = null) {
-        const path = (window.location.pathname || '/ban-do-paris.html').split('&id=')[0].split('?')[0];
-        const params = new URLSearchParams();
-
-        const query = (searchInput.value || '').trim();
-        const category = (categoryFilter.value || '').trim();
-        const area = (areaFilter.value || '').trim();
-        const stars = (starFilter.value || '').trim();
-
-        if (query) params.set('q', query);
-        if (category) params.set('category', category);
-        if (area) params.set('area', area);
-        if (stars) params.set('stars', stars);
-
-        if (item) {
-            if (item.reference) params.set('id', item.reference);
-            if (item.name_vn) params.set('name', item.name_vn);
+            output += escapeHtml(source.slice(cursor));
+            return output;
         }
 
-        const queryString = params.toString();
-        return queryString ? `${path}?${queryString}` : path;
-    }
+        const CATEGORY_GROUPS = [
+            'Tôn giáo','Khách sạn','Nhà ở dân dụng','Tòa nhà công cộng','Giáo dục','Y tế','Văn hóa nghệ thuật',
+            'Thương mại dịch vụ','Ẩm thực','Giao thông','Hạ tầng kỹ thuật','Công nghiệp thủ công','Quân sự phòng thủ',
+            'Tưởng niệm tượng đài','Di chỉ khảo cổ tiền sử','Cảnh quan vườn','Thể thao giải trí','Hành chính pháp lý',
+            'Khoa học nghiên cứu','Khác'
+        ];
 
-    function updateUrlForItem(item, mode = 'replace') {
-        if (suppressUrlSync) {
-            return;
-        }
-        const nextUrl = buildRequestedUrl(item);
-        const stateId = item && item.reference ? item.reference : '';
-        const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-        if (currentUrl === nextUrl) {
-            return;
-        }
-        if (mode === 'push') {
-            history.pushState({ id: stateId }, '', nextUrl);
-            return;
-        }
-        history.replaceState({ id: stateId }, '', nextUrl);
-    }
+        function mapCategoryToGroup(categoryRaw) {
+            const text = normalizeText(categoryRaw);
 
-    function updateUrlForFiltersOnly(mode = 'replace') {
-        if (suppressUrlSync) {
-            return;
-        }
-        const nextUrl = buildRequestedUrl(null);
-        const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
-        if (currentUrl === nextUrl) {
-            return;
-        }
-        if (mode === 'push') {
-            history.pushState({}, '', nextUrl);
-            return;
-        }
-        history.replaceState({}, '', nextUrl);
-    }
+            if (!text) return 'Khác';
+            if (text.includes('nha tho') || text.includes('tu vien') || text.includes('giao duong') || text.includes('nha nguyen')) return 'Tôn giáo';
+            if (text.includes('khach san')) return 'Khách sạn';
+            if (text.includes('ngoi nha') || text.includes('biet thu') || text.includes('nha o') || text.includes('can ho')) return 'Nhà ở dân dụng';
+            if (text.includes('toa nha') || text.includes('cung') || text.includes('dinh') || text.includes('nha hat') || text.includes('bao tang') || text.includes('thu vien')) return 'Tòa nhà công cộng';
+            if (text.includes('truong') || text.includes('hoc vien') || text.includes('dai hoc') || text.includes('lycee') || text.includes('college')) return 'Giáo dục';
+            if (text.includes('benh vien') || text.includes('nha thuong') || text.includes('phong kham') || text.includes('y te')) return 'Y tế';
+            if (text.includes('rap') || text.includes('nha hat') || text.includes('phong trung bay') || text.includes('trien lam') || text.includes('van hoa')) return 'Văn hóa nghệ thuật';
+            if (text.includes('cua hang') || text.includes('cho') || text.includes('trung tam thuong mai') || text.includes('thuong mai') || text.includes('dich vu')) return 'Thương mại dịch vụ';
+            if (text.includes('nha hang') || text.includes('quan ca phe') || text.includes('tiem banh') || text.includes('quan an') || text.includes('bar')) return 'Ẩm thực';
+            if (text.includes('ga') || text.includes('tau') || text.includes('metro') || text.includes('ben') || text.includes('tram') || text.includes('san bay')) return 'Giao thông';
+            if (text.includes('cau') || text.includes('cong') || text.includes('duong ham') || text.includes('ha tang') || text.includes('thuy loi')) return 'Hạ tầng kỹ thuật';
+            if (text.includes('xuong') || text.includes('nha may') || text.includes('cong nghiep') || text.includes('thu cong') || text.includes('kho')) return 'Công nghiệp thủ công';
+            if (text.includes('phao dai') || text.includes('quan su') || text.includes('don') || text.includes('thanh luy') || text.includes('bo phong thu')) return 'Quân sự phòng thủ';
+            if (text.includes('tuong dai') || text.includes('dai phun') || text.includes('dai ky niem') || text.includes('lang mo')) return 'Tưởng niệm tượng đài';
+            if (text.includes('menhir') || text.includes('dolmen') || text.includes('khao co') || text.includes('di chi')) return 'Di chỉ khảo cổ tiền sử';
+            if (text.includes('vuon') || text.includes('cong vien') || text.includes('canh quan') || text.includes('thao cam')) return 'Cảnh quan vườn';
+            if (text.includes('san van dong') || text.includes('the thao') || text.includes('giai tri') || text.includes('nha thi dau')) return 'Thể thao giải trí';
+            if (text.includes('toa an') || text.includes('hanh chinh') || text.includes('cong vu') || text.includes('thanh pho') || text.includes('phap ly')) return 'Hành chính pháp lý';
+            if (text.includes('phong thi nghiem') || text.includes('nghien cuu') || text.includes('khoa hoc') || text.includes('vien')) return 'Khoa học nghiên cứu';
 
-    function findIndexInCurrentByTarget(target) {
-        if (!target) {
+            return 'Khác';
+        }
+
+        function getSearchBlob(item) {
+            return normalizeText([
+                item.name_vn,
+                item.address_vn,
+                item.description_vn,
+                item.story_vn,
+                item.category_vn,
+                item.domaine_vn,
+                item.periode,
+                item.commune_forme_index
+            ].filter(Boolean).join(' '));
+        }
+
+        function getStarCount(scoreRaw) {
+            const s = Number.isFinite(Number(scoreRaw)) ? Math.max(0, Math.min(1, Number(scoreRaw))) : 0;
+            const stars = Math.round(s * 5);
+            return Math.max(1, Math.min(5, stars || 1));
+        }
+
+        function normalizeAreaKey(value) {
+            return normalizeText(value).replace(/[^a-z0-9]+/g, ' ').trim();
+        }
+
+        function resolveAreaLabel(item) {
+            const commune = (item.commune_forme_index || '').toString().trim();
+            if (commune) return commune;
+            const address = (item.address_vn || '').toString().trim();
+            if (!address) return 'Không rõ khu vực';
+            const parts = address.split(',').map((p) => p.trim()).filter(Boolean);
+            return parts.length ? parts[parts.length - 1] : address;
+        }
+
+        function buildFilterOptions() {
+            const areaMap = new Map();
+            allMonuments.forEach((item) => {
+                const key = item.__areaKey || '';
+                if (!key) return;
+                if (!areaMap.has(key)) {
+                    areaMap.set(key, { label: item.__areaLabel || key, count: 0 });
+                }
+                areaMap.get(key).count += 1;
+            });
+
+            const areas = Array.from(areaMap.entries())
+                .map(([key, meta]) => ({ key, label: meta.label }))
+                .sort((a, b) => a.label.localeCompare(b.label, 'vi'));
+
+            categoryFilter.innerHTML = '<option value="">Bộ lọc: Tất cả danh mục</option>';
+            CATEGORY_GROUPS.forEach((cat) => {
+                const option = document.createElement('option');
+                option.value = cat;
+                option.textContent = `Danh mục: ${cat}`;
+                categoryFilter.appendChild(option);
+            });
+
+            areaFilter.innerHTML = '<option value="">Bộ lọc: Tất cả khu vực</option>';
+            areas.forEach((area) => {
+                const option = document.createElement('option');
+                option.value = area.key;
+                option.textContent = `Khu vực: ${area.label}`;
+                areaFilter.appendChild(option);
+            });
+        }
+
+        function parseLooseParams(raw) {
+            if (!raw) return new URLSearchParams();
+            const cleaned = raw.replace(/^[?#&]+/, '');
+            return new URLSearchParams(cleaned);
+        }
+
+        function getMergedUrlParams() {
+            const merged = new URLSearchParams(window.location.search);
+
+            const path = window.location.pathname || '';
+            const htmlPos = path.indexOf('.html');
+            if (htmlPos >= 0) {
+                const tail = path.slice(htmlPos + 5);
+                const loose = parseLooseParams(tail);
+                for (const [key, value] of loose.entries()) {
+                    if (!merged.has(key)) merged.set(key, value);
+                }
+            }
+
+            if (window.location.hash) {
+                const hashParams = parseLooseParams(window.location.hash);
+                for (const [key, value] of hashParams.entries()) {
+                    if (!merged.has(key)) merged.set(key, value);
+                }
+            }
+
+            return merged;
+        }
+
+        function getUrlTarget() {
+            const params = getMergedUrlParams();
+            const reference = params.get('id') || '';
+            const name = params.get('name') || '';
+            return { reference: reference.trim(), name: name.trim() };
+        }
+
+        function getUrlFilterState() {
+            const params = getMergedUrlParams();
+            return {
+                query: (params.get('q') || '').trim(),
+                category: (params.get('category') || '').trim(),
+                area: (params.get('area') || '').trim(),
+                stars: (params.get('stars') || '').trim()
+            };
+        }
+
+        function setSelectValueSafe(selectEl, value) {
+            if (!value) { selectEl.value = ''; return; }
+            const exists = Array.from(selectEl.options).some((opt) => opt.value === value);
+            selectEl.value = exists ? value : '';
+        }
+
+        function setAreaFilterValueSafe(value) {
+            if (!value) { areaFilter.value = ''; return; }
+            const directExists = Array.from(areaFilter.options).some((opt) => opt.value === value);
+            if (directExists) { areaFilter.value = value; return; }
+            const normalized = normalizeAreaKey(value);
+            const normalizedExists = Array.from(areaFilter.options).some((opt) => opt.value === normalized);
+            areaFilter.value = normalizedExists ? normalized : '';
+        }
+
+        function buildRequestedUrl(item = null) {
+            const path = (window.location.pathname || '/ban-do-paris.html').split('&id=')[0].split('?')[0];
+            const params = new URLSearchParams();
+
+            const query = (searchInput.value || '').trim();
+            const category = (categoryFilter.value || '').trim();
+            const area = (areaFilter.value || '').trim();
+            const stars = (starFilter.value || '').trim();
+
+            if (query) params.set('q', query);
+            if (category) params.set('category', category);
+            if (area) params.set('area', area);
+            if (stars) params.set('stars', stars);
+
+            if (item) {
+                if (item.reference) params.set('id', item.reference);
+                if (item.name_vn) params.set('name', item.name_vn);
+            }
+
+            const queryString = params.toString();
+            return queryString ? `${path}?${queryString}` : path;
+        }
+
+        function updateUrlForItem(item, mode = 'replace') {
+            if (suppressUrlSync) return;
+            const nextUrl = buildRequestedUrl(item);
+            const stateId = item && item.reference ? item.reference : '';
+            const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+            if (currentUrl === nextUrl) return;
+            if (mode === 'push') { history.pushState({ id: stateId }, '', nextUrl); return; }
+            history.replaceState({ id: stateId }, '', nextUrl);
+        }
+
+        function updateUrlForFiltersOnly(mode = 'replace') {
+            if (suppressUrlSync) return;
+            const nextUrl = buildRequestedUrl(null);
+            const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+            if (currentUrl === nextUrl) return;
+            if (mode === 'push') { history.pushState({}, '', nextUrl); return; }
+            history.replaceState({}, '', nextUrl);
+        }
+
+        function findIndexInCurrentByTarget(target) {
+            if (!target) return -1;
+            if (target.reference) {
+                const idxByRef = monuments.findIndex((m) => (m.reference || '') === target.reference);
+                if (idxByRef >= 0) return idxByRef;
+            }
+            if (target.name) {
+                const nameNeedle = normalizeText(target.name);
+                const idxByName = monuments.findIndex((m) => normalizeText(m.name_vn) === nameNeedle);
+                if (idxByName >= 0) return idxByName;
+            }
             return -1;
         }
-        if (target.reference) {
-            const idxByRef = monuments.findIndex((m) => (m.reference || '') === target.reference);
-            if (idxByRef >= 0) {
-                return idxByRef;
+
+        function getCategoryVisual(category) {
+            const text = normalizeText(category);
+            if (text.includes('nha tho') || text.includes('tu vien') || text.includes('giao duong')) return { icon: 'fa-church', color: '#2563eb', label: 'Tôn giáo' };
+            if (text.includes('ga tau') || text.includes('metro') || text.includes('ga')) return { icon: 'fa-train-subway', color: '#0ea5a4', label: 'Giao thông' };
+            if (text.includes('khach san')) return { icon: 'fa-hotel', color: '#a16207', label: 'Khách sạn' };
+            if (text.includes('truong')) return { icon: 'fa-school', color: '#1d4ed8', label: 'Giáo dục' };
+            if (text.includes('nha hang') || text.includes('quan ca phe') || text.includes('cua hang')) return { icon: 'fa-shop', color: '#db2777', label: 'Thương mại' };
+            if (text.includes('tuong dai') || text.includes('menhir') || text.includes('dai phun')) return { icon: 'fa-monument', color: '#be123c', label: 'Tưởng niệm' };
+            if (text.includes('cau')) return { icon: 'fa-bridge', color: '#0891b2', label: 'Hạ tầng' };
+            if (text.includes('toa nha') || text.includes('ngoi nha') || text.includes('nha')) return { icon: 'fa-building-columns', color: '#4f46e5', label: 'Kiến trúc' };
+            return { icon: 'fa-landmark', color: '#475569', label: 'Di tích' };
+        }
+
+        function markerHtml(iconClass, color, isActive) {
+            const activeClass = isActive ? ' sv-marker--active' : '';
+            return `<div class="sv-marker${activeClass}" style="background:${color};"><i class="fa-solid ${iconClass}"></i></div>`;
+        }
+
+        function createIcon(category, isActive = false) {
+            const visual = getCategoryVisual(category);
+            const cacheKey = `${visual.icon}|${visual.color}|${isActive ? 1 : 0}`;
+            if (iconCache.has(cacheKey)) {
+                return iconCache.get(cacheKey);
             }
+            const icon = L.divIcon({
+                className: '',
+                html: markerHtml(visual.icon, visual.color, isActive),
+                iconSize: [28, 28],
+                iconAnchor: [14, 14],
+                popupAnchor: [0, -12]
+            });
+            iconCache.set(cacheKey, icon);
+            return icon;
         }
-        if (target.name) {
-            const nameNeedle = normalizeText(target.name);
-            const idxByName = monuments.findIndex((m) => normalizeText(m.name_vn) === nameNeedle);
-            if (idxByName >= 0) {
-                return idxByName;
+
+        function getMarkerForItem(item) {
+            const key = item.__markerKey;
+            if (markerCache.has(key)) {
+                return markerCache.get(key);
             }
-        }
-        return -1;
-    }
 
-    function getCategoryVisual(category) {
-        const text = normalizeText(category);
-        if (text.includes('nha tho') || text.includes('tu vien') || text.includes('giao duong')) {
-            return { icon: 'fa-church', color: '#2563eb', label: 'Tôn giáo' };
+            const marker = L.marker([item.__lat, item.__lon], { icon: createIcon(item.category_vn) });
+            marker.__item = item;
+            marker.__index = -1;
+            marker.bindPopup(popupHtml(item));
+            marker.on('click', () => focusByIndex(marker.__index, false));
+            markerCache.set(key, marker);
+            return marker;
         }
-        if (text.includes('ga tau') || text.includes('metro') || text.includes('ga')) {
-            return { icon: 'fa-train-subway', color: '#0ea5a4', label: 'Giao thông' };
-        }
-        if (text.includes('khach san')) {
-            return { icon: 'fa-hotel', color: '#a16207', label: 'Khách sạn' };
-        }
-        if (text.includes('truong')) {
-            return { icon: 'fa-school', color: '#1d4ed8', label: 'Giáo dục' };
-        }
-        if (text.includes('nha hang') || text.includes('quan ca phe') || text.includes('cua hang')) {
-            return { icon: 'fa-shop', color: '#db2777', label: 'Thương mại' };
-        }
-        if (text.includes('tuong dai') || text.includes('menhir') || text.includes('dai phun')) {
-            return { icon: 'fa-monument', color: '#be123c', label: 'Tưởng niệm' };
-        }
-        if (text.includes('cau')) {
-            return { icon: 'fa-bridge', color: '#0891b2', label: 'Hạ tầng' };
-        }
-        if (text.includes('toa nha') || text.includes('ngoi nha') || text.includes('nha')) {
-            return { icon: 'fa-building-columns', color: '#4f46e5', label: 'Kiến trúc' };
-        }
-        return { icon: 'fa-landmark', color: '#475569', label: 'Di tích' };
-    }
 
-    function markerHtml(iconClass, color, isActive) {
-        const activeClass = isActive ? ' sv-marker--active' : '';
-        return `<div class="sv-marker${activeClass}" style="background:${color};"><i class="fa-solid ${iconClass}"></i></div>`;
-    }
-
-    function createIcon(category, isActive = false) {
-        const visual = getCategoryVisual(category);
-        return L.divIcon({
-            className: '',
-            html: markerHtml(visual.icon, visual.color, isActive),
-            iconSize: [28, 28],
-            iconAnchor: [14, 14],
-            popupAnchor: [0, -12]
-        });
-    }
-
-    function toImagePath(reference) {
-        if (!reference) {
-            return '';
+        function toImagePath(reference) {
+            if (!reference) return '';
+            return `assets/paris/images/${String(reference).toLowerCase()}.jpg`;
         }
-        return `assets/paris/images/${String(reference).toLowerCase()}.jpg`;
-    }
 
-    function starRow(score) {
-        const s = Number.isFinite(Number(score)) ? Math.max(0, Math.min(1, Number(score))) : 0;
-        const filled = Math.round(s * 5);
-        const stars = Array.from({ length: 5 }, (_, i) =>
-            `<i class="fa-${i < filled ? 'solid' : 'regular'} fa-star"></i>`
-        ).join('');
-        return `${stars} <small>${(s * 5).toFixed(1)}/5</small>`;
-    }
+        function starRow(score) {
+            const s = Number.isFinite(Number(score)) ? Math.max(0, Math.min(1, Number(score))) : 0;
+            const filled = Math.round(s * 5);
+            const stars = Array.from({ length: 5 }, (_, i) => `<i class="fa-${i < filled ? 'solid' : 'regular'} fa-star"></i>`).join('');
+            return `${stars} <small>${(s * 5).toFixed(1)}/5</small>`;
+        }
 
-    function popupHtml(item) {
-        const visual = getCategoryVisual(item.category_vn);
-        return `
-            <div class="sv-popup-title"><i class="fa-solid ${visual.icon} me-1" style="color:${visual.color}"></i>${item.name_vn || 'Không rõ tên'}</div>
-            <p class="sv-popup-meta">${item.address_vn || 'Chưa có địa chỉ'}</p>
+        function popupHtml(item, terms = activeQueryTerms) {
+            const visual = getCategoryVisual(item.category_vn);
+            return `
+            <div class="sv-popup-title"><i class="fa-solid ${visual.icon} me-1" style="color:${visual.color}"></i>${highlightText(item.name_vn || 'Không rõ tên', terms)}</div>
+            <p class="sv-popup-meta">${highlightText(item.address_vn || 'Chưa có địa chỉ', terms)}</p>
         `;
-    }
-
-    function renderDetail(index) {
-        if (!monuments.length) {
-            detailBody.innerHTML = '<div class="sv-empty">Không có dữ liệu di tích phù hợp.</div>';
-            slideIndexEl.textContent = '0 / 0';
-            return;
         }
 
-        const i = (index + monuments.length) % monuments.length;
-        currentIndex = i;
-        const item = monuments[i];
-        const visual = getCategoryVisual(item.category_vn);
-        const imageSrc = toImagePath(item.reference);
+        function renderDetail(index) {
+            if (!monuments.length) {
+                detailBody.innerHTML = '<div class="sv-empty">Không có dữ liệu di tích phù hợp.</div>';
+                slideIndexEl.textContent = '0 / 0';
+                return;
+            }
 
-        detailBody.innerHTML = `
-            <img class="sv-detail-image" src="${imageSrc}" alt="${item.name_vn || 'Ảnh di tích'}"
+            const i = (index + monuments.length) % monuments.length;
+            currentIndex = i;
+            const item = monuments[i];
+            const visual = getCategoryVisual(item.category_vn);
+            const imageSrc = toImagePath(item.reference);
+            const terms = activeQueryTerms;
+            const safeAlt = escapeHtml(item.name_vn || 'Ảnh di tích');
+            const nameHtml = highlightText(item.name_vn || 'Không rõ tên', terms);
+            const addressHtml = highlightText(item.address_vn || 'Chưa có địa chỉ', terms);
+            const categoryHtml = highlightText(item.category_vn || 'Danh mục chưa rõ', terms);
+            const domainHtml = highlightText(item.domaine_vn || 'Chưa có lĩnh vực', terms);
+            const descriptionHtml = highlightText(item.description_vn || item.story_vn || 'Chưa có mô tả.', terms);
+
+            detailBody.innerHTML = `
+            <img class="sv-detail-image" src="${imageSrc}" alt="${safeAlt}" loading="lazy" decoding="async" fetchpriority="low"
                  onerror="this.onerror=null;this.src='${fallbackImage}';">
             <h2 class="sv-detail-title">
-                <i class="fa-solid ${visual.icon} me-1" style="color:${visual.color}"></i>${item.name_vn || 'Không rõ tên'}
+                <i class="fa-solid ${visual.icon} me-1" style="color:${visual.color}"></i>${nameHtml}
             </h2>
-            <p class="sv-detail-meta"><i class="fa-solid fa-location-dot me-1"></i>${item.address_vn || 'Chưa có địa chỉ'}</p>
-            <p class="sv-detail-meta"><i class="fa-regular fa-folder-open me-1"></i>${item.category_vn || 'Danh mục chưa rõ'} • ${item.domaine_vn || 'Chưa có lĩnh vực'}</p>
+            <p class="sv-detail-meta"><i class="fa-solid fa-location-dot me-1"></i>${addressHtml}</p>
+            <p class="sv-detail-meta"><i class="fa-regular fa-folder-open me-1"></i>${categoryHtml} • ${domainHtml}</p>
             <div class="sv-stars">${starRow(item.score)}</div>
-            <p class="sv-detail-desc">${item.description_vn || item.story_vn || 'Chưa có mô tả.'}</p>
+            <p class="sv-detail-desc">${descriptionHtml}</p>
             <div class="sv-detail-actions">
                 <button id="prevBtn" type="button" class="btn btn-outline-primary"><i class="fa-solid fa-arrow-left me-1"></i>Trước</button>
                 <button id="nextBtn" type="button" class="btn btn-primary">Sau<i class="fa-solid fa-arrow-right ms-1"></i></button>
             </div>
         `;
 
-        slideIndexEl.textContent = `${i + 1} / ${monuments.length}`;
+            slideIndexEl.textContent = `${i + 1} / ${monuments.length}`;
 
-        document.getElementById('prevBtn').addEventListener('click', () => focusByIndex(i - 1, true));
-        document.getElementById('nextBtn').addEventListener('click', () => focusByIndex(i + 1, true));
-    }
-
-    function setActiveMarker(index) {
-        if (activeMarker) {
-            activeMarker.setIcon(createIcon(activeMarker.__item.category_vn, false));
-        }
-        const marker = markers[index];
-        if (!marker) {
-            return;
-        }
-        marker.setIcon(createIcon(marker.__item.category_vn, true));
-        activeMarker = marker;
-    }
-
-    function focusByIndex(index, moveMap, options = {}) {
-        if (!monuments.length) {
-            return;
-        }
-        const i = (index + monuments.length) % monuments.length;
-        renderDetail(i);
-        updateUrlForItem(monuments[i], options.historyMode || 'replace');
-        setActiveMarker(i);
-
-        const marker = markers[i];
-        if (!marker) {
-            return;
+            document.getElementById('prevBtn').addEventListener('click', () => focusByIndex(i - 1, true));
+            document.getElementById('nextBtn').addEventListener('click', () => focusByIndex(i + 1, true));
         }
 
-        // Ensure map container is properly sized before any zoom operations
-        map.invalidateSize();
-
-        const latLng = marker.getLatLng();
-        let finalized = false;
-
-        // Function to finalize view after zoom
-        const finalizeView = () => {
-            if (finalized) return;
-            finalized = true;
-
-            if (moveMap) {
-                const targetZoom = Math.max(map.getZoom(), 15);
-                map.setView(latLng, targetZoom, { animate: false });
+        function setActiveMarker(index) {
+            if (activeMarker) {
+                activeMarker.setIcon(createIcon(activeMarker.__item.category_vn, false));
             }
-            marker.openPopup();
-            // Force map to refresh tiles
-            setTimeout(() => {
-                map.invalidateSize();
-                // Force redraw of tiles by small pan
-                map.panBy([1, 0], { animate: false });
-                map.panBy([-1, 0], { animate: false });
-            }, 50);
-            setTimeout(() => map.invalidateSize(), 200);
-        };
-
-        // Check if marker is already visible in the cluster
-        const visibleMarker = cluster.getVisibleParent(marker);
-        if (visibleMarker === marker) {
-            // Marker is already unclustered and visible
-            finalizeView();
-        } else {
-            // Need to zoom to show the marker
-            cluster.zoomToShowLayer(marker, () => {
-                finalizeView();
-            });
-            // Fallback: ensure finalizeView is called even if callback doesn't fire
-            setTimeout(() => {
-                finalizeView();
-            }, 500);
-        }
-    }
-
-    function rebuildMarkersAndView(focusIndex = 0, moveMap = false, options = {}) {
-        cluster.clearLayers();
-        markers = [];
-        activeMarker = null;
-
-        if (!monuments.length) {
-            countEl.textContent = '0 địa điểm';
-            slideIndexEl.textContent = '0 / 0';
-            detailBody.innerHTML = '<div class="sv-empty">Không có kết quả phù hợp với bộ lọc/tìm kiếm.</div>';
-            resultMeta.textContent = 'Không có dữ liệu phù hợp.';
-            updateUrlForFiltersOnly(options.historyMode || 'replace');
-            return;
+            const marker = markers[index];
+            if (!marker) return;
+            marker.setIcon(createIcon(marker.__item.category_vn, true));
+            activeMarker = marker;
         }
 
-        const bounds = [];
-        monuments.forEach((item, idx) => {
-            const marker = L.marker([item.__lat, item.__lon], { icon: createIcon(item.category_vn) });
-            marker.__item = item;
-            marker.__index = idx;
-            marker.bindPopup(popupHtml(item));
-            marker.on('click', () => focusByIndex(idx, false));
-            markers.push(marker);
-            cluster.addLayer(marker);
-            bounds.push([item.__lat, item.__lon]);
-        });
+        function focusByIndex(index, moveMap, options = {}) {
+            if (!monuments.length) return;
 
-        countEl.textContent = `${markers.length} địa điểm`;
-        resultMeta.textContent = `Hiển thị ${monuments.length} / ${allMonuments.length} POI theo bộ lọc hiện tại.`;
+            const i = (index + monuments.length) % monuments.length;
+            renderDetail(i);
+            updateUrlForItem(monuments[i], options.historyMode || 'replace');
+            setActiveMarker(i);
 
-        // Ensure map container is properly sized before any bounds/zoom operations
-        map.invalidateSize();
+            const marker = markers[i];
+            if (!marker) return;
 
-        if (bounds.length && !options.skipFitBounds) {
-            map.fitBounds(bounds, { padding: [20, 20], animate: false });
-        }
-        focusByIndex(focusIndex, moveMap, options);
-    }
-
-    function applyFilters(preserveCurrent = true, forcedTarget = null, options = {}) {
-        const query = normalizeText(searchInput.value).trim();
-        const selectedCategory = (categoryFilter.value || '').trim();
-        const selectedArea = (areaFilter.value || '').trim();
-        const selectedStar = Number(starFilter.value || 0);
-        const currentKey = preserveCurrent && monuments[currentIndex]
-            ? `${monuments[currentIndex].reference || ''}|${monuments[currentIndex].name_vn || ''}|${monuments[currentIndex].address_vn || ''}`
-            : null;
-
-        monuments = allMonuments.filter((item) => {
-            if (query && !item.__searchBlob.includes(query)) {
-                return false;
-            }
-            if (selectedCategory && item.__categoryGroup !== selectedCategory) {
-                return false;
-            }
-            if (selectedArea && item.__areaKey !== selectedArea) {
-                return false;
-            }
-            if (selectedStar > 0 && item.__stars !== selectedStar) {
-                return false;
-            }
-            return true;
-        });
-
-        monuments.sort((a, b) => (a.name_vn || '').localeCompare((b.name_vn || ''), 'vi'));
-
-        let nextIndex = 0;
-        const forcedIdx = findIndexInCurrentByTarget(forcedTarget);
-        if (forcedIdx >= 0) {
-            nextIndex = forcedIdx;
-        } else if (currentKey) {
-            const idx = monuments.findIndex((m) =>
-                `${m.reference || ''}|${m.name_vn || ''}|${m.address_vn || ''}` === currentKey
-            );
-            if (idx >= 0) {
-                nextIndex = idx;
-            }
-        }
-
-        rebuildMarkersAndView(nextIndex, Boolean(options.moveMap), options);
-    }
-
-    function syncFromUrl() {
-        if (!allMonuments.length) {
-            return;
-        }
-
-        const filterState = getUrlFilterState();
-        const target = getUrlTarget();
-        const hasTarget = Boolean(target.reference || target.name);
-        const existsInAll = hasTarget && allMonuments.some((m) =>
-            (target.reference && (m.reference || '') === target.reference) ||
-            (target.name && normalizeText(m.name_vn) === normalizeText(target.name))
-        );
-
-        const previousSuppress = suppressUrlSync;
-        suppressUrlSync = true;
-        searchInput.value = filterState.query;
-        setSelectValueSafe(categoryFilter, filterState.category);
-        setAreaFilterValueSafe(filterState.area);
-        setSelectValueSafe(starFilter, filterState.stars);
-
-        applyFilters(false, existsInAll ? target : null, {
-            historyMode: 'replace',
-            moveMap: existsInAll,
-            skipFitBounds: existsInAll
-        });
-        suppressUrlSync = previousSuppress;
-
-        // Force map to refresh after URL sync
-        setTimeout(() => {
             map.invalidateSize();
-        }, 100);
-    }
 
-    async function loadMonuments() {
-        try {
-            const response = await fetch('assets/paris/monuments.json', { cache: 'no-store' });
-            if (!response.ok) {
-                throw new Error(`HTTP ${response.status}`);
+            const latLng = marker.getLatLng();
+            let finalized = false;
+
+            const finalizeView = () => {
+                if (finalized) return;
+                finalized = true;
+
+                if (moveMap) {
+                    const targetZoom = Math.max(map.getZoom(), 15);
+                    map.setView(latLng, targetZoom, { animate: false });
+                }
+                marker.setPopupContent(popupHtml(monuments[i], activeQueryTerms));
+                marker.openPopup();
+
+                // NEW: nhẹ hơn, tránh bùng tile request
+                setTimeout(() => map.invalidateSize(), 120);
+            };
+
+            const visibleMarker = cluster.getVisibleParent(marker);
+            if (visibleMarker === marker) {
+                finalizeView();
+            } else {
+                cluster.zoomToShowLayer(marker, () => finalizeView());
+                setTimeout(() => finalizeView(), 500);
             }
-            const all = await response.json();
+        }
 
-            allMonuments = all
-                .map((item) => {
-                    const lat = Number(item.lat);
-                    const lon = Number(item.lon);
-                    return {
-                        ...item,
-                        __lat: lat,
-                        __lon: lon,
-                        __searchBlob: '',
-                        __stars: 1,
-                        __categoryGroup: 'Khác',
-                        __areaLabel: '',
-                        __areaKey: ''
-                    };
-                })
-                .filter((item) => Number.isFinite(item.__lat) && Number.isFinite(item.__lon))
-                .map((item) => ({
-                    ...item,
-                    __searchBlob: getSearchBlob(item),
-                    __stars: getStarCount(item.score),
-                    __categoryGroup: mapCategoryToGroup(item.category_vn),
-                    __areaLabel: resolveAreaLabel(item),
-                    __areaKey: normalizeAreaKey(resolveAreaLabel(item))
-                }));
+        function rebuildMarkersAndView(focusIndex = 0, moveMap = false, options = {}) {
+            cluster.clearLayers();
+            markers = [];
+            activeMarker = null;
 
-            if (!allMonuments.length) {
-                detailBody.innerHTML = '<div class="sv-empty">Không tìm thấy tọa độ hợp lệ trong dữ liệu.</div>';
-                resultMeta.textContent = 'Không có dữ liệu hợp lệ.';
+            if (!monuments.length) {
+                countEl.textContent = '0 địa điểm';
+                slideIndexEl.textContent = '0 / 0';
+                detailBody.innerHTML = '<div class="sv-empty">Không có kết quả phù hợp với bộ lọc/tìm kiếm.</div>';
+                resultMeta.textContent = 'Không có dữ liệu phù hợp.';
+                updateUrlForFiltersOnly(options.historyMode || 'replace');
                 return;
             }
 
-            buildFilterOptions();
-            suppressUrlSync = true;
-            applyFilters(false, null, { historyMode: 'replace' });
-            suppressUrlSync = false;
-            syncFromUrl();
+            const activeQuery = (searchInput.value || '').trim();
+            const bounds = [];
+            const nextMarkers = [];
+            monuments.forEach((item, idx) => {
+                const marker = getMarkerForItem(item);
+                marker.__index = idx;
+                marker.setIcon(createIcon(item.category_vn, false));
+                nextMarkers.push(marker);
+                bounds.push([item.__lat, item.__lon]);
+            });
+            markers = nextMarkers;
+            cluster.addLayers(nextMarkers);
 
-            // Ensure map is properly rendered after all initialization
-            setTimeout(() => {
-                map.invalidateSize();
-            }, 200);
-            setTimeout(() => {
-                map.invalidateSize();
-            }, 500);
-        } catch (error) {
-            detailBody.innerHTML = `<div class="sv-empty">Không thể tải dữ liệu di tích: ${error.message}</div>`;
-            resultMeta.textContent = `Lỗi tải dữ liệu: ${error.message}`;
+            countEl.textContent = `${markers.length} địa điểm`;
+            if (activeQuery) {
+                resultMeta.innerHTML = `Hiển thị ${monuments.length} / ${allMonuments.length} POI. Từ khóa: <strong>${escapeHtml(activeQuery)}</strong>.`;
+            } else {
+                resultMeta.textContent = `Hiển thị ${monuments.length} / ${allMonuments.length} POI theo bộ lọc hiện tại.`;
+            }
+
+            map.invalidateSize();
+
+            if (bounds.length && !options.skipFitBounds) {
+                map.fitBounds(bounds, { padding: [20, 20], animate: false });
+            }
+            focusByIndex(focusIndex, moveMap, options);
         }
-    }
 
-    searchInput.addEventListener('input', () => applyFilters(true, null, { historyMode: 'replace' }));
-    categoryFilter.addEventListener('change', () => applyFilters(true, null, { historyMode: 'replace' }));
-    areaFilter.addEventListener('change', () => applyFilters(true, null, { historyMode: 'replace' }));
-    starFilter.addEventListener('change', () => applyFilters(true, null, { historyMode: 'replace' }));
-    window.addEventListener('popstate', () => {
-        syncFromUrl();
-    });
+        function applyFilters(preserveCurrent = true, forcedTarget = null, options = {}) {
+            const queryRaw = (searchInput.value || '').trim();
+            const queryTerms = splitQueryTerms(queryRaw);
+            const selectedCategory = (categoryFilter.value || '').trim();
+            const selectedArea = (areaFilter.value || '').trim();
+            const selectedStar = Number(starFilter.value || 0);
+            activeQueryTerms = queryTerms;
 
-    loadMonuments();
-})();
+            const currentKey = preserveCurrent && monuments[currentIndex]
+                ? `${monuments[currentIndex].reference || ''}|${monuments[currentIndex].name_vn || ''}|${monuments[currentIndex].address_vn || ''}`
+                : null;
+
+            const source = sortedMonuments.length ? sortedMonuments : allMonuments;
+            const hasFilter = Boolean(queryTerms.length || selectedCategory || selectedArea || selectedStar > 0);
+            if (!hasFilter) {
+                monuments = source.slice();
+            } else {
+                monuments = source.filter((item) => {
+                    if (queryTerms.length && !queryTerms.every((term) => item.__searchBlob.includes(term))) return false;
+                    if (selectedCategory && item.__categoryGroup !== selectedCategory) return false;
+                    if (selectedArea && item.__areaKey !== selectedArea) return false;
+                    if (selectedStar > 0 && item.__stars !== selectedStar) return false;
+                    return true;
+                });
+            }
+
+            let nextIndex = 0;
+            const forcedIdx = findIndexInCurrentByTarget(forcedTarget);
+            if (forcedIdx >= 0) nextIndex = forcedIdx;
+            else if (currentKey) {
+                const idx = monuments.findIndex((m) => `${m.reference || ''}|${m.name_vn || ''}|${m.address_vn || ''}` === currentKey);
+                if (idx >= 0) nextIndex = idx;
+            }
+
+            rebuildMarkersAndView(nextIndex, Boolean(options.moveMap), options);
+        }
+
+        function scheduleApplyFilters(preserveCurrent = true, forcedTarget = null, options = {}) {
+            pendingFilterRequest = {
+                preserveCurrent,
+                forcedTarget,
+                options: { ...options }
+            };
+            if (filterFrameId) return;
+            filterFrameId = requestAnimationFrame(() => {
+                filterFrameId = 0;
+                const request = pendingFilterRequest || {
+                    preserveCurrent: true,
+                    forcedTarget: null,
+                    options: {}
+                };
+                pendingFilterRequest = null;
+                applyFilters(request.preserveCurrent, request.forcedTarget, request.options);
+            });
+        }
+
+        function syncFromUrl() {
+            if (!allMonuments.length) return;
+
+            const filterState = getUrlFilterState();
+            const target = getUrlTarget();
+            const hasTarget = Boolean(target.reference || target.name);
+            const existsInAll = hasTarget && allMonuments.some((m) =>
+                (target.reference && (m.reference || '') === target.reference) ||
+                (target.name && normalizeText(m.name_vn) === normalizeText(target.name))
+            );
+
+            const previousSuppress = suppressUrlSync;
+            suppressUrlSync = true;
+
+            searchInput.value = filterState.query;
+            setSelectValueSafe(categoryFilter, filterState.category);
+            setAreaFilterValueSafe(filterState.area);
+            setSelectValueSafe(starFilter, filterState.stars);
+
+            applyFilters(false, existsInAll ? target : null, {
+                historyMode: 'replace',
+                moveMap: existsInAll,
+                skipFitBounds: existsInAll
+            });
+
+            suppressUrlSync = previousSuppress;
+
+            setTimeout(() => map.invalidateSize(), 100);
+        }
+
+        async function loadMonuments() {
+            try {
+                const response = await fetch('assets/paris/monuments.json', { cache: 'force-cache' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                const all = await response.json();
+
+                allMonuments = all
+                    .map((item) => {
+                        const lat = Number(item.lat);
+                        const lon = Number(item.lon);
+                        return {
+                            ...item,
+                            __lat: lat,
+                            __lon: lon,
+                            __searchBlob: '',
+                            __stars: 1,
+                            __categoryGroup: 'Khác',
+                            __areaLabel: '',
+                            __areaKey: '',
+                            __sortName: '',
+                            __markerKey: ''
+                        };
+                    })
+                    .filter((item) => Number.isFinite(item.__lat) && Number.isFinite(item.__lon))
+                    .map((item) => {
+                        const areaLabel = resolveAreaLabel(item);
+                        const refKey = (item.reference || '').toString().trim().toLowerCase();
+                        const fallbackKey = `${item.__lat.toFixed(6)}|${item.__lon.toFixed(6)}|${normalizeText(item.name_vn)}`;
+                        return {
+                            ...item,
+                            __searchBlob: getSearchBlob(item),
+                            __stars: getStarCount(item.score),
+                            __categoryGroup: mapCategoryToGroup(item.category_vn),
+                            __areaLabel: areaLabel,
+                            __areaKey: normalizeAreaKey(areaLabel),
+                            __sortName: normalizeText(item.name_vn),
+                            __markerKey: refKey ? `ref:${refKey}` : `geo:${fallbackKey}`
+                        };
+                    });
+                sortedMonuments = allMonuments
+                    .slice()
+                    .sort((a, b) => (a.__sortName || '').localeCompare((b.__sortName || ''), 'vi'));
+
+                if (!allMonuments.length) {
+                    detailBody.innerHTML = '<div class="sv-empty">Không tìm thấy tọa độ hợp lệ trong dữ liệu.</div>';
+                    resultMeta.textContent = 'Không có dữ liệu hợp lệ.';
+                    return;
+                }
+
+                buildFilterOptions();
+                syncFromUrl();
+
+                setTimeout(() => map.invalidateSize(), 220);
+            } catch (error) {
+                detailBody.innerHTML = `<div class="sv-empty">Không thể tải dữ liệu di tích: ${error.message}</div>`;
+                resultMeta.textContent = `Lỗi tải dữ liệu: ${error.message}`;
+            }
+        }
+
+        searchInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                scheduleApplyFilters(true, null, { historyMode: 'replace' });
+            }
+        });
+        categoryFilter.addEventListener('change', () => scheduleApplyFilters(true, null, { historyMode: 'replace' }));
+        areaFilter.addEventListener('change', () => scheduleApplyFilters(true, null, { historyMode: 'replace' }));
+        starFilter.addEventListener('change', () => scheduleApplyFilters(true, null, { historyMode: 'replace' }));
+        window.addEventListener('popstate', () => syncFromUrl());
+
+        loadMonuments();
+    })();
 </script>
 </body>
 </html>

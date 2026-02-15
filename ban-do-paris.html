@@ -509,7 +509,15 @@
                 .toString()
                 .normalize('NFD')
                 .replace(/[\u0300-\u036f]/g, '')
-                .toLowerCase();
+                .toLowerCase()
+                .replace(/đ/g, 'd');
+        }
+
+        function normalizeSearchTokens(value) {
+            return normalizeText(value)
+                .replace(/[^a-z0-9\s]+/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
         }
 
         function escapeHtml(value) {
@@ -525,7 +533,7 @@
         function splitQueryTerms(raw) {
             if (!raw) return [];
             const unique = new Set();
-            normalizeText(raw).split(/\s+/).forEach((term) => {
+            normalizeSearchTokens(raw).split(/\s+/).forEach((term) => {
                 const t = term.trim();
                 if (t) unique.add(t);
             });
@@ -643,7 +651,7 @@
         }
 
         function getSearchBlob(item) {
-            return normalizeText([
+            return normalizeSearchTokens([
                 item.name_vn,
                 item.address_vn,
                 item.description_vn,

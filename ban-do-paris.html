@@ -354,6 +354,56 @@
             .toLowerCase();
     }
 
+    const CATEGORY_GROUPS = [
+        'Tôn giáo',
+        'Khách sạn',
+        'Nhà ở dân dụng',
+        'Tòa nhà công cộng',
+        'Giáo dục',
+        'Y tế',
+        'Văn hóa nghệ thuật',
+        'Thương mại dịch vụ',
+        'Ẩm thực',
+        'Giao thông',
+        'Hạ tầng kỹ thuật',
+        'Công nghiệp thủ công',
+        'Quân sự phòng thủ',
+        'Tưởng niệm tượng đài',
+        'Di chỉ khảo cổ tiền sử',
+        'Cảnh quan vườn',
+        'Thể thao giải trí',
+        'Hành chính pháp lý',
+        'Khoa học nghiên cứu',
+        'Khác'
+    ];
+
+    function mapCategoryToGroup(categoryRaw) {
+        const text = normalizeText(categoryRaw);
+
+        if (!text) return 'Khác';
+        if (text.includes('nha tho') || text.includes('tu vien') || text.includes('giao duong') || text.includes('nha nguyen')) return 'Tôn giáo';
+        if (text.includes('khach san')) return 'Khách sạn';
+        if (text.includes('ngoi nha') || text.includes('biet thu') || text.includes('nha o') || text.includes('can ho')) return 'Nhà ở dân dụng';
+        if (text.includes('toa nha') || text.includes('cung') || text.includes('dinh') || text.includes('nha hat') || text.includes('bao tang') || text.includes('thu vien')) return 'Tòa nhà công cộng';
+        if (text.includes('truong') || text.includes('hoc vien') || text.includes('dai hoc') || text.includes('lycee') || text.includes('college')) return 'Giáo dục';
+        if (text.includes('benh vien') || text.includes('nha thuong') || text.includes('phong kham') || text.includes('y te')) return 'Y tế';
+        if (text.includes('rap') || text.includes('nha hat') || text.includes('phong trung bay') || text.includes('trien lam') || text.includes('van hoa')) return 'Văn hóa nghệ thuật';
+        if (text.includes('cua hang') || text.includes('cho') || text.includes('trung tam thuong mai') || text.includes('thuong mai') || text.includes('dich vu')) return 'Thương mại dịch vụ';
+        if (text.includes('nha hang') || text.includes('quan ca phe') || text.includes('tiem banh') || text.includes('quan an') || text.includes('bar')) return 'Ẩm thực';
+        if (text.includes('ga') || text.includes('tau') || text.includes('metro') || text.includes('ben') || text.includes('tram') || text.includes('san bay')) return 'Giao thông';
+        if (text.includes('cau') || text.includes('cong') || text.includes('duong ham') || text.includes('ha tang') || text.includes('thuy loi')) return 'Hạ tầng kỹ thuật';
+        if (text.includes('xuong') || text.includes('nha may') || text.includes('cong nghiep') || text.includes('thu cong') || text.includes('kho')) return 'Công nghiệp thủ công';
+        if (text.includes('phao dai') || text.includes('quan su') || text.includes('don') || text.includes('thanh luy') || text.includes('bo phong thu')) return 'Quân sự phòng thủ';
+        if (text.includes('tuong dai') || text.includes('dai phun') || text.includes('dai ky niem') || text.includes('lang mo')) return 'Tưởng niệm tượng đài';
+        if (text.includes('menhir') || text.includes('dolmen') || text.includes('khao co') || text.includes('di chi')) return 'Di chỉ khảo cổ tiền sử';
+        if (text.includes('vuon') || text.includes('cong vien') || text.includes('canh quan') || text.includes('thao cam')) return 'Cảnh quan vườn';
+        if (text.includes('san van dong') || text.includes('the thao') || text.includes('giai tri') || text.includes('nha thi dau')) return 'Thể thao giải trí';
+        if (text.includes('toa an') || text.includes('hanh chinh') || text.includes('cong vu') || text.includes('thanh pho') || text.includes('phap ly')) return 'Hành chính pháp lý';
+        if (text.includes('phong thi nghiem') || text.includes('nghien cuu') || text.includes('khoa hoc') || text.includes('vien')) return 'Khoa học nghiên cứu';
+
+        return 'Khác';
+    }
+
     function getSearchBlob(item) {
         return normalizeText([
             item.name_vn,
@@ -373,17 +423,42 @@
         return Math.max(1, Math.min(5, stars || 1));
     }
 
-    function buildFilterOptions() {
-        const categories = Array.from(new Set(
-            allMonuments.map((item) => (item.category_vn || '').trim()).filter(Boolean)
-        )).sort((a, b) => a.localeCompare(b, 'vi'));
+    function normalizeAreaKey(value) {
+        return normalizeText(value).replace(/[^a-z0-9]+/g, ' ').trim();
+    }
 
-        const areas = Array.from(new Set(
-            allMonuments.map((item) => (item.commune_forme_index || '').trim()).filter(Boolean)
-        )).sort((a, b) => a.localeCompare(b, 'vi'));
+    function resolveAreaLabel(item) {
+        const commune = (item.commune_forme_index || '').toString().trim();
+        if (commune) {
+            return commune;
+        }
+        const address = (item.address_vn || '').toString().trim();
+        if (!address) {
+            return 'Không rõ khu vực';
+        }
+        const parts = address.split(',').map((p) => p.trim()).filter(Boolean);
+        return parts.length ? parts[parts.length - 1] : address;
+    }
+
+    function buildFilterOptions() {
+        const areaMap = new Map();
+        allMonuments.forEach((item) => {
+            const key = item.__areaKey || '';
+            if (!key) {
+                return;
+            }
+            if (!areaMap.has(key)) {
+                areaMap.set(key, { label: item.__areaLabel || key, count: 0 });
+            }
+            areaMap.get(key).count += 1;
+        });
+
+        const areas = Array.from(areaMap.entries())
+            .map(([key, meta]) => ({ key, label: meta.label }))
+            .sort((a, b) => a.label.localeCompare(b.label, 'vi'));
 
         categoryFilter.innerHTML = '<option value="">Bộ lọc: Tất cả danh mục</option>';
-        categories.forEach((cat) => {
+        CATEGORY_GROUPS.forEach((cat) => {
             const option = document.createElement('option');
             option.value = cat;
             option.textContent = `Danh mục: ${cat}`;
@@ -393,8 +468,8 @@
         areaFilter.innerHTML = '<option value="">Bộ lọc: Tất cả khu vực</option>';
         areas.forEach((area) => {
             const option = document.createElement('option');
-            option.value = area;
-            option.textContent = `Khu vực: ${area}`;
+            option.value = area.key;
+            option.textContent = `Khu vực: ${area.label}`;
             areaFilter.appendChild(option);
         });
     }
@@ -462,6 +537,21 @@
         }
         const exists = Array.from(selectEl.options).some((opt) => opt.value === value);
         selectEl.value = exists ? value : '';
+    }
+
+    function setAreaFilterValueSafe(value) {
+        if (!value) {
+            areaFilter.value = '';
+            return;
+        }
+        const directExists = Array.from(areaFilter.options).some((opt) => opt.value === value);
+        if (directExists) {
+            areaFilter.value = value;
+            return;
+        }
+        const normalized = normalizeAreaKey(value);
+        const normalizedExists = Array.from(areaFilter.options).some((opt) => opt.value === normalized);
+        areaFilter.value = normalizedExists ? normalized : '';
     }
 
     function buildRequestedUrl(item = null) {
@@ -764,10 +854,10 @@
             if (query && !item.__searchBlob.includes(query)) {
                 return false;
             }
-            if (selectedCategory && (item.category_vn || '') !== selectedCategory) {
+            if (selectedCategory && item.__categoryGroup !== selectedCategory) {
                 return false;
             }
-            if (selectedArea && (item.commune_forme_index || '') !== selectedArea) {
+            if (selectedArea && item.__areaKey !== selectedArea) {
                 return false;
             }
             if (selectedStar > 0 && item.__stars !== selectedStar) {
@@ -811,7 +901,7 @@
         suppressUrlSync = true;
         searchInput.value = filterState.query;
         setSelectValueSafe(categoryFilter, filterState.category);
-        setSelectValueSafe(areaFilter, filterState.area);
+        setAreaFilterValueSafe(filterState.area);
         setSelectValueSafe(starFilter, filterState.stars);
 
         applyFilters(false, existsInAll ? target : null, {
@@ -844,14 +934,20 @@
                         __lat: lat,
                         __lon: lon,
                         __searchBlob: '',
-                        __stars: 1
+                        __stars: 1,
+                        __categoryGroup: 'Khác',
+                        __areaLabel: '',
+                        __areaKey: ''
                     };
                 })
                 .filter((item) => Number.isFinite(item.__lat) && Number.isFinite(item.__lon))
                 .map((item) => ({
                     ...item,
                     __searchBlob: getSearchBlob(item),
-                    __stars: getStarCount(item.score)
+                    __stars: getStarCount(item.score),
+                    __categoryGroup: mapCategoryToGroup(item.category_vn),
+                    __areaLabel: resolveAreaLabel(item),
+                    __areaKey: normalizeAreaKey(resolveAreaLabel(item))
                 }));
 
             if (!allMonuments.length) {

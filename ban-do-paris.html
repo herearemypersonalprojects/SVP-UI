@@ -1,0 +1,894 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bản Đồ Paris - Di Tích Lịch Sử | SVP</title>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css" />
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css" />
+    <link rel="stylesheet" href="svp.css">
+    <style>
+        :root {
+            --paper: #f4efe6;
+            --ink: #172032;
+            --card: #ffffff;
+            --muted: #667085;
+            --line: #d6dbe5;
+            --gold: #d08b28;
+        }
+        body {
+            color: var(--ink);
+            background:
+                radial-gradient(circle at 10% 10%, rgba(208, 139, 40, .16), transparent 34%),
+                radial-gradient(circle at 86% 12%, rgba(13, 97, 141, .11), transparent 36%),
+                linear-gradient(180deg, #f8f4ec, #efe9de);
+        }
+        .sv-paris-wrap {
+            display: grid;
+            grid-template-columns: minmax(0, 2fr) minmax(320px, 1fr);
+            gap: 1rem;
+            align-items: stretch;
+        }
+        .sv-map-card,
+        .sv-detail-card {
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: var(--card);
+            overflow: hidden;
+            box-shadow: 0 12px 26px rgba(15, 23, 42, .08);
+        }
+        .sv-map-head,
+        .sv-detail-head {
+            padding: .9rem 1rem;
+            border-bottom: 1px solid #e8edf5;
+            background: linear-gradient(180deg, #fffdf8, #f6efe4);
+        }
+        .sv-map-sub {
+            font-size: .88rem;
+            color: var(--muted);
+            margin-top: .35rem;
+        }
+        .sv-toolbar {
+            margin-top: .95rem;
+            display: grid;
+            grid-template-columns: minmax(220px, 1.8fr) repeat(3, minmax(180px, 1fr));
+            gap: .7rem;
+            align-items: center;
+        }
+        .sv-toolbar .form-control,
+        .sv-toolbar .form-select {
+            border-radius: 999px;
+            border-color: #cdd6e4;
+            min-height: 42px;
+        }
+        .sv-toolbar__meta {
+            font-size: .88rem;
+            color: #475569;
+            margin-top: .55rem;
+        }
+        #parisMap {
+            width: 100%;
+            height: clamp(540px, 76vh, 860px);
+        }
+        .sv-detail-body {
+            display: grid;
+            gap: .8rem;
+            padding: 1rem;
+        }
+        .sv-detail-image {
+            width: 100%;
+            aspect-ratio: 16 / 10;
+            border-radius: 14px;
+            object-fit: cover;
+            border: 1px solid #d8dee9;
+            background: #f1f5f9;
+        }
+        .sv-detail-title {
+            margin: 0;
+            font-size: 1.1rem;
+            font-weight: 800;
+            line-height: 1.3;
+        }
+        .sv-detail-meta {
+            margin: 0;
+            color: #334155;
+            font-size: .92rem;
+        }
+        .sv-stars {
+            display: flex;
+            align-items: center;
+            gap: .4rem;
+            color: var(--gold);
+            font-size: .96rem;
+        }
+        .sv-stars small {
+            color: #64748b;
+        }
+        .sv-detail-desc {
+            margin: 0;
+            color: #1e293b;
+            line-height: 1.58;
+            max-height: 260px;
+            overflow: auto;
+            padding-right: .3rem;
+        }
+        .sv-detail-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: .55rem;
+        }
+        .sv-detail-actions .btn {
+            border-radius: 999px;
+            font-weight: 700;
+        }
+        .sv-empty {
+            color: #b91c1c;
+            font-weight: 700;
+            padding: .8rem 1rem;
+        }
+        .sv-marker {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #fff;
+            border: 2px solid rgba(255, 255, 255, .92);
+            box-shadow: 0 6px 12px rgba(15, 23, 42, .3);
+            font-size: 12px;
+        }
+        .sv-marker--active {
+            transform: scale(1.2);
+            box-shadow: 0 0 0 4px rgba(13, 110, 253, .24);
+        }
+        .leaflet-popup-content {
+            margin: 10px 12px;
+            line-height: 1.35;
+        }
+        .sv-popup-title {
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: .2rem;
+        }
+        .sv-popup-meta {
+            margin: 0;
+            color: #475569;
+            font-size: .86rem;
+        }
+        @media (max-width: 991.98px) {
+            .sv-paris-wrap {
+                grid-template-columns: 1fr;
+            }
+            .sv-toolbar {
+                grid-template-columns: 1fr;
+            }
+            #parisMap {
+                height: clamp(420px, 62vh, 700px);
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="sv-topbar pt-2 pb-1">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="sv-brand">
+            <img class="sv-brand__logo-img" src="assets/icons/logo_svp.png" alt="SVP" width="102" height="112" />
+            <div class="sv-brand__title">
+                <h1>DIỄN ĐÀN SINH VIÊN & TRI THỨC VIỆT TẠI PHÁP <span class="sv-brand__accent">(SVP)</span></h1>
+                <div class="sv-brand__divider"></div>
+                <small class="sv-brand__tagline">Kết Nối – Chia Sẻ – Thành Công</small>
+            </div>
+        </div>
+
+        <div class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <button class="btn btn-outline-secondary">Đăng Ký</button>
+            <button class="btn btn-primary">Đăng Nhập</button>
+        </div>
+    </div>
+</div>
+
+<div class="sv-nav">
+    <div class="container d-flex align-items-center justify-content-between">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link" href="index.html">Trang Chủ</a></li>
+            <li class="nav-item"><a class="nav-link" href="forum.html">Diễn Đàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="categories.html">Khám Phá Chủ Đề</a></li>
+            <li class="nav-item"><a class="nav-link" href="events.html">Sự Kiện & Lễ Hội</a></li>
+            <li class="nav-item"><a class="nav-link" href="ban-do-viet.html">Bản Đồ Việt</a></li>
+            <li class="nav-item"><a class="nav-link active" href="ban-do-paris.html">Bản Đồ Paris</a></li>
+            <li class="nav-item"><a class="nav-link" href="about.html">Giới Thiệu</a></li>
+        </ul>
+
+        <div class="sv-search position-relative my-2 my-md-0" style="width:min(320px, 60vw);">
+            <i class="fa fa-magnifying-glass"></i>
+            <input class="form-control" type="search" placeholder="Tìm kiếm..." />
+        </div>
+    </div>
+</div>
+
+<main class="container my-4">
+    <div class="sv-card mb-3">
+        <div class="sv-card__hd d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <span><i class="fa-solid fa-map-location-dot me-2 text-primary"></i>Bản Đồ Di Tích Lịch Sử Paris</span>
+            <span id="monumentCount" class="sv-badge">0 địa điểm</span>
+        </div>
+        <div class="p-3">
+            <p class="mb-0 text-secondary">
+                Khám phá các di tích lịch sử tại Paris qua bản đồ tương tác: bấm vào điểm trên bản đồ để xem thông tin, hoặc dùng nút
+                <strong>Trước</strong> / <strong>Sau</strong> để duyệt từng công trình.
+            </p>
+            <div class="sv-toolbar">
+                <div class="position-relative">
+                    <i class="fa-solid fa-magnifying-glass position-absolute text-secondary" style="left:14px; top:50%; transform:translateY(-50%);"></i>
+                    <input id="fulltextSearch" class="form-control ps-5" type="search" placeholder="Tìm kiếm tên, địa chỉ, mô tả, danh mục..." />
+                </div>
+                <select id="categoryFilter" class="form-select">
+                    <option value="">Bộ lọc: Tất cả danh mục</option>
+                </select>
+                <select id="areaFilter" class="form-select">
+                    <option value="">Bộ lọc: Tất cả khu vực</option>
+                </select>
+                <select id="starFilter" class="form-select">
+                    <option value="">Bộ lọc: Tất cả số sao</option>
+                    <option value="5">5 sao</option>
+                    <option value="4">4 sao</option>
+                    <option value="3">3 sao</option>
+                    <option value="2">2 sao</option>
+                    <option value="1">1 sao</option>
+                </select>
+            </div>
+            <div id="resultMeta" class="sv-toolbar__meta">Đang tải dữ liệu...</div>
+        </div>
+    </div>
+
+    <section class="sv-paris-wrap">
+        <article class="sv-map-card">
+            <div class="sv-map-head">
+                <strong><i class="fa-solid fa-compass me-1 text-primary"></i>Bản Đồ Di Tích Paris</strong>
+                <div class="sv-map-sub">Biểu tượng trên bản đồ thay đổi theo từng nhóm công trình.</div>
+            </div>
+            <div id="parisMap" aria-label="Bản đồ di tích lịch sử Paris"></div>
+        </article>
+
+        <aside class="sv-detail-card">
+            <div class="sv-detail-head d-flex align-items-center justify-content-between gap-2">
+                <strong><i class="fa-solid fa-landmark me-1 text-primary"></i>Chi Tiết Di Tích</strong>
+                <span id="slideIndex" class="sv-badge">0 / 0</span>
+            </div>
+            <div id="detailBody" class="sv-detail-body">
+                <div class="sv-empty">Đang tải dữ liệu di tích...</div>
+            </div>
+        </aside>
+    </section>
+</main>
+
+<footer class="container py-4">
+    <div class="row">
+        <div class="col-md">
+            <div class="sv-brand d-flex align-items-center mb-2">
+                <div class="sv-brand__logo" style="width:36px; height:36px; font-size:14px;">SVP</div>
+                <strong class="ms-2">SVP – Kết Nối • Chia Sẻ • Thành Công</strong>
+            </div>
+            <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
+        </div>
+        <div class="col-md text-md-end mt-2 mt-md-0">
+            <a class="me-3" href="/terms.html">Điều khoản</a>
+            <a class="me-3" href="/security.html">Bảo mật</a>
+            <a href="/contact.html">Liên hệ</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script>
+(() => {
+    const map = L.map('parisMap', {
+        preferCanvas: true,
+        zoomControl: true,
+        zoomAnimation: false,
+        fadeAnimation: false,
+        markerZoomAnimation: false,
+        minZoom: 10,
+        maxZoom: 19
+    }).setView([48.8566, 2.3522], 12);
+
+    const baseTiles = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+    });
+    const backupOsmTiles = L.tileLayer('https://{s}.tile.openstreetmap.fr/osmfr/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap contributors'
+    });
+    let switchedToBackupTiles = false;
+    baseTiles.on('tileerror', () => {
+        if (switchedToBackupTiles) {
+            return;
+        }
+        switchedToBackupTiles = true;
+        map.removeLayer(baseTiles);
+        backupOsmTiles.addTo(map);
+    });
+    baseTiles.addTo(map);
+
+    const cluster = L.markerClusterGroup({
+        chunkedLoading: true,
+        spiderfyOnMaxZoom: true,
+        showCoverageOnHover: false
+    });
+    map.addLayer(cluster);
+    map.whenReady(() => {
+        setTimeout(() => map.invalidateSize(), 0);
+    });
+    window.addEventListener('resize', () => map.invalidateSize());
+
+    const detailBody = document.getElementById('detailBody');
+    const slideIndexEl = document.getElementById('slideIndex');
+    const countEl = document.getElementById('monumentCount');
+    const searchInput = document.getElementById('fulltextSearch');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const areaFilter = document.getElementById('areaFilter');
+    const starFilter = document.getElementById('starFilter');
+    const resultMeta = document.getElementById('resultMeta');
+
+    let allMonuments = [];
+    let monuments = [];
+    let markers = [];
+    let currentIndex = 0;
+    let activeMarker = null;
+    let suppressUrlSync = false;
+    const fallbackImage =
+        "data:image/svg+xml;utf8," +
+        encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 800 500'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='#e2e8f0'/><stop offset='100%' stop-color='#cbd5e1'/></linearGradient></defs><rect width='800' height='500' fill='url(#g)'/><g fill='#334155'><circle cx='350' cy='220' r='34'/><rect x='302' y='260' width='96' height='84' rx='10'/><rect x='416' y='210' width='90' height='134' rx='10'/></g><text x='400' y='420' text-anchor='middle' font-size='30' fill='#475569' font-family='Arial,sans-serif'>Khong co anh di tich</text></svg>");
+
+    function normalizeText(value) {
+        return (value || '')
+            .toString()
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase();
+    }
+
+    function getSearchBlob(item) {
+        return normalizeText([
+            item.name_vn,
+            item.address_vn,
+            item.description_vn,
+            item.story_vn,
+            item.category_vn,
+            item.domaine_vn,
+            item.periode,
+            item.commune_forme_index
+        ].filter(Boolean).join(' '));
+    }
+
+    function getStarCount(scoreRaw) {
+        const s = Number.isFinite(Number(scoreRaw)) ? Math.max(0, Math.min(1, Number(scoreRaw))) : 0;
+        const stars = Math.round(s * 5);
+        return Math.max(1, Math.min(5, stars || 1));
+    }
+
+    function buildFilterOptions() {
+        const categories = Array.from(new Set(
+            allMonuments.map((item) => (item.category_vn || '').trim()).filter(Boolean)
+        )).sort((a, b) => a.localeCompare(b, 'vi'));
+
+        const areas = Array.from(new Set(
+            allMonuments.map((item) => (item.commune_forme_index || '').trim()).filter(Boolean)
+        )).sort((a, b) => a.localeCompare(b, 'vi'));
+
+        categoryFilter.innerHTML = '<option value="">Bộ lọc: Tất cả danh mục</option>';
+        categories.forEach((cat) => {
+            const option = document.createElement('option');
+            option.value = cat;
+            option.textContent = `Danh mục: ${cat}`;
+            categoryFilter.appendChild(option);
+        });
+
+        areaFilter.innerHTML = '<option value="">Bộ lọc: Tất cả khu vực</option>';
+        areas.forEach((area) => {
+            const option = document.createElement('option');
+            option.value = area;
+            option.textContent = `Khu vực: ${area}`;
+            areaFilter.appendChild(option);
+        });
+    }
+
+    function parseLooseParams(raw) {
+        if (!raw) {
+            return new URLSearchParams();
+        }
+        const cleaned = raw.replace(/^[?#&]+/, '');
+        return new URLSearchParams(cleaned);
+    }
+
+    function getMergedUrlParams() {
+        const merged = new URLSearchParams(window.location.search);
+
+        const path = window.location.pathname || '';
+        const htmlPos = path.indexOf('.html');
+        if (htmlPos >= 0) {
+            const tail = path.slice(htmlPos + 5);
+            const loose = parseLooseParams(tail);
+            for (const [key, value] of loose.entries()) {
+                if (!merged.has(key)) {
+                    merged.set(key, value);
+                }
+            }
+        }
+
+        if (window.location.hash) {
+            const hashParams = parseLooseParams(window.location.hash);
+            for (const [key, value] of hashParams.entries()) {
+                if (!merged.has(key)) {
+                    merged.set(key, value);
+                }
+            }
+        }
+
+        return merged;
+    }
+
+    function getUrlTarget() {
+        const params = getMergedUrlParams();
+        const reference = params.get('id') || '';
+        const name = params.get('name') || '';
+
+        return {
+            reference: reference.trim(),
+            name: name.trim()
+        };
+    }
+
+    function getUrlFilterState() {
+        const params = getMergedUrlParams();
+        return {
+            query: (params.get('q') || '').trim(),
+            category: (params.get('category') || '').trim(),
+            area: (params.get('area') || '').trim(),
+            stars: (params.get('stars') || '').trim()
+        };
+    }
+
+    function setSelectValueSafe(selectEl, value) {
+        if (!value) {
+            selectEl.value = '';
+            return;
+        }
+        const exists = Array.from(selectEl.options).some((opt) => opt.value === value);
+        selectEl.value = exists ? value : '';
+    }
+
+    function buildRequestedUrl(item = null) {
+        const path = (window.location.pathname || '/ban-do-paris.html').split('&id=')[0].split('?')[0];
+        const params = new URLSearchParams();
+
+        const query = (searchInput.value || '').trim();
+        const category = (categoryFilter.value || '').trim();
+        const area = (areaFilter.value || '').trim();
+        const stars = (starFilter.value || '').trim();
+
+        if (query) params.set('q', query);
+        if (category) params.set('category', category);
+        if (area) params.set('area', area);
+        if (stars) params.set('stars', stars);
+
+        if (item) {
+            if (item.reference) params.set('id', item.reference);
+            if (item.name_vn) params.set('name', item.name_vn);
+        }
+
+        const queryString = params.toString();
+        return queryString ? `${path}?${queryString}` : path;
+    }
+
+    function updateUrlForItem(item, mode = 'replace') {
+        if (suppressUrlSync) {
+            return;
+        }
+        const nextUrl = buildRequestedUrl(item);
+        const stateId = item && item.reference ? item.reference : '';
+        const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        if (currentUrl === nextUrl) {
+            return;
+        }
+        if (mode === 'push') {
+            history.pushState({ id: stateId }, '', nextUrl);
+            return;
+        }
+        history.replaceState({ id: stateId }, '', nextUrl);
+    }
+
+    function updateUrlForFiltersOnly(mode = 'replace') {
+        if (suppressUrlSync) {
+            return;
+        }
+        const nextUrl = buildRequestedUrl(null);
+        const currentUrl = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+        if (currentUrl === nextUrl) {
+            return;
+        }
+        if (mode === 'push') {
+            history.pushState({}, '', nextUrl);
+            return;
+        }
+        history.replaceState({}, '', nextUrl);
+    }
+
+    function findIndexInCurrentByTarget(target) {
+        if (!target) {
+            return -1;
+        }
+        if (target.reference) {
+            const idxByRef = monuments.findIndex((m) => (m.reference || '') === target.reference);
+            if (idxByRef >= 0) {
+                return idxByRef;
+            }
+        }
+        if (target.name) {
+            const nameNeedle = normalizeText(target.name);
+            const idxByName = monuments.findIndex((m) => normalizeText(m.name_vn) === nameNeedle);
+            if (idxByName >= 0) {
+                return idxByName;
+            }
+        }
+        return -1;
+    }
+
+    function getCategoryVisual(category) {
+        const text = normalizeText(category);
+        if (text.includes('nha tho') || text.includes('tu vien') || text.includes('giao duong')) {
+            return { icon: 'fa-church', color: '#2563eb', label: 'Tôn giáo' };
+        }
+        if (text.includes('ga tau') || text.includes('metro') || text.includes('ga')) {
+            return { icon: 'fa-train-subway', color: '#0ea5a4', label: 'Giao thông' };
+        }
+        if (text.includes('khach san')) {
+            return { icon: 'fa-hotel', color: '#a16207', label: 'Khách sạn' };
+        }
+        if (text.includes('truong')) {
+            return { icon: 'fa-school', color: '#1d4ed8', label: 'Giáo dục' };
+        }
+        if (text.includes('nha hang') || text.includes('quan ca phe') || text.includes('cua hang')) {
+            return { icon: 'fa-shop', color: '#db2777', label: 'Thương mại' };
+        }
+        if (text.includes('tuong dai') || text.includes('menhir') || text.includes('dai phun')) {
+            return { icon: 'fa-monument', color: '#be123c', label: 'Tưởng niệm' };
+        }
+        if (text.includes('cau')) {
+            return { icon: 'fa-bridge', color: '#0891b2', label: 'Hạ tầng' };
+        }
+        if (text.includes('toa nha') || text.includes('ngoi nha') || text.includes('nha')) {
+            return { icon: 'fa-building-columns', color: '#4f46e5', label: 'Kiến trúc' };
+        }
+        return { icon: 'fa-landmark', color: '#475569', label: 'Di tích' };
+    }
+
+    function markerHtml(iconClass, color, isActive) {
+        const activeClass = isActive ? ' sv-marker--active' : '';
+        return `<div class="sv-marker${activeClass}" style="background:${color};"><i class="fa-solid ${iconClass}"></i></div>`;
+    }
+
+    function createIcon(category, isActive = false) {
+        const visual = getCategoryVisual(category);
+        return L.divIcon({
+            className: '',
+            html: markerHtml(visual.icon, visual.color, isActive),
+            iconSize: [28, 28],
+            iconAnchor: [14, 14],
+            popupAnchor: [0, -12]
+        });
+    }
+
+    function toImagePath(reference) {
+        if (!reference) {
+            return '';
+        }
+        return `assets/paris/images/${String(reference).toLowerCase()}.jpg`;
+    }
+
+    function starRow(score) {
+        const s = Number.isFinite(Number(score)) ? Math.max(0, Math.min(1, Number(score))) : 0;
+        const filled = Math.round(s * 5);
+        const stars = Array.from({ length: 5 }, (_, i) =>
+            `<i class="fa-${i < filled ? 'solid' : 'regular'} fa-star"></i>`
+        ).join('');
+        return `${stars} <small>${(s * 5).toFixed(1)}/5</small>`;
+    }
+
+    function popupHtml(item) {
+        const visual = getCategoryVisual(item.category_vn);
+        return `
+            <div class="sv-popup-title"><i class="fa-solid ${visual.icon} me-1" style="color:${visual.color}"></i>${item.name_vn || 'Không rõ tên'}</div>
+            <p class="sv-popup-meta">${item.address_vn || 'Chưa có địa chỉ'}</p>
+        `;
+    }
+
+    function renderDetail(index) {
+        if (!monuments.length) {
+            detailBody.innerHTML = '<div class="sv-empty">Không có dữ liệu di tích phù hợp.</div>';
+            slideIndexEl.textContent = '0 / 0';
+            return;
+        }
+
+        const i = (index + monuments.length) % monuments.length;
+        currentIndex = i;
+        const item = monuments[i];
+        const visual = getCategoryVisual(item.category_vn);
+        const imageSrc = toImagePath(item.reference);
+
+        detailBody.innerHTML = `
+            <img class="sv-detail-image" src="${imageSrc}" alt="${item.name_vn || 'Ảnh di tích'}"
+                 onerror="this.onerror=null;this.src='${fallbackImage}';">
+            <h2 class="sv-detail-title">
+                <i class="fa-solid ${visual.icon} me-1" style="color:${visual.color}"></i>${item.name_vn || 'Không rõ tên'}
+            </h2>
+            <p class="sv-detail-meta"><i class="fa-solid fa-location-dot me-1"></i>${item.address_vn || 'Chưa có địa chỉ'}</p>
+            <p class="sv-detail-meta"><i class="fa-regular fa-folder-open me-1"></i>${item.category_vn || 'Danh mục chưa rõ'} • ${item.domaine_vn || 'Chưa có lĩnh vực'}</p>
+            <div class="sv-stars">${starRow(item.score)}</div>
+            <p class="sv-detail-desc">${item.description_vn || item.story_vn || 'Chưa có mô tả.'}</p>
+            <div class="sv-detail-actions">
+                <button id="prevBtn" type="button" class="btn btn-outline-primary"><i class="fa-solid fa-arrow-left me-1"></i>Trước</button>
+                <button id="nextBtn" type="button" class="btn btn-primary">Sau<i class="fa-solid fa-arrow-right ms-1"></i></button>
+            </div>
+        `;
+
+        slideIndexEl.textContent = `${i + 1} / ${monuments.length}`;
+
+        document.getElementById('prevBtn').addEventListener('click', () => focusByIndex(i - 1, true));
+        document.getElementById('nextBtn').addEventListener('click', () => focusByIndex(i + 1, true));
+    }
+
+    function setActiveMarker(index) {
+        if (activeMarker) {
+            activeMarker.setIcon(createIcon(activeMarker.__item.category_vn, false));
+        }
+        const marker = markers[index];
+        if (!marker) {
+            return;
+        }
+        marker.setIcon(createIcon(marker.__item.category_vn, true));
+        activeMarker = marker;
+    }
+
+    function focusByIndex(index, moveMap, options = {}) {
+        if (!monuments.length) {
+            return;
+        }
+        const i = (index + monuments.length) % monuments.length;
+        renderDetail(i);
+        updateUrlForItem(monuments[i], options.historyMode || 'replace');
+        setActiveMarker(i);
+
+        const marker = markers[i];
+        if (!marker) {
+            return;
+        }
+
+        // Ensure map container is properly sized before any zoom operations
+        map.invalidateSize();
+
+        const latLng = marker.getLatLng();
+        let finalized = false;
+
+        // Function to finalize view after zoom
+        const finalizeView = () => {
+            if (finalized) return;
+            finalized = true;
+
+            if (moveMap) {
+                const targetZoom = Math.max(map.getZoom(), 15);
+                map.setView(latLng, targetZoom, { animate: false });
+            }
+            marker.openPopup();
+            // Force map to refresh tiles
+            setTimeout(() => {
+                map.invalidateSize();
+                // Force redraw of tiles by small pan
+                map.panBy([1, 0], { animate: false });
+                map.panBy([-1, 0], { animate: false });
+            }, 50);
+            setTimeout(() => map.invalidateSize(), 200);
+        };
+
+        // Check if marker is already visible in the cluster
+        const visibleMarker = cluster.getVisibleParent(marker);
+        if (visibleMarker === marker) {
+            // Marker is already unclustered and visible
+            finalizeView();
+        } else {
+            // Need to zoom to show the marker
+            cluster.zoomToShowLayer(marker, () => {
+                finalizeView();
+            });
+            // Fallback: ensure finalizeView is called even if callback doesn't fire
+            setTimeout(() => {
+                finalizeView();
+            }, 500);
+        }
+    }
+
+    function rebuildMarkersAndView(focusIndex = 0, moveMap = false, options = {}) {
+        cluster.clearLayers();
+        markers = [];
+        activeMarker = null;
+
+        if (!monuments.length) {
+            countEl.textContent = '0 địa điểm';
+            slideIndexEl.textContent = '0 / 0';
+            detailBody.innerHTML = '<div class="sv-empty">Không có kết quả phù hợp với bộ lọc/tìm kiếm.</div>';
+            resultMeta.textContent = 'Không có dữ liệu phù hợp.';
+            updateUrlForFiltersOnly(options.historyMode || 'replace');
+            return;
+        }
+
+        const bounds = [];
+        monuments.forEach((item, idx) => {
+            const marker = L.marker([item.__lat, item.__lon], { icon: createIcon(item.category_vn) });
+            marker.__item = item;
+            marker.__index = idx;
+            marker.bindPopup(popupHtml(item));
+            marker.on('click', () => focusByIndex(idx, false));
+            markers.push(marker);
+            cluster.addLayer(marker);
+            bounds.push([item.__lat, item.__lon]);
+        });
+
+        countEl.textContent = `${markers.length} địa điểm`;
+        resultMeta.textContent = `Hiển thị ${monuments.length} / ${allMonuments.length} POI theo bộ lọc hiện tại.`;
+
+        // Ensure map container is properly sized before any bounds/zoom operations
+        map.invalidateSize();
+
+        if (bounds.length && !options.skipFitBounds) {
+            map.fitBounds(bounds, { padding: [20, 20], animate: false });
+        }
+        focusByIndex(focusIndex, moveMap, options);
+    }
+
+    function applyFilters(preserveCurrent = true, forcedTarget = null, options = {}) {
+        const query = normalizeText(searchInput.value).trim();
+        const selectedCategory = (categoryFilter.value || '').trim();
+        const selectedArea = (areaFilter.value || '').trim();
+        const selectedStar = Number(starFilter.value || 0);
+        const currentKey = preserveCurrent && monuments[currentIndex]
+            ? `${monuments[currentIndex].reference || ''}|${monuments[currentIndex].name_vn || ''}|${monuments[currentIndex].address_vn || ''}`
+            : null;
+
+        monuments = allMonuments.filter((item) => {
+            if (query && !item.__searchBlob.includes(query)) {
+                return false;
+            }
+            if (selectedCategory && (item.category_vn || '') !== selectedCategory) {
+                return false;
+            }
+            if (selectedArea && (item.commune_forme_index || '') !== selectedArea) {
+                return false;
+            }
+            if (selectedStar > 0 && item.__stars !== selectedStar) {
+                return false;
+            }
+            return true;
+        });
+
+        monuments.sort((a, b) => (a.name_vn || '').localeCompare((b.name_vn || ''), 'vi'));
+
+        let nextIndex = 0;
+        const forcedIdx = findIndexInCurrentByTarget(forcedTarget);
+        if (forcedIdx >= 0) {
+            nextIndex = forcedIdx;
+        } else if (currentKey) {
+            const idx = monuments.findIndex((m) =>
+                `${m.reference || ''}|${m.name_vn || ''}|${m.address_vn || ''}` === currentKey
+            );
+            if (idx >= 0) {
+                nextIndex = idx;
+            }
+        }
+
+        rebuildMarkersAndView(nextIndex, Boolean(options.moveMap), options);
+    }
+
+    function syncFromUrl() {
+        if (!allMonuments.length) {
+            return;
+        }
+
+        const filterState = getUrlFilterState();
+        const target = getUrlTarget();
+        const hasTarget = Boolean(target.reference || target.name);
+        const existsInAll = hasTarget && allMonuments.some((m) =>
+            (target.reference && (m.reference || '') === target.reference) ||
+            (target.name && normalizeText(m.name_vn) === normalizeText(target.name))
+        );
+
+        const previousSuppress = suppressUrlSync;
+        suppressUrlSync = true;
+        searchInput.value = filterState.query;
+        setSelectValueSafe(categoryFilter, filterState.category);
+        setSelectValueSafe(areaFilter, filterState.area);
+        setSelectValueSafe(starFilter, filterState.stars);
+
+        applyFilters(false, existsInAll ? target : null, {
+            historyMode: 'replace',
+            moveMap: existsInAll,
+            skipFitBounds: existsInAll
+        });
+        suppressUrlSync = previousSuppress;
+
+        // Force map to refresh after URL sync
+        setTimeout(() => {
+            map.invalidateSize();
+        }, 100);
+    }
+
+    async function loadMonuments() {
+        try {
+            const response = await fetch('assets/paris/monuments.json', { cache: 'no-store' });
+            if (!response.ok) {
+                throw new Error(`HTTP ${response.status}`);
+            }
+            const all = await response.json();
+
+            allMonuments = all
+                .map((item) => {
+                    const lat = Number(item.lat);
+                    const lon = Number(item.lon);
+                    return {
+                        ...item,
+                        __lat: lat,
+                        __lon: lon,
+                        __searchBlob: '',
+                        __stars: 1
+                    };
+                })
+                .filter((item) => Number.isFinite(item.__lat) && Number.isFinite(item.__lon))
+                .map((item) => ({
+                    ...item,
+                    __searchBlob: getSearchBlob(item),
+                    __stars: getStarCount(item.score)
+                }));
+
+            if (!allMonuments.length) {
+                detailBody.innerHTML = '<div class="sv-empty">Không tìm thấy tọa độ hợp lệ trong dữ liệu.</div>';
+                resultMeta.textContent = 'Không có dữ liệu hợp lệ.';
+                return;
+            }
+
+            buildFilterOptions();
+            suppressUrlSync = true;
+            applyFilters(false, null, { historyMode: 'replace' });
+            suppressUrlSync = false;
+            syncFromUrl();
+
+            // Ensure map is properly rendered after all initialization
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 200);
+            setTimeout(() => {
+                map.invalidateSize();
+            }, 500);
+        } catch (error) {
+            detailBody.innerHTML = `<div class="sv-empty">Không thể tải dữ liệu di tích: ${error.message}</div>`;
+            resultMeta.textContent = `Lỗi tải dữ liệu: ${error.message}`;
+        }
+    }
+
+    searchInput.addEventListener('input', () => applyFilters(true, null, { historyMode: 'replace' }));
+    categoryFilter.addEventListener('change', () => applyFilters(true, null, { historyMode: 'replace' }));
+    areaFilter.addEventListener('change', () => applyFilters(true, null, { historyMode: 'replace' }));
+    starFilter.addEventListener('change', () => applyFilters(true, null, { historyMode: 'replace' }));
+    window.addEventListener('popstate', () => {
+        syncFromUrl();
+    });
+
+    loadMonuments();
+})();
+</script>
+</body>
+</html>

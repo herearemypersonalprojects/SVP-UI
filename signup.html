@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Đăng Ký - SVP</title>
+    <style>
+        * { box-sizing: border-box; font-family: Arial, sans-serif; }
+        body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f5f7fb; }
+        .box { width: min(380px, 92vw); background: #fff; border: 1px solid #dbe4f0; border-radius: 10px; padding: 18px; }
+        h1 { margin: 0 0 14px; text-align: center; font-size: 22px; }
+        .input { width: 100%; border: 1px solid #cfd8e3; border-radius: 8px; padding: 10px 12px; margin-bottom: 10px; font-size: 14px; }
+        .captcha { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+        .captcha__q { min-width: 96px; font-weight: 700; color: #0f172a; }
+        .btn { width: 100%; border: 0; border-radius: 8px; padding: 10px 12px; color: #fff; background: #16a34a; cursor: pointer; }
+        .row { margin-top: 10px; text-align: center; font-size: 14px; }
+        .hint { margin-top: 10px; font-size: 13px; text-align: center; min-height: 18px; }
+        .ok { color: #15803d; }
+        .err { color: #b91c1c; }
+    </style>
+</head>
+<body>
+<div class="box">
+    <h1>Đăng Ký</h1>
+    <input id="email" class="input" type="email" placeholder="Email" />
+    <input id="password" class="input" type="password" placeholder="Mật khẩu" />
+    <div class="captcha">
+        <div id="captcha-q" class="captcha__q"></div>
+        <input id="captcha-a" class="input" type="text" placeholder="Nhập kết quả" style="margin:0;" />
+    </div>
+    <button id="btn-signup" class="btn" type="button">Tạo tài khoản</button>
+    <div class="row"><a href="login.html">Đã có tài khoản? Đăng nhập</a></div>
+    <div id="msg" class="hint"></div>
+</div>
+<script>
+(() => {
+    const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+    const msgEl = document.getElementById('msg');
+    const captchaQEl = document.getElementById('captcha-q');
+    let captchaAnswer = null;
+
+    const setMsg = (text, ok) => {
+        msgEl.textContent = text || '';
+        msgEl.className = 'hint ' + (ok ? 'ok' : 'err');
+    };
+
+    const resetCaptcha = () => {
+        const a = Math.floor(Math.random() * 9) + 1;
+        const b = Math.floor(Math.random() * 9) + 1;
+        captchaAnswer = a + b;
+        captchaQEl.textContent = `${a} + ${b} = ?`;
+        document.getElementById('captcha-a').value = '';
+    };
+
+    document.getElementById('btn-signup').addEventListener('click', async () => {
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const captchaInput = Number(document.getElementById('captcha-a').value.trim());
+
+        if (!email || !password) {
+            setMsg('Vui lòng nhập email và mật khẩu.', false);
+            return;
+        }
+        if (!Number.isFinite(captchaInput) || captchaInput !== captchaAnswer) {
+            setMsg('Captcha chưa đúng.', false);
+            resetCaptcha();
+            return;
+        }
+
+        try {
+            const response = await fetch(`${API_BASE_URL}/auth/signup`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                setMsg(payload.error || 'Đăng ký thất bại.', false);
+                resetCaptcha();
+                return;
+            }
+            localStorage.setItem('accessToken', payload.accessToken || '');
+            localStorage.setItem('refreshToken', payload.refreshToken || '');
+            setMsg('Tạo tài khoản thành công, đang chuyển trang...', true);
+            setTimeout(() => { window.location.href = 'index.html'; }, 400);
+        } catch (_) {
+            setMsg('Không thể kết nối máy chủ.', false);
+            resetCaptcha();
+        }
+    });
+
+    resetCaptcha();
+})();
+</script>
+</body>
+</html>

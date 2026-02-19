@@ -154,8 +154,8 @@
         </div>
 
         <div class="sv-auth d-none d-md-flex align-items-center gap-2">
-            <button class="btn btn-outline-secondary">Đăng Ký</button>
-            <button class="btn btn-primary">Đăng Nhập</button>
+            <a class="btn btn-outline-secondary" href="signup.html">Đăng Ký</a>
+            <a class="btn btn-primary" href="login.html">Đăng Nhập</a>
         </div>
     </div>
 </div>
@@ -198,12 +198,12 @@
     <!-- Category tabs -->
     <section class="sv-cats mt-3">
         <ul class="nav">
-            <li class="nav-item"><a class="nav-link active" href="kinh-nghiem-du-hoc.html"><img class="sv-cat__icon" src="assets/icons/icon_kinh_nghiem_du_hoc.png" alt=""> Học Tập & Nghiên Cứu</a></li>
-            <li class="nav-item"><a class="nav-link sv-cats__primary" href="viec-lam-thuc-tap.html"><img class="sv-cat__icon" src="assets/icons/icon_viec_lam_thuc_tap.png" alt=""> Việc Làm</a></li>
-            <li class="nav-item"><a class="nav-link sv-cats__primary" href="hoc-tap-nghien-cuu.html"><img class="sv-cat__icon" src="assets/icons/icon_hoc_tap_nghien_cuu.png" alt=""> Ngôn Ngữ & Văn Hóa</a></li>
+            <li class="nav-item"><a class="nav-link active" href="categories.html?categoryId=1"><img class="sv-cat__icon" src="assets/icons/icon_kinh_nghiem_du_hoc.png" alt=""> Học Tập & Nghiên Cứu</a></li>
+            <li class="nav-item"><a class="nav-link sv-cats__primary" href="categories.html?categoryId=4"><img class="sv-cat__icon" src="assets/icons/icon_viec_lam_thuc_tap.png" alt=""> Việc Làm</a></li>
+            <li class="nav-item"><a class="nav-link sv-cats__primary" href="categories.html?categoryId=6"><img class="sv-cat__icon" src="assets/icons/icon_hoc_tap_nghien_cuu.png" alt=""> Ngôn Ngữ & Văn Hóa</a></li>
 
-            <li class="nav-item"><a class="nav-link sv-cats__primary" href="su-kien-giao-luu.html"><img class="sv-cat__icon sv-cat__icon--event" src="assets/icons/icon_cuoc_song_tai_phap.png" alt=""> Cuộc Sống Tại Pháp</a></li>
-            <li class="nav-item"><a class="nav-link sv-cats__primary" href="nha-cua.html"><img class="sv-cat__icon" src="assets/icons/icon_du_lich_giai_tri.png" alt=""> Du Lịch, Giải Trí</a></li>
+            <li class="nav-item"><a class="nav-link sv-cats__primary" href="categories.html?categoryId=3"><img class="sv-cat__icon sv-cat__icon--event" src="assets/icons/icon_cuoc_song_tai_phap.png" alt=""> Cuộc Sống Tại Pháp</a></li>
+            <li class="nav-item"><a class="nav-link sv-cats__primary" href="categories.html?categoryId=13"><img class="sv-cat__icon" src="assets/icons/icon_du_lich_giai_tri.png" alt=""> Du Lịch, Giải Trí</a></li>
         </ul>
     </section>
 
@@ -234,26 +234,26 @@
             <div class="sv-card mb-3">
                 <div class="sv-card__hd d-flex align-items-center justify-content-between gap-2">
     <span><i class="fa-solid fa-calendar-days me-2 text-primary"></i>Sự Kiện Sắp Tới</span>
-    <a class="btn btn-sm btn-outline-primary" href="/events.html">Tất cả</a>
+    <a class="btn btn-sm btn-outline-primary" href="events.html">Tất cả</a>
 </div>
                 <ul id="sv-upcoming-events" class="sv-list" aria-live="polite">
                     <li>
                         <div>
-                            <a href="su-kien-du-hoc-phap-2026.html"><i class="fa fa-calendar-day me-2 text-primary"></i>Hội Thảo Du Học Pháp 2026</a>
+                            <a href="events.html"><i class="fa fa-calendar-day me-2 text-primary"></i>Hội Thảo Du Học Pháp 2026</a>
                             <div class="sv-meta">15/03/2026 • Paris</div>
                         </div>
                         <span class="sv-badge">Free</span>
                     </li>
                     <li>
                         <div>
-                            <a href="su-kien-gap-go-doanh-nghiep.html"><i class="fa fa-briefcase me-2 text-primary"></i>Gặp Gỡ Doanh Nghiệp</a>
+                            <a href="events.html"><i class="fa fa-briefcase me-2 text-primary"></i>Gặp Gỡ Doanh Nghiệp</a>
                             <div class="sv-meta">28/03/2026 • Lyon</div>
                         </div>
                         <span class="sv-badge">60 chỗ</span>
                     </li>
                     <li>
                         <div>
-                            <a href="su-kien-ket-noi-tan-sinh-vien.html"><i class="fa fa-users me-2 text-primary"></i>Kết Nối Tân Sinh Viên</a>
+                            <a href="events.html"><i class="fa fa-users me-2 text-primary"></i>Kết Nối Tân Sinh Viên</a>
                             <div class="sv-meta">07/04/2026 • Toulouse</div>
                         </div>
                         <span class="sv-badge">Mới</span>
@@ -386,7 +386,7 @@
                             </label>
                         </div>
                     </div>
-                    <button class="btn btn-primary w-100 mt-3" type="button">Đăng Ký Nhận Tin</button>
+                    <button id="sv-newsletter-submit" class="btn btn-primary w-100 mt-3" type="button">Đăng Ký Nhận Tin</button>
                     <div class="sv-newsletter__note">Bạn có thể hủy đăng ký bất cứ lúc nào.</div>
                 </div>
             </div>
@@ -413,9 +413,9 @@
             <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
         </div>
         <div class="col-md text-md-end mt-2 mt-md-0">
-            <a class="me-3" href="/terms.html">Điều khoản</a>
-            <a class="me-3" href="/security.html">Bảo mật</a>
-            <a href="/contact.html">Liên hệ</a>
+            <a class="me-3" href="terms.html">Điều khoản</a>
+            <a class="me-3" href="security.html">Bảo mật</a>
+            <a href="contact.html">Liên hệ</a>
         </div>
     </div>
 </footer>
@@ -426,6 +426,7 @@
         const emailInput = document.getElementById('sv-newsletter-email');
         const categories = document.getElementById('sv-newsletter-categories');
         const toggleAllBtn = document.getElementById('sv-newsletter-toggle');
+        const submitBtn = document.getElementById('sv-newsletter-submit');
         if (!emailInput || !categories) return;
         const checkboxes = Array.from(categories.querySelectorAll('input[type="checkbox"]'));
 
@@ -453,6 +454,34 @@
 
         checkboxes.forEach((cb) => cb.addEventListener('change', updateToggleLabel));
         emailInput.addEventListener('input', toggleCategories);
+        if (submitBtn) {
+            submitBtn.addEventListener('click', () => {
+                const email = emailInput.value.trim();
+                if (!email) {
+                    emailInput.focus();
+                    return;
+                }
+                const selectedIds = checkboxes
+                    .filter((cb) => cb.checked)
+                    .map((cb) => Number(cb.getAttribute('data-category-id')));
+                const saved = {
+                    email,
+                    categoryIds: selectedIds,
+                    savedAt: new Date().toISOString()
+                };
+                try {
+                    localStorage.setItem('svp.newsletter.subscription', JSON.stringify(saved));
+                } catch (error) {
+                    console.warn('Cannot save newsletter subscription locally:', error);
+                }
+                submitBtn.textContent = 'Đã đăng ký';
+                submitBtn.disabled = true;
+                setTimeout(() => {
+                    submitBtn.textContent = 'Đăng Ký Nhận Tin';
+                    submitBtn.disabled = false;
+                }, 1200);
+            });
+        }
         toggleCategories();
         updateToggleLabel();
     })();
@@ -487,6 +516,46 @@
             16: 'Chém gió, tán gẫu',
             17: 'Góp ý xây dựng SVP'
         };
+        const REQUEST_TIMEOUT_MS = 8000;
+        const FALLBACK_HOME_PAYLOAD = {
+            latestPosts: [
+                {
+                    postId: 900001,
+                    categoryId: 1,
+                    title: 'Checklist chuẩn bị học kỳ mới tại Pháp',
+                    contentHtml: '<p>Tổng hợp các việc cần làm trước khi vào kỳ mới: gia hạn giấy tờ, đăng ký môn học, bảo hiểm và kế hoạch tài chính.</p><p>Bài viết giúp bạn tránh thiếu sót trong những tuần đầu.</p>',
+                    createdAt: '2026-02-10T09:00:00Z',
+                    author: { userId: 1001, nickname: 'svp_admin', displayName: 'Ban Quản Trị SVP' },
+                    viewCount: 1260,
+                    likeCount: 78
+                },
+                {
+                    postId: 900002,
+                    categoryId: 4,
+                    title: 'Mẹo viết CV tiếng Pháp cho thực tập sinh',
+                    contentHtml: '<p>Cách trình bày CV ngắn gọn, tập trung kỹ năng và kinh nghiệm phù hợp với nhà tuyển dụng tại Pháp.</p><p>Có kèm mẫu bố cục tham khảo cho sinh viên mới ra trường.</p>',
+                    createdAt: '2026-02-08T12:30:00Z',
+                    author: { userId: 1002, nickname: 'mentor_lyon', displayName: 'Mentor Lyon' },
+                    viewCount: 845,
+                    likeCount: 53
+                },
+                {
+                    postId: 900003,
+                    categoryId: 3,
+                    title: 'Kinh nghiệm thuê nhà mùa cao điểm nhập học',
+                    contentHtml: '<p>Nên bắt đầu tìm phòng sớm từ 6-8 tuần, chuẩn bị dossier đầy đủ và kiểm tra kỹ hợp đồng trước khi đặt cọc.</p>',
+                    createdAt: '2026-02-05T18:15:00Z',
+                    author: { userId: 1003, nickname: 'thu_ha', displayName: 'Thu Hà' },
+                    viewCount: 932,
+                    likeCount: 61
+                }
+            ],
+            upcomingEvents: [
+                { eventId: 201, title: 'Hội Thảo Du Học Pháp 2026', eventTime: '2026-03-15T08:00:00Z', address: 'Paris', price: 0, online: false },
+                { eventId: 202, title: 'Gặp Gỡ Doanh Nghiệp', eventTime: '2026-03-28T08:00:00Z', address: 'Lyon', price: 0, online: false },
+                { eventId: 203, title: 'Kết Nối Tân Sinh Viên', eventTime: '2026-04-07T08:00:00Z', address: 'Toulouse', price: 0, online: false }
+            ]
+        };
 
         const escapeHtml = (value) => String(value ?? '')
             .replace(/&/g, '&amp;')
@@ -505,6 +574,22 @@
                 month: '2-digit',
                 year: 'numeric'
             }).format(parsed);
+        };
+        const fetchJson = async (url) => {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+            try {
+                const response = await fetch(url, {
+                    headers: { Accept: 'application/json' },
+                    signal: controller.signal
+                });
+                if (!response.ok) {
+                    throw new Error(`API responded with status ${response.status}`);
+                }
+                return await response.json();
+            } finally {
+                clearTimeout(timeoutId);
+            }
         };
 
         const toPlainText = (html) => String(html ?? '')
@@ -542,6 +627,28 @@
             }
             return 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1400&auto=format&fit=crop';
         };
+        const normalizePost = (post) => ({
+            postId: Number(post?.postId ?? post?.id ?? 0),
+            categoryId: Number(post?.categoryId ?? post?.category_id ?? 0),
+            title: post?.title || '',
+            contentHtml: post?.contentHtml || post?.content_html || post?.content || '',
+            createdAt: post?.createdAt || post?.created_at || new Date().toISOString(),
+            author: post?.author || {
+                userId: post?.userId ?? post?.user_id ?? null,
+                nickname: post?.nickname || post?.authorName || 'anonymous',
+                displayName: post?.authorDisplayName || post?.authorName || post?.nickname || 'Ẩn danh'
+            },
+            viewCount: Number(post?.viewCount ?? post?.views ?? post?.totalViews ?? 0),
+            likeCount: Number(post?.likeCount ?? post?.likes ?? post?.totalLikes ?? 0)
+        });
+        const normalizeEvent = (event) => ({
+            eventId: Number(event?.eventId ?? event?.id ?? 0),
+            title: event?.title || 'Sự kiện mới',
+            eventTime: event?.eventTime || event?.event_time || event?.createdAt || new Date().toISOString(),
+            address: event?.address || event?.location || '',
+            price: Number(event?.price ?? 0),
+            online: Boolean(event?.online)
+        });
 
         const getCategoryName = (categoryId) => CATEGORY_NAMES[categoryId] || `Chuyên mục #${categoryId ?? 'N/A'}`;
         const HOME_POSTS_LIMIT = 10;
@@ -594,7 +701,7 @@
             const commentsSource = Array.isArray(payload.comments)
                 ? payload.comments
                 : (Array.isArray(postSource.comments) ? postSource.comments : []);
-            return { post: postSource, comments: commentsSource };
+            return { post: normalizePost(postSource), comments: commentsSource };
         };
 
         const numberOrZero = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
@@ -712,13 +819,7 @@
             }
 
             try {
-                const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
-                    headers: { Accept: 'application/json' }
-                });
-                if (!response.ok) {
-                    throw new Error(`API responded with status ${response.status}`);
-                }
-                const payload = await response.json();
+                const payload = await fetchJson(`${API_BASE_URL}/posts/${postId}`);
                 const detail = resolvePostDetail(payload);
                 if (!detail) {
                     throw new Error('Invalid payload');
@@ -728,7 +829,14 @@
                 panel.style.maxHeight = `${panel.scrollHeight}px`;
             } catch (error) {
                 console.error('Cannot load post detail:', error);
-                renderPanelMessage(panel, 'Không thể tải chi tiết bài viết.');
+                const fallbackPost = loadedPosts.find((post) => Number(post.postId) === Number(postId));
+                if (fallbackPost) {
+                    const fallbackDetail = { post: fallbackPost, comments: [] };
+                    detailCache.set(postId, fallbackDetail);
+                    panel.innerHTML = `<div class="sv-article__detail-inner">${renderPostDetailContent(fallbackDetail.post, fallbackDetail.comments)}</div>`;
+                } else {
+                    renderPanelMessage(panel, 'Không thể tải chi tiết bài viết.');
+                }
                 panel.style.maxHeight = `${panel.scrollHeight}px`;
             }
         };
@@ -813,9 +921,10 @@
         };
 
         const renderHomeData = (payload) => {
-            const latestPosts = Array.isArray(payload.latestPosts) ? payload.latestPosts : [];
-            const upcomingEvents = Array.isArray(payload.upcomingEvents) ? payload.upcomingEvents : [];
+            const latestPosts = Array.isArray(payload.latestPosts) ? payload.latestPosts.map(normalizePost) : [];
+            const upcomingEvents = Array.isArray(payload.upcomingEvents) ? payload.upcomingEvents.map(normalizeEvent) : [];
             expandedCard = null;
+            detailCache.clear();
 
             loadedPosts = latestPosts.slice();
             if (loadedPosts.length === 0) {
@@ -870,14 +979,8 @@
                     beforeCreatedAt,
                     beforePostId: String(beforePostId)
                 });
-                const response = await fetch(`${API_BASE_URL}/posts/latest-articles?${params.toString()}`, {
-                    headers: { Accept: 'application/json' }
-                });
-                if (!response.ok) {
-                    throw new Error(`API responded with status ${response.status}`);
-                }
-                const payload = await response.json();
-                const newItems = Array.isArray(payload.items) ? payload.items : [];
+                const payload = await fetchJson(`${API_BASE_URL}/posts/latest-articles?${params.toString()}`);
+                const newItems = Array.isArray(payload.items) ? payload.items.map(normalizePost) : [];
                 if (newItems.length === 0) {
                     hasMorePosts = false;
                 } else {
@@ -909,17 +1012,11 @@
             membersEl.innerHTML = `<div class="p-3 sv-meta">Đang tải thành viên...</div>`;
             loadMoreBtn.style.display = 'none';
             try {
-                const response = await fetch(`${API_BASE_URL}/api/home`, {
-                    headers: { Accept: 'application/json' }
-                });
-                if (!response.ok) {
-                    throw new Error(`API responded with status ${response.status}`);
-                }
-                const payload = await response.json();
+                const payload = await fetchJson(`${API_BASE_URL}/api/home`);
                 renderHomeData(payload);
             } catch (error) {
                 console.error('Cannot load home data:', error);
-                renderError();
+                renderHomeData(FALLBACK_HOME_PAYLOAD);
             }
         };
 

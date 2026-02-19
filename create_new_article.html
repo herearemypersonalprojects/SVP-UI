@@ -36,6 +36,7 @@
             width: 100%;
             aspect-ratio: 16 / 8;
             border-radius: 10px;
+            display: none;
             background: linear-gradient(120deg, #dbeafe, #bfdbfe);
             border: 1px solid #dbe7ff;
             margin-bottom: .8rem;
@@ -189,6 +190,7 @@
                     </div>
 
                     <div class="mb-3">
+                        <div id="article-cover-preview" class="sv-preview-cover" aria-label="Xem trước ảnh đại diện"></div>
                         <label for="article-cover-file" class="form-label">Hoặc tải ảnh từ máy</label>
                         <input id="article-cover-file" class="form-control" type="file" accept="image/*">
 
@@ -251,6 +253,7 @@
         const contentHiddenInput = document.getElementById('article-content');
         const coverUrlInput = document.getElementById('article-cover-url');
         const coverFileInput = document.getElementById('article-cover-file');
+        const coverPreview = document.getElementById('article-cover-preview');
         const coverUploadStatus = document.getElementById('article-cover-upload-status');
         const categoryInput = document.getElementById('article-category');
         const emailWrap = document.getElementById('article-email-wrap');
@@ -259,9 +262,11 @@
         const toolbarButtons = Array.from(document.querySelectorAll('.sv-editor-toolbar button'));
         let savedRange = null;
         let isUploadingCover = false;
+        let pendingCoverFile = null;
+        let pendingCoverPreviewUrl = '';
         const MAX_IMAGE_UPLOAD_BYTES = 100 * 1024;
 
-        if (!form || !titleInput || !contentEditor || !contentHiddenInput || !coverUrlInput || !coverFileInput || !coverUploadStatus || !categoryInput || !feedback || !emailWrap || !emailInput) {
+        if (!form || !titleInput || !contentEditor || !contentHiddenInput || !coverUrlInput || !coverFileInput || !coverPreview || !coverUploadStatus || !categoryInput || !feedback || !emailWrap || !emailInput) {
             return;
         }
 
@@ -286,6 +291,33 @@
             } catch (_) {
                 return '';
             }
+        };
+
+        const hideCoverPreview = () => {
+            coverPreview.style.display = 'none';
+            coverPreview.style.backgroundImage = 'none';
+        };
+
+        const clearPendingCoverPreview = () => {
+            if (pendingCoverPreviewUrl) {
+                URL.revokeObjectURL(pendingCoverPreviewUrl);
+                pendingCoverPreviewUrl = '';
+            }
+        };
+
+        const clearPendingCoverFile = () => {
+            pendingCoverFile = null;
+            clearPendingCoverPreview();
+            coverFileInput.value = '';
+        };
+
+        const refreshCoverPreview = () => {
+            if (pendingCoverPreviewUrl) {
+                coverPreview.style.display = 'block';
+                coverPreview.style.backgroundImage = `url('${pendingCoverPreviewUrl}')`;
+                return;
+            }
+            hideCoverPreview();
         };
 
         const saveSelection = () => {
@@ -643,7 +675,6 @@
             if (!uploadUrl || !publicUrl) {
                 throw new Error('Thiếu uploadUrl/publicUrl từ API.');
             }
-
             let uploadResponse;
             try {
                 uploadResponse = await fetch(uploadUrl, {
@@ -671,6 +702,9 @@
 
             coverUrlInput.value = publicUrl;
             updateDraft();
+            clearPendingCoverFile();
+            refreshCoverPreview();
+
             setCoverUploadStatus('Upload ảnh thành công.', 'success');
         };
 
@@ -694,34 +728,37 @@
         });
         contentEditor.addEventListener('input', updateDraft);
         coverUrlInput.addEventListener('input', () => {
-            if (coverUrlInput.value.trim()) {
+            const safeUrl = sanitizeUrl(coverUrlInput.value);
+            if (safeUrl) {
+                clearPendingCoverFile();
+                refreshCoverPreview();
                 setCoverUploadStatus('Đang dùng ảnh đại diện từ URL đã nhập.', 'info');
             } else {
+                refreshCoverPreview();
                 setCoverUploadStatus('', 'info');
             }
         });
-        coverFileInput.addEventListener('change', async (event) => {
+        coverFileInput.addEventListener('change', (event) => {
             const file = event.target && event.target.files ? event.target.files[0] : null;
             if (!file) {
+                clearPendingCoverFile();
+                refreshCoverPreview();
                 setCoverUploadStatus('', 'info');
                 return;
             }
-            if (isUploadingCover) {
+            if (!file.type || !file.type.toLowerCase().startsWith('image/')) {
+                clearPendingCoverFile();
+                refreshCoverPreview();
+                setCoverUploadStatus('Chỉ hỗ trợ file ảnh.', 'error');
                 return;
             }
-
-            isUploadingCover = true;
-            coverFileInput.disabled = true;
-            setCoverUploadStatus('Đang upload ảnh lên Cloudflare R2...', 'info');
-            try {
-                await uploadCoverToCloudflare(file);
-            } catch (error) {
-                setCoverUploadStatus(toFriendlyUploadError(error), 'error');
-            } finally {
-                isUploadingCover = false;
-                coverFileInput.disabled = false;
-                coverFileInput.value = '';
-            }
+            clearPendingCoverPreview();
+            pendingCoverPreviewUrl = URL.createObjectURL(file);
+            pendingCoverFile = file;
+            coverUrlInput.value = '';
+            refreshCoverPreview();
+            updateDraft();
+            setCoverUploadStatus('Ảnh đã được chọn cục bộ. Ảnh sẽ được upload khi bấm "Đăng bài viết".', 'info');
         });
 
         toolbarButtons.forEach((button) => {
@@ -805,15 +842,9 @@
 
             const title = titleInput.value.trim();
             const categoryId = Number(categoryInput.value);
-            const contentHtml = composeContentHtml();
             if (!title || title.length < 5) {
                 setFeedback('Tiêu đề cần tối thiểu 5 ký tự.', 'error');
                 titleInput.focus();
-                return;
-            }
-            if (!contentHtml || contentHtml.replace(/<[^>]+>/g, ' ').trim().length < 20) {
-                setFeedback('Nội dung bài viết cần chi tiết hơn (ít nhất 20 ký tự).', 'error');
-                contentEditor.focus();
                 return;
             }
             if (!Number.isInteger(categoryId) || categoryId <= 0) {
@@ -833,6 +864,29 @@
                 const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
                     ? await window.SVPAuth.getValidAccessToken()
                     : (localStorage.getItem('accessToken') || '');
+
+                if (pendingCoverFile) {
+                    isUploadingCover = true;
+                    coverFileInput.disabled = true;
+                    setCoverUploadStatus('Đang upload ảnh lên Cloudflare R2...', 'info');
+                    try {
+                        await uploadCoverToCloudflare(pendingCoverFile);
+                    } catch (uploadError) {
+                        setCoverUploadStatus(toFriendlyUploadError(uploadError), 'error');
+                        setFeedback('Không thể upload ảnh đại diện.', 'error');
+                        return;
+                    } finally {
+                        isUploadingCover = false;
+                        coverFileInput.disabled = false;
+                    }
+                }
+
+                const contentHtml = composeContentHtml();
+                if (!contentHtml || contentHtml.replace(/<[^>]+>/g, ' ').trim().length < 20) {
+                    setFeedback('Nội dung bài viết cần chi tiết hơn (ít nhất 20 ký tự).', 'error');
+                    contentEditor.focus();
+                    return;
+                }
                 const response = await fetch(`${API_BASE_URL}/posts/articles`, {
                     method: 'POST',
                     headers: {
@@ -889,6 +943,8 @@
                 form.reset();
                 contentEditor.innerHTML = '';
                 contentHiddenInput.value = '';
+                clearPendingCoverFile();
+                refreshCoverPreview();
                 setCoverUploadStatus('', 'info');
                 emailInput.value = email;
                 setTimeout(() => {
@@ -909,6 +965,7 @@
             emailInput.value = initialEmail;
             emailWrap.classList.add('d-none');
         }
+        refreshCoverPreview();
         updateDraft();
     })();
 </script>

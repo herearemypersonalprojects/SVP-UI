@@ -411,7 +411,12 @@
                 return '';
             }
             try {
-                const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+                let payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+                const pad = payloadBase64.length % 4;
+                if (pad) {
+                    payloadBase64 += '='.repeat(4 - pad);
+                }
+                const payload = JSON.parse(atob(payloadBase64));
                 const fromToken = normalizeEmail(payload?.email || payload?.sub || '');
                 return isValidEmail(fromToken) ? fromToken : '';
             } catch (_) {
@@ -419,7 +424,13 @@
             }
         };
 
-        const getSessionEmail = () => {
+        const getSessionEmail = async () => {
+            if (window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function') {
+                const validToken = await window.SVPAuth.getValidAccessToken();
+                if (!validToken) {
+                    return '';
+                }
+            }
             const email = pickEmailFromStorage();
             return isValidEmail(email) ? email : '';
         };
@@ -513,7 +524,7 @@
             event.preventDefault();
             updateDraft();
 
-            const sessionEmail = getSessionEmail();
+            const sessionEmail = await getSessionEmail();
             const manualEmail = normalizeEmail(emailInput.value);
             const email = sessionEmail || manualEmail;
             if (!email) {
@@ -561,7 +572,9 @@
             setFeedback('Đang gửi bài viết, vui lòng đợi...', 'info');
 
             try {
-                const accessToken = localStorage.getItem('accessToken') || '';
+                const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
+                    ? await window.SVPAuth.getValidAccessToken()
+                    : (localStorage.getItem('accessToken') || '');
                 const response = await fetch(`${API_BASE_URL}/posts/articles`, {
                     method: 'POST',
                     headers: {

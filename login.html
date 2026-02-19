@@ -57,8 +57,11 @@
             }
             localStorage.setItem('accessToken', payload.accessToken || '');
             localStorage.setItem('refreshToken', payload.refreshToken || '');
+            if (payload.email) localStorage.setItem('userEmail', payload.email);
+            if (payload.nickname) localStorage.setItem('userNickname', payload.nickname);
+            if (payload.userId) localStorage.setItem('userId', payload.userId);
             setMsg('Đăng nhập thành công, đang chuyển trang...', true);
-            setTimeout(() => { window.location.href = 'index.html'; }, 400);
+            window.location.replace('index.html');
         } catch (_) {
             setMsg('Không thể kết nối máy chủ.', false);
         }

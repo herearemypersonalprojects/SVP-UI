@@ -266,10 +266,26 @@
         }
 
         const sanitizeUrl = (url) => {
-            const value = (url || '').trim();
-            if (!value) return '';
-            if (/^https?:\/\//i.test(value)) return value;
-            return '';
+            const raw = String(url || '').trim();
+            if (!raw) return '';
+
+            const cssUrlMatch = raw.match(/url\(\s*(['"]?)(https?:\/\/[^'"\\)\s]+)\1\s*\)/i);
+            const candidate = cssUrlMatch && cssUrlMatch[2]
+                ? cssUrlMatch[2].trim()
+                : raw;
+            if (!/^https?:\/\//i.test(candidate)) {
+                return '';
+            }
+
+            try {
+                const parsed = new URL(candidate);
+                if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+                    return '';
+                }
+                return parsed.toString();
+            } catch (_) {
+                return '';
+            }
         };
 
         const saveSelection = () => {

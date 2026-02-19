@@ -602,7 +602,7 @@
             if (!file.type || !file.type.toLowerCase().startsWith('image/')) {
                 throw new Error('Chỉ hỗ trợ file ảnh.');
             }
-            setCoverUploadStatus(`Đang nén ảnh về dưới ${formatSize(MAX_IMAGE_UPLOAD_BYTES)}...`, 'info');
+            setCoverUploadStatus(`Đang tải ảnh...`, 'info');
             const compressedFile = await compressImageBelowLimit(file, MAX_IMAGE_UPLOAD_BYTES);
             if (compressedFile.size !== file.size) {
                 setCoverUploadStatus(
@@ -778,7 +778,7 @@
             updateDraft();
 
             if (isUploadingCover) {
-                setFeedback('Ảnh đại diện đang upload lên Cloudflare R2. Vui lòng chờ xong rồi đăng bài.', 'error');
+                setFeedback('Ảnh đại diện đang tải lên máy chủ. Vui lòng chờ xong rồi đăng bài.', 'error');
                 return;
             }
 

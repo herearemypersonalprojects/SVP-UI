@@ -1123,7 +1123,7 @@
                 : (event.online ? 'Online' : 'Gratuit');
             const safeDate = escapeHtml(formatDate(event.eventTime));
             const safeBadge = escapeHtml(badge);
-            const safeHref = `events.html#event-${encodeURIComponent(event.eventId ?? '')}`;
+            const safeHref = `event_detail.html?eventId=${encodeURIComponent(event.eventId ?? '')}`;
             return `
                 <li>
                     <div>

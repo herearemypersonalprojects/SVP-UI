@@ -193,7 +193,7 @@
             contentEl.innerHTML = toContentHtml(event.content);
 
             if (imageUrl) {
-                heroEl.style.backgroundImage = `url('${escapeHtml(imageUrl)}')`;
+                heroEl.style.backgroundImage = `url("${encodeURI(imageUrl)}")`;
             } else {
                 heroEl.style.backgroundImage = 'linear-gradient(120deg, #dbeafe, #bfdbfe)';
             }

@@ -132,9 +132,42 @@
                         <textarea id="event-description" class="form-control" rows="6" required></textarea>
                     </div>
 
+                    <div class="mb-3">
+                        <label for="event-type" class="form-label">Loại sự kiện</label>
+                        <select id="event-type" class="form-select">
+                            <option value="">-- Chọn loại sự kiện --</option>
+                            <option value="Hội thảo">Hội thảo</option>
+                            <option value="Workshop">Workshop</option>
+                            <option value="Giao lưu">Giao lưu</option>
+                            <option value="Lễ hội">Lễ hội</option>
+                            <option value="Văn hóa">Văn hóa</option>
+                            <option value="Thể thao">Thể thao</option>
+                            <option value="Âm nhạc">Âm nhạc</option>
+                            <option value="Khác">Khác</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="event-tags" class="form-label">Tags (phân cách bằng dấu phẩy)</label>
+                        <input id="event-tags" class="form-control" type="text" placeholder="VD: du học, Paris, sinh viên">
+                    </div>
+
                     <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-2"></i>Tạo sự kiện</button>
                     <div id="event-submit-feedback" class="sv-meta mt-3" aria-live="polite"></div>
                 </form>
+            </section>
+        </div>
+
+        <div class="col-lg-4">
+            <section class="sv-card sticky-top" style="top: 1rem;">
+                <div class="sv-card__hd"><i class="fa-solid fa-eye me-2 text-primary"></i>Xem Trước</div>
+                <div class="p-3">
+                    <div id="event-preview-cover" class="sv-event-cover mb-3"></div>
+                    <h5 id="event-preview-title" class="fw-bold mb-2">Tên sự kiện sẽ hiển thị tại đây</h5>
+                    <p id="event-preview-datetime" class="sv-meta mb-1"><i class="fa-regular fa-calendar me-1"></i>Ngày giờ: Chưa cập nhật</p>
+                    <p id="event-preview-location" class="sv-meta mb-2"><i class="fa-solid fa-location-dot me-1"></i>Địa điểm: Chưa cập nhật</p>
+                    <p id="event-preview-description" class="small text-muted">Mô tả sự kiện sẽ xuất hiện ở đây sau khi bạn nhập.</p>
+                </div>
             </section>
         </div>
 
@@ -258,9 +291,9 @@
             previewLocation.textContent = `Địa điểm: ${location || (onlineInput.checked ? 'Online' : 'Chưa cập nhật')}`;
             previewDescription.textContent = description || 'Mô tả sự kiện sẽ xuất hiện ở đây sau khi bạn nhập.';
             previewCover.style.backgroundImage = imageUrl
-                ? `url('${imageUrl}')`
+                ? `url("${encodeURI(imageUrl)}")`
                 : (imageFilePreviewUrl
-                    ? `url('${imageFilePreviewUrl}')`
+                    ? `url("${imageFilePreviewUrl}")`
                     : 'linear-gradient(120deg, #dbeafe, #bfdbfe)');
         };
 

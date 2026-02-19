@@ -136,6 +136,46 @@
             white-space: pre-wrap;
             word-break: break-word;
         }
+        .sv-auth-user {
+            display: inline-flex;
+            align-items: center;
+            gap: .55rem;
+            padding: .25rem .35rem .25rem .3rem;
+            border: 1px solid #dbeafe;
+            border-radius: 999px;
+            background: #f8fbff;
+        }
+        .sv-auth-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #fff;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: .95rem;
+        }
+        .sv-auth-name {
+            color: #0f172a;
+            font-weight: 700;
+            max-width: 140px;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .sv-auth-logout {
+            border: 0;
+            background: transparent;
+            color: #475569;
+            font-weight: 600;
+            font-size: .85rem;
+            cursor: pointer;
+            padding: .2rem .35rem;
+            border-radius: 8px;
+        }
+        .sv-auth-logout:hover { background: #e2e8f0; }
     </style>
 </head>
 <body>
@@ -153,7 +193,7 @@
             </div>
         </div>
 
-        <div class="sv-auth d-none d-md-flex align-items-center gap-2">
+        <div id="sv-auth-box" class="sv-auth d-none d-md-flex align-items-center gap-2">
             <a class="btn btn-outline-secondary" href="signup.html">Đăng Ký</a>
             <a class="btn btn-primary" href="login.html">Đăng Nhập</a>
         </div>
@@ -424,6 +464,57 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
+    (function () {
+        const authBox = document.getElementById('sv-auth-box');
+        if (!authBox) return;
+
+        const escapeHtml = (value) => String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
+        const parseJwtPayload = (token) => {
+            if (!token || token.split('.').length !== 3) return null;
+            try {
+                const payloadBase64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+                return JSON.parse(atob(payloadBase64));
+            } catch (_) {
+                return null;
+            }
+        };
+
+        const accessToken = localStorage.getItem('accessToken') || '';
+        const payload = parseJwtPayload(accessToken) || {};
+        const nickname = (localStorage.getItem('userNickname') || payload.nickname || '').trim();
+        const email = (localStorage.getItem('userEmail') || payload.email || '').trim();
+        if (!accessToken || (!nickname && !email)) {
+            return;
+        }
+
+        const displayName = nickname || email;
+        const initial = (displayName.charAt(0) || 'U').toUpperCase();
+        authBox.innerHTML = `
+            <div class="sv-auth-user" title="${escapeHtml(email || displayName)}">
+                <span class="sv-auth-avatar">${escapeHtml(initial)}</span>
+                <span class="sv-auth-name">${escapeHtml(displayName)}</span>
+                <button id="sv-auth-logout" class="sv-auth-logout" type="button">Đăng xuất</button>
+            </div>
+        `;
+
+        const logoutBtn = document.getElementById('sv-auth-logout');
+        if (!logoutBtn) return;
+        logoutBtn.addEventListener('click', () => {
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refreshToken');
+            localStorage.removeItem('userEmail');
+            localStorage.removeItem('userNickname');
+            localStorage.removeItem('userId');
+            window.location.reload();
+        });
+    })();
+
     (function () {
         const emailInput = document.getElementById('sv-newsletter-email');
         const emailErrorEl = document.getElementById('sv-newsletter-email-error');
@@ -698,6 +789,7 @@
             postId: Number(post?.postId ?? post?.id ?? 0),
             categoryId: Number(post?.categoryId ?? post?.category_id ?? 0),
             isArticle: Boolean(post?.isArticle ?? post?.is_article ?? true),
+            status: post?.status ?? post?.postStatus ?? null,
             title: post?.title || '',
             contentHtml: post?.contentHtml || post?.content_html || post?.content || '',
             createdAt: post?.createdAt || post?.created_at || new Date().toISOString(),
@@ -743,6 +835,10 @@
             const safeDate = escapeHtml(formatDate(post.createdAt));
             const safeLead = escapeHtml(buildLead(post.contentHtml));
             const safeCover = escapeHtml(extractCover(post.contentHtml));
+            const status = String(post.status || '').toUpperCase();
+            const pendingNote = status === 'PENDING'
+                ? `<div class="sv-meta text-danger mt-2">Hãy kiểm tra hòm thư và xác nhận đăng bài này.</div>`
+                : '';
 
             return `
                 <article class="sv-article sv-article--clickable" data-post-id="${post.postId}" role="button" tabindex="0" aria-label="Xem chi tiết bài viết ${safeTitle}">
@@ -753,6 +849,7 @@
                     <h2 class="sv-article__title">${safeTitle}</h2>
                     <div class="sv-article__meta">Bởi ${safeAuthor} • Cập nhật ${safeDate}</div>
                     <p class="sv-article__lead">${safeLead}</p>
+                    ${pendingNote}
                     <div class="sv-article__cover" style="background-image:url('${safeCover}')"></div>
                     <div class="sv-article__tags">
                         <span class="sv-tag">${safeCategory}</span>
@@ -1007,6 +1104,8 @@
                 feedEl.innerHTML = visiblePosts.map((post) => renderArticleCard(post)).join('');
             }
 
+            injectLocalArticle();
+
             if (upcomingEvents.length === 0) {
                 eventsEl.innerHTML = `<li><div class="sv-meta">Chưa có sự kiện sắp tới.</div></li>`;
             } else {
@@ -1033,6 +1132,38 @@
             eventsEl.innerHTML = `<li><div class="sv-meta">Không thể tải sự kiện.</div></li>`;
             membersEl.innerHTML = `<div class="p-3 sv-meta">Không thể tải thành viên.</div>`;
             loadMoreBtn.style.display = 'none';
+        };
+
+        const injectLocalArticle = () => {
+            const raw = localStorage.getItem('svp.latestSubmittedArticle');
+            if (!raw) {
+                return;
+            }
+            let localPost;
+            try {
+                localPost = JSON.parse(raw);
+            } catch (_) {
+                localStorage.removeItem('svp.latestSubmittedArticle');
+                return;
+            }
+            const normalized = normalizePost({
+                ...localPost,
+                postId: Number(localPost.postId) || Date.now()
+            });
+            normalized.status = localPost.status || normalized.status;
+
+            loadedPosts = [normalized, ...loadedPosts.filter((post) => post.postId !== normalized.postId)];
+            const visiblePosts = getVisiblePosts(loadedPosts);
+            feedEl.innerHTML = visiblePosts.length === 0
+                ? `<div class="sv-meta">Chưa có bài viết phù hợp để hiển thị.</div>`
+                : visiblePosts.map((post) => renderArticleCard(post)).join('');
+
+            const topMembers = collectTopMembers(loadedPosts);
+            membersEl.innerHTML = topMembers.length === 0
+                ? `<div class="p-3 sv-meta">Chưa có thành viên nổi bật.</div>`
+                : topMembers.map((member) => renderMember(member)).join('');
+
+            localStorage.removeItem('svp.latestSubmittedArticle');
         };
 
         const loadMorePosts = async () => {

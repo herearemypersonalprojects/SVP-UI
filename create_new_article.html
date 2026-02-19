@@ -419,6 +419,11 @@
             }
         };
 
+        const getSessionEmail = () => {
+            const email = pickEmailFromStorage();
+            return isValidEmail(email) ? email : '';
+        };
+
         const composeContentHtml = () => {
             const editorHtml = contentEditor.innerHTML.trim();
             const coverUrl = sanitizeUrl(coverUrlInput.value);
@@ -508,18 +513,25 @@
             event.preventDefault();
             updateDraft();
 
-            const email = normalizeEmail(emailInput.value);
+            const sessionEmail = getSessionEmail();
+            const manualEmail = normalizeEmail(emailInput.value);
+            const email = sessionEmail || manualEmail;
             if (!email) {
                 emailWrap.classList.remove('d-none');
                 setFeedback('Bạn chưa đăng nhập. Vui lòng nhập email để nhận magic link xác thực đăng bài.', 'error');
                 emailInput.focus();
                 return;
             }
-            if (!isValidEmail(email)) {
+            if (!sessionEmail && !isValidEmail(email)) {
                 emailWrap.classList.remove('d-none');
                 setFeedback('Email chưa hợp lệ.', 'error');
                 emailInput.focus();
                 return;
+            }
+
+            if (sessionEmail) {
+                emailInput.value = sessionEmail;
+                emailWrap.classList.add('d-none');
             }
 
             const title = titleInput.value.trim();
@@ -549,11 +561,13 @@
             setFeedback('Đang gửi bài viết, vui lòng đợi...', 'info');
 
             try {
+                const accessToken = localStorage.getItem('accessToken') || '';
                 const response = await fetch(`${API_BASE_URL}/posts/articles`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        Accept: 'application/json'
+                        Accept: 'application/json',
+                        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
                     },
                     body: JSON.stringify({
                         email,
@@ -569,17 +583,45 @@
                 }
 
                 const postId = payload.postId || 'N/A';
+                const status = String(payload.status || '').toUpperCase();
                 const expiresAt = payload.verifyExpiresAt || '';
                 const debugLink = payload.verifyLink ? `\nLink xác thực (dev): ${payload.verifyLink}` : '';
-                setFeedback(
-                    `Bài viết #${postId} đã được tạo với trạng thái PENDING. Hãy kiểm tra email ${email} và bấm magic link để xuất bản.${expiresAt ? ` (Hết hạn: ${expiresAt})` : ''}${debugLink}`,
-                    'success'
-                );
+                if (status === 'PUBLISHED') {
+                    setFeedback(
+                        `Bài viết #${postId} đã được xuất bản ngay với trạng thái PUBLISHED.`,
+                        'success'
+                    );
+                } else {
+                    setFeedback(
+                        `Bài viết #${postId} đã được tạo với trạng thái PENDING. Hãy kiểm tra email ${email} và bấm magic link để xuất bản.${expiresAt ? ` (Hết hạn: ${expiresAt})` : ''}${debugLink}`,
+                        'success'
+                    );
+                }
+                const authorName = (localStorage.getItem('userNickname') || email || '').trim();
+                const localPost = {
+                    postId,
+                    categoryId,
+                    title,
+                    contentHtml,
+                    createdAt: new Date().toISOString(),
+                    status: status || 'PENDING',
+                    author: {
+                        displayName: authorName,
+                        nickname: authorName
+                    }
+                };
+                try {
+                    localStorage.setItem('svp.latestSubmittedArticle', JSON.stringify(localPost));
+                } catch (_) {
+                }
                 localStorage.setItem('userEmail', email);
                 form.reset();
                 contentEditor.innerHTML = '';
                 contentHiddenInput.value = '';
                 emailInput.value = email;
+                setTimeout(() => {
+                    window.location.href = 'index.html';
+                }, 600);
             } catch (_) {
                 setFeedback('Không thể kết nối API.', 'error');
             } finally {
@@ -593,13 +635,11 @@
         const initialEmail = pickEmailFromStorage();
         if (initialEmail) {
             emailInput.value = initialEmail;
+            emailWrap.classList.add('d-none');
         }
         updateDraft();
     })();
 </script>
+<script src="auth-topbar.js"></script>
 </body>
 </html>
-
-
-
-

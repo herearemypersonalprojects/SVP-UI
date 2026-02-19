@@ -1,0 +1,222 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Xác thực đăng bài - SVP</title>
+    <style>
+        body { margin: 0; min-height: 100vh; display: grid; place-items: center; font-family: Arial, sans-serif; background: #f8fafc; color: #0f172a; }
+        .box { width: min(560px, 92vw); background: #fff; border: 1px solid #e2e8f0; border-radius: 12px; padding: 22px; text-align: center; }
+        .spinner { width: 28px; height: 28px; border: 3px solid #dbeafe; border-top-color: #2563eb; border-radius: 50%; margin: 0 auto 10px; animation: spin .8s linear infinite; }
+        .spinner.hidden { display: none; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .err { color: #b91c1c; }
+        .ok { color: #166534; }
+        .meta { color: #475569; margin-top: 12px; font-size: 14px; line-height: 1.45; }
+        .actions { margin-top: 14px; }
+        .actions a { display: inline-block; padding: 8px 12px; border-radius: 8px; background: #2563eb; color: #fff; text-decoration: none; }
+    </style>
+</head>
+<body>
+<main class="box">
+    <div id="spinner" class="spinner"></div>
+    <h1 id="title" style="font-size:20px; margin:0 0 8px;">Đang xác thực bài viết</h1>
+    <p id="msg" style="margin:0;">Vui lòng đợi, hệ thống đang xác thực yêu cầu của bạn...</p>
+    <p id="meta" class="meta"></p>
+    <div class="actions">
+        <a id="go-home-link" href="index.html">Về trang chủ</a>
+    </div>
+</main>
+
+<script>
+(() => {
+    const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+    const titleEl = document.getElementById('title');
+    const msgEl = document.getElementById('msg');
+    const metaEl = document.getElementById('meta');
+    const spinnerEl = document.getElementById('spinner');
+    const goHomeLink = document.getElementById('go-home-link');
+    const PENDING_AUTH_KEY = 'svp.pendingArticlePublishAuth';
+    let pendingAuth = null;
+
+    const parseHashParams = () => new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+    const parseQueryParams = () => new URLSearchParams(window.location.search || '');
+    const safeStatus = (status) => String(status || '').trim().toUpperCase();
+    const safeTitle = (value) => String(value || '').trim();
+    const asText = (value) => String(value || '').trim();
+    const isObject = (value) => value && typeof value === 'object' && !Array.isArray(value);
+
+    const statusLabel = (status) => {
+        const upper = safeStatus(status);
+        if (upper === 'PUBLISHED') return 'Đã xuất bản';
+        if (upper === 'ALREADY_PUBLISHED') return 'Đã xuất bản trước đó';
+        return upper || 'Không rõ';
+    };
+
+    const hasAuthTokens = (auth) => {
+        if (!isObject(auth)) return false;
+        return Boolean(asText(auth.accessToken) && asText(auth.refreshToken));
+    };
+
+    const normalizeAuth = (auth) => {
+        if (!isObject(auth)) return null;
+        const normalized = {
+            accessToken: asText(auth.accessToken),
+            refreshToken: asText(auth.refreshToken),
+            email: asText(auth.email),
+            nickname: asText(auth.nickname),
+            userId: asText(auth.userId),
+            tokenType: asText(auth.tokenType),
+            accessExpiresAt: asText(auth.accessExpiresAt),
+            refreshExpiresAt: asText(auth.refreshExpiresAt)
+        };
+        return hasAuthTokens(normalized) ? normalized : null;
+    };
+
+    const setPendingAuth = (auth) => {
+        pendingAuth = normalizeAuth(auth);
+        if (!pendingAuth) {
+            sessionStorage.removeItem(PENDING_AUTH_KEY);
+            return;
+        }
+        try {
+            sessionStorage.setItem(PENDING_AUTH_KEY, JSON.stringify(pendingAuth));
+        } catch (_) {
+        }
+    };
+
+    const getPendingAuth = () => {
+        if (pendingAuth) {
+            return pendingAuth;
+        }
+        try {
+            const raw = sessionStorage.getItem(PENDING_AUTH_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            pendingAuth = normalizeAuth(parsed);
+            return pendingAuth;
+        } catch (_) {
+            return null;
+        }
+    };
+
+    const clearPendingAuth = () => {
+        pendingAuth = null;
+        sessionStorage.removeItem(PENDING_AUTH_KEY);
+    };
+
+    const applyAuthToLocalStorage = (auth) => {
+        const normalized = normalizeAuth(auth);
+        if (!normalized) return false;
+        localStorage.setItem('accessToken', normalized.accessToken);
+        localStorage.setItem('refreshToken', normalized.refreshToken);
+        if (normalized.email) localStorage.setItem('userEmail', normalized.email);
+        if (normalized.nickname) localStorage.setItem('userNickname', normalized.nickname);
+        if (normalized.userId) localStorage.setItem('userId', normalized.userId);
+        return true;
+    };
+
+    const setError = (message) => {
+        spinnerEl.classList.add('hidden');
+        titleEl.textContent = 'Xác thực thất bại';
+        msgEl.textContent = message || 'Không thể xác thực bài viết.';
+        msgEl.className = 'err';
+        metaEl.textContent = '';
+    };
+
+    const renderStatus = (articleTitle, status) => {
+        spinnerEl.classList.add('hidden');
+        const upperStatus = safeStatus(status);
+        const published = upperStatus === 'PUBLISHED';
+        const already = upperStatus === 'ALREADY_PUBLISHED';
+
+        if (published) {
+            titleEl.textContent = 'Xác thực thành công';
+            msgEl.textContent = 'Bài viết PENDING đã được xuất bản.';
+            msgEl.className = 'ok';
+        } else if (already) {
+            titleEl.textContent = 'Bài viết đã được xử lý';
+            msgEl.textContent = 'Bài viết này đã được xuất bản trước đó.';
+            msgEl.className = '';
+        } else {
+            titleEl.textContent = 'Đã xử lý yêu cầu';
+            msgEl.textContent = 'Yêu cầu đã được tiếp nhận.';
+            msgEl.className = '';
+        }
+
+        const authReady = Boolean(getPendingAuth());
+        const authHint = authReady ? 'Nhấn "Về trang chủ" để tự động đăng nhập.' : '';
+        const titleText = safeTitle(articleTitle) || 'Không xác định';
+        const mainMeta = `Tiêu đề bài viết: ${titleText} - Trạng thái: ${statusLabel(upperStatus)}`;
+        metaEl.textContent = [mainMeta, authHint].filter(Boolean).join(' - ');
+    };
+
+    const verifyByToken = async (token) => {
+        const url = `${API_BASE_URL}/posts/articles/verify-publish?format=json&token=${encodeURIComponent(token)}`;
+        const response = await fetch(url, {
+            method: 'GET',
+            headers: { Accept: 'application/json' }
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload.error || 'Không thể xác thực token.');
+        }
+        setPendingAuth(payload && payload.auth ? payload.auth : null);
+        const status = safeStatus(payload.status);
+        const articleTitle = safeTitle(payload.title);
+        const nextHash = `status=${encodeURIComponent(status)}&title=${encodeURIComponent(articleTitle)}`;
+        window.history.replaceState(null, '', `${window.location.pathname}#${nextHash}`);
+        renderStatus(articleTitle, status);
+    };
+
+    const hashParams = parseHashParams();
+    const queryParams = parseQueryParams();
+    const readParam = (name) => asText(queryParams.get(name)) || asText(hashParams.get(name));
+    const token = readParam('token');
+    const status = safeStatus(readParam('status'));
+    const articleTitle = safeTitle(readParam('title'));
+    const hashAuth = normalizeAuth({
+        accessToken: readParam('accessToken'),
+        refreshToken: readParam('refreshToken'),
+        email: readParam('email'),
+        nickname: readParam('nickname'),
+        userId: readParam('userId')
+    });
+    if (hashAuth) {
+        setPendingAuth(hashAuth);
+    }
+
+    if (goHomeLink) {
+        goHomeLink.addEventListener('click', (event) => {
+            const auth = getPendingAuth();
+            if (!auth) {
+                return;
+            }
+            event.preventDefault();
+            const applied = applyAuthToLocalStorage(auth);
+            clearPendingAuth();
+            if (applied) {
+                window.location.replace('index.html');
+            } else {
+                window.location.href = 'index.html';
+            }
+        });
+    }
+
+    if (token) {
+        verifyByToken(token).catch((error) => {
+            setError(error && error.message ? error.message : 'Không thể xác thực token.');
+        });
+        return;
+    }
+
+    if (status || articleTitle) {
+        renderStatus(articleTitle, status);
+        return;
+    }
+
+    setError('Không tìm thấy token xác thực.');
+})();
+</script>
+</body>
+</html>

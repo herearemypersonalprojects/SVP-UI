@@ -466,6 +466,7 @@
 <script src="auth-topbar.js"></script>
 <script>
     (function () {
+        const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
         const emailInput = document.getElementById('sv-newsletter-email');
         const emailErrorEl = document.getElementById('sv-newsletter-email-error');
         const statusEl = document.getElementById('sv-newsletter-status');
@@ -502,6 +503,13 @@
             }
         };
 
+        const getSelectedCategoryIds = () => {
+            return checkboxes
+                .filter((cb) => cb.checked)
+                .map((cb) => Number(cb.getAttribute('data-category-id')))
+                .filter((value) => Number.isInteger(value) && value > 0);
+        };
+
         const toggleCategories = () => {
             const isOpen = emailInput.value.trim().length > 0;
             categories.classList.toggle('is-open', isOpen);
@@ -532,7 +540,7 @@
         });
 
         if (submitBtn) {
-            submitBtn.addEventListener('click', () => {
+            submitBtn.addEventListener('click', async () => {
                 const email = emailInput.value.trim();
                 const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
@@ -551,27 +559,52 @@
 
                 clearEmailError();
 
-                const selectedIds = checkboxes
-                    .filter((cb) => cb.checked)
-                    .map((cb) => Number(cb.getAttribute('data-category-id')));
+                const selectedIds = getSelectedCategoryIds();
                 const saved = {
                     email,
                     categoryIds: selectedIds,
                     savedAt: new Date().toISOString()
                 };
-                try {
-                    localStorage.setItem('svp.newsletter.subscription', JSON.stringify(saved));
-                } catch (error) {
-                    console.warn('Cannot save newsletter subscription locally:', error);
-                }
 
-                setStatus('Bài viết mới sẽ được gửi về email của bạn.', 'success');
-                submitBtn.textContent = 'Đã đăng ký';
                 submitBtn.disabled = true;
-                setTimeout(() => {
+                submitBtn.textContent = 'Đang đăng ký...';
+                setStatus('Đang gửi yêu cầu đăng ký nhận tin...', null);
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/newsletter/subscribe`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json'
+                        },
+                        body: JSON.stringify({
+                            email,
+                            categoryIds: selectedIds
+                        })
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(payload.error || 'Không thể đăng ký nhận tin lúc này.');
+                    }
+
+                    try {
+                        localStorage.setItem('svp.newsletter.subscription', JSON.stringify(saved));
+                    } catch (error) {
+                        console.warn('Cannot save newsletter subscription locally:', error);
+                    }
+
+                    setStatus('Đăng ký nhận tin thành công. Vui lòng kiểm tra email chào mừng.', 'success');
+                    submitBtn.textContent = 'Đã đăng ký';
+                    setTimeout(() => {
+                        submitBtn.textContent = 'Đăng Ký Nhận Tin';
+                        submitBtn.disabled = false;
+                    }, 1200);
+                } catch (error) {
+                    console.error('Cannot subscribe newsletter:', error);
+                    setStatus(error && error.message ? error.message : 'Không thể kết nối máy chủ.', 'error');
                     submitBtn.textContent = 'Đăng Ký Nhận Tin';
                     submitBtn.disabled = false;
-                }, 1200);
+                }
             });
         }
 
@@ -591,6 +624,8 @@
 
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
         const WORDS_PER_MINUTE = 220;
+        const PREVIEW_LEAD_MAX_CHARS = 220;
+        const DEFAULT_ARTICLE_COVER = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1400&auto=format&fit=crop';
         const CATEGORY_NAMES = {
             1: 'Học tập và nghiên cứu tại Pháp',
             2: 'Kinh nghiệm xin học bổng và du học',
@@ -719,21 +754,143 @@
             return `${minutes} phút đọc`;
         };
 
-        const buildLead = (contentHtml) => {
+        const getLeadPreviewText = (contentHtml) => {
             const plainText = toPlainText(contentHtml);
             if (!plainText) {
-                return 'Bài viết đang được cập nhật nội dung.';
+                return '';
             }
-            return plainText.length <= 220 ? plainText : `${plainText.slice(0, 219).trim()}...`;
+            return plainText.slice(0, PREVIEW_LEAD_MAX_CHARS).trim();
         };
 
-        const extractCover = (contentHtml) => {
+        const buildLead = (contentHtml) => {
+            const previewText = getLeadPreviewText(contentHtml);
+            if (!previewText) {
+                return 'Bài viết đang được cập nhật nội dung.';
+            }
+            const plainText = toPlainText(contentHtml);
+            return plainText.length <= PREVIEW_LEAD_MAX_CHARS
+                ? previewText
+                : `${previewText}...`;
+        };
+
+        const extractFirstImageSrc = (contentHtml) => {
             const html = String(contentHtml || '');
             const match = html.match(/<img[^>]*src\s*=\s*['"]([^'"]+)['"][^>]*>/i);
             if (match && match[1]) {
-                return match[1];
+                return String(match[1]).trim();
             }
-            return 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1400&auto=format&fit=crop';
+            return '';
+        };
+
+        const extractCover = (contentHtml) => {
+            const firstImage = extractFirstImageSrc(contentHtml);
+            return firstImage || DEFAULT_ARTICLE_COVER;
+        };
+
+        const normalizeCompareText = (value) => String(value ?? '')
+            .toLowerCase()
+            .replace(/&nbsp;/g, ' ')
+            .replace(/\s+/g, ' ')
+            .replace(/[.,/#!$%^&*;:{}=_`~()\-+?"'|[\]\\<>]/g, '')
+            .trim();
+
+        const normalizeUrl = (value) => {
+            const raw = String(value || '').trim();
+            if (!raw) {
+                return '';
+            }
+            try {
+                return new URL(raw, window.location.href).href;
+            } catch (error) {
+                return raw;
+            }
+        };
+
+        const trimPreviewFromDetail = (post) => {
+            const rawHtml = String(post?.contentHtml || post?.content || '').trim();
+            if (!rawHtml) {
+                return `<p>${escapeHtml(toPlainText(post?.content || 'Nội dung đang được cập nhật.'))}</p>`;
+            }
+
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(`<div data-sv-article-root>${rawHtml}</div>`, 'text/html');
+            const root = doc.body.querySelector('[data-sv-article-root]');
+            if (!root) {
+                return rawHtml;
+            }
+
+            const firstElement = root.firstElementChild;
+            const normalizedTitle = normalizeCompareText(post?.title || '');
+            if (
+                firstElement
+                && /^H[1-6]$/i.test(firstElement.tagName)
+                && normalizedTitle
+                && normalizeCompareText(firstElement.textContent || '') === normalizedTitle
+            ) {
+                firstElement.remove();
+            }
+
+            const previewImageSrc = extractFirstImageSrc(rawHtml);
+            if (previewImageSrc) {
+                const firstImageEl = root.querySelector('img');
+                if (firstImageEl && normalizeUrl(firstImageEl.getAttribute('src')) === normalizeUrl(previewImageSrc)) {
+                    const imageContainer = firstImageEl.parentElement;
+                    if (
+                        imageContainer
+                        && /^(P|FIGURE|DIV)$/i.test(imageContainer.tagName)
+                        && imageContainer.querySelectorAll('img').length === 1
+                        && toPlainText(imageContainer.innerHTML).length === 0
+                    ) {
+                        imageContainer.remove();
+                    } else {
+                        firstImageEl.remove();
+                    }
+                }
+            }
+
+            let remainingLead = getLeadPreviewText(rawHtml);
+            if (remainingLead) {
+                const blocks = Array.from(root.children);
+                for (const block of blocks) {
+                    if (!remainingLead) {
+                        break;
+                    }
+                    const blockPlainText = toPlainText(block.innerHTML);
+                    if (!blockPlainText) {
+                        continue;
+                    }
+
+                    const normalizedLead = normalizeCompareText(remainingLead);
+                    const normalizedBlock = normalizeCompareText(blockPlainText);
+                    if (!normalizedLead || !normalizedBlock) {
+                        break;
+                    }
+                    if (normalizedLead.startsWith(normalizedBlock)) {
+                        remainingLead = remainingLead.slice(Math.min(remainingLead.length, blockPlainText.length)).trimStart();
+                        block.remove();
+                        continue;
+                    }
+                    if (normalizedBlock.startsWith(normalizedLead)) {
+                        const currentText = block.textContent || '';
+                        block.textContent = currentText.slice(Math.min(currentText.length, remainingLead.length)).trimStart();
+                        remainingLead = '';
+                    }
+                    break;
+                }
+            }
+
+            Array.from(root.children).forEach((block) => {
+                const hasMedia = block.querySelector('img,video,iframe,table,ul,ol,blockquote');
+                if (!hasMedia && toPlainText(block.innerHTML).length === 0) {
+                    block.remove();
+                }
+            });
+
+            const cleanedHtml = root.innerHTML.trim();
+            if (cleanedHtml) {
+                return cleanedHtml;
+            }
+            return '<p>Không có nội dung bổ sung ngoài phần preview.</p>';
         };
         const normalizePost = (post) => ({
             postId: Number(post?.postId ?? post?.id ?? 0),
@@ -801,9 +958,7 @@
                     <p class="sv-article__lead">${safeLead}</p>
                     ${pendingNote}
                     <div class="sv-article__cover" style="background-image:url('${safeCover}')"></div>
-                    <div class="sv-article__tags">
-                        <span class="sv-tag">${safeCategory}</span>
-                    </div>
+
                     <div class="sv-article__detail-panel" aria-hidden="true">
                         <div class="sv-article__detail-inner">
                             <div class="sv-meta">Chi tiết bài viết sẽ hiển thị tại đây.</div>
@@ -845,9 +1000,7 @@
         };
 
         const renderPostDetailContent = (post, comments) => {
-            const safeBody = post.contentHtml && String(post.contentHtml).trim().length > 0
-                ? String(post.contentHtml)
-                : `<p>${escapeHtml(toPlainText(post.content || 'Nội dung đang được cập nhật.'))}</p>`;
+            const safeBody = trimPreviewFromDetail(post);
             const views = numberOrZero(post.viewCount ?? post.views ?? post.totalViews);
             const likes = numberOrZero(post.likeCount ?? post.likes ?? post.totalLikes);
             const commentCount = comments.length;

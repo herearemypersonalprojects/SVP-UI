@@ -135,9 +135,9 @@
     </div>
 
     <section class="sv-page-hero mb-3">
-        <div class="sv-page-hero__eyebrow">Trình soạn thảo tạp chí</div>
+        <div class="sv-page-hero__eyebrow">Trình soạn thảo</div>
         <h2 class="sv-page-hero__title">Đăng bài viết dài có ảnh</h2>
-        <p class="sv-page-hero__subtitle">Mẫu soạn thảo dành cho bài viết chuyên sâu dạng tạp chí. Bạn có thể thêm ảnh đại diện và biên tập nội dung dài nhiều phần với trình soạn thảo trực quan.</p>
+        <p class="sv-page-hero__subtitle">Soạn thảo dành cho bài viết đăng trên trang chủ. Bạn có thể thêm ảnh đại diện và biên tập nội dung dài nhiều phần với trình soạn thảo trực quan.</p>
     </section>
 
     <div class="row g-3">
@@ -145,9 +145,14 @@
             <section class="sv-card">
                 <div class="sv-card__hd d-flex justify-content-between align-items-center gap-2">
                     <span><i class="fa-solid fa-pen-nib me-2 text-primary"></i>Nội Dung Bài Viết</span>
-                    <span class="sv-meta">Bản nháp chưa xuất bản</span>
                 </div>
                 <form id="article-form" class="sv-form p-3">
+                    <div id="article-email-wrap" class="mb-3 d-none">
+                        <label for="article-email" class="form-label">Email xác thực</label>
+                        <input id="article-email" class="form-control" type="email" placeholder="Nhập email để xác thực đăng bài">
+                        <div class="sv-meta mt-1" style="color:#b91c1c;">Bạn cần nhập email và xác thực magic link trước khi bài được xuất bản.</div>
+                    </div>
+
                     <div class="mb-3">
                         <label for="article-title" class="form-label">Tiêu đề bài viết</label>
                         <input id="article-title" class="form-control" type="text" placeholder="Ví dụ: Lộ trình săn học bổng Master tại Pháp" required>
@@ -155,18 +160,26 @@
 
                     <div class="row g-3 mb-3">
                         <div class="col-md-7">
-                            <label for="article-category" class="form-label">Danh mục (dùng chung với Diễn đàn)</label>
+                            <label for="article-category" class="form-label">Chuyên mục</label>
                             <select id="article-category" class="form-select">
-                                <option value="Học Tập & Nghiên Cứu">Học Tập & Nghiên Cứu</option>
-                                <option value="Kinh Nghiệm Việc Làm">Kinh Nghiệm Việc Làm</option>
-                                <option value="Đầu Tư Tại Pháp">Đầu Tư Tại Pháp</option>
-                                <option value="Sự Kiện & Lễ Hội">Sự Kiện & Lễ Hội</option>
-                                <option value="Tìm & Cho Thuê Nhà">Tìm & Cho Thuê Nhà</option>
+                                <option value="1">1 - Học tập và nghiên cứu tại Pháp</option>
+                                <option value="2">2 - Kinh nghiệm xin học bổng và du học</option>
+                                <option value="3">3 - Cuộc sống tại Pháp</option>
+                                <option value="4">4 - Cơ hội việc làm và thực tập</option>
+                                <option value="5">5 - Các vấn đề pháp lý, quốc tịch và thuế khóa</option>
+                                <option value="6">6 - Văn hóa và ngôn ngữ Pháp</option>
+                                <option value="7">7 - Sự kiện và giao lưu</option>
+                                <option value="8">8 - Nhà cửa</option>
+                                <option value="9">9 - Mua bán, rao vặt</option>
+                                <option value="10">10 - Đầu tư tại Pháp</option>
+                                <option value="11">11 - Chia sẻ trải nghiệm, câu chuyện cá nhân</option>
+                                <option value="12">12 - Công nghệ, kỹ năng và tri thức mở</option>
+                                <option value="13">13 - Giải trí, du lịch</option>
+                                <option value="14">14 - Góc văn học và nghệ thuật</option>
+                                <option value="15">15 - Nơi gặp gỡ, hẹn hò nghiêm túc</option>
+                                <option value="16">16 - Chém gió, tán gẫu</option>
+                                <option value="17">17 - Góp ý xây dựng SVP</option>
                             </select>
-                        </div>
-                        <div class="col-md-5">
-                            <label for="article-read-time" class="form-label">Thời lượng đọc (phút)</label>
-                            <input id="article-read-time" class="form-control" type="number" min="1" value="8">
                         </div>
                     </div>
 
@@ -198,13 +211,10 @@
                         <input id="article-content" type="hidden" name="article-content">
                     </div>
 
-                    <div class="mb-3">
-                        <label for="article-tags" class="form-label">Tags</label>
-                        <input id="article-tags" class="form-control" type="text" placeholder="Ví dụ: du-hoc, hoc-bong, kinh-nghiem">
-                    </div>
+
 
                     <div class="d-flex flex-wrap justify-content-between gap-2">
-                        <button type="button" class="btn btn-outline-secondary"><i class="fa-regular fa-floppy-disk me-2"></i>Lưu nháp</button>
+
                         <button type="submit" class="btn btn-primary"><i class="fa-solid fa-paper-plane me-2"></i>Đăng bài viết</button>
                     </div>
                     <div id="article-submit-feedback" class="sv-meta mt-3" aria-live="polite"></div>
@@ -212,31 +222,6 @@
             </section>
         </div>
 
-        <div class="col-lg-4">
-            <section class="sv-card mb-3">
-                <div class="sv-card__hd"><i class="fa-regular fa-eye me-2 text-primary"></i>Xem Nhanh Bản Nháp</div>
-                <div class="p-3">
-                    <div id="article-preview-cover" class="sv-preview-cover"></div>
-                    <div id="article-preview-title" class="fw-bold mb-2">Tiêu đề bài viết sẽ hiển thị tại đây</div>
-                    <div id="article-preview-snippet" class="sv-meta mb-2">Đoạn trích nội dung sẽ hiển thị tại đây.</div>
-                    <span id="article-preview-category" class="sv-pill"><i class="fa-regular fa-folder-open"></i>Học Tập &amp; Nghiên Cứu</span>
-                </div>
-            </section>
-
-            <section class="sv-card">
-                <div class="sv-card__hd"><i class="fa-solid fa-layer-group me-2 text-primary"></i>Danh Mục Dùng Chung</div>
-                <div class="p-3">
-                    <p class="sv-meta mb-2">Trang chủ bài viết và diễn đàn thảo luận dùng cùng hệ danh mục để dễ quản trị nội dung:</p>
-                    <div class="sv-category-list">
-                        <span class="sv-tag">Học Tập &amp; Nghiên Cứu</span>
-                        <span class="sv-tag">Kinh Nghiệm Việc Làm</span>
-                        <span class="sv-tag">Đầu Tư Tại Pháp</span>
-                        <span class="sv-tag">Sự Kiện &amp; Lễ Hội</span>
-                        <span class="sv-tag">Tìm &amp; Cho Thuê Nhà</span>
-                    </div>
-                </div>
-            </section>
-        </div>
     </div>
 </main>
 
@@ -260,6 +245,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     (function () {
+        const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
         const form = document.getElementById('article-form');
         const titleInput = document.getElementById('article-title');
         const contentEditor = document.getElementById('article-content-editor');
@@ -267,15 +253,13 @@
         const coverUrlInput = document.getElementById('article-cover-url');
         const coverFileInput = document.getElementById('article-cover-file');
         const categoryInput = document.getElementById('article-category');
-        const previewTitle = document.getElementById('article-preview-title');
-        const previewSnippet = document.getElementById('article-preview-snippet');
-        const previewCover = document.getElementById('article-preview-cover');
-        const previewCategory = document.getElementById('article-preview-category');
+        const emailWrap = document.getElementById('article-email-wrap');
+        const emailInput = document.getElementById('article-email');
         const feedback = document.getElementById('article-submit-feedback');
         const toolbarButtons = Array.from(document.querySelectorAll('.sv-editor-toolbar button'));
         let savedRange = null;
 
-        if (!form || !titleInput || !contentEditor || !contentHiddenInput || !coverUrlInput || !coverFileInput || !categoryInput || !previewTitle || !previewSnippet || !previewCover || !previewCategory || !feedback) {
+        if (!form || !titleInput || !contentEditor || !contentHiddenInput || !coverUrlInput || !coverFileInput || !categoryInput || !feedback || !emailWrap || !emailInput) {
             return;
         }
 
@@ -404,44 +388,72 @@
             return true;
         };
 
-        const getSnippet = () => {
-            const plainText = contentEditor.textContent.replace(/\s+/g, ' ').trim();
-            if (!plainText) return 'Đoạn trích nội dung sẽ hiển thị tại đây.';
-            return plainText.length > 180 ? `${plainText.slice(0, 177)}...` : plainText;
+        const updateDraft = () => {
+            contentHiddenInput.value = contentEditor.innerHTML;
         };
 
-        const updatePreview = () => {
-            const title = titleInput.value.trim();
-            const category = categoryInput.value;
-            const coverUrl = coverUrlInput.value.trim();
+        const normalizeEmail = (value) => (value || '').trim().toLowerCase();
+        const isValidEmail = (value) => /^[^\s@]+@[^\s@]+$/.test(value);
 
-            previewTitle.textContent = title || 'Tiêu đề bài viết sẽ hiển thị tại đây';
-            previewSnippet.textContent = getSnippet();
-            previewCategory.innerHTML = `<i class="fa-regular fa-folder-open"></i>${category}`;
-            contentHiddenInput.value = contentEditor.innerHTML;
-
-            if (coverUrl) {
-                previewCover.style.backgroundImage = `url('${coverUrl}')`;
-            } else {
-                previewCover.style.backgroundImage = 'linear-gradient(120deg, #dbeafe, #bfdbfe)';
+        const pickEmailFromStorage = () => {
+            const fromDirect = normalizeEmail(
+                localStorage.getItem('userEmail')
+                || localStorage.getItem('email')
+                || localStorage.getItem('svp.email')
+                || ''
+            );
+            if (isValidEmail(fromDirect)) {
+                return fromDirect;
+            }
+            const accessToken = localStorage.getItem('accessToken') || '';
+            const parts = accessToken.split('.');
+            if (parts.length !== 3) {
+                return '';
+            }
+            try {
+                const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
+                const fromToken = normalizeEmail(payload?.email || payload?.sub || '');
+                return isValidEmail(fromToken) ? fromToken : '';
+            } catch (_) {
+                return '';
             }
         };
 
-        coverFileInput.addEventListener('change', () => {
-            const [file] = coverFileInput.files || [];
-            if (!file) return;
-            const objectUrl = URL.createObjectURL(file);
-            previewCover.style.backgroundImage = `url('${objectUrl}')`;
-        });
+        const composeContentHtml = () => {
+            const editorHtml = contentEditor.innerHTML.trim();
+            const coverUrl = sanitizeUrl(coverUrlInput.value);
+            const coverHtml = coverUrl ? `<p><img src="${coverUrl}" alt="cover image"></p>` : '';
+            if (!editorHtml) {
+                return coverHtml;
+            }
+            if (!coverHtml) {
+                return editorHtml;
+            }
+            const containsCover = editorHtml.includes(`src="${coverUrl}"`) || editorHtml.includes(`src='${coverUrl}'`);
+            return containsCover ? editorHtml : `${coverHtml}\n${editorHtml}`;
+        };
+
+        const setFeedback = (text, type) => {
+            feedback.textContent = text;
+            if (type === 'error') {
+                feedback.style.color = '#b91c1c';
+                return;
+            }
+            if (type === 'success') {
+                feedback.style.color = '#15803d';
+                return;
+            }
+            feedback.style.color = '#475569';
+        };
 
         [titleInput, coverUrlInput, categoryInput].forEach((element) => {
-            element.addEventListener('input', updatePreview);
-            element.addEventListener('change', updatePreview);
+            element.addEventListener('input', updateDraft);
+            element.addEventListener('change', updateDraft);
         });
         ['keyup', 'mouseup', 'blur'].forEach((eventName) => {
             contentEditor.addEventListener(eventName, saveSelection);
         });
-        contentEditor.addEventListener('input', updatePreview);
+        contentEditor.addEventListener('input', updateDraft);
 
         toolbarButtons.forEach((button) => {
             button.addEventListener('click', () => {
@@ -452,7 +464,7 @@
                 if (action === 'insert-image-url') {
                     const imageUrl = prompt('Nhập URL ảnh (http/https):');
                     if (imageUrl) insertImageAtCursor(imageUrl);
-                    updatePreview();
+                    updateDraft();
                     return;
                 }
 
@@ -464,7 +476,7 @@
                             alert('URL YouTube không hợp lệ.');
                         }
                     }
-                    updatePreview();
+                    updateDraft();
                     return;
                 }
 
@@ -475,7 +487,7 @@
                     restoreSelection();
                     document.execCommand('createLink', false, linkUrl);
                     saveSelection();
-                    updatePreview();
+                    updateDraft();
                     return;
                 }
 
@@ -488,23 +500,105 @@
                     document.execCommand(command, false, null);
                 }
                 saveSelection();
-                updatePreview();
+                updateDraft();
             });
         });
 
-        form.addEventListener('submit', (event) => {
+        form.addEventListener('submit', async (event) => {
             event.preventDefault();
-            contentHiddenInput.value = contentEditor.innerHTML;
-            feedback.textContent = 'Bản demo giao diện: bài viết đã sẵn sàng để gửi lên hệ thống xuất bản.';
+            updateDraft();
+
+            const email = normalizeEmail(emailInput.value);
+            if (!email) {
+                emailWrap.classList.remove('d-none');
+                setFeedback('Bạn chưa đăng nhập. Vui lòng nhập email để nhận magic link xác thực đăng bài.', 'error');
+                emailInput.focus();
+                return;
+            }
+            if (!isValidEmail(email)) {
+                emailWrap.classList.remove('d-none');
+                setFeedback('Email chưa hợp lệ.', 'error');
+                emailInput.focus();
+                return;
+            }
+
+            const title = titleInput.value.trim();
+            const categoryId = Number(categoryInput.value);
+            const contentHtml = composeContentHtml();
+            if (!title || title.length < 5) {
+                setFeedback('Tiêu đề cần tối thiểu 5 ký tự.', 'error');
+                titleInput.focus();
+                return;
+            }
+            if (!contentHtml || contentHtml.replace(/<[^>]+>/g, ' ').trim().length < 20) {
+                setFeedback('Nội dung bài viết cần chi tiết hơn (ít nhất 20 ký tự).', 'error');
+                contentEditor.focus();
+                return;
+            }
+            if (!Number.isInteger(categoryId) || categoryId <= 0) {
+                setFeedback('Chuyên mục không hợp lệ.', 'error');
+                return;
+            }
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const oldLabel = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang gửi...';
+            }
+            setFeedback('Đang gửi bài viết, vui lòng đợi...', 'info');
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/posts/articles`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json'
+                    },
+                    body: JSON.stringify({
+                        email,
+                        categoryId,
+                        title,
+                        contentHtml
+                    })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    setFeedback(payload.error || 'Không thể gửi bài viết.', 'error');
+                    return;
+                }
+
+                const postId = payload.postId || 'N/A';
+                const expiresAt = payload.verifyExpiresAt || '';
+                const debugLink = payload.verifyLink ? `\nLink xác thực (dev): ${payload.verifyLink}` : '';
+                setFeedback(
+                    `Bài viết #${postId} đã được tạo với trạng thái PENDING. Hãy kiểm tra email ${email} và bấm magic link để xuất bản.${expiresAt ? ` (Hết hạn: ${expiresAt})` : ''}${debugLink}`,
+                    'success'
+                );
+                localStorage.setItem('userEmail', email);
+                form.reset();
+                contentEditor.innerHTML = '';
+                contentHiddenInput.value = '';
+                emailInput.value = email;
+            } catch (_) {
+                setFeedback('Không thể kết nối API.', 'error');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = oldLabel;
+                }
+            }
         });
 
-        updatePreview();
+        const initialEmail = pickEmailFromStorage();
+        if (initialEmail) {
+            emailInput.value = initialEmail;
+        }
+        updateDraft();
     })();
 </script>
 </body>
 </html>
-
-
 
 
 

@@ -326,6 +326,7 @@
                     <p class="sv-meta mb-2">Nhập email để nhận thông báo bài viết mới theo chủ đề bạn quan tâm.</p>
                     <div class="mb-2">
                         <input id="sv-newsletter-email" class="form-control sv-newsletter__input" type="email" placeholder="Email của bạn" />
+                        <div id="sv-newsletter-email-error" class="small text-danger mt-1 d-none"></div>
                     </div>
                     <div id="sv-newsletter-categories" class="sv-newsletter__categories" aria-hidden="true">
                         <div class="sv-newsletter__head">
@@ -387,6 +388,7 @@
                         </div>
                     </div>
                     <button id="sv-newsletter-submit" class="btn btn-primary w-100 mt-3" type="button">Đăng Ký Nhận Tin</button>
+                                        <div id="sv-newsletter-status" class="small mt-2" aria-live="polite"></div>
                     <div class="sv-newsletter__note">Bạn có thể hủy đăng ký bất cứ lúc nào.</div>
                 </div>
             </div>
@@ -424,11 +426,40 @@
 <script>
     (function () {
         const emailInput = document.getElementById('sv-newsletter-email');
+        const emailErrorEl = document.getElementById('sv-newsletter-email-error');
+        const statusEl = document.getElementById('sv-newsletter-status');
         const categories = document.getElementById('sv-newsletter-categories');
         const toggleAllBtn = document.getElementById('sv-newsletter-toggle');
         const submitBtn = document.getElementById('sv-newsletter-submit');
         if (!emailInput || !categories) return;
         const checkboxes = Array.from(categories.querySelectorAll('input[type="checkbox"]'));
+
+        const setStatus = (text, type) => {
+            if (!statusEl) return;
+            statusEl.textContent = text || '';
+            statusEl.className = 'small mt-2';
+            if (type === 'success') {
+                statusEl.classList.add('text-success');
+            } else if (type === 'error') {
+                statusEl.classList.add('text-danger');
+            }
+        };
+
+        const clearEmailError = () => {
+            emailInput.classList.remove('is-invalid');
+            if (emailErrorEl) {
+                emailErrorEl.textContent = '';
+                emailErrorEl.classList.add('d-none');
+            }
+        };
+
+        const showEmailError = (message) => {
+            emailInput.classList.add('is-invalid');
+            if (emailErrorEl) {
+                emailErrorEl.textContent = message;
+                emailErrorEl.classList.remove('d-none');
+            }
+        };
 
         const toggleCategories = () => {
             const isOpen = emailInput.value.trim().length > 0;
@@ -453,14 +484,32 @@
         }
 
         checkboxes.forEach((cb) => cb.addEventListener('change', updateToggleLabel));
-        emailInput.addEventListener('input', toggleCategories);
+        emailInput.addEventListener('input', () => {
+            toggleCategories();
+            clearEmailError();
+            setStatus('', null);
+        });
+
         if (submitBtn) {
             submitBtn.addEventListener('click', () => {
                 const email = emailInput.value.trim();
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
                 if (!email) {
+                    showEmailError('Vui lòng nhập email để nhận tin mới.');
+                    setStatus('', null);
                     emailInput.focus();
                     return;
                 }
+                if (!emailPattern.test(email)) {
+                    showEmailError('Email không đúng định dạng.');
+                    setStatus('', null);
+                    emailInput.focus();
+                    return;
+                }
+
+                clearEmailError();
+
                 const selectedIds = checkboxes
                     .filter((cb) => cb.checked)
                     .map((cb) => Number(cb.getAttribute('data-category-id')));
@@ -474,6 +523,8 @@
                 } catch (error) {
                     console.warn('Cannot save newsletter subscription locally:', error);
                 }
+
+                setStatus('Bài viết mới sẽ được gửi về email của bạn.', 'success');
                 submitBtn.textContent = 'Đã đăng ký';
                 submitBtn.disabled = true;
                 setTimeout(() => {
@@ -482,6 +533,7 @@
                 }, 1200);
             });
         }
+
         toggleCategories();
         updateToggleLabel();
     })();
@@ -1083,6 +1135,8 @@
 </script>
 </body>
 </html>
+
+
 
 
 

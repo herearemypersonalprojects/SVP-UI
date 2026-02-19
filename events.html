@@ -69,55 +69,11 @@
 
             <div class="tab-content" id="eventTabsContent">
                 <div class="tab-pane fade show active" id="upcoming" role="tabpanel" aria-labelledby="upcoming-tab" tabindex="0">
-                    <ul class="sv-list mb-0">
-                        <li>
-                            <div>
-                                <a href="su-kien-du-hoc-phap-2026.html"><i class="fa fa-calendar-day me-2 text-primary"></i>Hội Thảo Du Học Pháp 2026</a>
-                                <div class="sv-meta">15/03/2026 • Paris</div>
-                            </div>
-                            <span class="sv-badge">Free</span>
-                        </li>
-                        <li>
-                            <div>
-                                <a href="su-kien-gap-go-doanh-nghiep.html"><i class="fa fa-briefcase me-2 text-primary"></i>Gặp Gỡ Doanh Nghiệp</a>
-                                <div class="sv-meta">28/03/2026 • Lyon</div>
-                            </div>
-                            <span class="sv-badge">60 chỗ</span>
-                        </li>
-                        <li>
-                            <div>
-                                <a href="su-kien-ket-noi-tan-sinh-vien.html"><i class="fa fa-users me-2 text-primary"></i>Kết Nối Tân Sinh Viên</a>
-                                <div class="sv-meta">07/04/2026 • Toulouse</div>
-                            </div>
-                            <span class="sv-badge">Mới</span>
-                        </li>
-                    </ul>
+                    <ul id="sv-events-upcoming-list" class="sv-list mb-0" aria-live="polite"></ul>
                 </div>
 
                 <div class="tab-pane fade" id="past" role="tabpanel" aria-labelledby="past-tab" tabindex="0">
-                    <ul class="sv-list mb-0">
-                        <li>
-                            <div>
-                                <a href="#"><i class="fa fa-chalkboard-user me-2 text-primary"></i>Workshop CV & Phỏng vấn</a>
-                                <div class="sv-meta">11/12/2025 • Online</div>
-                            </div>
-                            <span class="sv-badge">Đã kết thúc</span>
-                        </li>
-                        <li>
-                            <div>
-                                <a href="#"><i class="fa fa-globe me-2 text-primary"></i>Ngày hội Văn hóa Việt - Pháp</a>
-                                <div class="sv-meta">22/11/2025 • Marseille</div>
-                            </div>
-                            <span class="sv-badge">Đã kết thúc</span>
-                        </li>
-                        <li>
-                            <div>
-                                <a href="#"><i class="fa fa-comments me-2 text-primary"></i>Talkshow Kinh Nghiệm Học Bổng</a>
-                                <div class="sv-meta">03/10/2025 • Lille</div>
-                            </div>
-                            <span class="sv-badge">Đã kết thúc</span>
-                        </li>
-                    </ul>
+                    <ul id="sv-events-past-list" class="sv-list mb-0" aria-live="polite"></ul>
                 </div>
             </div>
         </div>
@@ -142,6 +98,120 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    (function () {
+        const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+        const upcomingList = document.getElementById('sv-events-upcoming-list');
+        const pastList = document.getElementById('sv-events-past-list');
+        if (!upcomingList || !pastList) {
+            return;
+        }
+
+        const escapeHtml = (value) => String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
+        const toTimeValue = (value) => {
+            const time = Date.parse(String(value || ''));
+            return Number.isFinite(time) ? time : 0;
+        };
+
+        const formatDate = (value) => {
+            const time = toTimeValue(value);
+            if (!time) {
+                return 'Chưa cập nhật';
+            }
+            return new Intl.DateTimeFormat('vi-VN', {
+                dateStyle: 'short',
+                timeStyle: 'short'
+            }).format(new Date(time));
+        };
+
+        const toBadge = (event, isPast) => {
+            if (isPast) {
+                return 'Đã kết thúc';
+            }
+            const rawPrice = Number(event.price);
+            if (Number.isFinite(rawPrice) && rawPrice > 0) {
+                return `${rawPrice.toLocaleString('vi-VN')}€`;
+            }
+            return event.online ? 'Online' : 'Free';
+        };
+
+        const renderEventItem = (event, isPast) => {
+            const title = escapeHtml(event.title || 'Sự kiện mới');
+            const eventId = encodeURIComponent(event.eventId || '');
+            const href = `event_detail.html?eventId=${eventId}`;
+            const date = escapeHtml(formatDate(event.eventTime));
+            const address = escapeHtml(event.address || (event.online ? 'Online' : 'Địa điểm cập nhật sau'));
+            const badge = escapeHtml(toBadge(event, isPast));
+            const iconClass = isPast ? 'fa-regular fa-calendar-check' : 'fa fa-calendar-day';
+            return `
+                <li>
+                    <div>
+                        <a href="${href}"><i class="${iconClass} me-2 text-primary"></i>${title}</a>
+                        <div class="sv-meta">${date} • ${address}</div>
+                    </div>
+                    <span class="sv-badge">${badge}</span>
+                </li>
+            `;
+        };
+
+        const renderList = (target, items, isPast, emptyMessage) => {
+            if (!Array.isArray(items) || items.length === 0) {
+                target.innerHTML = `<li><div class="sv-meta">${escapeHtml(emptyMessage)}</div></li>`;
+                return;
+            }
+            target.innerHTML = items.map((event) => renderEventItem(event, isPast)).join('');
+        };
+
+        const fetchEvents = async () => {
+            const response = await fetch(`${API_BASE_URL}/events?limit=200`, {
+                method: 'GET',
+                headers: { Accept: 'application/json' }
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload.error || 'Không thể tải danh sách sự kiện.');
+            }
+            return Array.isArray(payload.items) ? payload.items : [];
+        };
+
+        const loadEvents = async () => {
+            upcomingList.innerHTML = '<li><div class="sv-meta">Đang tải sự kiện...</div></li>';
+            pastList.innerHTML = '<li><div class="sv-meta">Đang tải sự kiện...</div></li>';
+            try {
+                const events = await fetchEvents();
+                const now = Date.now();
+                const upcoming = events
+                    .filter((event) => {
+                        const time = toTimeValue(event.eventTime);
+                        return time >= now;
+                    })
+                    .sort((left, right) => toTimeValue(left.eventTime) - toTimeValue(right.eventTime));
+                const past = events
+                    .filter((event) => {
+                        const time = toTimeValue(event.eventTime);
+                        return time > 0 && time < now;
+                    })
+                    .sort((left, right) => toTimeValue(right.eventTime) - toTimeValue(left.eventTime));
+
+                renderList(upcomingList, upcoming, false, 'Chưa có sự kiện sắp diễn ra.');
+                renderList(pastList, past, true, 'Chưa có sự kiện đã qua.');
+            } catch (error) {
+                console.error('Cannot load events:', error);
+                const message = error && error.message ? error.message : 'Không thể tải danh sách sự kiện.';
+                upcomingList.innerHTML = `<li><div class="sv-meta">${escapeHtml(message)}</div></li>`;
+                pastList.innerHTML = `<li><div class="sv-meta">${escapeHtml(message)}</div></li>`;
+            }
+        };
+
+        loadEvents();
+    })();
+</script>
 <script src="auth-topbar.js"></script>
 </body>
 </html>

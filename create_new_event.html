@@ -7,56 +7,31 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="svp.css">
     <link rel="stylesheet" href="dropdown-hover.css">
     <style>
-        .sv-event-helper {
-            border: 1px solid #bfdbfe;
-            background: #eff6ff;
-            border-radius: 10px;
-            padding: .75rem .85rem;
-            color: #1e3a8a;
-            font-size: .9rem;
-        }
-        .sv-event-preview {
-            border: 1px dashed #cbd5e1;
-            border-radius: 10px;
-            padding: .9rem;
-            background: #f8fafc;
-        }
         .sv-event-cover {
             width: 100%;
             aspect-ratio: 16 / 9;
             border-radius: 10px;
-            margin-bottom: .7rem;
             border: 1px solid #dbe7ff;
             background: linear-gradient(120deg, #dbeafe, #bfdbfe);
             background-size: cover;
             background-position: center;
         }
-        .sv-upload-note {
-            margin-top: .5rem;
-            font-size: .88rem;
-            color: #475569;
-        }
-        .sv-event-meta {
+        .sv-grid-2 {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: .65rem;
+            gap: .75rem;
         }
         @media (max-width: 575px) {
-            .sv-event-meta {
+            .sv-grid-2 {
                 grid-template-columns: 1fr;
             }
         }
     </style>
 </head>
 <body>
-
-<!-- Top brand + auth -->
 <div class="sv-topbar pt-2 pb-1">
     <div class="container d-flex align-items-center justify-content-between">
         <div class="sv-brand">
@@ -67,7 +42,6 @@
                 <small class="sv-brand__tagline">Kết Nối – Chia Sẻ – Thành Công</small>
             </div>
         </div>
-
         <div class="sv-auth d-none d-md-flex align-items-center gap-2">
             <button class="btn btn-outline-secondary">Đăng Ký</button>
             <button class="btn btn-primary">Đăng Nhập</button>
@@ -75,7 +49,6 @@
     </div>
 </div>
 
-<!-- Main nav -->
 <div class="sv-nav">
     <div class="container d-flex align-items-center justify-content-between">
         <ul class="nav">
@@ -87,13 +60,9 @@
             <li class="nav-item"><a class="nav-link" href="ban-do-paris.html">Bản Đồ Paris</a></li>
             <li class="nav-item"><a class="nav-link" href="about.html">Giới Thiệu</a></li>
         </ul>
-
-        <div class="sv-search position-relative my-2 my-md-0" style="width:min(320px, 60vw);">
-            <i class="fa fa-magnifying-glass"></i>
-            <input class="form-control" type="search" placeholder="Tìm kiếm..." />
-        </div>
     </div>
 </div>
+
 <main class="container my-3 my-md-4">
     <div class="sv-breadcrumb">
         <a href="index.html">Trang chủ</a> / <a href="events.html">Sự kiện</a> / <span>Tạo sự kiện mới</span>
@@ -102,7 +71,7 @@
     <section class="sv-page-hero mb-3">
         <div class="sv-page-hero__eyebrow">Trình tạo sự kiện</div>
         <h2 class="sv-page-hero__title">Tạo Sự Kiện Mới</h2>
-        <p class="sv-page-hero__subtitle">Điền thông tin sự kiện để hiển thị trên trang danh sách sự kiện.</p>
+        <p class="sv-page-hero__subtitle">Chia sẻ thông tin về sự kiện, lễ hội sẽ diễn ra.</p>
     </section>
 
     <div class="row g-3">
@@ -110,12 +79,18 @@
             <section class="sv-card">
                 <div class="sv-card__hd"><i class="fa-solid fa-calendar-plus me-2 text-primary"></i>Thông Tin Sự Kiện</div>
                 <form id="event-form" class="sv-form p-3">
-                    <div class="mb-3">
-                        <label for="event-title" class="form-label">Tên sự kiện</label>
-                        <input id="event-title" class="form-control" type="text" placeholder="Ví dụ: Talkshow định hướng nghề nghiệp IT tại Pháp" required>
+                    <div id="event-email-wrap" class="mb-3 d-none">
+                        <label for="event-email" class="form-label">Email đăng sự kiện</label>
+                        <input id="event-email" class="form-control" type="email" placeholder="Nhập email nếu bạn chưa đăng nhập">
+                        <div class="sv-meta mt-1" style="color:#b91c1c;">Bạn cần đăng nhập hoặc nhập email hợp lệ để đăng sự kiện.</div>
                     </div>
 
-                    <div class="sv-event-meta mb-3">
+                    <div class="mb-3">
+                        <label for="event-title" class="form-label">Tên sự kiện</label>
+                        <input id="event-title" class="form-control" type="text" required>
+                    </div>
+
+                    <div class="sv-grid-2 mb-3">
                         <div>
                             <label for="event-date" class="form-label">Ngày diễn ra</label>
                             <input id="event-date" class="form-control" type="date" required>
@@ -126,26 +101,20 @@
                         </div>
                     </div>
 
-                    <div class="sv-event-meta mb-3">
+                    <div class="sv-grid-2 mb-3">
                         <div>
                             <label for="event-location" class="form-label">Địa điểm</label>
-                            <input id="event-location" class="form-control" type="text" placeholder="Paris / Online / Lyon..." required>
+                            <input id="event-location" class="form-control" type="text" required>
                         </div>
                         <div>
-                            <label for="event-capacity" class="form-label">Số lượng chỗ</label>
-                            <input id="event-capacity" class="form-control" type="number" min="1" value="60">
+                            <label for="event-price" class="form-label">Giá vé (€)</label>
+                            <input id="event-price" class="form-control" type="number" min="0" step="0.01" value="0">
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="event-type" class="form-label">Loại sự kiện</label>
-                        <select id="event-type" class="form-select">
-                            <option>Hội thảo</option>
-                            <option>Giao lưu cộng đồng</option>
-                            <option>Workshop</option>
-                            <option>Networking</option>
-                            <option>Khác</option>
-                        </select>
+                    <div class="mb-3 form-check">
+                        <input id="event-online" class="form-check-input" type="checkbox">
+                        <label for="event-online" class="form-check-label">Sự kiện online</label>
                     </div>
 
                     <div class="mb-3">
@@ -156,52 +125,29 @@
                     <div class="mb-3">
                         <label for="event-image-file" class="form-label">Hoặc upload ảnh sự kiện</label>
                         <input id="event-image-file" class="form-control" type="file" accept="image/*">
-                        <div class="sv-upload-note">Ưu tiên ảnh ngang tỉ lệ 16:9 để hiển thị đẹp trong ô xem trước.</div>
+                        <div id="event-image-upload-status" class="sv-meta mt-2"></div>
                     </div>
 
                     <div class="mb-3">
                         <label for="event-description" class="form-label">Mô tả sự kiện</label>
-                        <textarea id="event-description" class="form-control" rows="6" placeholder="Nội dung chính, đối tượng tham gia, quyền lợi người tham dự..."></textarea>
-                        <div class="sv-event-helper mt-2">
-                            <i class="fa-solid fa-circle-info me-1"></i>
-                            Mẹo: mô tả rõ agenda và đối tượng tham gia để tăng tỷ lệ đăng ký.
-                        </div>
+                        <textarea id="event-description" class="form-control" rows="6" required></textarea>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="event-tags" class="form-label">Tags</label>
-                        <input id="event-tags" class="form-control" type="text" placeholder="Ví dụ: du-hoc, workshop, networking">
-                    </div>
-
-                    <div class="d-flex flex-wrap justify-content-between gap-2">
-                        <button type="button" class="btn btn-outline-secondary"><i class="fa-regular fa-floppy-disk me-2"></i>Lưu nháp</button>
-                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-2"></i>Tạo sự kiện</button>
-                    </div>
+                    <button type="submit" class="btn btn-primary"><i class="fa-solid fa-check me-2"></i>Tạo sự kiện</button>
                     <div id="event-submit-feedback" class="sv-meta mt-3" aria-live="polite"></div>
                 </form>
             </section>
         </div>
 
         <div class="col-lg-4">
-            <section class="sv-card mb-3">
+            <section class="sv-card">
                 <div class="sv-card__hd"><i class="fa-regular fa-eye me-2 text-primary"></i>Xem Trước Sự Kiện</div>
                 <div class="p-3">
-                    <div id="event-preview-cover" class="sv-event-cover"></div>
+                    <div id="event-preview-cover" class="sv-event-cover mb-3"></div>
                     <div id="event-preview-title" class="fw-bold mb-2">Tên sự kiện sẽ hiển thị tại đây</div>
-                    <div class="sv-meta mb-2" id="event-preview-datetime">Ngày giờ: Chưa cập nhật</div>
-                    <div class="sv-meta mb-2" id="event-preview-location">Địa điểm: Chưa cập nhật</div>
-                    <div class="sv-event-preview" id="event-preview-description">Mô tả sự kiện sẽ xuất hiện ở đây sau khi bạn nhập.</div>
-                </div>
-            </section>
-
-            <section class="sv-card">
-                <div class="sv-card__hd"><i class="fa-solid fa-list-check me-2 text-primary"></i>Checklist Nhanh</div>
-                <div class="p-3">
-                    <ul class="sv-list mb-0">
-                        <li><span>Tiêu đề rõ mục tiêu sự kiện</span></li>
-                        <li><span>Ngày giờ và địa điểm chính xác</span></li>
-                        <li><span>Mô tả ngắn gọn, dễ đăng ký</span></li>
-                    </ul>
+                    <div id="event-preview-datetime" class="sv-meta mb-2">Ngày giờ: Chưa cập nhật</div>
+                    <div id="event-preview-location" class="sv-meta mb-2">Địa điểm: Chưa cập nhật</div>
+                    <div id="event-preview-description" class="sv-meta">Mô tả sự kiện sẽ xuất hiện ở đây sau khi bạn nhập.</div>
                 </div>
             </section>
         </div>
@@ -228,15 +174,22 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     (function () {
+        const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
         const form = document.getElementById('event-form');
+        const emailWrap = document.getElementById('event-email-wrap');
+        const emailInput = document.getElementById('event-email');
         const titleInput = document.getElementById('event-title');
         const dateInput = document.getElementById('event-date');
         const timeInput = document.getElementById('event-time');
         const locationInput = document.getElementById('event-location');
+        const priceInput = document.getElementById('event-price');
+        const onlineInput = document.getElementById('event-online');
         const imageUrlInput = document.getElementById('event-image-url');
         const imageFileInput = document.getElementById('event-image-file');
+        const imageUploadStatus = document.getElementById('event-image-upload-status');
         const descriptionInput = document.getElementById('event-description');
-
+        const typeInput = document.getElementById('event-type');
+        const tagsInput = document.getElementById('event-tags');
         const previewCover = document.getElementById('event-preview-cover');
         const previewTitle = document.getElementById('event-preview-title');
         const previewDatetime = document.getElementById('event-preview-datetime');
@@ -244,87 +197,282 @@
         const previewDescription = document.getElementById('event-preview-description');
         const feedback = document.getElementById('event-submit-feedback');
 
-        if (!form || !titleInput || !dateInput || !timeInput || !locationInput || !imageUrlInput || !imageFileInput || !descriptionInput || !previewCover || !previewTitle || !previewDatetime || !previewLocation || !previewDescription || !feedback) {
+        if (!form || !emailWrap || !emailInput || !titleInput || !dateInput || !timeInput || !locationInput || !priceInput || !onlineInput || !imageUrlInput || !imageFileInput || !imageUploadStatus || !descriptionInput || !typeInput || !tagsInput || !previewCover || !previewTitle || !previewDatetime || !previewLocation || !previewDescription || !feedback) {
             return;
         }
 
-        const defaultCover = 'linear-gradient(120deg, #dbeafe, #bfdbfe)';
-        let fileObjectUrl = '';
-
-        const toVnDate = (value) => {
-            if (!value) return 'Chưa cập nhật';
-            const [year, month, day] = value.split('-');
-            if (!year || !month || !day) return 'Chưa cập nhật';
-            return `${day}/${month}/${year}`;
-        };
-
-        const setCover = (url) => {
-            if (url) {
-                previewCover.style.backgroundImage = `url('${url}')`;
-            } else {
-                previewCover.style.backgroundImage = defaultCover;
+        const normalizeEmail = (value) => (value || '').trim().toLowerCase();
+        const isValidEmail = (value) => /^[^\s@]+@[^\s@]+$/.test(value);
+        const sanitizeUrl = (value) => {
+            const raw = String(value || '').trim();
+            if (!/^https?:\/\//i.test(raw)) return '';
+            try {
+                const parsed = new URL(raw);
+                return (parsed.protocol === 'http:' || parsed.protocol === 'https:') ? parsed.toString() : '';
+            } catch (_) {
+                return '';
             }
         };
 
-        const updatePreview = () => {
+        const setFeedback = (text, type) => {
+            feedback.textContent = text || '';
+            feedback.style.color = type === 'error' ? '#b91c1c' : (type === 'success' ? '#15803d' : '#475569');
+        };
+
+        const setUploadStatus = (text, type) => {
+            imageUploadStatus.textContent = text || '';
+            imageUploadStatus.style.color = type === 'error' ? '#b91c1c' : (type === 'success' ? '#15803d' : '#475569');
+        };
+
+        let imageFilePreviewUrl = '';
+        const clearImageFilePreview = () => {
+            if (imageFilePreviewUrl) {
+                URL.revokeObjectURL(imageFilePreviewUrl);
+                imageFilePreviewUrl = '';
+            }
+        };
+
+        const pickEmailFromStorage = () => {
+            const direct = normalizeEmail(localStorage.getItem('userEmail') || localStorage.getItem('email') || '');
+            if (isValidEmail(direct)) return direct;
+            const token = localStorage.getItem('accessToken') || '';
+            const parts = token.split('.');
+            if (parts.length !== 3) return '';
+            try {
+                let payload = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+                const pad = payload.length % 4;
+                if (pad) payload += '='.repeat(4 - pad);
+                const parsed = JSON.parse(atob(payload));
+                const fromToken = normalizeEmail(parsed?.email || parsed?.sub || '');
+                return isValidEmail(fromToken) ? fromToken : '';
+            } catch (_) {
+                return '';
+            }
+        };
+
+        const getSessionEmail = async () => {
+            if (window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function') {
+                const token = await window.SVPAuth.getValidAccessToken();
+                if (!token) return '';
+            }
+            const email = pickEmailFromStorage();
+            return isValidEmail(email) ? email : '';
+        };
+
+        const preview = () => {
             const title = titleInput.value.trim();
-            const date = toVnDate(dateInput.value);
-            const time = timeInput.value || 'Chưa cập nhật';
+            const date = dateInput.value;
+            const time = timeInput.value;
             const location = locationInput.value.trim();
             const description = descriptionInput.value.trim();
-            const imageUrl = imageUrlInput.value.trim();
-
+            const imageUrl = sanitizeUrl(imageUrlInput.value);
             previewTitle.textContent = title || 'Tên sự kiện sẽ hiển thị tại đây';
-            previewDatetime.textContent = `Ngày giờ: ${date} ${time !== 'Chưa cập nhật' ? `• ${time}` : ''}`.trim();
-            previewLocation.textContent = `Địa điểm: ${location || 'Chưa cập nhật'}`;
+            previewDatetime.textContent = `Ngày giờ: ${date || 'Chưa cập nhật'} ${time || ''}`.trim();
+            previewLocation.textContent = `Địa điểm: ${location || (onlineInput.checked ? 'Online' : 'Chưa cập nhật')}`;
             previewDescription.textContent = description || 'Mô tả sự kiện sẽ xuất hiện ở đây sau khi bạn nhập.';
-
-            if (imageUrl) {
-                setCover(imageUrl);
-                return;
-            }
-
-            if (fileObjectUrl) {
-                setCover(fileObjectUrl);
-                return;
-            }
-
-            setCover('');
+            previewCover.style.backgroundImage = imageUrl
+                ? `url('${imageUrl}')`
+                : (imageFilePreviewUrl
+                    ? `url('${imageFilePreviewUrl}')`
+                    : 'linear-gradient(120deg, #dbeafe, #bfdbfe)');
         };
 
-        imageFileInput.addEventListener('change', () => {
-            const [file] = imageFileInput.files || [];
-            if (fileObjectUrl) {
-                URL.revokeObjectURL(fileObjectUrl);
-                fileObjectUrl = '';
-            }
+        const uploadSelectedImageIfNeeded = async (accessToken) => {
+            const file = imageFileInput.files && imageFileInput.files[0] ? imageFileInput.files[0] : null;
             if (!file) {
-                updatePreview();
+                return sanitizeUrl(imageUrlInput.value);
+            }
+            if (!file.type || !file.type.toLowerCase().startsWith('image/')) {
+                throw new Error('Chỉ hỗ trợ file ảnh.');
+            }
+
+            setUploadStatus('Đang lấy URL upload ảnh...', 'info');
+            const presignResponse = await fetch(`${API_BASE_URL}/api/upload/post-image`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+                },
+                body: JSON.stringify({
+                    filename: file.name || 'event-cover',
+                    contentType: file.type || 'application/octet-stream'
+                })
+            });
+            const presignPayload = await presignResponse.json().catch(() => ({}));
+            if (!presignResponse.ok) {
+                throw new Error(presignPayload.error || 'Không lấy được presigned URL.');
+            }
+            const uploadUrl = String(presignPayload.uploadUrl || '').trim();
+            const publicUrl = String(presignPayload.publicUrl || '').trim();
+            if (!uploadUrl || !publicUrl) {
+                throw new Error('Thiếu uploadUrl/publicUrl từ API.');
+            }
+
+            setUploadStatus('Đang upload ảnh lên Cloudflare R2...', 'info');
+            let uploadResponse;
+            try {
+                uploadResponse = await fetch(uploadUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': file.type },
+                    body: file
+                });
+            } catch (_) {
+                try {
+                    uploadResponse = await fetch(uploadUrl, {
+                        method: 'PUT',
+                        body: await file.arrayBuffer()
+                    });
+                } catch (_) {
+                    throw new Error('Upload bị chặn do CORS trên Cloudflare R2. Hãy bật CORS cho origin frontend và method PUT.');
+                }
+            }
+            if (!uploadResponse.ok) {
+                throw new Error(`Upload ảnh thất bại (${uploadResponse.status}).`);
+            }
+            setUploadStatus('Upload ảnh thành công.', 'success');
+            imageUrlInput.value = publicUrl;
+            return publicUrl;
+        };
+
+        const buildEventContent = () => {
+            const description = descriptionInput.value.trim();
+            const type = typeInput.value.trim();
+            const tags = String(tagsInput.value || '').split(',').map((item) => item.trim()).filter(Boolean);
+            const lines = [description];
+            if (type) lines.push(`Loại sự kiện: ${type}`);
+            if (tags.length > 0) lines.push(`Tags: ${tags.join(', ')}`);
+            return lines.join('\n\n').trim();
+        };
+
+        const toIsoDatetime = () => {
+            const rawDate = dateInput.value;
+            const rawTime = timeInput.value;
+            if (!rawDate || !rawTime) return '';
+            const dt = new Date(`${rawDate}T${rawTime.length === 5 ? `${rawTime}:00` : rawTime}`);
+            return Number.isNaN(dt.getTime()) ? '' : dt.toISOString();
+        };
+
+        [titleInput, dateInput, timeInput, locationInput, onlineInput, imageUrlInput, descriptionInput].forEach((el) => {
+            el.addEventListener('input', preview);
+            el.addEventListener('change', preview);
+        });
+        imageFileInput.addEventListener('change', () => {
+            const file = imageFileInput.files && imageFileInput.files[0] ? imageFileInput.files[0] : null;
+            clearImageFilePreview();
+            if (!file) {
+                setUploadStatus('', 'info');
+                preview();
                 return;
             }
-            fileObjectUrl = URL.createObjectURL(file);
-            updatePreview();
+            if (!file.type || !file.type.toLowerCase().startsWith('image/')) {
+                imageFileInput.value = '';
+                setUploadStatus('Chỉ hỗ trợ file ảnh.', 'error');
+                preview();
+                return;
+            }
+            imageUrlInput.value = '';
+            imageFilePreviewUrl = URL.createObjectURL(file);
+            setUploadStatus('Ảnh sẽ được upload khi bấm "Tạo sự kiện".', 'info');
+            preview();
         });
 
-        [titleInput, dateInput, timeInput, locationInput, imageUrlInput, descriptionInput].forEach((element) => {
-            element.addEventListener('input', updatePreview);
-            element.addEventListener('change', updatePreview);
-        });
-
-        form.addEventListener('submit', (event) => {
+        form.addEventListener('submit', async (event) => {
             event.preventDefault();
-            feedback.textContent = 'Bản demo giao diện: sự kiện đã sẵn sàng để gửi lên hệ thống.';
+            const sessionEmail = await getSessionEmail();
+            const manualEmail = normalizeEmail(emailInput.value);
+            const email = sessionEmail || manualEmail;
+            if (!email) {
+                emailWrap.classList.remove('d-none');
+                setFeedback('Bạn chưa đăng nhập. Vui lòng nhập email để đăng sự kiện.', 'error');
+                return;
+            }
+            if (!sessionEmail && !isValidEmail(email)) {
+                emailWrap.classList.remove('d-none');
+                setFeedback('Email chưa hợp lệ.', 'error');
+                return;
+            }
+            if (sessionEmail) {
+                emailInput.value = sessionEmail;
+                emailWrap.classList.add('d-none');
+            }
+
+            const title = titleInput.value.trim();
+            const content = buildEventContent();
+            const eventTime = toIsoDatetime();
+            const rawLocation = locationInput.value.trim();
+            const online = onlineInput.checked || /(^|\s)(online|zoom|gmeet|meet|teams)(\s|$)/i.test(rawLocation);
+            const address = online ? (rawLocation || 'Online') : rawLocation;
+            const price = Number(priceInput.value || 0);
+
+            if (title.length < 5) return setFeedback('Tên sự kiện cần tối thiểu 5 ký tự.', 'error');
+            if (!eventTime) return setFeedback('Ngày giờ sự kiện không hợp lệ.', 'error');
+            if (content.length < 10) return setFeedback('Mô tả sự kiện cần tối thiểu 10 ký tự.', 'error');
+            if (!address) return setFeedback('Địa điểm không được để trống.', 'error');
+            if (!Number.isFinite(price) || price < 0) return setFeedback('Giá vé không hợp lệ.', 'error');
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const oldLabel = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang gửi...';
+            }
+            setFeedback('Đang gửi sự kiện, vui lòng đợi...', 'info');
+
+            try {
+                const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
+                    ? await window.SVPAuth.getValidAccessToken()
+                    : (localStorage.getItem('accessToken') || '');
+                const imageUrl = await uploadSelectedImageIfNeeded(accessToken);
+
+                const response = await fetch(`${API_BASE_URL}/events`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+                    },
+                    body: JSON.stringify({ email, title, content, eventTime, online, address, imageUrl, price: price > 0 ? price : 0 })
+                });
+
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    setFeedback(payload.error || 'Không thể tạo sự kiện.', 'error');
+                    return;
+                }
+
+                const eventId = Number(payload.eventId || 0);
+                setFeedback(`Sự kiện #${eventId || 'N/A'} đã được tạo thành công.`, 'success');
+                localStorage.setItem('userEmail', email);
+                form.reset();
+                emailInput.value = email;
+                clearImageFilePreview();
+                setUploadStatus('', 'info');
+                preview();
+                setTimeout(() => {
+                    window.location.href = eventId > 0
+                        ? `event_detail.html?eventId=${encodeURIComponent(eventId)}`
+                        : 'events.html';
+                }, 700);
+            } catch (error) {
+                const message = error && error.message ? error.message : 'Không thể kết nối API.';
+                setFeedback(message, 'error');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = oldLabel;
+                }
+            }
         });
 
-        updatePreview();
+        const initialEmail = pickEmailFromStorage();
+        if (initialEmail) {
+            emailInput.value = initialEmail;
+            emailWrap.classList.add('d-none');
+        }
+        preview();
     })();
 </script>
 <script src="auth-topbar.js"></script>
 </body>
 </html>
-
-
-
-
-
-

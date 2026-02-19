@@ -262,6 +262,10 @@
         const toolbarButtons = Array.from(document.querySelectorAll('.sv-editor-toolbar button'));
         let savedRange = null;
         let isUploadingCover = false;
+        let isPreparingCoverFromUrl = false;
+        let coverUrlResolveTimer = null;
+        let coverUrlResolveSeq = 0;
+        let lastResolvedCoverUrl = '';
         let pendingCoverFile = null;
         let pendingCoverPreviewUrl = '';
         const MAX_IMAGE_UPLOAD_BYTES = 100 * 1024;
@@ -309,6 +313,16 @@
             pendingCoverFile = null;
             clearPendingCoverPreview();
             coverFileInput.value = '';
+            lastResolvedCoverUrl = '';
+        };
+
+        const cancelCoverUrlResolve = () => {
+            if (coverUrlResolveTimer) {
+                clearTimeout(coverUrlResolveTimer);
+                coverUrlResolveTimer = null;
+            }
+            coverUrlResolveSeq += 1;
+            isPreparingCoverFromUrl = false;
         };
 
         const refreshCoverPreview = () => {
@@ -318,6 +332,71 @@
                 return;
             }
             hideCoverPreview();
+        };
+
+        const inferFileNameFromUrl = (rawUrl, mimeType) => {
+            let baseName = 'cover-image';
+            try {
+                const parsed = new URL(rawUrl);
+                const path = parsed.pathname || '';
+                const lastSegment = decodeURIComponent(path.split('/').filter(Boolean).pop() || '');
+                if (lastSegment) {
+                    baseName = lastSegment.replace(/\.[^/.]+$/, '') || baseName;
+                }
+            } catch (_) {
+            }
+            const extension = imageExtensionForMime(mimeType);
+            return `${baseName}.${extension}`;
+        };
+
+        const loadCoverFromUrlToPendingFile = async (url, statusPrefix) => {
+            const safeUrl = sanitizeUrl(url);
+            if (!safeUrl) {
+                return false;
+            }
+
+            const currentSeq = ++coverUrlResolveSeq;
+            isPreparingCoverFromUrl = true;
+            setCoverUploadStatus(statusPrefix || 'Đang tải ảnh từ URL...', 'info');
+            try {
+                const response = await fetch(safeUrl, {
+                    method: 'GET',
+                    mode: 'cors',
+                    cache: 'no-store'
+                });
+                if (!response.ok) {
+                    throw new Error(`Không thể tải ảnh từ URL (${response.status}).`);
+                }
+                const blob = await response.blob();
+                const mimeType = (blob.type || '').toLowerCase();
+                if (!mimeType.startsWith('image/')) {
+                    throw new Error('URL không trả về dữ liệu ảnh hợp lệ.');
+                }
+                if (currentSeq !== coverUrlResolveSeq) {
+                    return false;
+                }
+
+                clearPendingCoverPreview();
+                pendingCoverPreviewUrl = URL.createObjectURL(blob);
+                pendingCoverFile = new File(
+                    [blob],
+                    inferFileNameFromUrl(safeUrl, mimeType),
+                    { type: mimeType || 'application/octet-stream' }
+                );
+                lastResolvedCoverUrl = safeUrl;
+                refreshCoverPreview();
+                setCoverUploadStatus('Ảnh URL đã được tải cục bộ. Ảnh sẽ được upload khi bấm "Đăng bài viết".', 'info');
+                return true;
+            } catch (error) {
+                if (currentSeq !== coverUrlResolveSeq) {
+                    return false;
+                }
+                throw error;
+            } finally {
+                if (currentSeq === coverUrlResolveSeq) {
+                    isPreparingCoverFromUrl = false;
+                }
+            }
         };
 
         const saveSelection = () => {
@@ -729,33 +808,52 @@
         contentEditor.addEventListener('input', updateDraft);
         coverUrlInput.addEventListener('input', () => {
             const safeUrl = sanitizeUrl(coverUrlInput.value);
-            if (safeUrl) {
-                clearPendingCoverFile();
-                refreshCoverPreview();
-                setCoverUploadStatus('Đang dùng ảnh đại diện từ URL đã nhập.', 'info');
-            } else {
+            cancelCoverUrlResolve();
+            if (!safeUrl) {
+                lastResolvedCoverUrl = '';
                 refreshCoverPreview();
                 setCoverUploadStatus('', 'info');
+                return;
             }
+            if (pendingCoverFile && safeUrl === lastResolvedCoverUrl) {
+                refreshCoverPreview();
+                setCoverUploadStatus('Ảnh URL đã được tải cục bộ. Ảnh sẽ được upload khi bấm "Đăng bài viết".', 'info');
+                return;
+            }
+            clearPendingCoverFile();
+            refreshCoverPreview();
+            coverUrlResolveTimer = window.setTimeout(async () => {
+                try {
+                    await loadCoverFromUrlToPendingFile(safeUrl, 'Đang tải ảnh từ URL về cục bộ...');
+                } catch (_) {
+                    setCoverUploadStatus('Không thể tải ảnh từ URL (có thể do CORS hoặc URL không hợp lệ). Vui lòng tải ảnh từ máy.', 'error');
+                }
+            }, 250);
         });
         coverFileInput.addEventListener('change', (event) => {
             const file = event.target && event.target.files ? event.target.files[0] : null;
             if (!file) {
+                cancelCoverUrlResolve();
                 clearPendingCoverFile();
+                lastResolvedCoverUrl = '';
                 refreshCoverPreview();
                 setCoverUploadStatus('', 'info');
                 return;
             }
             if (!file.type || !file.type.toLowerCase().startsWith('image/')) {
+                cancelCoverUrlResolve();
                 clearPendingCoverFile();
+                lastResolvedCoverUrl = '';
                 refreshCoverPreview();
                 setCoverUploadStatus('Chỉ hỗ trợ file ảnh.', 'error');
                 return;
             }
+            cancelCoverUrlResolve();
             clearPendingCoverPreview();
             pendingCoverPreviewUrl = URL.createObjectURL(file);
             pendingCoverFile = file;
             coverUrlInput.value = '';
+            lastResolvedCoverUrl = '';
             refreshCoverPreview();
             updateDraft();
             setCoverUploadStatus('Ảnh đã được chọn cục bộ. Ảnh sẽ được upload khi bấm "Đăng bài viết".', 'info');
@@ -818,6 +916,10 @@
                 setFeedback('Ảnh đại diện đang tải lên máy chủ. Vui lòng chờ xong rồi đăng bài.', 'error');
                 return;
             }
+            if (isPreparingCoverFromUrl) {
+                setFeedback('Ảnh từ URL đang được tải cục bộ. Vui lòng chờ xong rồi đăng bài.', 'error');
+                return;
+            }
 
             const sessionEmail = await getSessionEmail();
             const manualEmail = normalizeEmail(emailInput.value);
@@ -864,6 +966,17 @@
                 const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
                     ? await window.SVPAuth.getValidAccessToken()
                     : (localStorage.getItem('accessToken') || '');
+
+                const inputCoverUrl = sanitizeUrl(coverUrlInput.value);
+                if (inputCoverUrl && !pendingCoverFile) {
+                    try {
+                        await loadCoverFromUrlToPendingFile(inputCoverUrl, 'Đang tải ảnh URL trước khi upload...');
+                    } catch (_) {
+                        setCoverUploadStatus('Không thể tải ảnh từ URL (có thể do CORS hoặc URL không hợp lệ). Vui lòng tải ảnh từ máy.', 'error');
+                        setFeedback('Không thể chuẩn bị ảnh URL để upload.', 'error');
+                        return;
+                    }
+                }
 
                 if (pendingCoverFile) {
                     isUploadingCover = true;
@@ -943,6 +1056,7 @@
                 form.reset();
                 contentEditor.innerHTML = '';
                 contentHiddenInput.value = '';
+                cancelCoverUrlResolve();
                 clearPendingCoverFile();
                 refreshCoverPreview();
                 setCoverUploadStatus('', 'info');

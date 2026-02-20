@@ -689,72 +689,35 @@
         try { localStorage.setItem(localKey(postId), JSON.stringify(existing)); } catch {}
     };
 
-    /* ── Trimming preview from full content ── */
-    const normalizeCompareText = (v) => String(v??'').toLowerCase()
-        .replace(/&nbsp;/g,' ').replace(/\s+/g,' ')
-        .replace(/[.,/#!$%^&*;:{}=_`~()\-+?"'|[\]\\<>]/g,'').trim();
-
-    const normalizeUrl = (v) => {
-        const raw = String(v||'').trim();
-        if (!raw) return '';
-        try { return new URL(raw, window.location.href).href; } catch { return raw; }
-    };
-
-    const getLeadPreviewText = (html) => {
-        const t = toPlainText(html);
-        return t.slice(0, 220).trim();
-    };
-
-    const trimPreviewFromDetail = (post) => {
-        const rawHtml = String(post?.contentHtml || '').trim();
+    /* ── Render full content (without trimming preview) ── */
+    const sanitizePostContentHtml = (html) => {
+        const rawHtml = String(html || '').trim();
         if (!rawHtml) return '<p>Nội dung đang được cập nhật.</p>';
 
         const parser = new DOMParser();
         const doc = parser.parseFromString(`<div data-root>${rawHtml}</div>`, 'text/html');
         const root = doc.body.querySelector('[data-root]');
-        if (!root) return rawHtml;
+        if (!root) return '<p>Nội dung đang được cập nhật.</p>';
 
-        // Remove heading if same as title
-        const firstEl = root.firstElementChild;
-        const normTitle = normalizeCompareText(post?.title||'');
-        if (firstEl && /^H[1-6]$/i.test(firstEl.tagName) && normTitle &&
-            normalizeCompareText(firstEl.textContent||'') === normTitle) {
-            firstEl.remove();
-        }
-
-        // Remove first cover image (already shown in hero)
-        const previewImgSrc = extractFirstImageSrc(rawHtml);
-        if (previewImgSrc) {
-            const firstImg = root.querySelector('img');
-            if (firstImg && normalizeUrl(firstImg.getAttribute('src')) === normalizeUrl(previewImgSrc)) {
-                const wrap = firstImg.parentElement;
-                if (wrap && /^(P|FIGURE|DIV)$/i.test(wrap.tagName) && wrap.querySelectorAll('img').length === 1 && !toPlainText(wrap.innerHTML)) {
-                    wrap.remove();
-                } else { firstImg.remove(); }
-            }
-        }
-
-        // Remove lead paragraph (already shown as preview on index)
-        let lead = getLeadPreviewText(rawHtml);
-        if (lead) {
-            for (const block of Array.from(root.children)) {
-                if (!lead) break;
-                const bt = toPlainText(block.innerHTML);
-                if (!bt) continue;
-                const nl = normalizeCompareText(lead), nb = normalizeCompareText(bt);
-                if (!nl||!nb) break;
-                if (nl.startsWith(nb)) { lead = lead.slice(bt.length).trimStart(); block.remove(); continue; }
-                if (nb.startsWith(nl)) { block.textContent = block.textContent.slice(lead.length).trimStart(); lead=''; }
-                break;
-            }
-        }
-
-        // Clean empty blocks
-        Array.from(root.children).forEach(b => {
-            if (!b.querySelector('img,video,iframe,table,ul,ol,blockquote') && !toPlainText(b.innerHTML)) b.remove();
+        root.querySelectorAll('script,style,iframe,object,embed,link,meta').forEach((el) => el.remove());
+        root.querySelectorAll('*').forEach((el) => {
+            Array.from(el.attributes).forEach((attr) => {
+                const attrName = String(attr.name || '').toLowerCase();
+                const attrValue = String(attr.value || '').trim();
+                if (attrName.startsWith('on')) {
+                    el.removeAttribute(attr.name);
+                    return;
+                }
+                if ((attrName === 'src' || attrName === 'href') && attrValue && !toSafeHttpUrl(attrValue)) {
+                    if (!(attrName === 'href' && attrValue.startsWith('#'))) {
+                        el.removeAttribute(attr.name);
+                    }
+                }
+            });
         });
 
-        return root.innerHTML.trim() || '<p>Không có nội dung bổ sung ngoài phần preview.</p>';
+        const cleaned = root.innerHTML.trim();
+        return cleaned || '<p>Nội dung đang được cập nhật.</p>';
     };
 
     /* ── Image compression (same as thread.html) ── */
@@ -926,7 +889,7 @@
 
     const renderBody = (post) => {
         if (!bodyEl) return;
-        bodyEl.innerHTML = trimPreviewFromDetail(post);
+        bodyEl.innerHTML = sanitizePostContentHtml(post.contentHtml);
     };
 
     const renderShare = (post) => {

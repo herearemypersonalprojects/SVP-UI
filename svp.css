@@ -11,6 +11,7 @@
 
         body{ background:#f2f5f9; font-family: system-ui, -apple-system, Segoe UI, Roboto, "Helvetica Neue", Arial, "Noto Sans", "Liberation Sans", sans-serif; }
         a{ text-decoration:none; }
+        img{ max-width:100%; height:auto; }
 
         /* Top bar */
         .sv-topbar{
@@ -646,6 +647,31 @@
 }
 
 @media (max-width: 768px){
+    .sv-topbar .container{
+        flex-wrap:wrap;
+        gap:.6rem;
+    }
+    /* Bootstrap uses display:none !important for .d-none; re-enable auth on small screens. */
+    .sv-auth.d-none{
+        display:flex !important;
+    }
+    .sv-nav .container{
+        flex-wrap:wrap;
+        gap:.5rem;
+        justify-content:flex-start;
+    }
+    .sv-nav .nav{
+        width:100%;
+        flex-wrap:nowrap;
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+        scrollbar-width:none;
+    }
+    .sv-nav .nav::-webkit-scrollbar{ display:none; }
+    .sv-nav .sv-search{
+        flex:1 1 100%;
+        width:100% !important;
+    }
     .sv-page-hero{
         padding:1.1rem 1.2rem;
     }
@@ -661,6 +687,88 @@
     }
     .sv-event-card{
         flex-direction:column;
+    }
+}
+
+@media (max-width: 576px){
+    .sv-brand{
+        flex:1 1 100%;
+        justify-content:center;
+    }
+    .sv-brand__logo-img{
+        width:72px;
+        height:72px;
+    }
+    .sv-brand__divider,
+    .sv-brand__tagline{
+        display:none;
+    }
+    .sv-brand__title h1{
+        font-size:1.05rem;
+        letter-spacing:.01em;
+        display:-webkit-box;
+        -webkit-line-clamp:2;
+        -webkit-box-orient:vertical;
+        overflow:hidden;
+    }
+    .sv-auth{
+        flex:1 1 100%;
+        flex-wrap:wrap;
+        justify-content:center;
+    }
+    .sv-auth .btn{
+        padding:.4rem .7rem;
+        font-size:.95rem;
+    }
+
+    .sv-nav .nav-link{
+        padding:.55rem .7rem;
+    }
+
+    .sv-search input{
+        padding-left:2.2rem;
+    }
+
+    .sv-hero__image{
+        min-height:160px;
+    }
+    .sv-hero__actions{
+        left:12px;
+        right:12px;
+        bottom:12px;
+    }
+    .sv-hero__btn{
+        width:100%;
+        min-width:0;
+        justify-content:space-between;
+    }
+
+    .sv-cats .nav{
+        flex-wrap:nowrap;
+        overflow-x:auto;
+        -webkit-overflow-scrolling:touch;
+        scrollbar-width:none;
+    }
+    .sv-cats .nav::-webkit-scrollbar{ display:none; }
+    .sv-cats .sv-cat__icon{
+        width:48px;
+        height:48px;
+    }
+    .sv-cats .sv-cat__icon--event{
+        width:40px;
+        height:40px;
+    }
+
+    .sv-card__hd{
+        padding:.75rem .9rem;
+    }
+    .sv-list li{
+        flex-wrap:wrap;
+        align-items:flex-start;
+        gap:.6rem;
+    }
+    .sv-badge{
+        margin-left:auto;
     }
 }
 

@@ -48,9 +48,9 @@
             </div>
         </div>
 
-        <div class="sv-auth d-none d-md-flex align-items-center gap-2">
-            <button class="btn btn-outline-secondary">Đăng Ký</button>
-            <button class="btn btn-primary">Đăng Nhập</button>
+        <div id="sv-auth-box" class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <a class="btn btn-outline-secondary" href="signup.html">Đăng Ký</a>
+            <a class="btn btn-primary" href="login.html">Đăng Nhập</a>
         </div>
     </div>
 </div>
@@ -81,7 +81,7 @@
     <section class="sv-page-hero mb-3">
         <div class="sv-page-hero__eyebrow">Trình tạo thảo luận</div>
         <h2 class="sv-page-hero__title">Tạo Chủ Đề Mới</h2>
-        <p class="sv-page-hero__subtitle">Khởi tạo một cuộc thảo luận mới cho cộng đồng. Luồng này dùng chung danh mục với trang bài viết để nội dung nhất quán.</p>
+        <p class="sv-page-hero__subtitle">Khởi tạo một cuộc thảo luận mới cho diễn đàn.</p>
     </section>
 
     <div class="row g-3">
@@ -114,13 +114,7 @@
                         </div>
                     </div>
 
-                    <div class="mb-3">
-                        <label for="discussion-tags" class="form-label">Tags</label>
-                        <input id="discussion-tags" class="form-control" type="text" placeholder="Ví dụ: visa, lyon, thu-tuc">
-                    </div>
-
                     <div class="d-flex flex-wrap justify-content-between gap-2">
-                        <button type="button" class="btn btn-outline-secondary"><i class="fa-regular fa-floppy-disk me-2"></i>Lưu nháp</button>
                         <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus me-2"></i>Tạo chủ đề mới</button>
                     </div>
                     <div id="discussion-submit-feedback" class="sv-meta mt-3" aria-live="polite"></div>
@@ -128,33 +122,7 @@
             </section>
         </div>
 
-        <div class="col-lg-4">
-            <section class="sv-card mb-3">
-                <div class="sv-card__hd"><i class="fa-regular fa-eye me-2 text-primary"></i>Xem Trước Chủ Đề</div>
-                <div class="p-3">
-                    <div id="discussion-preview-title" class="fw-bold mb-2">Tiêu đề chủ đề sẽ hiển thị tại đây</div>
-                    <div class="sv-meta mb-2">Danh mục: <strong id="discussion-preview-category">Học Tập &amp; Nghiên Cứu</strong></div>
-                    <div class="sv-first-comment-preview">
-                        <div class="sv-meta mb-1"><i class="fa-solid fa-comment-dots me-1"></i>Comment đầu tiên (từ Subject)</div>
-                        <div id="discussion-preview-subject">Nội dung Subject sẽ xuất hiện ở đây sau khi bạn nhập.</div>
-                    </div>
-                </div>
-            </section>
 
-            <section class="sv-card">
-                <div class="sv-card__hd"><i class="fa-solid fa-layer-group me-2 text-primary"></i>Danh Mục Dùng Chung</div>
-                <div class="p-3">
-                    <p class="sv-meta mb-2">Các chủ đề thảo luận và bài viết tạp chí cùng dùng bộ danh mục sau:</p>
-                    <div class="sv-discussion-category-list">
-                        <span class="sv-tag">Học Tập &amp; Nghiên Cứu</span>
-                        <span class="sv-tag">Kinh Nghiệm Việc Làm</span>
-                        <span class="sv-tag">Đầu Tư Tại Pháp</span>
-                        <span class="sv-tag">Sự Kiện &amp; Lễ Hội</span>
-                        <span class="sv-tag">Tìm &amp; Cho Thuê Nhà</span>
-                    </div>
-                </div>
-            </section>
-        </div>
     </div>
 </main>
 

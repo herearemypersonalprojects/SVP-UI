@@ -154,9 +154,9 @@
             </div>
         </div>
 
-        <div class="sv-auth d-none d-md-flex align-items-center gap-2">
-            <button class="btn btn-outline-secondary">Đăng Ký</button>
-            <button class="btn btn-primary">Đăng Nhập</button>
+        <div id="sv-auth-box" class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <a class="btn btn-outline-secondary" href="signup.html">Đăng Ký</a>
+            <a class="btn btn-primary" href="login.html">Đăng Nhập</a>
         </div>
     </div>
 </div>
@@ -376,6 +376,29 @@
             return Number.isFinite(time) ? time : 0;
         };
 
+        const toCommentId = (value) => {
+            const id = Number(value);
+            return Number.isFinite(id) ? id : 0;
+        };
+
+        const sortRepliesByTime = (items) => {
+            return items
+                .map((item, index) => ({ item, index }))
+                .sort((left, right) => {
+                    const leftTime = toMillis(left.item?.createdAt);
+                    const rightTime = toMillis(right.item?.createdAt);
+                    if (leftTime && rightTime && leftTime !== rightTime) {
+                        return leftTime - rightTime;
+                    }
+                    if (leftTime && !rightTime) return -1;
+                    if (!leftTime && rightTime) return 1;
+                    const idDiff = toCommentId(left.item?.id) - toCommentId(right.item?.id);
+                    if (idDiff !== 0) return idDiff;
+                    return left.index - right.index;
+                })
+                .map((entry) => entry.item);
+        };
+
         const formatDateTime = (value) => {
             const time = toMillis(value);
             if (!time) return 'Không rõ thời gian';
@@ -479,7 +502,7 @@
         const loadLocalReplies = (threadId) => {
             try {
                 const parsed = JSON.parse(localStorage.getItem(localReplyKey(threadId)) || '[]');
-                return Array.isArray(parsed) ? parsed : [];
+                return sortRepliesByTime(Array.isArray(parsed) ? parsed : []);
             } catch (_) {
                 return [];
             }
@@ -556,10 +579,10 @@
         };
 
         const renderPosts = (thread, apiComments, localReplies) => {
+            const orderedReplies = sortRepliesByTime([...apiComments, ...localReplies]);
             const postItems = [
                 toPostItem(thread, 1, true),
-                ...apiComments.map((item, idx) => toPostItem(item, idx + 2, false)),
-                ...localReplies.map((item, idx) => toPostItem(item, idx + 2 + apiComments.length, false))
+                ...orderedReplies.map((item, idx) => toPostItem(item, idx + 2, false))
             ];
 
             postsCountEl.textContent = `${postItems.length} bài`;
@@ -602,7 +625,7 @@
         const renderRelatedThreads = async (threadId, categoryId) => {
             relatedEl.innerHTML = '<li><div class="sv-meta">Đang tải chủ đề liên quan...</div></li>';
             try {
-                const response = await fetch(`${API_BASE_URL}/posts/latest-articles?limit=8&categoryId=${encodeURIComponent(categoryId)}`, {
+                const response = await fetch(`${API_BASE_URL}/posts/latest-discussions?limit=8&categoryId=${encodeURIComponent(categoryId)}`, {
                     method: 'GET',
                     headers: { Accept: 'application/json' }
                 });
@@ -798,7 +821,7 @@
                 };
 
                 const currentReplies = loadLocalReplies(thread.threadId);
-                currentReplies.unshift(newReply);
+                currentReplies.push(newReply);
                 saveLocalReplies(thread.threadId, currentReplies);
 
                 const nextTotalReplies = apiComments.length + currentReplies.length;

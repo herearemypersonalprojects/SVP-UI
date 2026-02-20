@@ -141,9 +141,9 @@
             </div>
         </div>
 
-        <div class="sv-auth d-none d-md-flex align-items-center gap-2">
-            <button class="btn btn-outline-secondary">Đăng Ký</button>
-            <button class="btn btn-primary">Đăng Nhập</button>
+        <div id="sv-auth-box" class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <a class="btn btn-outline-secondary" href="signup.html">Đăng Ký</a>
+            <a class="btn btn-primary" href="login.html">Đăng Nhập</a>
         </div>
     </div>
 </div>
@@ -172,9 +172,9 @@
     </div>
 
     <section class="sv-page-hero mb-3">
-        <div class="sv-page-hero__eyebrow">Classic Community Forum</div>
+        <div class="sv-page-hero__eyebrow">Việt tại Pháp</div>
         <h2 class="sv-page-hero__title">Diễn Đàn SVP</h2>
-        <p class="sv-page-hero__subtitle">Danh sách chủ đề được cập nhật động từ hệ thống bài viết. Giao diện theo phong cách forum cổ điển: rõ cột thông tin, dễ theo dõi và dễ mở thread chi tiết.</p>
+        <p class="sv-page-hero__subtitle">Không gian thảo luận chính thức của SVP, cập nhật theo thời gian thực.</p>
         <div class="sv-page-hero__actions">
             <a class="btn btn-primary" href="create_new_discussion.html"><i class="fa-solid fa-pen-to-square me-2"></i>Tạo chủ đề mới</a>
             <a class="btn btn-outline-secondary" href="categories.html"><i class="fa-solid fa-layer-group me-2"></i>Xem chuyên mục</a>
@@ -453,40 +453,10 @@
             categoryEl.innerHTML = options.join('');
         };
 
-        const mergeLocalDraft = (threads) => {
-            let draft = null;
-            try {
-                draft = JSON.parse(localStorage.getItem('svp.latestSubmittedArticle') || 'null');
-            } catch (_) {
-                draft = null;
-            }
-            if (!draft || typeof draft !== 'object') {
-                return threads;
-            }
-            const draftId = Number(draft.postId || 0);
-            if (!Number.isInteger(draftId) || draftId <= 0) {
-                return threads;
-            }
-            if (threads.some((item) => item.threadId === draftId)) {
-                return threads;
-            }
-            const categoryId = Number(draft.categoryId || 0);
-            return [
-                {
-                    threadId: draftId,
-                    title: String(draft.title || 'Chủ đề nháp mới'),
-                    categoryId,
-                    categoryName: CATEGORY_MAP.get(categoryId) || `Chuyên mục #${categoryId || '?'}`,
-                    authorName: String(draft?.author?.displayName || draft?.author?.nickname || 'Bạn'),
-                    createdAt: String(draft.createdAt || new Date().toISOString()),
-                    excerpt: excerptFromHtml(draft.contentHtml || '', 180)
-                },
-                ...threads
-            ];
-        };
+        const mergeLocalDraft = (threads) => threads;
 
         const fetchThreads = async () => {
-            const response = await fetch(`${API_BASE_URL}/posts/latest-articles?limit=200`, {
+            const response = await fetch(`${API_BASE_URL}/posts/latest-discussions?limit=200`, {
                 method: 'GET',
                 headers: { Accept: 'application/json' }
             });

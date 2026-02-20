@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="SVP">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#1a73e8"/>
+      <stop offset="100%" stop-color="#1558b0"/>
+    </linearGradient>
+  </defs>
+  <rect x="4" y="4" width="56" height="56" rx="14" fill="url(#bg)"/>
+  <circle cx="49" cy="15" r="5" fill="#e53935"/>
+  <text x="32" y="40" text-anchor="middle" font-size="23" font-weight="800"
+        font-family="Arial, Helvetica, sans-serif" fill="#ffffff">SVP</text>
+</svg>

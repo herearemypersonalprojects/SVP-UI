@@ -22,10 +22,10 @@
         .sv-article-feed {
             padding: 1rem;
         }
-        .sv-article-feed .sv-article {
+        .sv-article-feed > .sv-article {
             margin-bottom: 1rem;
         }
-        .sv-article-feed .sv-article:last-child {
+        .sv-article-feed > .sv-article:last-child {
             margin-bottom: 0;
         }
         .sv-article--clickable {
@@ -57,139 +57,6 @@
             background: #e2e8f0 center/cover no-repeat;
             border: 1px solid #e5e7eb;
         }
-        .sv-article__detail-panel {
-            max-height: 0;
-            opacity: 0;
-            overflow: hidden;
-            transition: max-height .55s cubic-bezier(.22, 1, .36, 1), opacity .3s ease, margin-top .55s cubic-bezier(.22, 1, .36, 1);
-            margin-top: 0;
-        }
-        .sv-article__detail-panel.is-open {
-            opacity: 1;
-            margin-top: .85rem;
-        }
-        .sv-article__detail-inner {
-            border-top: 1px solid #e5e7eb;
-            padding-top: .9rem;
-        }
-        .sv-article__tags {
-            display: flex;
-            flex-wrap: wrap;
-            gap: .5rem;
-            margin-top: 1rem;
-        }
-        .sv-members .avatar--initial {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #cbd5e1 !important;
-            color: #0f172a;
-            font-weight: 800;
-            font-size: 1rem;
-            text-transform: uppercase;
-        }
-        .sv-article-detail .sv-article__content {
-            line-height: 1.7;
-            color: #0f172a;
-        }
-        .sv-article-detail__stats {
-            display: flex;
-            flex-wrap: wrap;
-            gap: .5rem;
-            margin: 1rem 0;
-        }
-        .sv-article-detail__stat {
-            display: inline-flex;
-            align-items: center;
-            gap: .4rem;
-            padding: .35rem .7rem;
-            border-radius: 999px;
-            border: 1px solid #dbeafe;
-            background: #eff6ff;
-            color: #1e3a8a;
-            font-size: .875rem;
-            font-weight: 600;
-        }
-        .sv-comment-list {
-            margin-top: 1rem;
-            display: grid;
-            gap: .85rem;
-        }
-        .sv-comment-item {
-            border: 1px solid #e5e7eb;
-            border-radius: 12px;
-            padding: .85rem;
-            background: #f8fafc;
-        }
-        .sv-comment-meta {
-            display: flex;
-            justify-content: space-between;
-            align-items: baseline;
-            gap: .5rem;
-            margin-bottom: .45rem;
-        }
-        .sv-comment-name {
-            font-weight: 700;
-            color: #0f172a;
-        }
-        .sv-comment-content {
-            margin: 0;
-            color: #1f2937;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-        .sv-comment-media {
-            margin: 0 0 .65rem;
-        }
-        .sv-comment-media img {
-            display: block;
-            width: 100%;
-            max-height: 340px;
-            object-fit: contain;
-            border-radius: 10px;
-            border: 1px solid #dbeafe;
-            background: #fff;
-        }
-        .sv-auth-user {
-            display: inline-flex;
-            align-items: center;
-            gap: .55rem;
-            padding: .25rem .35rem .25rem .3rem;
-            border: 1px solid #dbeafe;
-            border-radius: 999px;
-            background: #f8fbff;
-        }
-        .sv-auth-avatar {
-            width: 34px;
-            height: 34px;
-            border-radius: 999px;
-            background: linear-gradient(135deg, #2563eb, #1d4ed8);
-            color: #fff;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            font-weight: 800;
-            font-size: .95rem;
-        }
-        .sv-auth-name {
-            color: #0f172a;
-            font-weight: 700;
-            max-width: 140px;
-            overflow: hidden;
-            text-overflow: ellipsis;
-            white-space: nowrap;
-        }
-        .sv-auth-logout {
-            border: 0;
-            background: transparent;
-            color: #475569;
-            font-weight: 600;
-            font-size: .85rem;
-            cursor: pointer;
-            padding: .2rem .35rem;
-            border-radius: 8px;
-        }
-        .sv-auth-logout:hover { background: #e2e8f0; }
     </style>
 </head>
 <body>
@@ -757,21 +624,6 @@
             .replace(/\s+/g, ' ')
             .trim();
 
-        const toSafeHttpUrl = (value) => {
-            const raw = String(value || '').trim();
-            if (!raw) {
-                return '';
-            }
-            try {
-                const parsed = new URL(raw, window.location.href);
-                if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
-                    return '';
-                }
-                return parsed.href;
-            } catch (error) {
-                return '';
-            }
-        };
 
         const estimateReadTime = (contentHtml) => {
             const plainText = toPlainText(contentHtml);
@@ -816,111 +668,6 @@
             return firstImage || DEFAULT_ARTICLE_COVER;
         };
 
-        const normalizeCompareText = (value) => String(value ?? '')
-            .toLowerCase()
-            .replace(/&nbsp;/g, ' ')
-            .replace(/\s+/g, ' ')
-            .replace(/[.,/#!$%^&*;:{}=_`~()\-+?"'|[\]\\<>]/g, '')
-            .trim();
-
-        const normalizeUrl = (value) => {
-            const raw = String(value || '').trim();
-            if (!raw) {
-                return '';
-            }
-            try {
-                return new URL(raw, window.location.href).href;
-            } catch (error) {
-                return raw;
-            }
-        };
-
-        const trimPreviewFromDetail = (post) => {
-            const rawHtml = String(post?.contentHtml || post?.content || '').trim();
-            if (!rawHtml) {
-                return `<p>${escapeHtml(toPlainText(post?.content || 'Nội dung đang được cập nhật.'))}</p>`;
-            }
-
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(`<div data-sv-article-root>${rawHtml}</div>`, 'text/html');
-            const root = doc.body.querySelector('[data-sv-article-root]');
-            if (!root) {
-                return rawHtml;
-            }
-
-            const firstElement = root.firstElementChild;
-            const normalizedTitle = normalizeCompareText(post?.title || '');
-            if (
-                firstElement
-                && /^H[1-6]$/i.test(firstElement.tagName)
-                && normalizedTitle
-                && normalizeCompareText(firstElement.textContent || '') === normalizedTitle
-            ) {
-                firstElement.remove();
-            }
-
-            const previewImageSrc = extractFirstImageSrc(rawHtml);
-            if (previewImageSrc) {
-                const firstImageEl = root.querySelector('img');
-                if (firstImageEl && normalizeUrl(firstImageEl.getAttribute('src')) === normalizeUrl(previewImageSrc)) {
-                    const imageContainer = firstImageEl.parentElement;
-                    if (
-                        imageContainer
-                        && /^(P|FIGURE|DIV)$/i.test(imageContainer.tagName)
-                        && imageContainer.querySelectorAll('img').length === 1
-                        && toPlainText(imageContainer.innerHTML).length === 0
-                    ) {
-                        imageContainer.remove();
-                    } else {
-                        firstImageEl.remove();
-                    }
-                }
-            }
-
-            let remainingLead = getLeadPreviewText(rawHtml);
-            if (remainingLead) {
-                const blocks = Array.from(root.children);
-                for (const block of blocks) {
-                    if (!remainingLead) {
-                        break;
-                    }
-                    const blockPlainText = toPlainText(block.innerHTML);
-                    if (!blockPlainText) {
-                        continue;
-                    }
-
-                    const normalizedLead = normalizeCompareText(remainingLead);
-                    const normalizedBlock = normalizeCompareText(blockPlainText);
-                    if (!normalizedLead || !normalizedBlock) {
-                        break;
-                    }
-                    if (normalizedLead.startsWith(normalizedBlock)) {
-                        remainingLead = remainingLead.slice(Math.min(remainingLead.length, blockPlainText.length)).trimStart();
-                        block.remove();
-                        continue;
-                    }
-                    if (normalizedBlock.startsWith(normalizedLead)) {
-                        const currentText = block.textContent || '';
-                        block.textContent = currentText.slice(Math.min(currentText.length, remainingLead.length)).trimStart();
-                        remainingLead = '';
-                    }
-                    break;
-                }
-            }
-
-            Array.from(root.children).forEach((block) => {
-                const hasMedia = block.querySelector('img,video,iframe,table,ul,ol,blockquote');
-                if (!hasMedia && toPlainText(block.innerHTML).length === 0) {
-                    block.remove();
-                }
-            });
-
-            const cleanedHtml = root.innerHTML.trim();
-            if (cleanedHtml) {
-                return cleanedHtml;
-            }
-            return '<p>Không có nội dung bổ sung ngoài phần preview.</p>';
-        };
         const normalizePost = (post) => ({
             postId: Number(post?.postId ?? post?.id ?? 0),
             categoryId: Number(post?.categoryId ?? post?.category_id ?? 0),
@@ -959,8 +706,6 @@
         let beforeCreatedAt = null;
         let beforePostId = null;
         let isLoadingMore = false;
-        let expandedCard = null;
-        const detailCache = new Map();
 
         const renderArticleCard = (post) => {
             const author = post.author || {};
@@ -975,6 +720,7 @@
             const pendingNote = status === 'PENDING'
                 ? `<div class="sv-meta text-danger mt-2">Hãy kiểm tra hòm thư và xác nhận đăng bài này.</div>`
                 : '';
+            const detailHref = `post_detail.html?postId=${encodeURIComponent(post.postId)}`;
 
             return `
                 <article class="sv-article sv-article--clickable" data-post-id="${post.postId}" role="button" tabindex="0" aria-label="Xem chi tiết bài viết ${safeTitle}">
@@ -986,166 +732,14 @@
                     <div class="sv-article__meta">Bởi ${safeAuthor} • Cập nhật ${safeDate}</div>
                     <p class="sv-article__lead">${safeLead}</p>
                     ${pendingNote}
-                    <div class="sv-article__cover" style="background-image:url('${safeCover}')"></div>
-
-                    <div class="sv-article__detail-panel" aria-hidden="true">
-                        <div class="sv-article__detail-inner">
-                            <div class="sv-meta">Chi tiết bài viết sẽ hiển thị tại đây.</div>
-                        </div>
+                    <a class="sv-article__cover d-block" href="${detailHref}" style="background-image:url('${safeCover}')" tabindex="-1" aria-hidden="true"></a>
+                    <div class="d-flex justify-content-end mt-2">
+                        <a class="btn btn-sm btn-outline-primary" href="${detailHref}"><i class="fa-solid fa-book-open me-1"></i>Đọc tiếp</a>
                     </div>
                 </article>
             `;
         };
 
-        const resolvePostDetail = (payload) => {
-            if (!payload || typeof payload !== 'object') {
-                return null;
-            }
-            const postSource = payload.post && typeof payload.post === 'object' ? payload.post : payload;
-            const commentsSource = Array.isArray(payload.comments)
-                ? payload.comments
-                : (Array.isArray(postSource.comments) ? postSource.comments : []);
-            return { post: normalizePost(postSource), comments: commentsSource };
-        };
-
-        const numberOrZero = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
-
-        const renderCommentItem = (comment) => {
-            const author = comment.author || {};
-            const displayName = author.displayName || author.nickname || comment.authorName || 'Ẩn danh';
-            const createdAt = formatDate(comment.createdAt || comment.created_at);
-            const rawContent = comment.contentText || comment.content || comment.contentHtml || '';
-            const content = escapeHtml(toPlainText(rawContent));
-            const directImageUrl = toSafeHttpUrl(comment.imageUrl || comment.image_url);
-            const imageFromContent = toSafeHttpUrl(extractFirstImageSrc(comment.contentHtml || comment.content_html || ''));
-            const resolvedImageUrl = directImageUrl || imageFromContent;
-
-            return `
-                <article class="sv-comment-item">
-                    <div class="sv-comment-meta">
-                        <span class="sv-comment-name">${escapeHtml(displayName)}</span>
-                        <span class="sv-meta">${escapeHtml(createdAt)}</span>
-                    </div>
-                    ${resolvedImageUrl ? `<div class="sv-comment-media"><img src="${escapeHtml(resolvedImageUrl)}" alt="Ảnh đính kèm bình luận" loading="lazy" decoding="async"></div>` : ''}
-                    <p class="sv-comment-content">${content || 'Bình luận đang được cập nhật.'}</p>
-                </article>
-            `;
-        };
-
-        const renderPostDetailContent = (post, comments) => {
-            const safeBody = trimPreviewFromDetail(post);
-            const views = numberOrZero(post.viewCount ?? post.views ?? post.totalViews);
-            const likes = numberOrZero(post.likeCount ?? post.likes ?? post.totalLikes);
-            const commentCount = comments.length;
-
-            const commentsHtml = commentCount === 0
-                ? `<div class="sv-meta">Chưa có bình luận cho bài viết này.</div>`
-                : `<div class="sv-comment-list">${comments.map((item) => renderCommentItem(item)).join('')}</div>`;
-
-            return `
-                <div class="sv-article-detail">
-                    <div class="sv-article-detail__stats">
-                        <span class="sv-article-detail__stat"><i class="fa-regular fa-eye"></i>${views.toLocaleString('vi-VN')} lượt xem</span>
-                        <span class="sv-article-detail__stat"><i class="fa-regular fa-thumbs-up"></i>${likes.toLocaleString('vi-VN')} lượt thích</span>
-                        <span class="sv-article-detail__stat"><i class="fa-regular fa-comments"></i>${commentCount.toLocaleString('vi-VN')} bình luận</span>
-                    </div>
-                    <div class="sv-article__content">${safeBody}</div>
-                    <section class="mt-4">
-                        <h3 class="h5 mb-3">Bình luận chi tiết</h3>
-                        ${commentsHtml}
-                    </section>
-                </div>
-            `;
-        };
-
-        const setPanelState = (panel, isOpen) => {
-            if (!panel) {
-                return;
-            }
-            if (isOpen) {
-                panel.classList.add('is-open');
-                panel.setAttribute('aria-hidden', 'false');
-                panel.style.maxHeight = `${panel.scrollHeight}px`;
-            } else {
-                panel.style.maxHeight = `${panel.scrollHeight}px`;
-                requestAnimationFrame(() => {
-                    panel.classList.remove('is-open');
-                    panel.setAttribute('aria-hidden', 'true');
-                    panel.style.maxHeight = '0px';
-                });
-            }
-        };
-
-        const renderPanelMessage = (panel, message) => {
-            if (!panel) {
-                return;
-            }
-            panel.innerHTML = `
-                <div class="sv-article__detail-inner">
-                    <div class="sv-meta">${escapeHtml(message)}</div>
-                </div>
-            `;
-        };
-
-        const closeExpandedCard = () => {
-            if (!expandedCard) {
-                return;
-            }
-            const panel = expandedCard.querySelector('.sv-article__detail-panel');
-            setPanelState(panel, false);
-            expandedCard = null;
-        };
-
-        const openPostDetail = async (cardEl, postId) => {
-            if (!cardEl || !Number.isFinite(postId)) {
-                return;
-            }
-            const panel = cardEl.querySelector('.sv-article__detail-panel');
-            if (!panel) {
-                return;
-            }
-
-            if (expandedCard && expandedCard !== cardEl) {
-                closeExpandedCard();
-            }
-            if (expandedCard === cardEl && panel.classList.contains('is-open')) {
-                closeExpandedCard();
-                return;
-            }
-
-            renderPanelMessage(panel, 'Đang tải chi tiết bài viết...');
-            setPanelState(panel, true);
-            expandedCard = cardEl;
-
-            if (detailCache.has(postId)) {
-                const cached = detailCache.get(postId);
-                panel.innerHTML = `<div class="sv-article__detail-inner">${renderPostDetailContent(cached.post, cached.comments)}</div>`;
-                panel.style.maxHeight = `${panel.scrollHeight}px`;
-                return;
-            }
-
-            try {
-                const payload = await fetchJson(`${API_BASE_URL}/posts/${postId}`);
-                const detail = resolvePostDetail(payload);
-                if (!detail) {
-                    throw new Error('Invalid payload');
-                }
-                detailCache.set(postId, detail);
-                panel.innerHTML = `<div class="sv-article__detail-inner">${renderPostDetailContent(detail.post, detail.comments)}</div>`;
-                panel.style.maxHeight = `${panel.scrollHeight}px`;
-            } catch (error) {
-                console.error('Cannot load post detail:', error);
-                const fallbackPost = loadedPosts.find((post) => Number(post.postId) === Number(postId));
-                if (fallbackPost) {
-                    const fallbackDetail = { post: fallbackPost, comments: [] };
-                    detailCache.set(postId, fallbackDetail);
-                    panel.innerHTML = `<div class="sv-article__detail-inner">${renderPostDetailContent(fallbackDetail.post, fallbackDetail.comments)}</div>`;
-                } else {
-                    renderPanelMessage(panel, 'Không thể tải chi tiết bài viết.');
-                }
-                panel.style.maxHeight = `${panel.scrollHeight}px`;
-            }
-        };
 
         const renderEventItem = (event) => {
             const safeTitle = escapeHtml(event.title || 'Sự kiện mới');
@@ -1229,8 +823,6 @@
         const renderHomeData = (payload) => {
             const latestPosts = Array.isArray(payload.latestPosts) ? payload.latestPosts.map(normalizePost) : [];
             const upcomingEvents = Array.isArray(payload.upcomingEvents) ? payload.upcomingEvents.map(normalizeEvent) : [];
-            expandedCard = null;
-            detailCache.clear();
 
             loadedPosts = latestPosts.slice();
             const visiblePosts = getVisiblePosts(loadedPosts);
@@ -1263,12 +855,6 @@
             loadMoreBtn.disabled = !hasMorePosts;
         };
 
-        const renderError = () => {
-            feedEl.innerHTML = `<div class="sv-meta">Không thể tải dữ liệu trang chủ.</div>`;
-            eventsEl.innerHTML = `<li><div class="sv-meta">Không thể tải sự kiện.</div></li>`;
-            membersEl.innerHTML = `<div class="p-3 sv-meta">Không thể tải thành viên.</div>`;
-            loadMoreBtn.style.display = 'none';
-        };
 
         const injectLocalArticle = () => {
             const raw = localStorage.getItem('svp.latestSubmittedArticle');
@@ -1378,12 +964,14 @@
             if (!clickable || !feedEl.contains(clickable)) {
                 return;
             }
-            const detailZone = event.target.closest('.sv-article__detail-panel');
-            if (detailZone && clickable.contains(detailZone)) {
+            // Allow native link navigation (cover image link, "Đọc tiếp" button)
+            if (event.target.closest('a') || event.target.closest('button')) {
                 return;
             }
             const postId = Number(clickable.getAttribute('data-post-id'));
-            openPostDetail(clickable, postId);
+            if (Number.isFinite(postId) && postId > 0) {
+                window.location.href = `post_detail.html?postId=${encodeURIComponent(postId)}`;
+            }
         });
         feedEl.addEventListener('keydown', (event) => {
             if (event.key !== 'Enter' && event.key !== ' ') {
@@ -1395,7 +983,9 @@
             }
             event.preventDefault();
             const postId = Number(clickable.getAttribute('data-post-id'));
-            openPostDetail(clickable, postId);
+            if (Number.isFinite(postId) && postId > 0) {
+                window.location.href = `post_detail.html?postId=${encodeURIComponent(postId)}`;
+            }
         });
         loadHome();
     })();

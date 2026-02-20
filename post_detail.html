@@ -1,0 +1,1250 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title id="pd-page-title">Bài viết - SVP</title>
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+    <link rel="shortcut icon" href="assets/icons/favicon.svg">
+
+    <!-- Bootstrap 5 -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Font Awesome -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <!-- Custom Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather:ital,wght@0,400;0,700;1,400&family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="svp.css">
+    <link rel="stylesheet" href="dropdown-hover.css">
+    <style>
+        /* ── Magazine article page ── */
+        .pd-hero {
+            width: 100%;
+            aspect-ratio: 16 / 6;
+            border-radius: 16px;
+            background: #e2e8f0 center / cover no-repeat;
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
+            border: 1px solid #e5e7eb;
+        }
+        .pd-hero__overlay {
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(to top, rgba(15,23,42,.55) 0%, transparent 55%);
+            border-radius: 16px;
+        }
+        .pd-meta-bar {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: .55rem 1rem;
+            margin-bottom: 1rem;
+            color: #64748b;
+            font-size: .875rem;
+        }
+        .pd-title {
+            font-family: 'Merriweather', Georgia, serif;
+            font-size: clamp(1.5rem, 4vw, 2.4rem);
+            font-weight: 700;
+            line-height: 1.3;
+            color: #0f172a;
+            margin-bottom: 1rem;
+        }
+        .pd-author-bar {
+            display: flex;
+            align-items: center;
+            gap: .85rem;
+            padding: .85rem 1rem;
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            margin-bottom: 1.5rem;
+        }
+        .pd-author-avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: 1.15rem;
+            flex-shrink: 0;
+        }
+        .pd-author-name {
+            font-weight: 700;
+            color: #0f172a;
+            line-height: 1.2;
+        }
+        .pd-author-meta {
+            color: #64748b;
+            font-size: .84rem;
+        }
+        /* Stats badges row */
+        .pd-stats-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .55rem;
+            margin-bottom: 1.75rem;
+        }
+        .pd-stat {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .35rem .75rem;
+            border-radius: 999px;
+            border: 1px solid #dbeafe;
+            background: #eff6ff;
+            color: #1e3a8a;
+            font-size: .85rem;
+            font-weight: 600;
+        }
+
+        /* Article body typography */
+        .pd-body {
+            font-family: 'Merriweather', Georgia, serif;
+            font-size: 1.035rem;
+            line-height: 1.85;
+            color: #1e293b;
+        }
+        .pd-body p { margin-bottom: 1.15rem; }
+        .pd-body h2, .pd-body h3 {
+            font-family: var(--sv-title-font, 'Roboto Condensed', sans-serif);
+            color: #0f172a;
+            margin: 1.75rem 0 .65rem;
+        }
+        .pd-body h2 { font-size: 1.45rem; }
+        .pd-body h3 { font-size: 1.2rem; }
+        .pd-body img {
+            display: block;
+            max-width: 100%;
+            border-radius: 12px;
+            margin: 1.25rem auto;
+            border: 1px solid #e5e7eb;
+        }
+        .pd-body blockquote {
+            border-left: 4px solid #2563eb;
+            background: #eff6ff;
+            margin: 1.25rem 0;
+            padding: .85rem 1.1rem;
+            border-radius: 0 10px 10px 0;
+            color: #1e3a8a;
+            font-style: italic;
+        }
+        .pd-body ul, .pd-body ol {
+            padding-left: 1.5rem;
+            margin-bottom: 1rem;
+        }
+        .pd-body a { color: #2563eb; }
+        .pd-body a:hover { color: #1d4ed8; }
+
+        /* Divider */
+        .pd-divider {
+            border: none;
+            border-top: 2px solid #e5e7eb;
+            margin: 2rem 0;
+        }
+
+        /* Comment section */
+        .pd-comment-section__title {
+            font-family: var(--sv-title-font, 'Roboto Condensed', sans-serif);
+            font-size: 1.3rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: 1.25rem;
+            display: flex;
+            align-items: center;
+            gap: .55rem;
+        }
+        .pd-comment-list {
+            display: grid;
+            gap: 1rem;
+            margin-bottom: 1.5rem;
+        }
+        .pd-comment-item {
+            background: #f8fafc;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 1rem 1.1rem;
+        }
+        .pd-comment-item__header {
+            display: flex;
+            align-items: center;
+            gap: .7rem;
+            margin-bottom: .6rem;
+        }
+        .pd-comment-avatar {
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #2563eb, #1558b0);
+            color: #fff;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            font-size: .9rem;
+            flex-shrink: 0;
+        }
+        .pd-comment-name {
+            font-weight: 700;
+            color: #0f172a;
+            font-size: .9rem;
+        }
+        .pd-comment-date {
+            color: #94a3b8;
+            font-size: .8rem;
+            margin-left: auto;
+        }
+        .pd-comment-media {
+            margin-bottom: .65rem;
+        }
+        .pd-comment-media img {
+            display: block;
+            width: 100%;
+            max-height: 360px;
+            object-fit: contain;
+            border-radius: 10px;
+            border: 1px solid #dbeafe;
+            background: #fff;
+        }
+        .pd-comment-text {
+            color: #1f2937;
+            font-size: .92rem;
+            line-height: 1.65;
+            white-space: pre-wrap;
+            word-break: break-word;
+            margin: 0;
+        }
+        .pd-reply-actions button {
+            border: 0;
+            background: transparent;
+            color: #2563eb;
+            font-size: .82rem;
+            font-weight: 700;
+            cursor: pointer;
+            padding: 0;
+        }
+        .pd-reply-actions button:hover { text-decoration: underline; }
+
+        /* Reply form */
+        .pd-reply-form-section {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            overflow: hidden;
+        }
+        .pd-reply-form-section .sv-card__hd {
+            border-radius: 14px 14px 0 0;
+        }
+        .sv-char-count {
+            text-align: right;
+            color: #64748b;
+            font-size: .84rem;
+            margin-top: .35rem;
+        }
+        .sv-reply-image-preview {
+            display: none;
+            margin-top: .55rem;
+            max-height: 340px;
+            width: 100%;
+            object-fit: contain;
+            border-radius: 10px;
+            border: 1px solid #dbeafe;
+            background: #f8fafc;
+        }
+        .sv-reply-image-preview.is-visible { display: block; }
+
+        /* Sidebar sticky */
+        .pd-sidebar-sticky {
+            position: sticky;
+            top: 1rem;
+        }
+
+        /* Share buttons */
+        .pd-share {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+            margin-top: 1.5rem;
+        }
+        .pd-share a {
+            display: inline-flex;
+            align-items: center;
+            gap: .4rem;
+            padding: .4rem .85rem;
+            border-radius: 999px;
+            font-size: .85rem;
+            font-weight: 600;
+            text-decoration: none;
+            transition: opacity .15s;
+        }
+        .pd-share a:hover { opacity: .85; }
+        .pd-share__fb { background: #1877f2; color: #fff; }
+        .pd-share__tw { background: #000; color: #fff; }
+        .pd-share__copy { background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; cursor:pointer; }
+
+        /* Loading / error states */
+        .pd-skeleton {
+            background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
+            background-size: 200% 100%;
+            animation: pd-shimmer 1.4s infinite;
+            border-radius: 8px;
+        }
+        @keyframes pd-shimmer {
+            0% { background-position: 200% 0; }
+            100% { background-position: -200% 0; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- Top brand + auth -->
+<div class="sv-topbar pt-2 pb-1">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="sv-brand">
+            <img class="sv-brand__logo-img" src="assets/icons/logo_svp.png" alt="SVP" width="102" height="112" />
+            <div class="sv-brand__title">
+                <h1>DIỄN ĐÀN SINH VIÊN & TRI THỨC VIỆT TẠI PHÁP <span class="sv-brand__accent">(SVP)</span></h1>
+                <div class="sv-brand__divider"></div>
+                <small class="sv-brand__tagline">Kết Nối – Chia Sẻ – Thành Công</small>
+            </div>
+        </div>
+        <div id="sv-auth-box" class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <a class="btn btn-outline-secondary" href="signup.html">Đăng Ký</a>
+            <a class="btn btn-primary" href="login.html">Đăng Nhập</a>
+        </div>
+    </div>
+</div>
+
+<!-- Main nav -->
+<div class="sv-nav">
+    <div class="container d-flex align-items-center justify-content-between">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link" href="index.html">Trang Chủ</a></li>
+            <li class="nav-item"><a class="nav-link" href="forum.html">Diễn Đàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="categories.html">Khám Phá Chủ Đề</a></li>
+            <li class="nav-item"><a class="nav-link" href="events.html">Sự Kiện & Lễ Hội</a></li>
+            <li class="nav-item"><a class="nav-link" href="ban-do-paris.html">Bản Đồ Paris</a></li>
+            <li class="nav-item"><a class="nav-link" href="about.html">Giới Thiệu</a></li>
+        </ul>
+        <div class="sv-search position-relative my-2 my-md-0" style="width:min(320px, 60vw);">
+            <i class="fa fa-magnifying-glass"></i>
+            <input class="form-control" type="search" placeholder="Tìm kiếm..." />
+        </div>
+    </div>
+</div>
+
+<main class="container my-3 my-md-4" id="pd-main">
+
+    <!-- Breadcrumb -->
+    <nav class="sv-breadcrumb mb-3" aria-label="breadcrumb">
+        <a href="index.html">Trang chủ</a> /
+        <a href="index.html" id="pd-breadcrumb-cat">Bài viết</a> /
+        <span id="pd-breadcrumb-title">Đang tải...</span>
+    </nav>
+
+    <div class="row g-4">
+        <!-- ── Main column ── -->
+        <div class="col-lg-8">
+
+            <!-- Hero cover -->
+            <div id="pd-hero" class="pd-hero pd-skeleton">
+                <div class="pd-hero__overlay"></div>
+            </div>
+
+            <!-- Meta bar -->
+            <div class="pd-meta-bar">
+                <span class="sv-pill" id="pd-category"><i class="fa-regular fa-folder-open me-1"></i>Đang tải...</span>
+                <span><i class="fa-regular fa-clock me-1 text-primary"></i><span id="pd-date">--</span></span>
+                <span><i class="fa-regular fa-eye me-1 text-primary"></i><span id="pd-views">--</span> lượt xem</span>
+                <span><i class="fa-solid fa-book-open me-1 text-primary"></i><span id="pd-readtime">--</span></span>
+            </div>
+
+            <!-- Title -->
+            <h1 id="pd-title" class="pd-title">Đang tải bài viết...</h1>
+
+            <!-- Author bar -->
+            <div class="pd-author-bar">
+                <div class="pd-author-avatar" id="pd-author-avatar">?</div>
+                <div>
+                    <div class="pd-author-name" id="pd-author-name">Đang tải...</div>
+                    <div class="pd-author-meta" id="pd-author-meta"></div>
+                </div>
+                <div class="ms-auto d-flex gap-2 flex-wrap">
+                    <span class="pd-stat" id="pd-likes"><i class="fa-regular fa-thumbs-up"></i>--</span>
+                    <span class="pd-stat" id="pd-comment-count"><i class="fa-regular fa-comments"></i>--</span>
+                </div>
+            </div>
+
+            <!-- Article body -->
+            <div id="pd-body" class="pd-body">
+                <div class="pd-skeleton" style="height:1.1rem;margin-bottom:.75rem;border-radius:6px;"></div>
+                <div class="pd-skeleton" style="height:1.1rem;margin-bottom:.75rem;border-radius:6px;width:90%;"></div>
+                <div class="pd-skeleton" style="height:1.1rem;margin-bottom:.75rem;border-radius:6px;width:80%;"></div>
+                <div class="pd-skeleton" style="height:1.1rem;margin-bottom:.75rem;border-radius:6px;width:95%;"></div>
+                <div class="pd-skeleton" style="height:1.1rem;border-radius:6px;width:70%;"></div>
+            </div>
+
+            <!-- Share buttons -->
+            <div class="pd-share mt-3" id="pd-share" style="display:none!important">
+                <a id="pd-share-fb" class="pd-share__fb" href="#" target="_blank" rel="noopener noreferrer">
+                    <i class="fa-brands fa-facebook-f"></i>Chia sẻ
+                </a>
+                <a id="pd-share-tw" class="pd-share__tw" href="#" target="_blank" rel="noopener noreferrer">
+                    <i class="fa-brands fa-x-twitter"></i>Tweet
+                </a>
+                <button class="pd-share__copy" id="pd-share-copy" type="button">
+                    <i class="fa-regular fa-copy"></i>Sao chép link
+                </button>
+            </div>
+
+            <hr class="pd-divider">
+
+            <!-- Comments section -->
+            <section id="pd-comments-section">
+                <div class="pd-comment-section__title">
+                    <i class="fa-regular fa-comments text-primary"></i>
+                    Bình luận <span id="pd-comment-badge" class="sv-badge ms-1"></span>
+                </div>
+                <div id="pd-comment-list" class="pd-comment-list" aria-live="polite">
+                    <div class="sv-meta">Đang tải bình luận...</div>
+                </div>
+            </section>
+
+            <!-- Reply form -->
+            <section class="pd-reply-form-section sv-card sv-form mt-3" id="reply-box">
+                <div class="sv-card__hd"><i class="fa-solid fa-pen me-2 text-primary"></i>Viết bình luận</div>
+                <form id="reply-form" class="p-3" novalidate>
+                    <div class="row g-2">
+                        <div class="col-md-6">
+                            <label for="reply-name" class="form-label">Tên hiển thị</label>
+                            <input id="reply-name" class="form-control" type="text" placeholder="Ví dụ: Minh Đức" required>
+                        </div>
+                        <div class="col-md-6">
+                            <label for="reply-email" class="form-label">Email</label>
+                            <input id="reply-email" class="form-control" type="email" placeholder="ban@example.com" required>
+                        </div>
+                    </div>
+                    <div class="mt-3">
+                        <label for="reply-message" class="form-label">Nội dung bình luận</label>
+                        <textarea id="reply-message" class="form-control" rows="5" maxlength="2000"
+                            placeholder="Chia sẻ ý kiến, câu hỏi hoặc bổ sung thông tin..." required></textarea>
+                        <div id="reply-char-count" class="sv-char-count">0/2000 ký tự</div>
+                    </div>
+                    <div class="mt-3">
+                        <label for="reply-image" class="form-label">Ảnh đính kèm <span class="sv-meta">(tuỳ chọn)</span></label>
+                        <input id="reply-image" class="form-control" type="file" accept="image/*">
+                        <div id="reply-image-status" class="sv-meta mt-2"></div>
+                        <img id="reply-image-preview" class="sv-reply-image-preview" src="" alt="Xem trước ảnh đính kèm">
+                        <button id="reply-image-clear" class="btn btn-sm btn-outline-secondary mt-2 d-none" type="button">Xóa ảnh đã chọn</button>
+                    </div>
+                    <div class="mt-3 d-flex flex-wrap gap-2">
+                        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-paper-plane me-2"></i>Đăng bình luận</button>
+                        <button id="reply-clear" class="btn btn-outline-secondary" type="button">Xóa nội dung</button>
+                    </div>
+                    <div id="reply-feedback" class="sv-meta mt-3" aria-live="polite"></div>
+                </form>
+            </section>
+        </div>
+
+        <!-- ── Sidebar ── -->
+        <div class="col-lg-4">
+            <div class="pd-sidebar-sticky">
+
+                <!-- Article stats card -->
+                <div class="sv-card mb-3">
+                    <div class="sv-card__hd"><i class="fa-solid fa-chart-simple me-2 text-primary"></i>Thống kê bài viết</div>
+                    <ul id="pd-kpis" class="sv-list mb-0">
+                        <li><div><span class="sv-meta">Đang tải...</span></div></li>
+                    </ul>
+                </div>
+
+                <!-- Related articles -->
+                <div class="sv-card mb-3">
+                    <div class="sv-card__hd"><i class="fa-solid fa-newspaper me-2 text-primary"></i>Bài viết liên quan</div>
+                    <ul id="pd-related" class="sv-list mb-0">
+                        <li><div><span class="sv-meta">Đang tải...</span></div></li>
+                    </ul>
+                </div>
+
+                <!-- Community rules -->
+                <div class="sv-card">
+                    <div class="sv-card__hd"><i class="fa-solid fa-shield-heart me-2 text-primary"></i>Quy tắc bình luận</div>
+                    <ul class="sv-list mb-0">
+                        <li><div><strong>Tôn trọng người khác</strong><div class="sv-meta">Không công kích cá nhân hay sử dụng ngôn ngữ thô tục.</div></div></li>
+                        <li><div><strong>Thông tin có căn cứ</strong><div class="sv-meta">Khuyến khích đính kèm nguồn tham khảo chính thức.</div></div></li>
+                        <li><div><strong>Bám sát chủ đề</strong><div class="sv-meta">Bình luận nên liên quan đến nội dung bài viết.</div></div></li>
+                        <li><div><strong>Không spam</strong><div class="sv-meta">Tránh đăng lặp nhiều lần cùng nội dung.</div></div></li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="container py-4">
+    <div class="row">
+        <div class="col-md">
+            <div class="sv-brand d-flex align-items-center mb-2">
+                <div class="sv-brand__logo" style="width:36px; height:36px; font-size:14px;">SVP</div>
+                <strong class="ms-2">SVP – Kết Nối • Chia Sẻ • Thành Công</strong>
+            </div>
+            <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
+        </div>
+        <div class="col-md text-md-end mt-2 mt-md-0">
+            <a class="me-3" href="terms.html">Điều khoản</a>
+            <a class="me-3" href="security.html">Bảo mật</a>
+            <a href="contact.html">Liên hệ</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="auth-topbar.js"></script>
+<script>
+(function () {
+    'use strict';
+
+    /* ── Constants ── */
+    const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+    const WORDS_PER_MINUTE = 220;
+    const MAX_REPLY_IMAGE_SOURCE_BYTES = 10 * 1024 * 1024; // 10 MB
+    const MAX_REPLY_IMAGE_UPLOAD_BYTES = 88 * 1024;        // 88 KB
+    const METRIC_KEY = 'svp.postDetail.metrics.v1';
+    const LOCAL_COMMENT_PREFIX = 'svp.postDetail.localComments.v1.';
+
+    const CATEGORY_NAMES = {
+        1: 'Học tập và nghiên cứu tại Pháp',
+        2: 'Kinh nghiệm xin học bổng và du học',
+        3: 'Cuộc sống tại Pháp',
+        4: 'Cơ hội việc làm và thực tập',
+        5: 'Các vấn đề pháp lý, quốc tịch và thuế khóa',
+        6: 'Văn hóa và ngôn ngữ Pháp',
+        7: 'Sự kiện và giao lưu',
+        8: 'Nhà cửa',
+        9: 'Mua bán, rao vặt',
+        10: 'Đầu tư tại Pháp',
+        11: 'Chia sẻ trải nghiệm, câu chuyện cá nhân',
+        12: 'Công nghệ, kỹ năng và tri thức mở',
+        13: 'Giải trí, du lịch',
+        14: 'Góc văn học và nghệ thuật',
+        15: 'Nơi gặp gỡ, hẹn hò nghiêm túc',
+        16: 'Chém gió, tán gẫu',
+        17: 'Góp ý xây dựng SVP'
+    };
+
+    /* ── DOM refs ── */
+    const heroCover      = document.getElementById('pd-hero');
+    const breadcrumbCat  = document.getElementById('pd-breadcrumb-cat');
+    const breadcrumbTit  = document.getElementById('pd-breadcrumb-title');
+    const categoryEl     = document.getElementById('pd-category');
+    const dateEl         = document.getElementById('pd-date');
+    const viewsEl        = document.getElementById('pd-views');
+    const readtimeEl     = document.getElementById('pd-readtime');
+    const titleEl        = document.getElementById('pd-title');
+    const authorAvatarEl = document.getElementById('pd-author-avatar');
+    const authorNameEl   = document.getElementById('pd-author-name');
+    const authorMetaEl   = document.getElementById('pd-author-meta');
+    const likesEl        = document.getElementById('pd-likes');
+    const commentCountEl = document.getElementById('pd-comment-count');
+    const bodyEl         = document.getElementById('pd-body');
+    const shareSection   = document.getElementById('pd-share');
+    const shareFbEl      = document.getElementById('pd-share-fb');
+    const shareTwEl      = document.getElementById('pd-share-tw');
+    const shareCopyBtn   = document.getElementById('pd-share-copy');
+    const commentListEl  = document.getElementById('pd-comment-list');
+    const commentBadgeEl = document.getElementById('pd-comment-badge');
+    const kpisEl         = document.getElementById('pd-kpis');
+    const relatedEl      = document.getElementById('pd-related');
+    const pageTitleEl    = document.getElementById('pd-page-title');
+
+    const replyForm          = document.getElementById('reply-form');
+    const replyNameEl        = document.getElementById('reply-name');
+    const replyEmailEl       = document.getElementById('reply-email');
+    const replyMessageEl     = document.getElementById('reply-message');
+    const replyCharCountEl   = document.getElementById('reply-char-count');
+    const replyImageEl       = document.getElementById('reply-image');
+    const replyImageStatusEl = document.getElementById('reply-image-status');
+    const replyImagePreview  = document.getElementById('reply-image-preview');
+    const replyImageClearBtn = document.getElementById('reply-image-clear');
+    const replyFeedbackEl    = document.getElementById('reply-feedback');
+    const replyClearBtn      = document.getElementById('reply-clear');
+    const replySubmitBtn     = replyForm ? replyForm.querySelector('button[type="submit"]') : null;
+    let replyImageObjectUrl  = '';
+
+    /* ── Utilities ── */
+    const escapeHtml = (v) => String(v ?? '')
+        .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+        .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+
+    const toPlainText = (html) => String(html ?? '')
+        .replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&')
+        .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\s+/g,' ').trim();
+
+    const formatDate = (iso) => {
+        const d = new Date(iso);
+        if (isNaN(d)) return 'N/A';
+        return new Intl.DateTimeFormat('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'}).format(d);
+    };
+
+    const formatDateFull = (iso) => {
+        const d = new Date(iso);
+        if (isNaN(d)) return '';
+        return new Intl.DateTimeFormat('vi-VN',{dateStyle:'long'}).format(d);
+    };
+
+    const timeAgo = (iso) => {
+        const ms = Date.parse(String(iso||''));
+        if (!ms) return '';
+        const diff = Math.max(0, Math.floor((Date.now()-ms)/60000));
+        if (diff < 1) return 'Vừa xong';
+        if (diff < 60) return `${diff} phút trước`;
+        const h = Math.floor(diff/60);
+        if (h < 24) return `${h} giờ trước`;
+        return `${Math.floor(h/24)} ngày trước`;
+    };
+
+    const getCategoryName = (id) => CATEGORY_NAMES[id] || `Chuyên mục #${id||'?'}`;
+
+    const toSafeHttpUrl = (value) => {
+        const raw = String(value||'').trim();
+        if (!raw) return '';
+        try {
+            const u = new URL(raw, window.location.href);
+            return (u.protocol==='http:'||u.protocol==='https:') ? u.href : '';
+        } catch { return ''; }
+    };
+
+    const extractFirstImageSrc = (html) => {
+        const m = String(html||'').match(/<img[^>]*src\s*=\s*['"]([^'"]+)['"]/i);
+        return m && m[1] ? String(m[1]).trim() : '';
+    };
+
+    const estimateReadTime = (html) => {
+        const words = toPlainText(html).split(/\s+/).length;
+        return `${Math.max(1, Math.ceil(words/WORDS_PER_MINUTE))} phút đọc`;
+    };
+
+    const getInitial = (name) => String(name||'?').trim().charAt(0).toUpperCase()||'?';
+
+    const normalizePost = (post) => ({
+        postId: Number(post?.postId ?? post?.id ?? 0),
+        categoryId: Number(post?.categoryId ?? 0),
+        title: post?.title || '',
+        contentHtml: post?.contentHtml || post?.content_html || post?.content || '',
+        createdAt: post?.createdAt || post?.created_at || new Date().toISOString(),
+        author: post?.author || {
+            userId: null,
+            nickname: post?.nickname || 'anonymous',
+            displayName: post?.authorDisplayName || post?.authorName || post?.nickname || 'Ẩn danh'
+        },
+        viewCount: Number(post?.viewCount ?? post?.views ?? 0),
+        likeCount: Number(post?.likeCount ?? post?.likes ?? 0)
+    });
+
+    const normalizeComment = (c) => {
+        const author = c?.author || {};
+        const contentHtml = String(c?.contentHtml || c?.content_html || c?.content || '');
+        const directImg = toSafeHttpUrl(c?.imageUrl || c?.image_url || '');
+        const embeddedImg = toSafeHttpUrl(extractFirstImageSrc(contentHtml));
+        return {
+            id: Number(c?.commentId || c?.id || Date.now()),
+            authorName: String(author.displayName || author.nickname || c?.authorName || 'Ẩn danh'),
+            createdAt: String(c?.createdAt || c?.created_at || ''),
+            contentText: toPlainText(contentHtml) || String(c?.contentText || ''),
+            imageUrl: directImg || embeddedImg
+        };
+    };
+
+    /* ── Metrics (localStorage) ── */
+    const loadMetrics = () => {
+        try { const d = JSON.parse(localStorage.getItem(METRIC_KEY)||'{}'); return (d&&typeof d==='object') ? d : {}; }
+        catch { return {}; }
+    };
+    const saveMetrics = (store) => { try { localStorage.setItem(METRIC_KEY, JSON.stringify(store)); } catch {} };
+    const metricStore = loadMetrics();
+
+    const updateMetric = (postId, updater) => {
+        const k = String(postId);
+        const cur = metricStore[k] || { views:0, comments:0 };
+        metricStore[k] = { views: Math.max(0,Number(updater(cur).views||0)), comments: Math.max(0,Number(updater(cur).comments||0)) };
+        saveMetrics(metricStore);
+        return metricStore[k];
+    };
+
+    /* ── Local comments ── */
+    const localKey = (postId) => `${LOCAL_COMMENT_PREFIX}${postId}`;
+    const loadLocalComments = (postId) => {
+        try { const arr = JSON.parse(localStorage.getItem(localKey(postId))||'[]'); return Array.isArray(arr) ? arr : []; }
+        catch { return []; }
+    };
+    const saveLocalComment = (postId, comment) => {
+        const existing = loadLocalComments(postId);
+        existing.push(comment);
+        try { localStorage.setItem(localKey(postId), JSON.stringify(existing)); } catch {}
+    };
+
+    /* ── Trimming preview from full content ── */
+    const normalizeCompareText = (v) => String(v??'').toLowerCase()
+        .replace(/&nbsp;/g,' ').replace(/\s+/g,' ')
+        .replace(/[.,/#!$%^&*;:{}=_`~()\-+?"'|[\]\\<>]/g,'').trim();
+
+    const normalizeUrl = (v) => {
+        const raw = String(v||'').trim();
+        if (!raw) return '';
+        try { return new URL(raw, window.location.href).href; } catch { return raw; }
+    };
+
+    const getLeadPreviewText = (html) => {
+        const t = toPlainText(html);
+        return t.slice(0, 220).trim();
+    };
+
+    const trimPreviewFromDetail = (post) => {
+        const rawHtml = String(post?.contentHtml || '').trim();
+        if (!rawHtml) return '<p>Nội dung đang được cập nhật.</p>';
+
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(`<div data-root>${rawHtml}</div>`, 'text/html');
+        const root = doc.body.querySelector('[data-root]');
+        if (!root) return rawHtml;
+
+        // Remove heading if same as title
+        const firstEl = root.firstElementChild;
+        const normTitle = normalizeCompareText(post?.title||'');
+        if (firstEl && /^H[1-6]$/i.test(firstEl.tagName) && normTitle &&
+            normalizeCompareText(firstEl.textContent||'') === normTitle) {
+            firstEl.remove();
+        }
+
+        // Remove first cover image (already shown in hero)
+        const previewImgSrc = extractFirstImageSrc(rawHtml);
+        if (previewImgSrc) {
+            const firstImg = root.querySelector('img');
+            if (firstImg && normalizeUrl(firstImg.getAttribute('src')) === normalizeUrl(previewImgSrc)) {
+                const wrap = firstImg.parentElement;
+                if (wrap && /^(P|FIGURE|DIV)$/i.test(wrap.tagName) && wrap.querySelectorAll('img').length === 1 && !toPlainText(wrap.innerHTML)) {
+                    wrap.remove();
+                } else { firstImg.remove(); }
+            }
+        }
+
+        // Remove lead paragraph (already shown as preview on index)
+        let lead = getLeadPreviewText(rawHtml);
+        if (lead) {
+            for (const block of Array.from(root.children)) {
+                if (!lead) break;
+                const bt = toPlainText(block.innerHTML);
+                if (!bt) continue;
+                const nl = normalizeCompareText(lead), nb = normalizeCompareText(bt);
+                if (!nl||!nb) break;
+                if (nl.startsWith(nb)) { lead = lead.slice(bt.length).trimStart(); block.remove(); continue; }
+                if (nb.startsWith(nl)) { block.textContent = block.textContent.slice(lead.length).trimStart(); lead=''; }
+                break;
+            }
+        }
+
+        // Clean empty blocks
+        Array.from(root.children).forEach(b => {
+            if (!b.querySelector('img,video,iframe,table,ul,ol,blockquote') && !toPlainText(b.innerHTML)) b.remove();
+        });
+
+        return root.innerHTML.trim() || '<p>Không có nội dung bổ sung ngoài phần preview.</p>';
+    };
+
+    /* ── Image compression (same as thread.html) ── */
+    const formatSize = (b) => {
+        const n = Number(b);
+        if (!isFinite(n)||n<=0) return '0 B';
+        if (n<1024) return `${n} B`;
+        if (n<1048576) return `${(n/1024).toFixed(1)} KB`;
+        return `${(n/1048576).toFixed(2)} MB`;
+    };
+
+    const imageExtForMime = (mime) => {
+        const m = String(mime||'').toLowerCase();
+        if (m==='image/jpeg'||m==='image/jpg') return 'jpg';
+        if (m==='image/png') return 'png';
+        if (m==='image/webp') return 'webp';
+        if (m==='image/gif') return 'gif';
+        return 'jpg';
+    };
+
+    const loadImgFromFile = (file) => new Promise((res, rej) => {
+        const u = URL.createObjectURL(file);
+        const img = new Image();
+        img.onload = () => { URL.revokeObjectURL(u); res(img); };
+        img.onerror = () => { URL.revokeObjectURL(u); rej(new Error('Không đọc được ảnh.')); };
+        img.src = u;
+    });
+
+    const canvasToBlob = (canvas, mime, quality) => new Promise(r => canvas.toBlob(b=>r(b), mime, quality));
+
+    const compressImage = async (file, maxBytes) => {
+        if (!(file instanceof File)) throw new Error('File ảnh không hợp lệ.');
+        if (file.size < maxBytes) return file;
+        const img = await loadImgFromFile(file);
+        const sw = img.naturalWidth || img.width, sh = img.naturalHeight || img.height;
+        if (!sw||!sh) throw new Error('Không xác định được kích thước ảnh.');
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) throw new Error('Trình duyệt không hỗ trợ nén ảnh.');
+        const scales = [1,.92,.84,.76,.68,.6,.52,.44,.36,.3,.25];
+        const qualities = [.9,.82,.74,.66,.58,.5,.42];
+        const mimes = ['image/webp','image/jpeg'];
+        let best = null, bestMime='';
+        for (const s of scales) {
+            canvas.width = Math.max(1,Math.round(sw*s));
+            canvas.height = Math.max(1,Math.round(sh*s));
+            ctx.clearRect(0,0,canvas.width,canvas.height);
+            ctx.drawImage(img,0,0,canvas.width,canvas.height);
+            for (const m of mimes) for (const q of qualities) {
+                const blob = await canvasToBlob(canvas,m,q);
+                if (!blob) continue;
+                if (!best||blob.size<best.size){best=blob;bestMime=m;}
+                if (blob.size<maxBytes) return new File([blob],`reply-${Date.now()}.${imageExtForMime(m)}`,{type:m});
+            }
+        }
+        if (best&&best.size<maxBytes) return new File([best],`reply-${Date.now()}.${imageExtForMime(bestMime)}`,{type:bestMime});
+        throw new Error(`Không thể nén ảnh xuống dưới ${formatSize(maxBytes)}.`);
+    };
+
+    /* ── Reply image preview ── */
+    const revokeImagePreview = () => {
+        if (!replyImageObjectUrl) return;
+        URL.revokeObjectURL(replyImageObjectUrl);
+        replyImageObjectUrl = '';
+    };
+    const setImagePreview = (file) => {
+        revokeImagePreview();
+        if (!file) { replyImagePreview.classList.remove('is-visible'); replyImagePreview.removeAttribute('src'); return; }
+        replyImageObjectUrl = URL.createObjectURL(file);
+        replyImagePreview.src = replyImageObjectUrl;
+        replyImagePreview.classList.add('is-visible');
+    };
+    const clearImageInput = (opts={}) => {
+        replyImageEl.value='';
+        setImagePreview(null);
+        replyImageClearBtn.classList.add('d-none');
+        if (opts.clearStatus!==false) setImageStatus('','info');
+    };
+
+    const setImageStatus = (txt, type) => {
+        if (!replyImageStatusEl) return;
+        replyImageStatusEl.textContent = txt||'';
+        replyImageStatusEl.style.color = type==='error' ? '#b91c1c' : (type==='success' ? '#15803d' : '#64748b');
+    };
+    const setReplyFeedback = (txt, type) => {
+        if (!replyFeedbackEl) return;
+        replyFeedbackEl.textContent = txt||'';
+        replyFeedbackEl.style.color = type==='error' ? '#b91c1c' : (type==='success' ? '#15803d' : '#64748b');
+    };
+
+    /* ── Upload image to Cloudflare ── */
+    const uploadImage = async (file) => {
+        const mime = String(file?.type||'').toLowerCase();
+        if (!mime.startsWith('image/')) throw new Error('Chỉ hỗ trợ file ảnh.');
+        setImageStatus('Đang nén ảnh...','info');
+        const compressed = await compressImage(file, MAX_REPLY_IMAGE_UPLOAD_BYTES);
+        setImageStatus(`Đã nén ảnh (${formatSize(compressed.size)}). Đang upload...`,'info');
+        const accessToken = window.SVPAuth?.getValidAccessToken ? await window.SVPAuth.getValidAccessToken() : (localStorage.getItem('accessToken')||'');
+        const presignRes = await fetch(`${API_BASE_URL}/api/upload/post-image`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json',Accept:'application/json',...(accessToken?{Authorization:`Bearer ${accessToken}`}:{})},
+            body:JSON.stringify({filename:`comment-${Date.now()}.${imageExtForMime(compressed.type)}`,contentType:compressed.type})
+        });
+        const presignData = await presignRes.json().catch(()=>({}));
+        if (!presignRes.ok) throw new Error(presignData.error||`Không thể tạo URL upload (${presignRes.status}).`);
+        const uploadUrl = String(presignData.uploadUrl||'').trim();
+        const publicUrl = String(presignData.publicUrl||'').trim();
+        if (!uploadUrl||!publicUrl) throw new Error('Thiếu uploadUrl/publicUrl từ API.');
+        setImageStatus('Đang upload...','info');
+        let upRes = await fetch(uploadUrl,{method:'PUT',headers:compressed.type?{'Content-Type':compressed.type}:{},body:compressed});
+        if (!upRes.ok&&compressed.type) upRes = await fetch(uploadUrl,{method:'PUT',body:compressed});
+        if (!upRes.ok) throw new Error(`Upload thất bại (${upRes.status}).`);
+        return publicUrl;
+    };
+
+    const deleteUploadedImage = async (url) => {
+        if (!url) return;
+        const at = window.SVPAuth?.getValidAccessToken ? await window.SVPAuth.getValidAccessToken() : (localStorage.getItem('accessToken')||'');
+        await fetch(`${API_BASE_URL}/api/upload/post-image/delete`,{
+            method:'POST',
+            headers:{'Content-Type':'application/json',Accept:'application/json',...(at?{Authorization:`Bearer ${at}`}:{})},
+            body:JSON.stringify({publicUrl:url})
+        }).catch(()=>{});
+    };
+
+    /* ── Render functions ── */
+    const renderHero = (contentHtml) => {
+        const DEFAULT_COVER = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1400&auto=format&fit=crop';
+        const first = extractFirstImageSrc(contentHtml);
+        const coverUrl = first || DEFAULT_COVER;
+        heroCover.classList.remove('pd-skeleton');
+        heroCover.style.backgroundImage = `url('${escapeHtml(coverUrl)}')`;
+    };
+
+    const renderPostHeader = (post, commentCount) => {
+        const author = post.author || {};
+        const displayName = author.displayName || author.nickname || 'Ẩn danh';
+        const categoryName = getCategoryName(post.categoryId);
+
+        // Page title & breadcrumb
+        document.title = `${post.title||'Bài viết'} - SVP`;
+        if (pageTitleEl) pageTitleEl.textContent = `${post.title||'Bài viết'} - SVP`;
+        if (breadcrumbTit) breadcrumbTit.textContent = post.title || 'Chi tiết bài viết';
+        if (breadcrumbCat) {
+            breadcrumbCat.textContent = categoryName;
+            breadcrumbCat.href = `index.html?categoryId=${post.categoryId}`;
+        }
+
+        // Meta bar
+        if (categoryEl) {
+            categoryEl.innerHTML = `<i class="fa-regular fa-folder-open me-1"></i>${escapeHtml(categoryName)}`;
+        }
+        if (dateEl) dateEl.textContent = formatDateFull(post.createdAt);
+        if (viewsEl) viewsEl.textContent = post.viewCount.toLocaleString('vi-VN');
+        if (readtimeEl) readtimeEl.textContent = estimateReadTime(post.contentHtml);
+
+        // Title
+        if (titleEl) titleEl.textContent = post.title || 'Chưa có tiêu đề';
+
+        // Author
+        if (authorAvatarEl) authorAvatarEl.textContent = getInitial(displayName);
+        if (authorNameEl) authorNameEl.textContent = displayName;
+        if (authorMetaEl) authorMetaEl.textContent = `Đăng ngày ${formatDate(post.createdAt)}`;
+
+        // Stats badges
+        if (likesEl) likesEl.innerHTML = `<i class="fa-regular fa-thumbs-up"></i>${post.likeCount.toLocaleString('vi-VN')} thích`;
+        if (commentCountEl) commentCountEl.innerHTML = `<i class="fa-regular fa-comments"></i>${commentCount.toLocaleString('vi-VN')} bình luận`;
+    };
+
+    const renderBody = (post) => {
+        if (!bodyEl) return;
+        bodyEl.innerHTML = trimPreviewFromDetail(post);
+    };
+
+    const renderShare = (post) => {
+        if (!shareSection) return;
+        const url = encodeURIComponent(window.location.href);
+        const text = encodeURIComponent(post.title||'Bài viết hay từ SVP');
+        if (shareFbEl) shareFbEl.href = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+        if (shareTwEl) shareTwEl.href = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
+        shareSection.style.removeProperty('display');
+    };
+
+    const renderCommentItem = (comment) => {
+        const initial = getInitial(comment.authorName);
+        const safeImage = comment.imageUrl ? `
+            <div class="pd-comment-media">
+                <img src="${escapeHtml(comment.imageUrl)}" alt="Ảnh đính kèm" loading="lazy" decoding="async">
+            </div>` : '';
+        const ago = timeAgo(comment.createdAt);
+        const dateStr = formatDate(comment.createdAt);
+        const timeLabel = ago ? `${ago} (${dateStr})` : dateStr;
+        return `
+            <article class="pd-comment-item" id="comment-${comment.id}">
+                <div class="pd-comment-item__header">
+                    <div class="pd-comment-avatar">${escapeHtml(initial)}</div>
+                    <span class="pd-comment-name">${escapeHtml(comment.authorName)}</span>
+                    <span class="pd-comment-date">${escapeHtml(timeLabel)}</span>
+                </div>
+                ${safeImage}
+                <p class="pd-comment-text">${escapeHtml(comment.contentText) || 'Đang cập nhật nội dung.'}</p>
+                <div class="pd-reply-actions mt-2 d-flex gap-3">
+                    <button type="button" data-reply="${escapeHtml(comment.authorName)}"><i class="fa-solid fa-reply me-1"></i>Trả lời</button>
+                    <button type="button" data-quote="${escapeHtml((comment.contentText||'').slice(0,80))}"><i class="fa-solid fa-quote-left me-1"></i>Trích dẫn</button>
+                </div>
+            </article>`;
+    };
+
+    const renderComments = (comments) => {
+        if (!commentListEl) return;
+        const total = comments.length;
+        if (commentBadgeEl) commentBadgeEl.textContent = total > 0 ? total : '';
+        if (total === 0) {
+            commentListEl.innerHTML = `<div class="sv-meta text-center py-3"><i class="fa-regular fa-comment-dots me-2 text-muted"></i>Chưa có bình luận. Hãy là người đầu tiên!</div>`;
+            return;
+        }
+        commentListEl.innerHTML = `<div class="pd-comment-list">${comments.map(renderCommentItem).join('')}</div>`;
+    };
+
+    const renderKpis = (post, commentCount) => {
+        if (!kpisEl) return;
+        kpisEl.innerHTML = `
+            <li><div><strong>Chuyên mục</strong><div class="sv-meta">${escapeHtml(getCategoryName(post.categoryId))}</div></div></li>
+            <li><div><strong>Ngày đăng</strong><div class="sv-meta">${escapeHtml(formatDateFull(post.createdAt))}</div></div></li>
+            <li><div><strong>Lượt xem</strong><div class="sv-meta">${post.viewCount.toLocaleString('vi-VN')} lượt</div></div></li>
+            <li><div><strong>Lượt thích</strong><div class="sv-meta">${post.likeCount.toLocaleString('vi-VN')} lượt</div></div></li>
+            <li><div><strong>Bình luận</strong><div class="sv-meta">${commentCount.toLocaleString('vi-VN')} bình luận</div></div></li>
+            <li><div><strong>Thời gian đọc</strong><div class="sv-meta">${escapeHtml(estimateReadTime(post.contentHtml))}</div></div></li>
+        `;
+    };
+
+    const renderRelated = async (postId, categoryId) => {
+        if (!relatedEl) return;
+        try {
+            const res = await fetch(`${API_BASE_URL}/posts/latest-articles?limit=6&categoryId=${encodeURIComponent(categoryId)}`,
+                { headers: { Accept: 'application/json' } });
+            const data = await res.json().catch(()=>({}));
+            if (!res.ok) throw new Error();
+            const items = (Array.isArray(data.items)?data.items:[])
+                .map(i=>({ postId:Number(i?.postId||0), title:String(i?.title||''), createdAt:String(i?.createdAt||'') }))
+                .filter(i=>i.postId>0 && i.postId!==postId).slice(0,5);
+            if (!items.length) { relatedEl.innerHTML='<li><div class="sv-meta">Chưa có bài liên quan.</div></li>'; return; }
+            relatedEl.innerHTML = items.map(i=>`
+                <li>
+                    <div>
+                        <a href="post_detail.html?postId=${encodeURIComponent(i.postId)}">${escapeHtml(i.title)}</a>
+                        <div class="sv-meta">${escapeHtml(timeAgo(i.createdAt))}</div>
+                    </div>
+                </li>`).join('');
+        } catch {
+            relatedEl.innerHTML='<li><div class="sv-meta">Không tải được bài viết liên quan.</div></li>';
+        }
+    };
+
+    /* ── Reply form interactions ── */
+    const attachFormHandlers = (post, commentsRef) => {
+        // Char count
+        replyMessageEl.addEventListener('input', () => {
+            replyCharCountEl.textContent = `${replyMessageEl.value.length}/2000 ký tự`;
+        });
+
+        // Image picker
+        replyImageEl.addEventListener('change', () => {
+            const file = replyImageEl.files?.[0] || null;
+            if (!file) { clearImageInput(); return; }
+            if (!file.type.startsWith('image/')) { clearImageInput({clearStatus:false}); setImageStatus('Chỉ hỗ trợ file ảnh.','error'); return; }
+            if (file.size > MAX_REPLY_IMAGE_SOURCE_BYTES) { clearImageInput({clearStatus:false}); setImageStatus(`Ảnh quá lớn (giới hạn ${formatSize(MAX_REPLY_IMAGE_SOURCE_BYTES)}).`,'error'); return; }
+            setImagePreview(file);
+            replyImageClearBtn.classList.remove('d-none');
+            setImageStatus(`Đã chọn: ${file.name} (${formatSize(file.size)}).`,'info');
+        });
+
+        replyImageClearBtn.addEventListener('click', () => { clearImageInput({clearStatus:false}); setImageStatus('Đã xoá ảnh.','info'); });
+
+        replyClearBtn.addEventListener('click', () => {
+            replyForm.reset();
+            replyCharCountEl.textContent = '0/2000 ký tự';
+            clearImageInput();
+            setReplyFeedback('','info');
+        });
+
+        // Reply/quote buttons in comment list
+        if (commentListEl) {
+            commentListEl.addEventListener('click', (e) => {
+                const btn = e.target.closest('[data-reply],[data-quote]');
+                if (!btn) return;
+                const replyTo = btn.dataset.reply;
+                const quote   = btn.dataset.quote;
+                if (replyTo) {
+                    const prefix = `@${replyTo} `;
+                    if (!replyMessageEl.value.startsWith(prefix)) replyMessageEl.value = prefix + replyMessageEl.value;
+                    replyCharCountEl.textContent = `${replyMessageEl.value.length}/2000 ký tự`;
+                }
+                if (quote) {
+                    replyMessageEl.value = `> ${quote}\n${replyMessageEl.value}`.trim();
+                    replyCharCountEl.textContent = `${replyMessageEl.value.length}/2000 ký tự`;
+                }
+                document.getElementById('reply-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                replyMessageEl.focus();
+            });
+        }
+
+        // Copy link
+        if (shareCopyBtn) {
+            shareCopyBtn.addEventListener('click', async () => {
+                try {
+                    await navigator.clipboard.writeText(window.location.href);
+                    shareCopyBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Đã sao chép!';
+                    setTimeout(() => { shareCopyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>Sao chép link'; }, 2000);
+                } catch { alert(window.location.href); }
+            });
+        }
+
+        // Submit
+        replyForm.addEventListener('submit', async (ev) => {
+            ev.preventDefault();
+            const name    = replyNameEl.value.trim();
+            const email   = replyEmailEl.value.trim();
+            const message = replyMessageEl.value.trim();
+            const imgFile = replyImageEl.files?.[0] || null;
+
+            if (name.length < 2) { setReplyFeedback('Tên hiển thị cần tối thiểu 2 ký tự.','error'); replyNameEl.focus(); return; }
+            if (!/^[^\s@]+@[^\s@]+$/.test(email)) { setReplyFeedback('Email chưa hợp lệ.','error'); replyEmailEl.focus(); return; }
+            if (!message && !imgFile) { setReplyFeedback('Vui lòng nhập nội dung hoặc chọn ảnh đính kèm.','error'); replyMessageEl.focus(); return; }
+            if (message && message.length < 5 && !imgFile) { setReplyFeedback('Nội dung cần tối thiểu 5 ký tự.','error'); replyMessageEl.focus(); return; }
+
+            const oldLabel = replySubmitBtn.innerHTML;
+            replySubmitBtn.disabled = true;
+            replySubmitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang đăng...';
+            replyClearBtn.disabled = true;
+            replyImageEl.disabled = true;
+            replyImageClearBtn.disabled = true;
+
+            let uploadedUrl = '';
+            let persisted = false;
+
+            try {
+                if (imgFile) {
+                    uploadedUrl = await uploadImage(imgFile);
+                    setImageStatus('Upload ảnh thành công.','success');
+                }
+
+                const contentHtml = message
+                    ? message.split(/\n+/).filter(Boolean).map(l=>`<p>${escapeHtml(l)}</p>`).join('')
+                    : '';
+
+                const accessToken = window.SVPAuth?.getValidAccessToken ? await window.SVPAuth.getValidAccessToken() : (localStorage.getItem('accessToken')||'');
+                const res = await fetch(`${API_BASE_URL}/posts/${encodeURIComponent(post.postId)}/comments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type':'application/json', Accept:'application/json',
+                        ...(accessToken?{Authorization:`Bearer ${accessToken}`}:{})
+                    },
+                    body: JSON.stringify({ email, contentHtml, imageUrl: uploadedUrl })
+                });
+                const data = await res.json().catch(()=>({}));
+                if (!res.ok) throw new Error(data.error || `Lỗi ${res.status}`);
+
+                const newComment = normalizeComment(data);
+                persisted = true;
+                commentsRef.push(newComment);
+
+                localStorage.setItem('userEmail', email);
+                if (!localStorage.getItem('userNickname')) localStorage.setItem('userNickname', name);
+
+                renderComments(commentsRef);
+                if (commentCountEl) commentCountEl.innerHTML = `<i class="fa-regular fa-comments"></i>${commentsRef.length.toLocaleString('vi-VN')} bình luận`;
+                renderKpis(post, commentsRef.length);
+                updateMetric(post.postId, prev => ({ views: prev.views, comments: commentsRef.length }));
+
+                replyForm.reset();
+                replyCharCountEl.textContent = '0/2000 ký tự';
+                clearImageInput();
+                setReplyFeedback('Bình luận đã được đăng thành công!','success');
+
+                // Scroll to new comment
+                setTimeout(() => {
+                    const last = commentListEl.querySelector('.pd-comment-list')?.lastElementChild;
+                    if (last) last.scrollIntoView({ behavior:'smooth', block:'nearest' });
+                }, 150);
+
+            } catch (err) {
+                if (uploadedUrl && !persisted) await deleteUploadedImage(uploadedUrl);
+
+                // Fallback: save locally
+                const localComment = {
+                    id: Date.now(),
+                    authorName: name,
+                    createdAt: new Date().toISOString(),
+                    contentText: message,
+                    imageUrl: uploadedUrl
+                };
+                saveLocalComment(post.postId, localComment);
+                commentsRef.push(localComment);
+                renderComments(commentsRef);
+                if (commentCountEl) commentCountEl.innerHTML = `<i class="fa-regular fa-comments"></i>${commentsRef.length.toLocaleString('vi-VN')} bình luận`;
+                renderKpis(post, commentsRef.length);
+
+                localStorage.setItem('userEmail', email);
+                if (!localStorage.getItem('userNickname')) localStorage.setItem('userNickname', name);
+
+                replyForm.reset();
+                replyCharCountEl.textContent = '0/2000 ký tự';
+                clearImageInput();
+                setReplyFeedback(`Bình luận đã được lưu cục bộ (${err?.message||'API không khả dụng'}).`,'success');
+            } finally {
+                replySubmitBtn.disabled = false;
+                replySubmitBtn.innerHTML = oldLabel;
+                replyClearBtn.disabled = false;
+                replyImageEl.disabled = false;
+                replyImageClearBtn.disabled = false;
+            }
+        });
+    };
+
+    /* ── Pre-fill from localStorage ── */
+    const prefillForm = () => {
+        const nick  = localStorage.getItem('userNickname')||'';
+        const email = localStorage.getItem('userEmail')||'';
+        if (nick && replyNameEl)  replyNameEl.value  = nick;
+        if (email && replyEmailEl) replyEmailEl.value = email;
+    };
+
+    /* ── Main load ── */
+    const init = async () => {
+        const params = new URLSearchParams(window.location.search);
+        const postId = Number(params.get('postId')||0);
+
+        if (!postId) {
+            if (titleEl) titleEl.textContent = 'Không tìm thấy bài viết.';
+            if (bodyEl) bodyEl.innerHTML = `<p class="sv-meta">Thiếu thông tin định danh bài viết. <a href="index.html">Quay lại trang chủ</a>.</p>`;
+            return;
+        }
+
+        let post, apiComments = [];
+
+        try {
+            const res = await fetch(`${API_BASE_URL}/posts/${postId}`, { headers:{Accept:'application/json'} });
+            const data = await res.json().catch(()=>({}));
+            if (!res.ok) throw new Error(data.error||`API ${res.status}`);
+
+            const src = (data.post && typeof data.post==='object') ? data.post : data;
+            post = normalizePost(src);
+            apiComments = Array.isArray(data.comments) ? data.comments.map(normalizeComment)
+                : (Array.isArray(src.comments) ? src.comments.map(normalizeComment) : []);
+
+        } catch (apiErr) {
+            console.warn('API failed, trying localStorage fallback:', apiErr);
+
+            // Try localStorage fallbacks
+            let localData = null;
+            try { localData = JSON.parse(localStorage.getItem('svp.latestSubmittedArticle')||'null'); } catch {}
+            if (localData && Number(localData.postId)===postId) {
+                post = normalizePost(localData);
+                apiComments = [];
+            } else {
+                if (titleEl) titleEl.textContent = 'Không thể tải bài viết.';
+                if (bodyEl) bodyEl.innerHTML = `<p class="sv-meta">Không thể kết nối máy chủ. <a href="index.html">Quay lại trang chủ</a>.</p>`;
+                if (heroCover) heroCover.classList.remove('pd-skeleton');
+                return;
+            }
+        }
+
+        // Merge local comments
+        const localComments = loadLocalComments(postId);
+        const allComments = [...apiComments, ...localComments];
+        // Deduplicate by id
+        const seen = new Set();
+        const comments = allComments.filter(c => { const k=String(c.id); if(seen.has(k))return false; seen.add(k); return true; });
+        comments.sort((a,b) => (Date.parse(a.createdAt)||0) - (Date.parse(b.createdAt)||0));
+
+        // Track view
+        updateMetric(postId, prev => ({ views: prev.views+1, comments: Math.max(prev.comments, comments.length) }));
+
+        // Render everything
+        renderHero(post.contentHtml);
+        renderPostHeader(post, comments.length);
+        renderBody(post);
+        renderShare(post);
+        renderComments(comments);
+        renderKpis(post, comments.length);
+        renderRelated(postId, post.categoryId);
+
+        // Form
+        prefillForm();
+        attachFormHandlers(post, comments);
+    };
+
+    init();
+})();
+</script>
+</body>
+</html>

@@ -15,6 +15,22 @@
     <link rel="stylesheet" href="svp.css">
     <link rel="stylesheet" href="dropdown-hover.css">
     <style>
+        .sv-preview-cover {
+            width: 100%;
+            aspect-ratio: 16 / 8;
+            border-radius: 10px;
+            display: none;
+            background: linear-gradient(120deg, #dbeafe, #bfdbfe);
+            border: 1px solid #dbe7ff;
+            margin-bottom: .8rem;
+            background-size: cover;
+            background-position: center;
+        }
+        .sv-upload-note {
+            margin-top: .5rem;
+            font-size: .88rem;
+            color: #475569;
+        }
         .sv-discussion-tip {
             border: 1px solid #bfdbfe;
             background: #eff6ff;
@@ -23,22 +39,16 @@
             color: #1e3a8a;
             font-size: .9rem;
         }
-        .sv-first-comment-preview {
-            padding: .8rem;
+        .sv-preview-box {
             border: 1px dashed #cbd5e1;
             border-radius: 10px;
             background: #f8fafc;
-        }
-        .sv-discussion-category-list {
-            display: flex;
-            flex-wrap: wrap;
-            gap: .5rem;
+            padding: .8rem;
         }
     </style>
 </head>
 <body>
 
-<!-- Top brand + auth -->
 <div class="sv-topbar pt-2 pb-1">
     <div class="container d-flex align-items-center justify-content-between">
         <div class="sv-brand">
@@ -57,7 +67,6 @@
     </div>
 </div>
 
-<!-- Main nav -->
 <div class="sv-nav">
     <div class="container d-flex align-items-center justify-content-between">
         <ul class="nav">
@@ -75,6 +84,7 @@
         </div>
     </div>
 </div>
+
 <main class="container my-3 my-md-4">
     <div class="sv-breadcrumb">
         <a href="index.html">Trang chủ</a> / <a href="forum.html">Diễn đàn</a> / <span>Tạo chủ đề mới</span>
@@ -83,36 +93,67 @@
     <section class="sv-page-hero mb-3">
         <div class="sv-page-hero__eyebrow">Trình tạo thảo luận</div>
         <h2 class="sv-page-hero__title">Tạo Chủ Đề Mới</h2>
-        <p class="sv-page-hero__subtitle">Khởi tạo một cuộc thảo luận mới cho diễn đàn.</p>
+        <p class="sv-page-hero__subtitle">Đăng chủ đề discussion. Bạn có thể đính kèm ảnh trong bài viết.</p>
     </section>
 
     <div class="row g-3">
         <div class="col-lg-8">
             <section class="sv-card">
                 <div class="sv-card__hd"><i class="fa-solid fa-comments me-2 text-primary"></i>Thông Tin Chủ Đề</div>
-                <form id="discussion-form" class="sv-form p-3">
+                <form id="discussion-form" class="sv-form p-3" novalidate>
+                    <div id="discussion-email-wrap" class="mb-3 d-none">
+                        <label for="discussion-email" class="form-label">Email đăng chủ đề</label>
+                        <input id="discussion-email" class="form-control" type="email" placeholder="Nhập email nếu bạn chưa đăng nhập">
+                        <div class="sv-meta mt-1" style="color:#b91c1c;">Bạn cần đăng nhập hoặc nhập email hợp lệ để tạo chủ đề.</div>
+                    </div>
+
                     <div class="mb-3">
                         <label for="discussion-title" class="form-label">Tiêu đề chủ đề</label>
                         <input id="discussion-title" class="form-control" type="text" placeholder="Ví dụ: Xin kinh nghiệm gia hạn visa ở Lyon" required>
                     </div>
 
                     <div class="mb-3">
-                        <label for="discussion-category" class="form-label">Danh mục (dùng chung với Trang Chủ)</label>
+                        <label for="discussion-category" class="form-label">Chuyên mục</label>
                         <select id="discussion-category" class="form-select">
-                            <option value="Học Tập & Nghiên Cứu">Học Tập & Nghiên Cứu</option>
-                            <option value="Kinh Nghiệm Việc Làm">Kinh Nghiệm Việc Làm</option>
-                            <option value="Đầu Tư Tại Pháp">Đầu Tư Tại Pháp</option>
-                            <option value="Sự Kiện & Lễ Hội">Sự Kiện & Lễ Hội</option>
-                            <option value="Tìm & Cho Thuê Nhà">Tìm & Cho Thuê Nhà</option>
+                            <option value="1">1 - Học tập và nghiên cứu tại Pháp</option>
+                            <option value="2">2 - Kinh nghiệm xin học bổng và du học</option>
+                            <option value="3">3 - Cuộc sống tại Pháp</option>
+                            <option value="4">4 - Cơ hội việc làm và thực tập</option>
+                            <option value="5">5 - Các vấn đề pháp lý, quốc tịch và thuế khóa</option>
+                            <option value="6">6 - Văn hóa và ngôn ngữ Pháp</option>
+                            <option value="7">7 - Sự kiện và giao lưu</option>
+                            <option value="8">8 - Nhà cửa</option>
+                            <option value="9">9 - Mua bán, rao vặt</option>
+                            <option value="10">10 - Đầu tư tại Pháp</option>
+                            <option value="11">11 - Chia sẻ trải nghiệm, câu chuyện cá nhân</option>
+                            <option value="12">12 - Công nghệ, kỹ năng và tri thức mở</option>
+                            <option value="13">13 - Giải trí, du lịch</option>
+                            <option value="14">14 - Góc văn học và nghệ thuật</option>
+                            <option value="15">15 - Nơi gặp gỡ, hẹn hò nghiêm túc</option>
+                            <option value="16">16 - Chém gió, tán gẫu</option>
+                            <option value="17">17 - Góp ý xây dựng SVP</option>
                         </select>
                     </div>
 
                     <div class="mb-3">
+                        <label for="discussion-cover-url" class="form-label">URL ảnh đính kèm</label>
+                        <input id="discussion-cover-url" class="form-control" type="url" placeholder="https://...">
+                    </div>
+
+                    <div class="mb-3">
+                        <div id="discussion-cover-preview" class="sv-preview-cover" aria-label="Xem trước ảnh chủ đề"></div>
+                        <label for="discussion-cover-file" class="form-label">Hoặc tải ảnh từ máy</label>
+                        <input id="discussion-cover-file" class="form-control" type="file" accept="image/*">
+                        <div class="sv-upload-note">Ảnh sẽ được upload lên cloud khi bấm "Tạo chủ đề mới".</div>
+                        <div id="discussion-cover-upload-status" class="sv-meta mt-2"></div>
+                    </div>
+
+                    <div class="mb-3">
                         <label for="discussion-subject" class="form-label">Subject (nội dung mở đầu)</label>
-                        <textarea id="discussion-subject" class="form-control" rows="6" placeholder="Viết nội dung bạn muốn mở đầu cuộc thảo luận..."></textarea>
+                        <textarea id="discussion-subject" class="form-control" rows="8" placeholder="Viết nội dung bạn muốn mở đầu cuộc thảo luận..." required></textarea>
                         <div class="sv-discussion-tip mt-2">
                             <i class="fa-solid fa-circle-info me-1"></i>
-                            Nội dung trong trường Subject sẽ tự động trở thành comment đầu tiên sau khi tạo chủ đề.
+                            Nội dung Subject sẽ tạo post đầu tiên của thread.
                         </div>
                     </div>
 
@@ -124,7 +165,16 @@
             </section>
         </div>
 
-
+        <div class="col-lg-4">
+            <section class="sv-card">
+                <div class="sv-card__hd"><i class="fa-regular fa-eye me-2 text-primary"></i>Xem Trước Chủ Đề</div>
+                <div class="p-3">
+                    <div id="discussion-preview-title" class="fw-bold mb-2">Tiêu đề chủ đề sẽ hiển thị tại đây</div>
+                    <div class="sv-meta mb-2">Chuyên mục: <strong id="discussion-preview-category">1 - Học tập và nghiên cứu tại Pháp</strong></div>
+                    <div class="sv-preview-box" id="discussion-preview-subject">Nội dung Subject sẽ xuất hiện ở đây sau khi bạn nhập.</div>
+                </div>
+            </section>
+        </div>
     </div>
 </main>
 
@@ -138,9 +188,9 @@
             <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
         </div>
         <div class="col-md text-md-end mt-2 mt-md-0">
-            <a class="me-3" href="/terms.html">Điều khoản</a>
-            <a class="me-3" href="/security.html">Bảo mật</a>
-            <a href="/contact.html">Liên hệ</a>
+            <a class="me-3" href="terms.html">Điều khoản</a>
+            <a class="me-3" href="security.html">Bảo mật</a>
+            <a href="contact.html">Liên hệ</a>
         </div>
     </div>
 </footer>
@@ -148,26 +198,368 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     (function () {
+        const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+        const MAX_IMAGE_UPLOAD_BYTES = 100 * 1024;
+
         const form = document.getElementById('discussion-form');
+        const emailWrap = document.getElementById('discussion-email-wrap');
+        const emailInput = document.getElementById('discussion-email');
         const titleInput = document.getElementById('discussion-title');
         const categoryInput = document.getElementById('discussion-category');
+        const coverUrlInput = document.getElementById('discussion-cover-url');
+        const coverFileInput = document.getElementById('discussion-cover-file');
+        const coverPreview = document.getElementById('discussion-cover-preview');
+        const coverUploadStatus = document.getElementById('discussion-cover-upload-status');
         const subjectInput = document.getElementById('discussion-subject');
         const previewTitle = document.getElementById('discussion-preview-title');
         const previewCategory = document.getElementById('discussion-preview-category');
         const previewSubject = document.getElementById('discussion-preview-subject');
         const feedback = document.getElementById('discussion-submit-feedback');
 
-        if (!form || !titleInput || !categoryInput || !subjectInput || !previewTitle || !previewCategory || !previewSubject || !feedback) {
+        if (!form || !emailWrap || !emailInput || !titleInput || !categoryInput || !coverUrlInput || !coverFileInput || !coverPreview || !coverUploadStatus || !subjectInput || !previewTitle || !previewCategory || !previewSubject || !feedback) {
             return;
         }
 
+        let pendingCoverFile = null;
+        let pendingCoverPreviewUrl = '';
+        let isUploadingCover = false;
+        let isPreparingCoverFromUrl = false;
+        let coverUrlResolveTimer = null;
+        let coverUrlResolveSeq = 0;
+        let lastResolvedCoverUrl = '';
+
+        const sanitizeUrl = (url) => {
+            const raw = String(url || '').trim();
+            if (!raw) return '';
+            const cssUrlMatch = raw.match(/url\(\s*(['"]?)(https?:\/\/[^'"\)\s]+)\1\s*\)/i);
+            const candidate = cssUrlMatch && cssUrlMatch[2] ? cssUrlMatch[2].trim() : raw;
+            if (!/^https?:\/\//i.test(candidate)) return '';
+            try {
+                const parsed = new URL(candidate);
+                if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+                return parsed.toString();
+            } catch (_) {
+                return '';
+            }
+        };
+
+        const normalizeEmail = (value) => (value || '').trim().toLowerCase();
+        const isValidEmail = (value) => /^[^\s@]+@[^\s@]+$/.test(value);
+
+        const pickEmailFromStorage = () => {
+            const fromDirect = normalizeEmail(
+                localStorage.getItem('userEmail')
+                || localStorage.getItem('email')
+                || localStorage.getItem('svp.email')
+                || ''
+            );
+            if (isValidEmail(fromDirect)) return fromDirect;
+            const accessToken = localStorage.getItem('accessToken') || '';
+            const parts = accessToken.split('.');
+            if (parts.length !== 3) return '';
+            try {
+                let payloadBase64 = parts[1].replace(/-/g, '+').replace(/_/g, '/');
+                const pad = payloadBase64.length % 4;
+                if (pad) payloadBase64 += '='.repeat(4 - pad);
+                const payload = JSON.parse(atob(payloadBase64));
+                const fromToken = normalizeEmail(payload?.email || payload?.sub || '');
+                return isValidEmail(fromToken) ? fromToken : '';
+            } catch (_) {
+                return '';
+            }
+        };
+
+        const getSessionEmail = async () => {
+            if (window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function') {
+                const validToken = await window.SVPAuth.getValidAccessToken();
+                if (!validToken) return '';
+            }
+            const email = pickEmailFromStorage();
+            return isValidEmail(email) ? email : '';
+        };
+
+        const setFeedback = (text, type) => {
+            feedback.textContent = text || '';
+            if (type === 'error') {
+                feedback.style.color = '#b91c1c';
+                return;
+            }
+            if (type === 'success') {
+                feedback.style.color = '#15803d';
+                return;
+            }
+            feedback.style.color = '#475569';
+        };
+
+        const setCoverUploadStatus = (text, type) => {
+            coverUploadStatus.textContent = text || '';
+            if (type === 'error') {
+                coverUploadStatus.style.color = '#b91c1c';
+                return;
+            }
+            if (type === 'success') {
+                coverUploadStatus.style.color = '#15803d';
+                return;
+            }
+            coverUploadStatus.style.color = '#475569';
+        };
+
+        const hideCoverPreview = () => {
+            coverPreview.style.display = 'none';
+            coverPreview.style.backgroundImage = 'none';
+        };
+
+        const clearPendingCoverPreview = () => {
+            if (pendingCoverPreviewUrl) {
+                URL.revokeObjectURL(pendingCoverPreviewUrl);
+                pendingCoverPreviewUrl = '';
+            }
+        };
+
+        const clearPendingCoverFile = () => {
+            pendingCoverFile = null;
+            clearPendingCoverPreview();
+            coverFileInput.value = '';
+            lastResolvedCoverUrl = '';
+        };
+
+        const cancelCoverUrlResolve = () => {
+            if (coverUrlResolveTimer) {
+                clearTimeout(coverUrlResolveTimer);
+                coverUrlResolveTimer = null;
+            }
+            coverUrlResolveSeq += 1;
+            isPreparingCoverFromUrl = false;
+        };
+
+        const refreshCoverPreview = () => {
+            if (pendingCoverPreviewUrl) {
+                coverPreview.style.display = 'block';
+                coverPreview.style.backgroundImage = `url('${pendingCoverPreviewUrl}')`;
+                return;
+            }
+            hideCoverPreview();
+        };
+
+        const imageExtensionForMime = (mimeType) => {
+            const normalized = (mimeType || '').toLowerCase();
+            if (normalized === 'image/webp') return 'webp';
+            if (normalized === 'image/png') return 'png';
+            if (normalized === 'image/gif') return 'gif';
+            if (normalized === 'image/avif') return 'avif';
+            return 'jpg';
+        };
+
+        const inferFileNameFromUrl = (rawUrl, mimeType) => {
+            let baseName = 'discussion-cover';
+            try {
+                const parsed = new URL(rawUrl);
+                const path = parsed.pathname || '';
+                const lastSegment = decodeURIComponent(path.split('/').filter(Boolean).pop() || '');
+                if (lastSegment) {
+                    baseName = lastSegment.replace(/\.[^/.]+$/, '') || baseName;
+                }
+            } catch (_) {
+            }
+            return `${baseName}.${imageExtensionForMime(mimeType)}`;
+        };
+
+        const loadCoverFromUrlToPendingFile = async (url, statusPrefix) => {
+            const safeUrl = sanitizeUrl(url);
+            if (!safeUrl) return false;
+            const currentSeq = ++coverUrlResolveSeq;
+            isPreparingCoverFromUrl = true;
+            setCoverUploadStatus(statusPrefix || 'Đang tải ảnh từ URL...', 'info');
+            try {
+                const response = await fetch(safeUrl, { method: 'GET', mode: 'cors', cache: 'no-store' });
+                if (!response.ok) throw new Error(`Không thể tải ảnh từ URL (${response.status}).`);
+                const blob = await response.blob();
+                const mimeType = (blob.type || '').toLowerCase();
+                if (!mimeType.startsWith('image/')) throw new Error('URL không trả về dữ liệu ảnh hợp lệ.');
+                if (currentSeq !== coverUrlResolveSeq) return false;
+
+                clearPendingCoverPreview();
+                pendingCoverPreviewUrl = URL.createObjectURL(blob);
+                pendingCoverFile = new File([blob], inferFileNameFromUrl(safeUrl, mimeType), { type: mimeType || 'application/octet-stream' });
+                lastResolvedCoverUrl = safeUrl;
+                refreshCoverPreview();
+                setCoverUploadStatus('Ảnh URL đã được tải cục bộ. Ảnh sẽ được upload khi bấm "Tạo chủ đề mới".', 'info');
+                return true;
+            } catch (error) {
+                if (currentSeq !== coverUrlResolveSeq) return false;
+                throw error;
+            } finally {
+                if (currentSeq === coverUrlResolveSeq) {
+                    isPreparingCoverFromUrl = false;
+                }
+            }
+        };
+
+        const formatSize = (bytes) => `${(bytes / 1024).toFixed(1)}KB`;
+
+        const loadImageFromFile = (file) => new Promise((resolve, reject) => {
+            const objectUrl = URL.createObjectURL(file);
+            const image = new Image();
+            image.onload = () => {
+                URL.revokeObjectURL(objectUrl);
+                resolve(image);
+            };
+            image.onerror = () => {
+                URL.revokeObjectURL(objectUrl);
+                reject(new Error('Không đọc được ảnh để nén.'));
+            };
+            image.src = objectUrl;
+        });
+
+        const canvasToBlob = (canvas, mimeType, quality) => new Promise((resolve) => {
+            canvas.toBlob((blob) => resolve(blob), mimeType, quality);
+        });
+
+        const replaceFileExtension = (filename, newExtension) => {
+            const raw = (filename || 'discussion-cover').trim();
+            const base = raw.replace(/\.[^/.]+$/, '');
+            return `${base}.${newExtension}`;
+        };
+
+        const compressImageBelowLimit = async (file, maxBytes) => {
+            if (!(file instanceof File) || file.size <= maxBytes) return file;
+
+            const image = await loadImageFromFile(file);
+            const sourceWidth = image.naturalWidth || image.width;
+            const sourceHeight = image.naturalHeight || image.height;
+            if (!sourceWidth || !sourceHeight) throw new Error('Không xác định được kích thước ảnh.');
+
+            const canvas = document.createElement('canvas');
+            const context = canvas.getContext('2d');
+            if (!context) throw new Error('Trình duyệt không hỗ trợ nén ảnh.');
+
+            const scaleCandidates = [1, 0.92, 0.84, 0.76, 0.68, 0.6, 0.52, 0.44, 0.36, 0.3, 0.25];
+            const qualityCandidates = [0.9, 0.82, 0.74, 0.66, 0.58, 0.5, 0.42];
+            const mimeCandidates = ['image/webp', 'image/jpeg'];
+            if (file.type === 'image/jpeg' || file.type === 'image/jpg') mimeCandidates.unshift('image/jpeg');
+            else if (file.type === 'image/webp') mimeCandidates.unshift('image/webp');
+
+            let bestBlob = null;
+            for (const scale of scaleCandidates) {
+                const targetWidth = Math.max(1, Math.round(sourceWidth * scale));
+                const targetHeight = Math.max(1, Math.round(sourceHeight * scale));
+                canvas.width = targetWidth;
+                canvas.height = targetHeight;
+                context.clearRect(0, 0, targetWidth, targetHeight);
+                context.drawImage(image, 0, 0, targetWidth, targetHeight);
+
+                for (const mimeType of mimeCandidates) {
+                    for (const quality of qualityCandidates) {
+                        const blob = await canvasToBlob(canvas, mimeType, quality);
+                        if (!blob) continue;
+                        if (!bestBlob || blob.size < bestBlob.size) bestBlob = blob;
+                        if (blob.size <= maxBytes) {
+                            const extension = imageExtensionForMime(mimeType);
+                            const outputName = replaceFileExtension(file.name, extension);
+                            return new File([blob], outputName, { type: mimeType });
+                        }
+                    }
+                }
+            }
+            if (!bestBlob) throw new Error('Không thể nén ảnh.');
+            throw new Error(`Không thể nén ảnh xuống dưới ${formatSize(maxBytes)}. Kích thước nhỏ nhất đạt được là ${formatSize(bestBlob.size)}.`);
+        };
+
+        const uploadCoverToCloudflare = async (file) => {
+            if (!file) return;
+            if (!file.type || !file.type.toLowerCase().startsWith('image/')) throw new Error('Chỉ hỗ trợ file ảnh.');
+
+            setCoverUploadStatus('Đang xử lý ảnh trước khi upload...', 'info');
+            const compressedFile = await compressImageBelowLimit(file, MAX_IMAGE_UPLOAD_BYTES);
+            if (compressedFile.size !== file.size) {
+                setCoverUploadStatus(`Đã nén ảnh từ ${formatSize(file.size)} xuống ${formatSize(compressedFile.size)}. Đang upload...`, 'info');
+            } else {
+                setCoverUploadStatus(`Ảnh đã ở mức ${formatSize(compressedFile.size)}. Đang upload...`, 'info');
+            }
+
+            const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
+                ? await window.SVPAuth.getValidAccessToken()
+                : (localStorage.getItem('accessToken') || '');
+
+            const presignResponse = await fetch(`${API_BASE_URL}/api/upload/post-image`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+                },
+                body: JSON.stringify({
+                    filename: compressedFile.name || 'discussion-cover',
+                    contentType: compressedFile.type || 'application/octet-stream'
+                })
+            });
+            const presignPayload = await presignResponse.json().catch(() => ({}));
+            if (!presignResponse.ok) throw new Error(presignPayload.error || 'Không lấy được presigned URL.');
+
+            const uploadUrl = String(presignPayload.uploadUrl || '').trim();
+            const publicUrl = String(presignPayload.publicUrl || '').trim();
+            if (!uploadUrl || !publicUrl) throw new Error('Thiếu uploadUrl/publicUrl từ API.');
+
+            let uploadResponse;
+            try {
+                uploadResponse = await fetch(uploadUrl, {
+                    method: 'PUT',
+                    headers: { 'Content-Type': compressedFile.type },
+                    body: compressedFile
+                });
+            } catch (_) {
+                try {
+                    const binaryBody = await compressedFile.arrayBuffer();
+                    uploadResponse = await fetch(uploadUrl, { method: 'PUT', body: binaryBody });
+                } catch (_) {
+                    throw new Error('Upload bị chặn do CORS trên Cloudflare R2. Hãy bật CORS cho origin frontend, method PUT, allowed headers *.');
+                }
+            }
+            if (!uploadResponse.ok) throw new Error(`Upload lên R2 thất bại (${uploadResponse.status}).`);
+
+            coverUrlInput.value = publicUrl;
+            clearPendingCoverFile();
+            refreshCoverPreview();
+            setCoverUploadStatus('Upload ảnh thành công.', 'success');
+        };
+
+        const toFriendlyUploadError = (error) => {
+            const message = error && error.message ? String(error.message) : '';
+            if (!message) return 'Upload ảnh thất bại.';
+            if (message.toLowerCase().includes('failed to fetch')) {
+                return 'Upload bị chặn do CORS trên Cloudflare R2. Hãy bật CORS cho origin frontend, method PUT, allowed headers *.';
+            }
+            return message;
+        };
+
+        const escapeHtml = (value) => String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
+        const textToParagraphsHtml = (text) => {
+            const lines = String(text || '').split(/\r?\n+/).map((line) => line.trim()).filter(Boolean);
+            if (!lines.length) return '<p></p>';
+            return lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('');
+        };
+
+        const composeContentHtml = () => {
+            const bodyHtml = textToParagraphsHtml(subjectInput.value.trim());
+            const coverUrl = sanitizeUrl(coverUrlInput.value);
+            const coverHtml = coverUrl ? `<p><img src="${coverUrl}" alt="discussion cover"></p>` : '';
+            return `${coverHtml}${bodyHtml}`;
+        };
+
         const updatePreview = () => {
             const title = titleInput.value.trim();
-            const category = categoryInput.value;
+            const categoryText = categoryInput.options[categoryInput.selectedIndex]
+                ? categoryInput.options[categoryInput.selectedIndex].text
+                : '';
             const subject = subjectInput.value.trim();
-
             previewTitle.textContent = title || 'Tiêu đề chủ đề sẽ hiển thị tại đây';
-            previewCategory.textContent = category;
+            previewCategory.textContent = categoryText || 'Chưa chọn';
             previewSubject.textContent = subject || 'Nội dung Subject sẽ xuất hiện ở đây sau khi bạn nhập.';
         };
 
@@ -176,22 +568,220 @@
             element.addEventListener('change', updatePreview);
         });
 
-        form.addEventListener('submit', (event) => {
-            event.preventDefault();
-            feedback.textContent = 'Chủ đề đã sẵn sàng tạo.';
+        coverUrlInput.addEventListener('input', () => {
+            const safeUrl = sanitizeUrl(coverUrlInput.value);
+            cancelCoverUrlResolve();
+            if (!safeUrl) {
+                lastResolvedCoverUrl = '';
+                refreshCoverPreview();
+                setCoverUploadStatus('', 'info');
+                return;
+            }
+            if (pendingCoverFile && safeUrl === lastResolvedCoverUrl) {
+                refreshCoverPreview();
+                setCoverUploadStatus('Ảnh URL đã được tải cục bộ. Ảnh sẽ được upload khi bấm "Tạo chủ đề mới".', 'info');
+                return;
+            }
+            clearPendingCoverFile();
+            refreshCoverPreview();
+            coverUrlResolveTimer = window.setTimeout(async () => {
+                try {
+                    await loadCoverFromUrlToPendingFile(safeUrl, 'Đang tải ảnh từ URL về cục bộ...');
+                } catch (_) {
+                    setCoverUploadStatus('Không thể tải ảnh từ URL (có thể do CORS hoặc URL không hợp lệ). Vui lòng tải ảnh từ máy.', 'error');
+                }
+            }, 250);
         });
 
+        coverFileInput.addEventListener('change', (event) => {
+            const file = event.target && event.target.files ? event.target.files[0] : null;
+            if (!file) {
+                cancelCoverUrlResolve();
+                clearPendingCoverFile();
+                refreshCoverPreview();
+                setCoverUploadStatus('', 'info');
+                return;
+            }
+            if (!file.type || !file.type.toLowerCase().startsWith('image/')) {
+                cancelCoverUrlResolve();
+                clearPendingCoverFile();
+                refreshCoverPreview();
+                setCoverUploadStatus('Chỉ hỗ trợ file ảnh.', 'error');
+                return;
+            }
+            cancelCoverUrlResolve();
+            clearPendingCoverPreview();
+            pendingCoverPreviewUrl = URL.createObjectURL(file);
+            pendingCoverFile = file;
+            coverUrlInput.value = '';
+            lastResolvedCoverUrl = '';
+            refreshCoverPreview();
+            setCoverUploadStatus('Ảnh đã được chọn cục bộ. Ảnh sẽ được upload khi bấm "Tạo chủ đề mới".', 'info');
+        });
+
+        form.addEventListener('submit', async (event) => {
+            event.preventDefault();
+
+            if (isUploadingCover) {
+                setFeedback('Ảnh đang tải lên máy chủ. Vui lòng chờ xong rồi đăng.', 'error');
+                return;
+            }
+            if (isPreparingCoverFromUrl) {
+                setFeedback('Ảnh từ URL đang được tải cục bộ. Vui lòng chờ xong rồi đăng.', 'error');
+                return;
+            }
+
+            const sessionEmail = await getSessionEmail();
+            const manualEmail = normalizeEmail(emailInput.value);
+            const email = sessionEmail || manualEmail;
+            if (!email) {
+                emailWrap.classList.remove('d-none');
+                setFeedback('Bạn chưa đăng nhập. Vui lòng nhập email để tạo chủ đề.', 'error');
+                emailInput.focus();
+                return;
+            }
+            if (!sessionEmail && !isValidEmail(email)) {
+                emailWrap.classList.remove('d-none');
+                setFeedback('Email chưa hợp lệ.', 'error');
+                emailInput.focus();
+                return;
+            }
+            if (sessionEmail) {
+                emailInput.value = sessionEmail;
+                emailWrap.classList.add('d-none');
+            }
+
+            const title = titleInput.value.trim();
+            const categoryId = Number(categoryInput.value);
+            const subject = subjectInput.value.trim();
+
+            if (!title || title.length < 5) {
+                setFeedback('Tiêu đề cần tối thiểu 5 ký tự.', 'error');
+                titleInput.focus();
+                return;
+            }
+            if (!Number.isInteger(categoryId) || categoryId <= 0) {
+                setFeedback('Chuyên mục không hợp lệ.', 'error');
+                categoryInput.focus();
+                return;
+            }
+            if (!subject || subject.length < 20) {
+                setFeedback('Nội dung Subject cần tối thiểu 20 ký tự.', 'error');
+                subjectInput.focus();
+                return;
+            }
+
+            const submitBtn = form.querySelector('button[type="submit"]');
+            const oldLabel = submitBtn ? submitBtn.innerHTML : '';
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang gửi...';
+            }
+            setFeedback('Đang tạo chủ đề, vui lòng đợi...', 'info');
+
+            try {
+                const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
+                    ? await window.SVPAuth.getValidAccessToken()
+                    : (localStorage.getItem('accessToken') || '');
+
+                const inputCoverUrl = sanitizeUrl(coverUrlInput.value);
+                if (inputCoverUrl && !pendingCoverFile) {
+                    try {
+                        await loadCoverFromUrlToPendingFile(inputCoverUrl, 'Đang tải ảnh URL trước khi upload...');
+                    } catch (_) {
+                        setCoverUploadStatus('Không thể tải ảnh từ URL (có thể do CORS hoặc URL không hợp lệ). Vui lòng tải ảnh từ máy.', 'error');
+                        setFeedback('Không thể chuẩn bị ảnh URL để upload.', 'error');
+                        return;
+                    }
+                }
+
+                if (pendingCoverFile) {
+                    isUploadingCover = true;
+                    coverFileInput.disabled = true;
+                    setCoverUploadStatus('Đang upload ảnh lên Cloudflare R2...', 'info');
+                    try {
+                        await uploadCoverToCloudflare(pendingCoverFile);
+                    } catch (uploadError) {
+                        setCoverUploadStatus(toFriendlyUploadError(uploadError), 'error');
+                        setFeedback('Không thể upload ảnh đính kèm.', 'error');
+                        return;
+                    } finally {
+                        isUploadingCover = false;
+                        coverFileInput.disabled = false;
+                    }
+                }
+
+                const contentHtml = composeContentHtml();
+                const response = await fetch(`${API_BASE_URL}/posts/discussions`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+                    },
+                    body: JSON.stringify({
+                        email,
+                        categoryId,
+                        title,
+                        contentHtml
+                    })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    setFeedback(payload.error || 'Không thể tạo chủ đề.', 'error');
+                    return;
+                }
+
+                const postId = Number(payload.postId || 0);
+                setFeedback(`Đã tạo chủ đề #${postId || 'N/A'} thành công.`, 'success');
+
+                try {
+                    localStorage.setItem('svp.latestSubmittedDiscussion', JSON.stringify({
+                        postId,
+                        categoryId,
+                        title,
+                        contentHtml,
+                        createdAt: new Date().toISOString(),
+                        status: String(payload.status || 'PUBLISHED'),
+                        author: { displayName: localStorage.getItem('userNickname') || email, nickname: localStorage.getItem('userNickname') || email }
+                    }));
+                } catch (_) {
+                }
+                localStorage.setItem('userEmail', email);
+
+                form.reset();
+                emailInput.value = email;
+                cancelCoverUrlResolve();
+                clearPendingCoverFile();
+                refreshCoverPreview();
+                setCoverUploadStatus('', 'info');
+                updatePreview();
+
+                setTimeout(() => {
+                    window.location.href = postId > 0
+                        ? `thread.html?postId=${encodeURIComponent(postId)}`
+                        : 'forum.html';
+                }, 700);
+            } catch (_) {
+                setFeedback('Không thể kết nối API.', 'error');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = oldLabel;
+                }
+            }
+        });
+
+        const initialEmail = pickEmailFromStorage();
+        if (initialEmail) {
+            emailInput.value = initialEmail;
+            emailWrap.classList.add('d-none');
+        }
+
+        hideCoverPreview();
         updatePreview();
     })();
 </script>
 <script src="auth-topbar.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-

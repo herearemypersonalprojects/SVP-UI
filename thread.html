@@ -739,6 +739,26 @@
                     return buildFallbackThread(topicFallback);
                 }
 
+                let localDiscussion = null;
+                try {
+                    localDiscussion = JSON.parse(localStorage.getItem('svp.latestSubmittedDiscussion') || 'null');
+                } catch (_) {
+                    localDiscussion = null;
+                }
+                const localDiscussionPostId = Number(localDiscussion?.postId || 0);
+                if (localDiscussion && localDiscussionPostId === postId) {
+                    return {
+                        threadId: localDiscussionPostId,
+                        title: String(localDiscussion.title || 'Chủ đề mới'),
+                        categoryId: Number(localDiscussion.categoryId || 0),
+                        authorName: String(localDiscussion?.author?.displayName || localDiscussion?.author?.nickname || 'Bạn'),
+                        createdAt: String(localDiscussion.createdAt || new Date().toISOString()),
+                        updatedAt: String(localDiscussion.createdAt || new Date().toISOString()),
+                        contentLines: htmlToLines(localDiscussion.contentHtml || ''),
+                        comments: []
+                    };
+                }
+
                 let localArticle = null;
                 try {
                     localArticle = JSON.parse(localStorage.getItem('svp.latestSubmittedArticle') || 'null');

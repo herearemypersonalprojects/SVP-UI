@@ -90,6 +90,20 @@
             color: #1f2937;
             line-height: 1.6;
         }
+        .sv-thread-post__media {
+            display: grid;
+            gap: .6rem;
+            margin-bottom: .7rem;
+        }
+        .sv-thread-post__image {
+            display: block;
+            width: 100%;
+            max-height: 420px;
+            object-fit: contain;
+            border-radius: 10px;
+            border: 1px solid #dbeafe;
+            background: #f8fafc;
+        }
         .sv-thread-post__actions {
             display: flex;
             gap: .75rem;
@@ -373,6 +387,45 @@
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
 
+        const normalizeSafeImageUrl = (value) => {
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            try {
+                const parsed = new URL(raw, window.location.href);
+                if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+                return parsed.href;
+            } catch (_) {
+                return '';
+            }
+        };
+
+        const extractImageUrlsFromHtml = (html, maxItems = 4) => {
+            const source = String(html || '');
+            if (!source) return [];
+            const urls = [];
+            const matcher = /<img\b[^>]*\bsrc\s*=\s*(?:"([^"]+)"|'([^']+)'|([^>\s]+))/gi;
+            let match;
+            while ((match = matcher.exec(source)) && urls.length < maxItems) {
+                const candidate = normalizeSafeImageUrl(match[1] || match[2] || match[3] || '');
+                if (candidate && !urls.includes(candidate)) {
+                    urls.push(candidate);
+                }
+            }
+            return urls;
+        };
+
+        const collectImageUrls = (preferredUrl, html) => {
+            const urls = [];
+            const direct = normalizeSafeImageUrl(preferredUrl);
+            if (direct) urls.push(direct);
+            extractImageUrlsFromHtml(html).forEach((url) => {
+                if (!urls.includes(url)) {
+                    urls.push(url);
+                }
+            });
+            return urls;
+        };
+
         const toMillis = (value) => {
             const time = Date.parse(String(value || ''));
             return Number.isFinite(time) ? time : 0;
@@ -521,6 +574,7 @@
             const post = payload && payload.post && typeof payload.post === 'object' ? payload.post : payload;
             const comments = Array.isArray(payload && payload.comments) ? payload.comments : [];
             const author = post?.author || {};
+            const postContentHtml = String(post?.contentHtml || post?.content_html || '');
             return {
                 threadId: Number(post?.postId || 0),
                 title: String(post?.title || 'Chủ đề'),
@@ -528,14 +582,17 @@
                 authorName: String(author.displayName || author.nickname || 'Thành viên SVP'),
                 createdAt: String(post?.createdAt || ''),
                 updatedAt: String(post?.updatedAt || post?.createdAt || ''),
-                contentLines: htmlToLines(post?.contentHtml || ''),
+                contentLines: htmlToLines(postContentHtml),
+                imageUrls: collectImageUrls(post?.imageUrl || post?.image_url || '', postContentHtml),
                 comments: comments.map((comment) => {
                     const commentAuthor = comment?.author || {};
+                    const commentContentHtml = String(comment?.contentHtml || comment?.content_html || '');
                     return {
                         id: Number(comment?.commentId || Date.now()),
                         authorName: String(commentAuthor.displayName || commentAuthor.nickname || 'Thành viên'),
-                        createdAt: String(comment?.createdAt || ''),
-                        contentLines: htmlToLines(comment?.contentHtml || '')
+                        createdAt: String(comment?.createdAt || comment?.created_at || ''),
+                        contentLines: htmlToLines(commentContentHtml),
+                        imageUrls: collectImageUrls(comment?.imageUrl || comment?.image_url || '', commentContentHtml)
                     };
                 })
             };
@@ -576,6 +633,9 @@
                 authorName: post.authorName,
                 role: isOriginalPost ? 'Chủ thớt' : 'Thành viên',
                 createdAt: post.createdAt,
+                imageUrls: Array.isArray(post.imageUrls)
+                    ? post.imageUrls.filter((url) => typeof url === 'string' && url)
+                    : [],
                 lines: Array.isArray(post.contentLines) && post.contentLines.length ? post.contentLines : ['Nội dung đang cập nhật.']
             };
         };
@@ -605,6 +665,11 @@
                         <div class="sv-thread-post__content">
                             ${item.lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('')}
                         </div>
+                        ${item.imageUrls.length ? `
+                        <div class="sv-thread-post__media">
+                            ${item.imageUrls.map((url, imageIndex) => `<img class="sv-thread-post__image" src="${escapeHtml(url)}" alt="Ảnh đính kèm #${item.index}.${imageIndex + 1}" loading="lazy" decoding="async">`).join('')}
+                        </div>
+                        ` : ''}
                         <div class="sv-thread-post__actions">
                             <button type="button" data-reply="${escapeHtml(item.authorName)}">Trả lời</button>
                             <button type="button" data-quote="${escapeHtml(item.lines[0] || '')}">Trích dẫn</button>
@@ -747,6 +812,7 @@
                 }
                 const localDiscussionPostId = Number(localDiscussion?.postId || 0);
                 if (localDiscussion && localDiscussionPostId === postId) {
+                    const discussionContentHtml = String(localDiscussion.contentHtml || '');
                     return {
                         threadId: localDiscussionPostId,
                         title: String(localDiscussion.title || 'Chủ đề mới'),
@@ -754,7 +820,8 @@
                         authorName: String(localDiscussion?.author?.displayName || localDiscussion?.author?.nickname || 'Bạn'),
                         createdAt: String(localDiscussion.createdAt || new Date().toISOString()),
                         updatedAt: String(localDiscussion.createdAt || new Date().toISOString()),
-                        contentLines: htmlToLines(localDiscussion.contentHtml || ''),
+                        contentLines: htmlToLines(discussionContentHtml),
+                        imageUrls: collectImageUrls(localDiscussion.imageUrl || localDiscussion.image_url || '', discussionContentHtml),
                         comments: []
                     };
                 }
@@ -767,6 +834,7 @@
                 }
                 const localPostId = Number(localArticle?.postId || 0);
                 if (localArticle && localPostId === postId) {
+                    const articleContentHtml = String(localArticle.contentHtml || '');
                     return {
                         threadId: localPostId,
                         title: String(localArticle.title || 'Chủ đề mới'),
@@ -774,7 +842,8 @@
                         authorName: String(localArticle?.author?.displayName || localArticle?.author?.nickname || 'Bạn'),
                         createdAt: String(localArticle.createdAt || new Date().toISOString()),
                         updatedAt: String(localArticle.createdAt || new Date().toISOString()),
-                        contentLines: htmlToLines(localArticle.contentHtml || ''),
+                        contentLines: htmlToLines(articleContentHtml),
+                        imageUrls: collectImageUrls(localArticle.imageUrl || localArticle.image_url || '', articleContentHtml),
                         comments: []
                     };
                 }
@@ -839,6 +908,7 @@
                     id: Date.now(),
                     authorName: name,
                     createdAt,
+                    imageUrls: [],
                     contentLines: htmlToLines(message)
                 };
 

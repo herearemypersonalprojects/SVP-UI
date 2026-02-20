@@ -138,6 +138,18 @@
             white-space: pre-wrap;
             word-break: break-word;
         }
+        .sv-comment-media {
+            margin: 0 0 .65rem;
+        }
+        .sv-comment-media img {
+            display: block;
+            width: 100%;
+            max-height: 340px;
+            object-fit: contain;
+            border-radius: 10px;
+            border: 1px solid #dbeafe;
+            background: #fff;
+        }
         .sv-auth-user {
             display: inline-flex;
             align-items: center;
@@ -745,6 +757,22 @@
             .replace(/\s+/g, ' ')
             .trim();
 
+        const toSafeHttpUrl = (value) => {
+            const raw = String(value || '').trim();
+            if (!raw) {
+                return '';
+            }
+            try {
+                const parsed = new URL(raw, window.location.href);
+                if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+                    return '';
+                }
+                return parsed.href;
+            } catch (error) {
+                return '';
+            }
+        };
+
         const estimateReadTime = (contentHtml) => {
             const plainText = toPlainText(contentHtml);
             if (!plainText) {
@@ -988,6 +1016,9 @@
             const createdAt = formatDate(comment.createdAt || comment.created_at);
             const rawContent = comment.contentText || comment.content || comment.contentHtml || '';
             const content = escapeHtml(toPlainText(rawContent));
+            const directImageUrl = toSafeHttpUrl(comment.imageUrl || comment.image_url);
+            const imageFromContent = toSafeHttpUrl(extractFirstImageSrc(comment.contentHtml || comment.content_html || ''));
+            const resolvedImageUrl = directImageUrl || imageFromContent;
 
             return `
                 <article class="sv-comment-item">
@@ -995,6 +1026,7 @@
                         <span class="sv-comment-name">${escapeHtml(displayName)}</span>
                         <span class="sv-meta">${escapeHtml(createdAt)}</span>
                     </div>
+                    ${resolvedImageUrl ? `<div class="sv-comment-media"><img src="${escapeHtml(resolvedImageUrl)}" alt="Ảnh đính kèm bình luận" loading="lazy" decoding="async"></div>` : ''}
                     <p class="sv-comment-content">${content || 'Bình luận đang được cập nhật.'}</p>
                 </article>
             `;

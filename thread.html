@@ -3,7 +3,7 @@
 <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP)</title>
+    <title>Chi tiết chủ đề - SVP Forum</title>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
@@ -13,161 +13,136 @@
     <link rel="stylesheet" href="svp.css">
     <link rel="stylesheet" href="dropdown-hover.css">
     <style>
-        .sv-thread-header {
+        .sv-thread-head {
             background: #fff;
             border: 1px solid var(--sv-border);
             border-radius: 12px;
-            padding: 1.25rem 1.4rem;
+            padding: 1rem 1.2rem;
         }
-        .sv-thread-header__meta {
+        .sv-thread-head__meta {
             display: flex;
             flex-wrap: wrap;
-            gap: .6rem 1rem;
-            color: var(--sv-muted);
-            font-size: .9rem;
+            gap: .55rem 1rem;
+            color: #64748b;
+            font-size: .86rem;
+            margin-bottom: .45rem;
         }
-        .sv-thread-header__title {
-            font-family: var(--sv-title-font);
-            font-size: 1.9rem;
-            font-weight: 800;
+        .sv-thread-head__title {
+            margin: .2rem 0 .55rem;
             color: #1e3a8a;
-            margin: .45rem 0 .75rem;
+            font-family: var(--sv-title-font);
+            font-size: 1.75rem;
+            font-weight: 800;
         }
-        .sv-thread-tools {
-            display: flex;
-            flex-wrap: wrap;
-            gap: .55rem;
-            margin-top: .9rem;
-        }
-        .sv-forum-post {
+        .sv-thread-post {
             display: grid;
-            grid-template-columns: 170px minmax(0, 1fr);
-            border-bottom: 1px solid #edf2f7;
-            background: #fff;
+            grid-template-columns: 180px minmax(0, 1fr);
+            border-bottom: 1px solid #e2e8f0;
         }
-        .sv-forum-post:last-child {
+        .sv-thread-post:last-child {
             border-bottom: 0;
         }
-        .sv-forum-post__author {
-            border-right: 1px solid #edf2f7;
-            padding: .95rem .8rem;
+        .sv-thread-post__author {
             background: #f8fafc;
+            border-right: 1px solid #e2e8f0;
+            padding: .9rem .8rem;
             text-align: center;
         }
-        .sv-forum-post__avatar {
-            width: 60px;
-            height: 60px;
+        .sv-thread-post__avatar {
+            width: 58px;
+            height: 58px;
             border-radius: 50%;
-            margin: 0 auto .5rem;
+            margin: 0 auto .45rem;
             display: flex;
             align-items: center;
             justify-content: center;
             color: #fff;
             font-weight: 800;
-            font-size: 1.3rem;
             background: linear-gradient(135deg, #1a73e8, #1558b0);
         }
-        .sv-forum-post__name {
+        .sv-thread-post__name {
             font-weight: 800;
             color: #0f172a;
-            line-height: 1.2;
+            line-height: 1.25;
         }
-        .sv-forum-post__role {
-            margin-top: .3rem;
-            color: var(--sv-muted);
-            font-size: .84rem;
+        .sv-thread-post__role {
+            margin-top: .25rem;
+            color: #64748b;
+            font-size: .82rem;
         }
-        .sv-forum-post__stats {
-            margin-top: .45rem;
-            color: var(--sv-muted);
-            font-size: .8rem;
-            line-height: 1.5;
+        .sv-thread-post__body {
+            padding: .7rem .95rem .85rem;
         }
-        .sv-forum-post__body {
-            padding: .7rem 1rem .95rem;
-        }
-        .sv-forum-post__meta {
+        .sv-thread-post__meta {
             display: flex;
-            align-items: center;
             justify-content: space-between;
             gap: .5rem;
-            color: var(--sv-muted);
-            font-size: .84rem;
-            border-bottom: 1px dashed #e2e8f0;
-            padding-bottom: .45rem;
-            margin-bottom: .55rem;
-        }
-        .sv-forum-post__index {
             color: #64748b;
-            font-weight: 700;
+            font-size: .82rem;
+            border-bottom: 1px dashed #e2e8f0;
+            padding-bottom: .42rem;
+            margin-bottom: .5rem;
         }
-        .sv-forum-post__content {
+        .sv-thread-post__content p {
+            margin-bottom: .55rem;
             color: #1f2937;
+            line-height: 1.6;
         }
-        .sv-forum-post__content p {
-            margin-bottom: .65rem;
-        }
-        .sv-forum-post__quote {
-            border-left: 3px solid var(--sv-primary);
-            background: #f8fafc;
-            border-radius: 8px;
-            padding: .6rem .8rem;
-            margin-top: .5rem;
-            color: #0f172a;
-            font-weight: 600;
-        }
-        .sv-forum-post__actions {
-            margin-top: .5rem;
+        .sv-thread-post__actions {
             display: flex;
-            gap: .7rem;
+            gap: .75rem;
             flex-wrap: wrap;
-            font-size: .84rem;
+            margin-top: .45rem;
         }
-        .sv-forum-post__actions button {
+        .sv-thread-post__actions button {
             border: 0;
+            padding: 0;
             background: transparent;
             color: var(--sv-primary);
-            padding: 0;
+            font-size: .83rem;
             font-weight: 700;
         }
-        .sv-forum-post__actions button:hover {
-            color: var(--sv-primary-d);
+        .sv-thread-post__actions button:hover {
             text-decoration: underline;
+            color: var(--sv-primary-d);
+        }
+        .sv-thread-empty {
+            padding: 1.15rem 1rem;
+            color: #64748b;
+            text-align: center;
         }
         .sv-char-count {
-            color: var(--sv-muted);
-            font-size: .84rem;
             text-align: right;
+            color: #64748b;
+            font-size: .84rem;
             margin-top: .35rem;
         }
-        .sv-sticky-sidebar {
+        .sv-sticky {
             position: sticky;
             top: 1rem;
         }
-        @media (max-width: 768px) {
-            .sv-forum-post {
+        @media (max-width: 900px) {
+            .sv-thread-post {
                 grid-template-columns: 1fr;
             }
-            .sv-forum-post__author {
+            .sv-thread-post__author {
                 border-right: 0;
-                border-bottom: 1px solid #edf2f7;
+                border-bottom: 1px solid #e2e8f0;
                 text-align: left;
                 display: flex;
                 align-items: center;
-                gap: .7rem;
+                gap: .75rem;
             }
-            .sv-forum-post__avatar {
+            .sv-thread-post__avatar {
                 margin: 0;
                 width: 44px;
                 height: 44px;
-                font-size: 1rem;
             }
         }
     </style>
 </head>
 <body>
 
-<!-- Top brand + auth -->
 <div class="sv-topbar pt-2 pb-1">
     <div class="container d-flex align-items-center justify-content-between">
         <div class="sv-brand">
@@ -186,7 +161,6 @@
     </div>
 </div>
 
-<!-- Main nav -->
 <div class="sv-nav">
     <div class="container d-flex align-items-center justify-content-between">
         <ul class="nav">
@@ -204,6 +178,7 @@
         </div>
     </div>
 </div>
+
 <main class="container my-3 my-md-4">
     <div class="sv-breadcrumb">
         <a href="index.html">Trang chủ</a> / <a href="forum.html">Diễn đàn</a> / <span id="thread-breadcrumb">Chi tiết chủ đề</span>
@@ -211,98 +186,76 @@
 
     <div class="row g-3">
         <div class="col-lg-8">
-            <section class="sv-thread-header mb-3">
-                <div class="sv-thread-header__meta">
-                    <span><i class="fa-solid fa-layer-group me-1 text-primary"></i><span id="thread-category">Học tập</span></span>
-                    <span><i class="fa-regular fa-clock me-1 text-primary"></i><span id="thread-updated">Cập nhật 20 phút trước</span></span>
-                    <span><i class="fa-regular fa-eye me-1 text-primary"></i><span id="thread-views">0 lượt xem</span></span>
-                    <span><i class="fa-regular fa-message me-1 text-primary"></i><span id="thread-replies">0 phản hồi</span></span>
+            <section class="sv-thread-head mb-3">
+                <div class="sv-thread-head__meta">
+                    <span><i class="fa-solid fa-layer-group me-1 text-primary"></i><span id="thread-category">Đang tải...</span></span>
+                    <span><i class="fa-regular fa-clock me-1 text-primary"></i><span id="thread-created">--</span></span>
+                    <span><i class="fa-regular fa-eye me-1 text-primary"></i><span id="thread-views">--</span></span>
+                    <span><i class="fa-regular fa-message me-1 text-primary"></i><span id="thread-replies">--</span></span>
                 </div>
-                <h2 id="thread-title" class="sv-thread-header__title">Tiêu đề chủ đề</h2>
-                <div id="thread-author" class="sv-meta">Khởi tạo bởi Admin</div>
-                <div id="thread-tags" class="d-flex flex-wrap gap-2 mt-3"></div>
-                <div class="sv-thread-tools">
-                    <button id="btn-scroll-form" class="btn btn-primary btn-sm"><i class="fa-solid fa-reply me-1"></i>Viết phản hồi</button>
-                    <button class="btn btn-outline-secondary btn-sm"><i class="fa-regular fa-bookmark me-1"></i>Lưu chủ đề</button>
-                    <button class="btn btn-outline-secondary btn-sm"><i class="fa-solid fa-share-nodes me-1"></i>Chia sẻ</button>
+                <h2 id="thread-title" class="sv-thread-head__title">Đang tải chủ đề...</h2>
+                <div id="thread-author" class="sv-meta mb-2"></div>
+                <div id="thread-tags" class="d-flex flex-wrap gap-2"></div>
+                <div class="mt-3 d-flex flex-wrap gap-2">
+                    <a class="btn btn-sm btn-outline-secondary" href="forum.html"><i class="fa-solid fa-arrow-left me-1"></i>Quay lại forum</a>
+                    <button id="btn-scroll-reply" class="btn btn-sm btn-primary" type="button"><i class="fa-solid fa-reply me-1"></i>Viết phản hồi</button>
                 </div>
             </section>
 
             <section class="sv-card mb-3">
                 <div class="sv-card__hd d-flex justify-content-between align-items-center">
-                    <span><i class="fa-solid fa-comments me-2 text-primary"></i>Trao Đổi</span>
-                    <span id="comments-count" class="sv-meta">0 bài phản hồi</span>
+                    <span><i class="fa-solid fa-comments me-2 text-primary"></i>Bài viết trong chủ đề</span>
+                    <span id="posts-count" class="sv-meta">0 bài</span>
                 </div>
-                <div id="discussion-list"></div>
+                <div id="thread-status" class="sv-thread-empty">Đang tải dữ liệu...</div>
+                <div id="thread-posts"></div>
             </section>
 
-            <section id="reply-form" class="sv-card sv-form">
-                <div class="sv-card__hd"><i class="fa-solid fa-pen me-2 text-primary"></i>Thêm Ý Kiến Mới</div>
-                <form id="comment-form" class="p-3">
-                    <p class="sv-meta mb-3">Ai cũng có thể gửi phản hồi, chỉ cần cung cấp tên và email.</p>
+            <section id="reply-box" class="sv-card sv-form">
+                <div class="sv-card__hd"><i class="fa-solid fa-pen me-2 text-primary"></i>Gửi phản hồi</div>
+                <form id="reply-form" class="p-3" novalidate>
                     <div class="row g-2">
                         <div class="col-md-6">
-                            <label for="comment-name" class="form-label">Tên hiển thị</label>
-                            <input id="comment-name" class="form-control" type="text" placeholder="Ví dụ: Minh Duc" required>
+                            <label for="reply-name" class="form-label">Tên hiển thị</label>
+                            <input id="reply-name" class="form-control" type="text" placeholder="Ví dụ: Minh Đức" required>
                         </div>
                         <div class="col-md-6">
-                            <label for="comment-email" class="form-label">Email</label>
-                            <input id="comment-email" class="form-control" type="email" placeholder="ban@example.com" required>
+                            <label for="reply-email" class="form-label">Email</label>
+                            <input id="reply-email" class="form-control" type="email" placeholder="ban@example.com" required>
                         </div>
                     </div>
                     <div class="mt-3">
-                        <label for="comment-message" class="form-label">Nội dung trao đổi</label>
-                        <textarea id="comment-message" class="form-control" rows="5" maxlength="1000" placeholder="Chia sẻ kinh nghiệm, câu hỏi hoặc góp ý của bạn..." required></textarea>
-                        <div id="char-count" class="sv-char-count">0/1000 ký tự</div>
+                        <label for="reply-message" class="form-label">Nội dung phản hồi</label>
+                        <textarea id="reply-message" class="form-control" rows="5" maxlength="2000" placeholder="Chia sẻ câu trả lời, kinh nghiệm hoặc câu hỏi bổ sung..." required></textarea>
+                        <div id="reply-char-count" class="sv-char-count">0/2000 ký tự</div>
                     </div>
                     <div class="mt-3 d-flex flex-wrap gap-2">
-                        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-paper-plane me-2"></i>Gửi phản hồi</button>
-                        <button id="btn-clear-form" class="btn btn-outline-secondary" type="button">Xóa nội dung</button>
+                        <button class="btn btn-primary" type="submit"><i class="fa-solid fa-paper-plane me-2"></i>Đăng phản hồi</button>
+                        <button id="reply-clear" class="btn btn-outline-secondary" type="button">Xóa nội dung</button>
                     </div>
+                    <div id="reply-feedback" class="sv-meta mt-3" aria-live="polite"></div>
                 </form>
             </section>
         </div>
 
         <div class="col-lg-4">
-            <div class="sv-sticky-sidebar">
+            <div class="sv-sticky">
                 <section class="sv-card mb-3">
-                    <div class="sv-card__hd"><i class="fa-solid fa-arrow-up-right-dots me-2 text-primary"></i>Thảo Luận Liên Quan</div>
-                    <ul class="sv-list" id="related-list"></ul>
+                    <div class="sv-card__hd"><i class="fa-solid fa-chart-simple me-2 text-primary"></i>Thống kê chủ đề</div>
+                    <ul id="thread-kpis" class="sv-list mb-0"></ul>
                 </section>
 
                 <section class="sv-card mb-3">
-                    <div class="sv-card__hd"><i class="fa-solid fa-user-group me-2 text-primary"></i>Thành Viên Đang Theo Dõi</div>
-                    <div class="sv-members">
-                        <div class="member">
-                            <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1544005313-94ddf0286df2?q=80&w=300&auto=format&fit=crop');"></div>
-                            <div>
-                                <div class="name">Minh Anh</div>
-                                <div class="role">Online 5 phút trước</div>
-                            </div>
-                        </div>
-                        <div class="member">
-                            <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?q=80&w=300&auto=format&fit=crop');"></div>
-                            <div>
-                                <div class="name">Quang Huy</div>
-                                <div class="role">Online 12 phút trước</div>
-                            </div>
-                        </div>
-                        <div class="member">
-                            <div class="avatar" style="background-image:url('https://images.unsplash.com/photo-1544005316-6e8b9f502d04?q=80&w=300&auto=format&fit=crop');"></div>
-                            <div>
-                                <div class="name">Thuy Duong</div>
-                                <div class="role">Online 21 phút trước</div>
-                            </div>
-                        </div>
-                    </div>
+                    <div class="sv-card__hd"><i class="fa-solid fa-arrow-up-right-dots me-2 text-primary"></i>Chủ đề liên quan</div>
+                    <ul id="related-list" class="sv-list mb-0"></ul>
                 </section>
 
                 <section class="sv-card">
-                    <div class="sv-card__hd"><i class="fa-solid fa-shield-heart me-2 text-primary"></i>Lưu Ý Thảo Luận</div>
-                    <ul class="sv-list">
-                        <li><div><strong>Tập trung vào giải pháp</strong><div class="sv-meta">Nêu rõ bối cảnh và câu hỏi.</div></div></li>
-                        <li><div><strong>Tôn trọng khác biệt</strong><div class="sv-meta">Không công kích cá nhân.</div></div></li>
-                        <li><div><strong>Thông tin có nguồn</strong><div class="sv-meta">Khuyến khích đính kèm link chính thức.</div></div></li>
+                    <div class="sv-card__hd"><i class="fa-solid fa-shield-heart me-2 text-primary"></i>Quy tắc trao đổi</div>
+                    <ul class="sv-list mb-0">
+                        <li><div><strong>Tập trung vào giải pháp</strong><div class="sv-meta">Nêu rõ bối cảnh trước khi hỏi.</div></div></li>
+                        <li><div><strong>Tôn trọng người khác</strong><div class="sv-meta">Không công kích cá nhân.</div></div></li>
+                        <li><div><strong>Ưu tiên thông tin có nguồn</strong><div class="sv-meta">Khuyến khích gắn link chính thức.</div></div></li>
                     </ul>
                 </section>
             </div>
@@ -320,9 +273,9 @@
             <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
         </div>
         <div class="col-md text-md-end mt-2 mt-md-0">
-            <a class="me-3" href="/terms.html">Điều khoản</a>
-            <a class="me-3" href="/security.html">Bảo mật</a>
-            <a href="/contact.html">Liên hệ</a>
+            <a class="me-3" href="terms.html">Điều khoản</a>
+            <a class="me-3" href="security.html">Bảo mật</a>
+            <a href="contact.html">Liên hệ</a>
         </div>
     </div>
 </footer>
@@ -330,267 +283,549 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script>
     (function () {
-        const topics = {
+        const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+        const METRIC_KEY = 'svp.forum.thread.metrics.v1';
+        const LOCAL_REPLY_PREFIX = 'svp.thread.localReplies.v1.';
+
+        const CATEGORY_MAP = new Map([
+            [1, 'Học tập và nghiên cứu tại Pháp'],
+            [2, 'Kinh nghiệm xin học bổng và du học'],
+            [3, 'Cuộc sống tại Pháp'],
+            [4, 'Cơ hội việc làm và thực tập'],
+            [5, 'Pháp lý, quốc tịch và thuế khóa'],
+            [6, 'Văn hóa và ngôn ngữ Pháp'],
+            [7, 'Sự kiện và giao lưu'],
+            [8, 'Nhà cửa'],
+            [9, 'Mua bán, rao vặt'],
+            [10, 'Đầu tư tại Pháp'],
+            [11, 'Trải nghiệm cá nhân'],
+            [12, 'Công nghệ và kỹ năng'],
+            [13, 'Giải trí, du lịch'],
+            [14, 'Văn học và nghệ thuật'],
+            [15, 'Gặp gỡ, hẹn hò'],
+            [16, 'Chém gió, tán gẫu'],
+            [17, 'Góp ý xây dựng SVP']
+        ]);
+
+        const FALLBACK_TOPICS = {
             1: {
-                title: "Kinh nghiệm gia hạn titre de sejour tại Paris năm 2026",
-                category: "Visa - The tam tru",
-                updated: "20 phut truoc",
-                views: 1248,
-                replies: 12,
-                author: "Ngoc Ha - Master 2, Paris Saclay",
-                authorName: "Ngoc Ha",
-                authorRole: "Chu tho",
-                authorPosts: 86,
-                tags: ["Thu tuc", "OFII", "Paris"],
-                lead: "Minh tong hop quy trinh gia han the tam tru theo lich hen prefecture, danh sach giay to va cac loi ho so hay bi tra ve.",
-                content: [
-                    "Buoc dau tien la dat lich hen som, uu tien truoc ngay het han toi thieu 6-8 tuan. Neu doi sat ngay, nguy co bi tre giay hen rat cao.",
-                    "Ho so can scan ro rang va dat ten file nhat quan. Minh de dang ten theo mau: passport.pdf, attestation_scolarite.pdf, justificatif_domicile.pdf.",
-                    "Khi nop online, nen chup man hinh tung buoc de co bang chung neu he thong loi. Co 2 ban be cua minh duoc yeu cau nop lai vi file qua nang.",
-                    "Neu ban da co alternance hoac stage dai han, nho bo sung giay xac nhan tu cong ty de tranh bi hoi them ve tai chinh."
+                title: 'Kinh nghiệm gia hạn titre de sejour tại Paris',
+                categoryId: 5,
+                authorName: 'Ngọc Hà',
+                createdAt: '2026-02-10T09:30:00Z',
+                contentLines: [
+                    'Mình tổng hợp lại quy trình gia hạn thẻ cư trú cho sinh viên tại Paris, kèm mốc thời gian chuẩn bị hồ sơ.',
+                    'Bạn nên đặt lịch hẹn sớm tối thiểu 6-8 tuần trước ngày hết hạn để tránh thiếu giấy hẹn.',
+                    'Nên scan hồ sơ theo tên file rõ ràng và giữ bản in đầy đủ để bổ sung nhanh khi được yêu cầu.'
+                ],
+                comments: [
+                    { id: 1, authorName: 'Linh Chi', createdAt: '2026-02-10T10:20:00Z', contentLines: ['Cảm ơn chia sẻ, phần đặt lịch thực sự rất quan trọng.'] }
                 ]
             },
             2: {
-                title: "Lam sao can bang hoc Master va viec part-time 20h/tuan?",
-                category: "Hoc tap - Nghien cuu",
-                updated: "48 phut truoc",
-                views: 863,
-                replies: 8,
-                author: "Hoang Nam - M1 Data Science",
-                authorName: "Hoang Nam",
-                authorRole: "Chu tho",
-                authorPosts: 43,
-                tags: ["Quan ly thoi gian", "Part-time", "Master"],
-                lead: "Can bang hoc va lam la bai toan kho voi du hoc sinh. Chu de nay tong hop cach sap lich hoc, dich vu truong va cach tranh qua tai.",
-                content: [
-                    "Minh chia lich theo block 2 gio, trong do 3 buoi toi/tuan danh cho viec lam. Cac buoi con lai uu tien bai tap nhom va doc tai lieu.",
-                    "Neu mon hoc co attendance cao, ban nen xin shift co dinh de tranh doi lich lien tuc. Chu dong thong bao voi quan ly ngay tu dau.",
-                    "Su dung mot bang theo doi nang luong hang tuan rat hieu qua: ngu du 7h, tap nhe 3 lan/tuan, va de 1 buoi trong de nghi.",
-                    "Loi pho bien la nhan qua nhieu ca vao ky giua ky. Ban nen dat gioi han ro rang: toi da 2 ca ngay thuong."
+                title: 'Làm sao cân bằng học Master và việc part-time?',
+                categoryId: 3,
+                authorName: 'Hoàng Nam',
+                createdAt: '2026-02-12T14:00:00Z',
+                contentLines: [
+                    'Mình đang học M1 và làm part-time 20h/tuần, cảm giác khá quá tải ở giai đoạn giữa kỳ.',
+                    'Không biết mọi người thường chia thời khóa biểu như thế nào để giữ hiệu quả học tập?'
+                ],
+                comments: [
+                    { id: 1, authorName: 'Thùy Dương', createdAt: '2026-02-12T15:05:00Z', contentLines: ['Bạn nên chia block học theo tuần và cố định lịch làm để giảm xung đột.'] }
                 ]
             }
         };
 
-        const commentsSeed = {
-            1: [
-                {
-                    id: 1,
-                    name: "Minh Duc",
-                    role: "Thanh vien SVP",
-                    posts: 27,
-                    time: "15 phut truoc",
-                    message: "Cam on ban, minh vua gap van de file qua dung luong. Ban co moc gio nao prefecture thuong mo slot moi khong?"
-                },
-                {
-                    id: 2,
-                    name: "Linh Chi",
-                    role: "Moderator",
-                    posts: 192,
-                    time: "10 phut truoc",
-                    message: "Kinh nghiem cua minh la refresh vao dau gio sang thu 2 va thu 4. Ngoai ra nho kiem tra email spam de tranh bo lo hen."
-                },
-                {
-                    id: 3,
-                    name: "Bao Anh",
-                    role: "M2 Marketing",
-                    posts: 58,
-                    time: "Vua xong",
-                    message: "Minh bo sung them: ban co the xin giay hen tam thoi neu visa sap het han. Nhieu ban quen muc nay nen rat bi dong."
-                }
-            ],
-            2: [
-                {
-                    id: 1,
-                    name: "Thuy Duong",
-                    role: "Alumni",
-                    posts: 134,
-                    time: "22 phut truoc",
-                    message: "Ban nen gom viec assignment theo sprint 2 tuan, dung de deadline don vao cung mot tuan voi lich lam."
-                }
-            ]
+        const breadcrumbEl = document.getElementById('thread-breadcrumb');
+        const categoryEl = document.getElementById('thread-category');
+        const createdEl = document.getElementById('thread-created');
+        const viewsEl = document.getElementById('thread-views');
+        const repliesEl = document.getElementById('thread-replies');
+        const titleEl = document.getElementById('thread-title');
+        const authorEl = document.getElementById('thread-author');
+        const tagsEl = document.getElementById('thread-tags');
+        const postsCountEl = document.getElementById('posts-count');
+        const statusEl = document.getElementById('thread-status');
+        const postsEl = document.getElementById('thread-posts');
+        const kpisEl = document.getElementById('thread-kpis');
+        const relatedEl = document.getElementById('related-list');
+
+        const replyForm = document.getElementById('reply-form');
+        const replyNameEl = document.getElementById('reply-name');
+        const replyEmailEl = document.getElementById('reply-email');
+        const replyMessageEl = document.getElementById('reply-message');
+        const replyCharCountEl = document.getElementById('reply-char-count');
+        const replyFeedbackEl = document.getElementById('reply-feedback');
+        const replyClearBtn = document.getElementById('reply-clear');
+        const scrollReplyBtn = document.getElementById('btn-scroll-reply');
+
+        if (!breadcrumbEl || !categoryEl || !createdEl || !viewsEl || !repliesEl || !titleEl || !authorEl || !tagsEl || !postsCountEl || !statusEl || !postsEl || !kpisEl || !relatedEl || !replyForm || !replyNameEl || !replyEmailEl || !replyMessageEl || !replyCharCountEl || !replyFeedbackEl || !replyClearBtn || !scrollReplyBtn) {
+            return;
+        }
+
+        const escapeHtml = (value) => String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
+        const toMillis = (value) => {
+            const time = Date.parse(String(value || ''));
+            return Number.isFinite(time) ? time : 0;
         };
 
-        const relatedThreads = [
-            { title: "Checklist ho so CAF cho tan du hoc sinh", link: "thread.html?topic=1", meta: "Visa - 3 gio truoc" },
-            { title: "Nen chon M1 hay PGE neu muon lam tai chinh?", link: "thread.html?topic=2", meta: "Hoc tap - 4 gio truoc" },
-            { title: "CV tieng Phap: loi khien ho so bi loai som", link: "thread.html?topic=2", meta: "Viec lam - 6 gio truoc" }
-        ];
+        const formatDateTime = (value) => {
+            const time = toMillis(value);
+            if (!time) return 'Không rõ thời gian';
+            return new Intl.DateTimeFormat('vi-VN', {
+                dateStyle: 'medium',
+                timeStyle: 'short'
+            }).format(new Date(time));
+        };
 
-        const getTopicId = () => {
+        const timeAgo = (value) => {
+            const time = toMillis(value);
+            if (!time) return 'Không rõ';
+            const diffMinutes = Math.max(0, Math.floor((Date.now() - time) / 60000));
+            if (diffMinutes < 1) return 'Vừa xong';
+            if (diffMinutes < 60) return `${diffMinutes} phút trước`;
+            const diffHours = Math.floor(diffMinutes / 60);
+            if (diffHours < 24) return `${diffHours} giờ trước`;
+            return `${Math.floor(diffHours / 24)} ngày trước`;
+        };
+
+        const htmlToLines = (html) => {
+            const normalized = String(html || '')
+                .replace(/<\s*br\s*\/?\s*>/gi, '\n')
+                .replace(/<\s*\/\s*(p|div|h[1-6]|li|blockquote)\s*>/gi, '\n')
+                .replace(/<li[^>]*>/gi, '- ')
+                .replace(/<[^>]+>/g, ' ')
+                .replace(/&nbsp;/gi, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            const lines = normalized.split(/\n+/).map((line) => line.trim()).filter(Boolean);
+            return lines.length ? lines : ['Nội dung đang được cập nhật.'];
+        };
+
+        const getInitial = (name) => {
+            const value = String(name || '?').trim();
+            return value ? value.charAt(0).toUpperCase() : '?';
+        };
+
+        const getRequestedThread = () => {
             const params = new URLSearchParams(window.location.search);
-            const id = Number(params.get("topic"));
-            if (Number.isNaN(id) || !topics[id]) return 1;
-            return id;
+            const postId = Number(params.get('postId') || 0);
+            if (Number.isInteger(postId) && postId > 0) {
+                return { postId, topicFallback: null };
+            }
+            const topic = Number(params.get('topic') || 0);
+            if (Number.isInteger(topic) && topic > 0) {
+                return { postId: topic, topicFallback: topic };
+            }
+            return { postId: 0, topicFallback: null };
         };
 
-        const topicId = getTopicId();
-        const topic = topics[topicId];
-        const comments = commentsSeed[topicId] ? [...commentsSeed[topicId]] : [];
-
-        const threadBreadcrumbEl = document.getElementById("thread-breadcrumb");
-        const threadCategoryEl = document.getElementById("thread-category");
-        const threadUpdatedEl = document.getElementById("thread-updated");
-        const threadViewsEl = document.getElementById("thread-views");
-        const threadRepliesEl = document.getElementById("thread-replies");
-        const threadTitleEl = document.getElementById("thread-title");
-        const threadAuthorEl = document.getElementById("thread-author");
-        const threadTagsEl = document.getElementById("thread-tags");
-        const commentsCountEl = document.getElementById("comments-count");
-        const discussionListEl = document.getElementById("discussion-list");
-        const relatedListEl = document.getElementById("related-list");
-        const formEl = document.getElementById("comment-form");
-        const nameEl = document.getElementById("comment-name");
-        const emailEl = document.getElementById("comment-email");
-        const messageEl = document.getElementById("comment-message");
-        const charCountEl = document.getElementById("char-count");
-        const clearBtn = document.getElementById("btn-clear-form");
-        const scrollFormBtn = document.getElementById("btn-scroll-form");
-
-        const getInitial = (name) => (name || "?").trim().charAt(0).toUpperCase();
-
-        const escapeHtml = (value) => value
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
-
-        const renderThread = () => {
-            threadBreadcrumbEl.textContent = topic.title;
-            threadCategoryEl.textContent = topic.category;
-            threadUpdatedEl.textContent = `Cap nhat ${topic.updated}`;
-            threadViewsEl.textContent = `${topic.views} luot xem`;
-            threadRepliesEl.textContent = `${comments.length} phan hoi`;
-            threadTitleEl.textContent = topic.title;
-            threadAuthorEl.textContent = `Khoi tao boi ${topic.author}`;
-            threadTagsEl.innerHTML = topic.tags.map((tag) => `<span class="sv-tag">${escapeHtml(tag)}</span>`).join("");
+        const loadMetricStore = () => {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(METRIC_KEY) || '{}');
+                return parsed && typeof parsed === 'object' ? parsed : {};
+            } catch (_) {
+                return {};
+            }
         };
 
-        const renderDiscussion = () => {
-            commentsCountEl.textContent = `${comments.length} bai phan hoi`;
-            const openerPost = {
-                id: 1,
-                name: topic.authorName || topic.author,
-                badgeText: topic.authorRole || "Chu tho",
-                posts: topic.authorPosts || 0,
-                time: topic.updated,
-                isOp: true,
-                paragraphs: [topic.lead, ...topic.content],
-                quote: "Meo nho: Luon du phong 1 ban ho so in cung va 1 folder scan cloud de xu ly nhanh khi can bo sung."
+        const saveMetricStore = (store) => {
+            try {
+                localStorage.setItem(METRIC_KEY, JSON.stringify(store));
+            } catch (_) {
+            }
+        };
+
+        const metricStore = loadMetricStore();
+
+        const updateThreadMetrics = (threadId, updater) => {
+            const key = String(threadId);
+            const current = metricStore[key] && typeof metricStore[key] === 'object'
+                ? metricStore[key]
+                : { views: 0, replies: 0, lastCommentAt: '' };
+            const next = updater({
+                views: Number(current.views || 0),
+                replies: Number(current.replies || 0),
+                lastCommentAt: String(current.lastCommentAt || '')
+            });
+            metricStore[key] = {
+                views: Math.max(0, Math.floor(Number(next.views || 0))),
+                replies: Math.max(0, Math.floor(Number(next.replies || 0))),
+                lastCommentAt: String(next.lastCommentAt || '')
             };
+            saveMetricStore(metricStore);
+            return metricStore[key];
+        };
 
-            const posts = [openerPost, ...comments.map((comment) => ({
-                id: comment.id,
-                name: comment.name,
-                badgeText: comment.email || comment.role || "Thanh vien",
-                posts: comment.posts || 0,
-                time: comment.time,
-                isOp: false,
-                paragraphs: [comment.message]
-            }))];
+        const getThreadMetrics = (threadId) => {
+            const key = String(threadId);
+            const raw = metricStore[key] && typeof metricStore[key] === 'object' ? metricStore[key] : {};
+            return {
+                views: Math.max(0, Math.floor(Number(raw.views || 0))),
+                replies: Math.max(0, Math.floor(Number(raw.replies || 0))),
+                lastCommentAt: String(raw.lastCommentAt || '')
+            };
+        };
 
-            discussionListEl.innerHTML = posts.map((post, idx) => `
-                <article class="sv-forum-post">
-                    <aside class="sv-forum-post__author">
-                        <div class="sv-forum-post__avatar">${escapeHtml(getInitial(post.name))}</div>
-                        <div class="sv-forum-post__name">${escapeHtml(post.name)}</div>
-                        <div class="sv-forum-post__role">${escapeHtml(post.badgeText)}${post.isOp ? ' • <span class="sv-tag">Chu de</span>' : ""}</div>
-                        <div class="sv-forum-post__stats">
-                            Bai dang: <strong>${post.posts}</strong><br>
-                            Danh so: <strong>#${idx + 1}</strong>
-                        </div>
+        const localReplyKey = (threadId) => `${LOCAL_REPLY_PREFIX}${threadId}`;
+
+        const loadLocalReplies = (threadId) => {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(localReplyKey(threadId)) || '[]');
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (_) {
+                return [];
+            }
+        };
+
+        const saveLocalReplies = (threadId, replies) => {
+            try {
+                localStorage.setItem(localReplyKey(threadId), JSON.stringify(replies));
+            } catch (_) {
+            }
+        };
+
+        const normalizeApiThread = (payload) => {
+            const post = payload && payload.post && typeof payload.post === 'object' ? payload.post : payload;
+            const comments = Array.isArray(payload && payload.comments) ? payload.comments : [];
+            const author = post?.author || {};
+            return {
+                threadId: Number(post?.postId || 0),
+                title: String(post?.title || 'Chủ đề'),
+                categoryId: Number(post?.categoryId || 0),
+                authorName: String(author.displayName || author.nickname || 'Thành viên SVP'),
+                createdAt: String(post?.createdAt || ''),
+                updatedAt: String(post?.updatedAt || post?.createdAt || ''),
+                contentLines: htmlToLines(post?.contentHtml || ''),
+                comments: comments.map((comment) => {
+                    const commentAuthor = comment?.author || {};
+                    return {
+                        id: Number(comment?.commentId || Date.now()),
+                        authorName: String(commentAuthor.displayName || commentAuthor.nickname || 'Thành viên'),
+                        createdAt: String(comment?.createdAt || ''),
+                        contentLines: htmlToLines(comment?.contentHtml || '')
+                    };
+                })
+            };
+        };
+
+        const buildFallbackThread = (topicId) => {
+            const fallback = FALLBACK_TOPICS[topicId];
+            if (!fallback) return null;
+            return {
+                threadId: topicId,
+                title: fallback.title,
+                categoryId: fallback.categoryId,
+                authorName: fallback.authorName,
+                createdAt: fallback.createdAt,
+                updatedAt: fallback.createdAt,
+                contentLines: fallback.contentLines,
+                comments: fallback.comments
+            };
+        };
+
+        const renderHeader = (thread, metrics, totalReplies) => {
+            const categoryName = CATEGORY_MAP.get(thread.categoryId) || `Chuyên mục #${thread.categoryId || '?'}`;
+            const createdLabel = formatDateTime(thread.createdAt);
+            breadcrumbEl.textContent = thread.title;
+            categoryEl.textContent = categoryName;
+            createdEl.textContent = createdLabel;
+            viewsEl.textContent = `${metrics.views} lượt xem`;
+            repliesEl.textContent = `${totalReplies} phản hồi`;
+            titleEl.textContent = thread.title;
+            authorEl.textContent = `Khởi tạo bởi ${thread.authorName}`;
+            tagsEl.innerHTML = `<span class="sv-tag">${escapeHtml(categoryName)}</span><span class="sv-tag">${escapeHtml(timeAgo(thread.updatedAt || thread.createdAt))}</span>`;
+        };
+
+        const toPostItem = (post, index, isOriginalPost) => {
+            return {
+                index,
+                isOriginalPost,
+                authorName: post.authorName,
+                role: isOriginalPost ? 'Chủ thớt' : 'Thành viên',
+                createdAt: post.createdAt,
+                lines: Array.isArray(post.contentLines) && post.contentLines.length ? post.contentLines : ['Nội dung đang cập nhật.']
+            };
+        };
+
+        const renderPosts = (thread, apiComments, localReplies) => {
+            const postItems = [
+                toPostItem(thread, 1, true),
+                ...apiComments.map((item, idx) => toPostItem(item, idx + 2, false)),
+                ...localReplies.map((item, idx) => toPostItem(item, idx + 2 + apiComments.length, false))
+            ];
+
+            postsCountEl.textContent = `${postItems.length} bài`;
+            statusEl.style.display = 'none';
+
+            postsEl.innerHTML = postItems.map((item) => `
+                <article class="sv-thread-post">
+                    <aside class="sv-thread-post__author">
+                        <div class="sv-thread-post__avatar">${escapeHtml(getInitial(item.authorName))}</div>
+                        <div class="sv-thread-post__name">${escapeHtml(item.authorName)}</div>
+                        <div class="sv-thread-post__role">${escapeHtml(item.role)}</div>
                     </aside>
-                    <div class="sv-forum-post__body">
-                        <div class="sv-forum-post__meta">
-                            <span>${escapeHtml(post.time)}</span>
-                            <span class="sv-forum-post__index">#${idx + 1}</span>
+                    <div class="sv-thread-post__body">
+                        <div class="sv-thread-post__meta">
+                            <span>${escapeHtml(formatDateTime(item.createdAt))}</span>
+                            <span>#${item.index}</span>
                         </div>
-                        <div class="sv-forum-post__content">
-                            ${post.paragraphs.map((text) => `<p>${escapeHtml(text)}</p>`).join("")}
-                            ${post.quote ? `<div class="sv-forum-post__quote">${escapeHtml(post.quote)}</div>` : ""}
+                        <div class="sv-thread-post__content">
+                            ${item.lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('')}
                         </div>
-                        <div class="sv-forum-post__actions">
-                            <button type="button" data-reply="${escapeHtml(post.name)}">Tra loi</button>
-                            <button type="button">Cam on</button>
-                            <button type="button">Trich dan</button>
+                        <div class="sv-thread-post__actions">
+                            <button type="button" data-reply="${escapeHtml(item.authorName)}">Trả lời</button>
+                            <button type="button" data-quote="${escapeHtml(item.lines[0] || '')}">Trích dẫn</button>
                         </div>
                     </div>
                 </article>
-            `).join("");
-            threadRepliesEl.textContent = `${comments.length} phan hoi`;
+            `).join('');
         };
 
-        const renderRelated = () => {
-            relatedListEl.innerHTML = relatedThreads.map((item) => `
-                <li>
-                    <div>
-                        <a href="${escapeHtml(item.link)}">${escapeHtml(item.title)}</a>
-                        <div class="sv-meta">${escapeHtml(item.meta)}</div>
-                    </div>
-                </li>
-            `).join("");
+        const renderThreadKpis = (thread, metrics, totalPosts, totalReplies) => {
+            kpisEl.innerHTML = `
+                <li><div><strong>ID thread</strong><div class="sv-meta">#${thread.threadId}</div></div></li>
+                <li><div><strong>Bài viết trong thread</strong><div class="sv-meta">${totalPosts} bài</div></div></li>
+                <li><div><strong>Phản hồi</strong><div class="sv-meta">${totalReplies} phản hồi</div></div></li>
+                <li><div><strong>Lượt xem</strong><div class="sv-meta">${metrics.views} lượt xem</div></div></li>
+                <li><div><strong>Hoạt động gần nhất</strong><div class="sv-meta">${escapeHtml(metrics.lastCommentAt ? formatDateTime(metrics.lastCommentAt) : formatDateTime(thread.updatedAt || thread.createdAt))}</div></div></li>
+            `;
         };
 
-        messageEl.addEventListener("input", () => {
-            charCountEl.textContent = `${messageEl.value.length}/1000 ky tu`;
-        });
+        const renderRelatedThreads = async (threadId, categoryId) => {
+            relatedEl.innerHTML = '<li><div class="sv-meta">Đang tải chủ đề liên quan...</div></li>';
+            try {
+                const response = await fetch(`${API_BASE_URL}/posts/latest-articles?limit=8&categoryId=${encodeURIComponent(categoryId)}`, {
+                    method: 'GET',
+                    headers: { Accept: 'application/json' }
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Không thể tải chủ đề liên quan.');
+                }
+                const items = Array.isArray(payload.items) ? payload.items : [];
+                const normalized = items
+                    .map((item) => ({
+                        postId: Number(item?.postId || 0),
+                        title: String(item?.title || 'Chủ đề'),
+                        createdAt: String(item?.createdAt || '')
+                    }))
+                    .filter((item) => item.postId > 0 && item.postId !== threadId)
+                    .slice(0, 5);
 
-        clearBtn.addEventListener("click", () => {
-            formEl.reset();
-            charCountEl.textContent = "0/1000 ky tu";
-        });
+                if (!normalized.length) {
+                    relatedEl.innerHTML = '<li><div class="sv-meta">Chưa có chủ đề liên quan trong chuyên mục này.</div></li>';
+                    return;
+                }
 
-        scrollFormBtn.addEventListener("click", () => {
-            document.getElementById("reply-form").scrollIntoView({ behavior: "smooth", block: "start" });
-            messageEl.focus();
-        });
-
-        discussionListEl.addEventListener("click", (event) => {
-            const target = event.target;
-            if (!(target instanceof HTMLButtonElement)) return;
-            const replyTo = target.dataset.reply;
-            if (!replyTo) return;
-            const prefix = `@${replyTo} `;
-            if (!messageEl.value.startsWith(prefix)) {
-                messageEl.value = `${prefix}${messageEl.value}`;
+                relatedEl.innerHTML = normalized.map((item) => `
+                    <li>
+                        <div>
+                            <a href="thread.html?postId=${encodeURIComponent(item.postId)}">${escapeHtml(item.title)}</a>
+                            <div class="sv-meta">${escapeHtml(timeAgo(item.createdAt))}</div>
+                        </div>
+                    </li>
+                `).join('');
+            } catch (error) {
+                console.error('Cannot load related threads:', error);
+                relatedEl.innerHTML = '<li><div class="sv-meta">Không tải được chủ đề liên quan.</div></li>';
             }
-            charCountEl.textContent = `${messageEl.value.length}/1000 ky tu`;
-            document.getElementById("reply-form").scrollIntoView({ behavior: "smooth", block: "start" });
-            messageEl.focus();
-        });
+        };
 
-        formEl.addEventListener("submit", (event) => {
-            event.preventDefault();
-            const name = nameEl.value.trim();
-            const email = emailEl.value.trim();
-            const message = messageEl.value.trim();
-            if (!name || !email || !message) return;
+        const setReplyFeedback = (text, type) => {
+            replyFeedbackEl.textContent = text || '';
+            replyFeedbackEl.style.color = type === 'error' ? '#b91c1c' : (type === 'success' ? '#15803d' : '#64748b');
+        };
 
-            comments.unshift({
-                id: Date.now(),
-                name,
-                email,
-                posts: Math.floor(Math.random() * 60) + 5,
-                time: "Vua xong",
-                message
+        const attachInteractionHandlers = () => {
+            replyMessageEl.addEventListener('input', () => {
+                replyCharCountEl.textContent = `${replyMessageEl.value.length}/2000 ký tự`;
             });
 
-            renderDiscussion();
-            formEl.reset();
-            charCountEl.textContent = "0/1000 ky tu";
-        });
+            replyClearBtn.addEventListener('click', () => {
+                replyForm.reset();
+                replyCharCountEl.textContent = '0/2000 ký tự';
+                setReplyFeedback('', 'info');
+            });
 
-        renderThread();
-        renderDiscussion();
-        renderRelated();
+            scrollReplyBtn.addEventListener('click', () => {
+                document.getElementById('reply-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                replyMessageEl.focus();
+            });
+
+            postsEl.addEventListener('click', (event) => {
+                const target = event.target;
+                if (!(target instanceof HTMLButtonElement)) return;
+                const replyTo = String(target.dataset.reply || '').trim();
+                if (replyTo) {
+                    const prefix = `@${replyTo} `;
+                    if (!replyMessageEl.value.startsWith(prefix)) {
+                        replyMessageEl.value = `${prefix}${replyMessageEl.value}`;
+                    }
+                    replyCharCountEl.textContent = `${replyMessageEl.value.length}/2000 ký tự`;
+                    document.getElementById('reply-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    replyMessageEl.focus();
+                    return;
+                }
+                const quote = String(target.dataset.quote || '').trim();
+                if (quote) {
+                    const quoted = `> ${quote}\n`;
+                    replyMessageEl.value = `${quoted}${replyMessageEl.value}`.trim();
+                    replyCharCountEl.textContent = `${replyMessageEl.value.length}/2000 ký tự`;
+                    replyMessageEl.focus();
+                }
+            });
+        };
+
+        const loadUserPrefill = () => {
+            const nickname = String(localStorage.getItem('userNickname') || '').trim();
+            const email = String(localStorage.getItem('userEmail') || '').trim();
+            if (nickname) replyNameEl.value = nickname;
+            if (email) replyEmailEl.value = email;
+        };
+
+        const loadThread = async () => {
+            const { postId, topicFallback } = getRequestedThread();
+            if (!postId) {
+                statusEl.textContent = 'Thiếu postId. Hãy quay lại danh sách forum và chọn một chủ đề.';
+                return null;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+                    method: 'GET',
+                    headers: { Accept: 'application/json' }
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Không tìm thấy chủ đề.');
+                }
+                return normalizeApiThread(payload);
+            } catch (error) {
+                console.warn('Cannot load thread from API, trying fallback:', error);
+                if (topicFallback && FALLBACK_TOPICS[topicFallback]) {
+                    return buildFallbackThread(topicFallback);
+                }
+
+                let localArticle = null;
+                try {
+                    localArticle = JSON.parse(localStorage.getItem('svp.latestSubmittedArticle') || 'null');
+                } catch (_) {
+                    localArticle = null;
+                }
+                const localPostId = Number(localArticle?.postId || 0);
+                if (localArticle && localPostId === postId) {
+                    return {
+                        threadId: localPostId,
+                        title: String(localArticle.title || 'Chủ đề mới'),
+                        categoryId: Number(localArticle.categoryId || 0),
+                        authorName: String(localArticle?.author?.displayName || localArticle?.author?.nickname || 'Bạn'),
+                        createdAt: String(localArticle.createdAt || new Date().toISOString()),
+                        updatedAt: String(localArticle.createdAt || new Date().toISOString()),
+                        contentLines: htmlToLines(localArticle.contentHtml || ''),
+                        comments: []
+                    };
+                }
+                throw error;
+            }
+        };
+
+        const init = async () => {
+            attachInteractionHandlers();
+            loadUserPrefill();
+
+            let thread;
+            try {
+                thread = await loadThread();
+            } catch (_) {
+                statusEl.textContent = 'Không thể tải chủ đề này. Hãy quay lại trang forum để chọn chủ đề khác.';
+                return;
+            }
+            if (!thread) {
+                return;
+            }
+
+            const localReplies = loadLocalReplies(thread.threadId);
+            const apiComments = Array.isArray(thread.comments) ? thread.comments : [];
+            const totalReplies = apiComments.length + localReplies.length;
+
+            const metrics = updateThreadMetrics(thread.threadId, (prev) => ({
+                views: prev.views + 1,
+                replies: Math.max(prev.replies, totalReplies),
+                lastCommentAt: prev.lastCommentAt || thread.updatedAt || thread.createdAt
+            }));
+
+            renderHeader(thread, metrics, totalReplies);
+            renderPosts(thread, apiComments, localReplies);
+            renderThreadKpis(thread, metrics, 1 + totalReplies, totalReplies);
+            renderRelatedThreads(thread.threadId, thread.categoryId);
+
+            replyForm.addEventListener('submit', (event) => {
+                event.preventDefault();
+                const name = String(replyNameEl.value || '').trim();
+                const email = String(replyEmailEl.value || '').trim();
+                const message = String(replyMessageEl.value || '').trim();
+
+                if (name.length < 2) {
+                    setReplyFeedback('Tên hiển thị cần tối thiểu 2 ký tự.', 'error');
+                    replyNameEl.focus();
+                    return;
+                }
+                if (!/^[^\s@]+@[^\s@]+$/.test(email)) {
+                    setReplyFeedback('Email chưa hợp lệ.', 'error');
+                    replyEmailEl.focus();
+                    return;
+                }
+                if (message.length < 5) {
+                    setReplyFeedback('Nội dung phản hồi cần tối thiểu 5 ký tự.', 'error');
+                    replyMessageEl.focus();
+                    return;
+                }
+
+                const createdAt = new Date().toISOString();
+                const newReply = {
+                    id: Date.now(),
+                    authorName: name,
+                    createdAt,
+                    contentLines: htmlToLines(message)
+                };
+
+                const currentReplies = loadLocalReplies(thread.threadId);
+                currentReplies.unshift(newReply);
+                saveLocalReplies(thread.threadId, currentReplies);
+
+                const nextTotalReplies = apiComments.length + currentReplies.length;
+                const nextMetrics = updateThreadMetrics(thread.threadId, (prev) => ({
+                    views: prev.views,
+                    replies: Math.max(prev.replies, nextTotalReplies),
+                    lastCommentAt: createdAt
+                }));
+
+                localStorage.setItem('userEmail', email);
+                if (!localStorage.getItem('userNickname')) {
+                    localStorage.setItem('userNickname', name);
+                }
+
+                renderHeader(thread, nextMetrics, nextTotalReplies);
+                renderPosts(thread, apiComments, currentReplies);
+                renderThreadKpis(thread, nextMetrics, 1 + nextTotalReplies, nextTotalReplies);
+
+                replyMessageEl.value = '';
+                replyCharCountEl.textContent = '0/2000 ký tự';
+                setReplyFeedback('Đã đăng phản hồi thành công (lưu cục bộ trên trình duyệt).', 'success');
+            });
+        };
+
+        init();
     })();
 </script>
 <script src="auth-topbar.js"></script>
 </body>
 </html>
-
-
-
-
-
-

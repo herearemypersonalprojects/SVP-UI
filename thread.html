@@ -133,6 +133,19 @@
             font-size: .84rem;
             margin-top: .35rem;
         }
+        .sv-reply-image-preview {
+            display: none;
+            margin-top: .55rem;
+            max-height: 340px;
+            width: 100%;
+            object-fit: contain;
+            border-radius: 10px;
+            border: 1px solid #dbeafe;
+            background: #f8fafc;
+        }
+        .sv-reply-image-preview.is-visible {
+            display: block;
+        }
         .sv-sticky {
             position: sticky;
             top: 1rem;
@@ -245,6 +258,13 @@
                         <textarea id="reply-message" class="form-control" rows="5" maxlength="2000" placeholder="Chia sẻ câu trả lời, kinh nghiệm hoặc câu hỏi bổ sung..." required></textarea>
                         <div id="reply-char-count" class="sv-char-count">0/2000 ký tự</div>
                     </div>
+                    <div class="mt-3">
+                        <label for="reply-image" class="form-label">Ảnh đính kèm (tuỳ chọn)</label>
+                        <input id="reply-image" class="form-control" type="file" accept="image/*">
+                        <div id="reply-image-status" class="sv-meta mt-2"></div>
+                        <img id="reply-image-preview" class="sv-reply-image-preview" alt="Xem trước ảnh đính kèm">
+                        <button id="reply-image-clear" class="btn btn-sm btn-outline-secondary mt-2 d-none" type="button">Xóa ảnh đã chọn</button>
+                    </div>
                     <div class="mt-3 d-flex flex-wrap gap-2">
                         <button class="btn btn-primary" type="submit"><i class="fa-solid fa-paper-plane me-2"></i>Đăng phản hồi</button>
                         <button id="reply-clear" class="btn btn-outline-secondary" type="button">Xóa nội dung</button>
@@ -302,6 +322,7 @@
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
         const METRIC_KEY = 'svp.forum.thread.metrics.v1';
         const LOCAL_REPLY_PREFIX = 'svp.thread.localReplies.v1.';
+        const MAX_REPLY_IMAGE_BYTES = 10 * 1024 * 1024;
 
         const CATEGORY_MAP = new Map([
             [1, 'Học tập và nghiên cứu tại Pháp'],
@@ -372,11 +393,17 @@
         const replyEmailEl = document.getElementById('reply-email');
         const replyMessageEl = document.getElementById('reply-message');
         const replyCharCountEl = document.getElementById('reply-char-count');
+        const replyImageEl = document.getElementById('reply-image');
+        const replyImageStatusEl = document.getElementById('reply-image-status');
+        const replyImagePreviewEl = document.getElementById('reply-image-preview');
+        const replyImageClearBtn = document.getElementById('reply-image-clear');
         const replyFeedbackEl = document.getElementById('reply-feedback');
         const replyClearBtn = document.getElementById('reply-clear');
         const scrollReplyBtn = document.getElementById('btn-scroll-reply');
+        const replySubmitBtn = replyForm.querySelector('button[type="submit"]');
+        let replyImagePreviewObjectUrl = '';
 
-        if (!breadcrumbEl || !categoryEl || !createdEl || !viewsEl || !repliesEl || !titleEl || !authorEl || !tagsEl || !postsCountEl || !statusEl || !postsEl || !kpisEl || !relatedEl || !replyForm || !replyNameEl || !replyEmailEl || !replyMessageEl || !replyCharCountEl || !replyFeedbackEl || !replyClearBtn || !scrollReplyBtn) {
+        if (!breadcrumbEl || !categoryEl || !createdEl || !viewsEl || !repliesEl || !titleEl || !authorEl || !tagsEl || !postsCountEl || !statusEl || !postsEl || !kpisEl || !relatedEl || !replyForm || !replyNameEl || !replyEmailEl || !replyMessageEl || !replyCharCountEl || !replyImageEl || !replyImageStatusEl || !replyImagePreviewEl || !replyImageClearBtn || !replyFeedbackEl || !replyClearBtn || !scrollReplyBtn || !replySubmitBtn) {
             return;
         }
 
@@ -481,6 +508,11 @@
                 .replace(/<li[^>]*>/gi, '- ')
                 .replace(/<[^>]+>/g, ' ')
                 .replace(/&nbsp;/gi, ' ')
+                .replace(/&amp;/gi, '&')
+                .replace(/&lt;/gi, '<')
+                .replace(/&gt;/gi, '>')
+                .replace(/&quot;/gi, '"')
+                .replace(/&#039;/gi, "'")
                 .replace(/\s+/g, ' ')
                 .trim();
             const lines = normalized.split(/\n+/).map((line) => line.trim()).filter(Boolean);
@@ -563,11 +595,16 @@
             }
         };
 
-        const saveLocalReplies = (threadId, replies) => {
-            try {
-                localStorage.setItem(localReplyKey(threadId), JSON.stringify(replies));
-            } catch (_) {
-            }
+        const normalizeApiComment = (comment) => {
+            const commentAuthor = comment?.author || {};
+            const commentContentHtml = String(comment?.contentHtml || comment?.content_html || '');
+            return {
+                id: Number(comment?.commentId || comment?.comment_id || Date.now()),
+                authorName: String(commentAuthor.displayName || commentAuthor.nickname || comment?.authorName || 'Thành viên'),
+                createdAt: String(comment?.createdAt || comment?.created_at || ''),
+                contentLines: htmlToLines(commentContentHtml),
+                imageUrls: collectImageUrls(comment?.imageUrl || comment?.image_url || '', commentContentHtml)
+            };
         };
 
         const normalizeApiThread = (payload) => {
@@ -584,17 +621,7 @@
                 updatedAt: String(post?.updatedAt || post?.createdAt || ''),
                 contentLines: htmlToLines(postContentHtml),
                 imageUrls: collectImageUrls(post?.imageUrl || post?.image_url || '', postContentHtml),
-                comments: comments.map((comment) => {
-                    const commentAuthor = comment?.author || {};
-                    const commentContentHtml = String(comment?.contentHtml || comment?.content_html || '');
-                    return {
-                        id: Number(comment?.commentId || Date.now()),
-                        authorName: String(commentAuthor.displayName || commentAuthor.nickname || 'Thành viên'),
-                        createdAt: String(comment?.createdAt || comment?.created_at || ''),
-                        contentLines: htmlToLines(commentContentHtml),
-                        imageUrls: collectImageUrls(comment?.imageUrl || comment?.image_url || '', commentContentHtml)
-                    };
-                })
+                comments: comments.map((comment) => normalizeApiComment(comment))
             };
         };
 
@@ -734,14 +761,196 @@
             replyFeedbackEl.style.color = type === 'error' ? '#b91c1c' : (type === 'success' ? '#15803d' : '#64748b');
         };
 
+        const setReplyImageStatus = (text, type) => {
+            replyImageStatusEl.textContent = text || '';
+            replyImageStatusEl.style.color = type === 'error' ? '#b91c1c' : (type === 'success' ? '#15803d' : '#64748b');
+        };
+
+        const formatSize = (bytes) => {
+            const size = Number(bytes);
+            if (!Number.isFinite(size) || size <= 0) return '0 B';
+            if (size < 1024) return `${size} B`;
+            if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+            return `${(size / (1024 * 1024)).toFixed(2)} MB`;
+        };
+
+        const imageExtensionForMime = (mimeType) => {
+            const normalized = String(mimeType || '').toLowerCase();
+            if (normalized === 'image/jpeg' || normalized === 'image/jpg') return 'jpg';
+            if (normalized === 'image/png') return 'png';
+            if (normalized === 'image/webp') return 'webp';
+            if (normalized === 'image/gif') return 'gif';
+            if (normalized === 'image/avif') return 'avif';
+            return 'jpg';
+        };
+
+        const inferReplyUploadFilename = (file) => {
+            const original = String(file?.name || '').trim();
+            const noExtension = original.replace(/\.[^./\\]+$/, '') || `reply-image-${Date.now()}`;
+            return `${noExtension}.${imageExtensionForMime(file?.type)}`;
+        };
+
+        const revokeReplyImagePreview = () => {
+            if (!replyImagePreviewObjectUrl) return;
+            URL.revokeObjectURL(replyImagePreviewObjectUrl);
+            replyImagePreviewObjectUrl = '';
+        };
+
+        const setReplyImagePreview = (file) => {
+            revokeReplyImagePreview();
+            if (!file) {
+                replyImagePreviewEl.classList.remove('is-visible');
+                replyImagePreviewEl.removeAttribute('src');
+                return;
+            }
+            replyImagePreviewObjectUrl = URL.createObjectURL(file);
+            replyImagePreviewEl.src = replyImagePreviewObjectUrl;
+            replyImagePreviewEl.classList.add('is-visible');
+        };
+
+        const clearReplyImageInput = (options = {}) => {
+            const clearStatus = options.clearStatus !== false;
+            replyImageEl.value = '';
+            setReplyImagePreview(null);
+            replyImageClearBtn.classList.add('d-none');
+            if (clearStatus) {
+                setReplyImageStatus('', 'info');
+            }
+        };
+
+        const uploadReplyImageToCloudflare = async (file) => {
+            const mimeType = String(file?.type || '').toLowerCase();
+            if (!mimeType.startsWith('image/')) {
+                throw new Error('Chỉ hỗ trợ file ảnh.');
+            }
+
+            const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
+                ? await window.SVPAuth.getValidAccessToken()
+                : (localStorage.getItem('accessToken') || '');
+
+            setReplyImageStatus('Đang chuẩn bị upload ảnh...', 'info');
+            const presignResponse = await fetch(`${API_BASE_URL}/api/upload/post-image`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+                },
+                body: JSON.stringify({
+                    filename: inferReplyUploadFilename(file),
+                    contentType: mimeType
+                })
+            });
+            const presignPayload = await presignResponse.json().catch(() => ({}));
+            if (!presignResponse.ok) {
+                throw new Error(presignPayload.error || `Không thể tạo URL upload (${presignResponse.status}).`);
+            }
+
+            const uploadUrl = String(presignPayload.uploadUrl || '').trim();
+            const publicUrl = String(presignPayload.publicUrl || '').trim();
+            if (!uploadUrl || !publicUrl) {
+                throw new Error('Thiếu uploadUrl/publicUrl từ API.');
+            }
+
+            setReplyImageStatus('Đang upload ảnh...', 'info');
+            let uploadResponse = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: mimeType ? { 'Content-Type': mimeType } : undefined,
+                body: file
+            });
+            if (!uploadResponse.ok && mimeType) {
+                uploadResponse = await fetch(uploadUrl, { method: 'PUT', body: file });
+            }
+            if (!uploadResponse.ok) {
+                throw new Error(`Upload ảnh thất bại (${uploadResponse.status}).`);
+            }
+            return publicUrl;
+        };
+
+        const contentHtmlFromReplyText = (message) => {
+            const text = String(message || '').trim();
+            if (!text) return '';
+            return text
+                .split(/\n+/)
+                .map((line) => line.trim())
+                .filter(Boolean)
+                .map((line) => `<p>${escapeHtml(line)}</p>`)
+                .join('');
+        };
+
+        const createCommentViaApi = async (threadId, email, contentHtml, imageUrl) => {
+            const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
+                ? await window.SVPAuth.getValidAccessToken()
+                : (localStorage.getItem('accessToken') || '');
+            const response = await fetch(`${API_BASE_URL}/posts/${encodeURIComponent(threadId)}/comments`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+                },
+                body: JSON.stringify({ email, contentHtml, imageUrl })
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload.error || `Không thể đăng phản hồi (${response.status}).`);
+            }
+            return normalizeApiComment(payload);
+        };
+
+        const deleteUploadedImageViaApi = async (publicUrl) => {
+            const normalizedUrl = String(publicUrl || '').trim();
+            if (!normalizedUrl) return;
+            const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
+                ? await window.SVPAuth.getValidAccessToken()
+                : (localStorage.getItem('accessToken') || '');
+            await fetch(`${API_BASE_URL}/api/upload/post-image/delete`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+                },
+                body: JSON.stringify({ publicUrl: normalizedUrl })
+            }).catch(() => {});
+        };
+
         const attachInteractionHandlers = () => {
             replyMessageEl.addEventListener('input', () => {
                 replyCharCountEl.textContent = `${replyMessageEl.value.length}/2000 ký tự`;
             });
 
+            replyImageEl.addEventListener('change', () => {
+                const file = replyImageEl.files && replyImageEl.files[0] ? replyImageEl.files[0] : null;
+                if (!file) {
+                    clearReplyImageInput({ clearStatus: true });
+                    return;
+                }
+                const mimeType = String(file.type || '').toLowerCase();
+                if (!mimeType.startsWith('image/')) {
+                    clearReplyImageInput({ clearStatus: false });
+                    setReplyImageStatus('Chỉ hỗ trợ file ảnh.', 'error');
+                    return;
+                }
+                if (file.size > MAX_REPLY_IMAGE_BYTES) {
+                    clearReplyImageInput({ clearStatus: false });
+                    setReplyImageStatus(`Ảnh vượt quá giới hạn ${formatSize(MAX_REPLY_IMAGE_BYTES)}.`, 'error');
+                    return;
+                }
+                setReplyImagePreview(file);
+                replyImageClearBtn.classList.remove('d-none');
+                setReplyImageStatus(`Đã chọn: ${file.name} (${formatSize(file.size)}). Ảnh sẽ upload khi bấm "Đăng phản hồi".`, 'info');
+            });
+
+            replyImageClearBtn.addEventListener('click', () => {
+                clearReplyImageInput({ clearStatus: false });
+                setReplyImageStatus('Đã xoá ảnh đính kèm.', 'info');
+            });
+
             replyClearBtn.addEventListener('click', () => {
                 replyForm.reset();
                 replyCharCountEl.textContent = '0/2000 ký tự';
+                clearReplyImageInput({ clearStatus: true });
                 setReplyFeedback('', 'info');
             });
 
@@ -867,7 +1076,7 @@
             }
 
             const localReplies = loadLocalReplies(thread.threadId);
-            const apiComments = Array.isArray(thread.comments) ? thread.comments : [];
+            let apiComments = Array.isArray(thread.comments) ? thread.comments : [];
             const totalReplies = apiComments.length + localReplies.length;
 
             const metrics = updateThreadMetrics(thread.threadId, (prev) => ({
@@ -881,11 +1090,12 @@
             renderThreadKpis(thread, metrics, 1 + totalReplies, totalReplies);
             renderRelatedThreads(thread.threadId, thread.categoryId);
 
-            replyForm.addEventListener('submit', (event) => {
+            replyForm.addEventListener('submit', async (event) => {
                 event.preventDefault();
                 const name = String(replyNameEl.value || '').trim();
                 const email = String(replyEmailEl.value || '').trim();
                 const message = String(replyMessageEl.value || '').trim();
+                const selectedImageFile = replyImageEl.files && replyImageEl.files[0] ? replyImageEl.files[0] : null;
 
                 if (name.length < 2) {
                     setReplyFeedback('Tên hiển thị cần tối thiểu 2 ký tự.', 'error');
@@ -897,44 +1107,89 @@
                     replyEmailEl.focus();
                     return;
                 }
-                if (message.length < 5) {
-                    setReplyFeedback('Nội dung phản hồi cần tối thiểu 5 ký tự.', 'error');
+                if (!message && !selectedImageFile) {
+                    setReplyFeedback('Vui lòng nhập phản hồi hoặc chọn ảnh đính kèm.', 'error');
                     replyMessageEl.focus();
                     return;
                 }
-
-                const createdAt = new Date().toISOString();
-                const newReply = {
-                    id: Date.now(),
-                    authorName: name,
-                    createdAt,
-                    imageUrls: [],
-                    contentLines: htmlToLines(message)
-                };
-
-                const currentReplies = loadLocalReplies(thread.threadId);
-                currentReplies.push(newReply);
-                saveLocalReplies(thread.threadId, currentReplies);
-
-                const nextTotalReplies = apiComments.length + currentReplies.length;
-                const nextMetrics = updateThreadMetrics(thread.threadId, (prev) => ({
-                    views: prev.views,
-                    replies: Math.max(prev.replies, nextTotalReplies),
-                    lastCommentAt: createdAt
-                }));
-
-                localStorage.setItem('userEmail', email);
-                if (!localStorage.getItem('userNickname')) {
-                    localStorage.setItem('userNickname', name);
+                if (message && message.length < 5 && !selectedImageFile) {
+                    setReplyFeedback('Nội dung phản hồi cần tối thiểu 5 ký tự (hoặc thêm ảnh đính kèm).', 'error');
+                    replyMessageEl.focus();
+                    return;
+                }
+                if (selectedImageFile) {
+                    const mimeType = String(selectedImageFile.type || '').toLowerCase();
+                    if (!mimeType.startsWith('image/')) {
+                        setReplyFeedback('Chỉ hỗ trợ ảnh đính kèm.', 'error');
+                        setReplyImageStatus('Chỉ hỗ trợ file ảnh.', 'error');
+                        return;
+                    }
+                    if (selectedImageFile.size > MAX_REPLY_IMAGE_BYTES) {
+                        setReplyFeedback(`Ảnh vượt quá giới hạn ${formatSize(MAX_REPLY_IMAGE_BYTES)}.`, 'error');
+                        setReplyImageStatus(`Ảnh vượt quá giới hạn ${formatSize(MAX_REPLY_IMAGE_BYTES)}.`, 'error');
+                        return;
+                    }
                 }
 
-                renderHeader(thread, nextMetrics, nextTotalReplies);
-                renderPosts(thread, apiComments, currentReplies);
-                renderThreadKpis(thread, nextMetrics, 1 + nextTotalReplies, nextTotalReplies);
+                const oldSubmitLabel = replySubmitBtn.innerHTML;
+                replySubmitBtn.disabled = true;
+                replySubmitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang đăng...';
+                replyClearBtn.disabled = true;
+                replyImageEl.disabled = true;
+                replyImageClearBtn.disabled = true;
 
-                replyMessageEl.value = '';
-                replyCharCountEl.textContent = '0/2000 ký tự';
-                setReplyFeedback('Đã đăng phản hồi thành công (lưu cục bộ trên trình duyệt).', 'success');
+                let uploadedImageUrl = '';
+                let commentPersisted = false;
+                try {
+                    if (selectedImageFile) {
+                        uploadedImageUrl = await uploadReplyImageToCloudflare(selectedImageFile);
+                        setReplyImageStatus('Upload ảnh thành công.', 'success');
+                    }
+                    const contentHtml = contentHtmlFromReplyText(message);
+                    const createdComment = await createCommentViaApi(
+                        thread.threadId,
+                        email,
+                        contentHtml,
+                        uploadedImageUrl
+                    );
+                    commentPersisted = true;
+                    apiComments = [...apiComments, createdComment];
+
+                    const currentReplies = loadLocalReplies(thread.threadId);
+                    const nextTotalReplies = apiComments.length + currentReplies.length;
+                    const nextMetrics = updateThreadMetrics(thread.threadId, (prev) => ({
+                        views: prev.views,
+                        replies: Math.max(prev.replies, nextTotalReplies),
+                        lastCommentAt: createdComment.createdAt || new Date().toISOString()
+                    }));
+
+                    localStorage.setItem('userEmail', email);
+                    if (!localStorage.getItem('userNickname')) {
+                        localStorage.setItem('userNickname', name);
+                    }
+
+                    renderHeader(thread, nextMetrics, nextTotalReplies);
+                    renderPosts(thread, apiComments, currentReplies);
+                    renderThreadKpis(thread, nextMetrics, 1 + nextTotalReplies, nextTotalReplies);
+
+                    replyForm.reset();
+                    replyCharCountEl.textContent = '0/2000 ký tự';
+                    clearReplyImageInput({ clearStatus: true });
+                    setReplyFeedback('Đã đăng phản hồi thành công.', 'success');
+                } catch (error) {
+                    console.error('Cannot submit reply:', error);
+                    if (uploadedImageUrl && !commentPersisted) {
+                        await deleteUploadedImageViaApi(uploadedImageUrl);
+                    }
+                    const messageText = String(error?.message || '').trim();
+                    setReplyFeedback(messageText || 'Không thể đăng phản hồi. Vui lòng thử lại.', 'error');
+                } finally {
+                    replySubmitBtn.disabled = false;
+                    replySubmitBtn.innerHTML = oldSubmitLabel;
+                    replyClearBtn.disabled = false;
+                    replyImageEl.disabled = false;
+                    replyImageClearBtn.disabled = false;
+                }
             });
         };
 

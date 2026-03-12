@@ -330,7 +330,10 @@
         .sv-members .member:last-child{ border-bottom:0; }
         .sv-members .avatar{
             width:40px; height:40px; border-radius:50%; background:#e2e8f0 center/cover no-repeat;
-        }
+            display:flex; align-items:center; justify-content:center;
+            font-weight:800;
+            line-height:1;
+            }
         .sv-members .name{ font-weight:700; color:#0f172a; }
         .sv-members .role{ font-size:.9rem; color:var(--sv-muted); }
 

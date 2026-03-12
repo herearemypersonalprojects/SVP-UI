@@ -343,6 +343,7 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="avatar-utils.js"></script>
 <script src="auth-topbar.js"></script>
 <script>
     (function () {
@@ -615,6 +616,32 @@
             }
         };
 
+        const resolveAvatarUrl = (rawUrl) => {
+            const value = String(rawUrl ?? '').trim();
+            if (!value) return '';
+            // Allow safe "inline" and browser-generated schemes.
+            if (/^(data:|blob:)/i.test(value)) {
+                return value;
+            }
+            // Support protocol-relative URLs.
+            if (value.startsWith('//')) {
+                return `${window.location.protocol}${value}`;
+            }
+            // Allow absolute http(s) URLs.
+            if (/^https?:\/\//i.test(value)) {
+                return value;
+            }
+            // Block other schemes (e.g. javascript:, file:).
+            if (/^[a-z][a-z0-9+.-]*:/i.test(value)) {
+                return '';
+            }
+
+            const base = String(API_BASE_URL || '').replace(/\/+$/, '');
+            if (!base) return value;
+            if (value.startsWith('/')) return `${base}${value}`;
+            return `${base}/${value}`;
+        };
+
         const toPlainText = (html) => String(html ?? '')
             .replace(/<[^>]+>/g, ' ')
             .replace(/&nbsp;/g, ' ')
@@ -801,12 +828,17 @@
             const profileHref = `forum.html?author=${encodeURIComponent(author.nickname || author.userId || '')}`;
 
             let avatarHtml;
-            if (author.avatarUrl && String(author.avatarUrl).trim().length > 0) {
-                const safeAvatarUrl = escapeHtml(author.avatarUrl);
+            const avatarUrl = resolveAvatarUrl(author.avatarUrl ?? author.avatar_url);
+            if (avatarUrl) {
+                const safeAvatarUrl = escapeHtml(avatarUrl);
                 avatarHtml = `<div class="avatar" style="background-image:url('${safeAvatarUrl}');"></div>`;
             } else {
-                const initial = escapeHtml(displayName.trim().charAt(0) || 'U');
-                avatarHtml = `<div class="avatar avatar--initial">${initial}</div>`;
+                const initial = escapeHtml((displayName.trim().charAt(0) || 'U').toUpperCase());
+                const colorSeed = author.nickname || author.userId || displayName;
+                const palette = window.SVPAvatar && typeof window.SVPAvatar.palette === 'function'
+                    ? window.SVPAvatar.palette(colorSeed)
+                    : { bg: '#e2e8f0', fg: '#475569' };
+                avatarHtml = `<div class="avatar avatar--initial" style="background:${escapeHtml(palette.bg)};color:${escapeHtml(palette.fg)};">${initial}</div>`;
             }
 
             return `
@@ -992,6 +1024,8 @@
 </script>
 </body>
 </html>
+
+
 
 
 

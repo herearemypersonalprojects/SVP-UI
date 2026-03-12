@@ -317,6 +317,7 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="avatar-utils.js"></script>
 <script>
     (function () {
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
@@ -525,6 +526,20 @@
             return value ? value.charAt(0).toUpperCase() : '?';
         };
 
+        const getAvatarPalette = (seed) => {
+            return window.SVPAvatar && typeof window.SVPAvatar.palette === 'function'
+                ? window.SVPAvatar.palette(seed)
+                : null;
+        };
+
+        const renderInitialAvatar = (name, seed) => {
+            const palette = getAvatarPalette(seed ?? name);
+            const avatarStyle = palette
+                ? ` style="background:${escapeHtml(palette.bg)};color:${escapeHtml(palette.fg)};"`
+                : '';
+            return `<div class="sv-thread-post__avatar"${avatarStyle}>${escapeHtml(getInitial(name))}</div>`;
+        };
+
         const getRequestedThread = () => {
             const params = new URLSearchParams(window.location.search);
             const postId = Number(params.get('postId') || 0);
@@ -602,6 +617,7 @@
             return {
                 id: Number(comment?.commentId || comment?.comment_id || Date.now()),
                 authorName: String(commentAuthor.displayName || commentAuthor.nickname || comment?.authorName || 'Thành viên'),
+                authorSeed: String(commentAuthor.nickname || commentAuthor.userId || commentAuthor.displayName || comment?.authorName || 'anonymous'),
                 createdAt: String(comment?.createdAt || comment?.created_at || ''),
                 contentLines: htmlToLines(commentContentHtml),
                 imageUrls: collectImageUrls(comment?.imageUrl || comment?.image_url || '', commentContentHtml)
@@ -618,6 +634,7 @@
                 title: String(post?.title || 'Chủ đề'),
                 categoryId: Number(post?.categoryId || 0),
                 authorName: String(author.displayName || author.nickname || 'Thành viên SVP'),
+                authorSeed: String(author.nickname || author.userId || author.displayName || 'anonymous'),
                 createdAt: String(post?.createdAt || ''),
                 updatedAt: String(post?.updatedAt || post?.createdAt || ''),
                 contentLines: htmlToLines(postContentHtml),
@@ -634,6 +651,7 @@
                 title: fallback.title,
                 categoryId: fallback.categoryId,
                 authorName: fallback.authorName,
+                authorSeed: fallback.authorName,
                 createdAt: fallback.createdAt,
                 updatedAt: fallback.createdAt,
                 contentLines: fallback.contentLines,
@@ -659,6 +677,7 @@
                 index,
                 isOriginalPost,
                 authorName: post.authorName,
+                authorSeed: post.authorSeed || post.authorName,
                 role: isOriginalPost ? 'Chủ thớt' : 'Thành viên',
                 createdAt: post.createdAt,
                 imageUrls: Array.isArray(post.imageUrls)
@@ -681,7 +700,7 @@
             postsEl.innerHTML = postItems.map((item) => `
                 <article class="sv-thread-post">
                     <aside class="sv-thread-post__author">
-                        <div class="sv-thread-post__avatar">${escapeHtml(getInitial(item.authorName))}</div>
+                        ${renderInitialAvatar(item.authorName, item.authorSeed)}
                         <div class="sv-thread-post__name">${escapeHtml(item.authorName)}</div>
                         <div class="sv-thread-post__role">${escapeHtml(item.role)}</div>
                     </aside>

@@ -1,0 +1,503 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Superadmin Dashboard - SVP</title>
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+    <link rel="shortcut icon" href="assets/icons/favicon.svg">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="svp.css">
+    <link rel="stylesheet" href="dropdown-hover.css">
+    <style>
+        .sv-admin-grid {
+            display: grid;
+            gap: 1rem;
+        }
+        @media (min-width: 992px) {
+            .sv-admin-grid {
+                grid-template-columns: repeat(3, minmax(0, 1fr));
+            }
+        }
+        .sv-kpi {
+            background: #fff;
+            border: 1px solid var(--sv-border);
+            border-radius: 14px;
+            padding: 1rem 1.1rem;
+        }
+        .sv-kpi__label {
+            color: var(--sv-muted);
+            font-size: .85rem;
+            font-weight: 600;
+        }
+        .sv-kpi__value {
+            font-size: 1.65rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .sv-list-rows {
+            display: grid;
+            gap: .5rem;
+        }
+        .sv-list-row {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .75rem;
+            padding: .6rem .75rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            background: #fff;
+        }
+        .sv-bar {
+            height: 8px;
+            border-radius: 999px;
+            background: #e2e8f0;
+            overflow: hidden;
+        }
+        .sv-bar__fill {
+            height: 100%;
+            background: linear-gradient(135deg, #2563eb, #1d4ed8);
+        }
+        .sv-admin-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: .9rem;
+        }
+        .sv-admin-table th,
+        .sv-admin-table td {
+            padding: .55rem .4rem;
+            border-bottom: 1px solid #e2e8f0;
+            text-align: left;
+        }
+        .sv-admin-table th {
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .sv-admin-muted {
+            color: var(--sv-muted);
+        }
+        .sv-admin-error {
+            color: #b91c1c;
+            font-weight: 700;
+        }
+    </style>
+</head>
+<body>
+
+<div class="sv-topbar pt-2 pb-1">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="sv-brand">
+            <img class="sv-brand__logo-img" src="assets/icons/logo_svp.png" alt="SVP" width="102" height="112" />
+            <div class="sv-brand__title">
+                <h1>DIỄN ĐÀN SINH VIÊN & TRI THỨC VIỆT TẠI PHÁP <span class="sv-brand__accent">(SVP)</span></h1>
+                <div class="sv-brand__divider"></div>
+                <small class="sv-brand__tagline">Kết Nối – Chia Sẻ – Thành Công</small>
+            </div>
+        </div>
+
+        <div id="sv-auth-box" class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <a class="btn btn-outline-secondary" href="signup.html">Đăng Ký</a>
+            <a class="btn btn-primary" href="login.html">Đăng Nhập</a>
+        </div>
+    </div>
+</div>
+
+<div class="sv-nav">
+    <div class="container d-flex align-items-center justify-content-between">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link" href="index.html">Trang Chủ</a></li>
+            <li class="nav-item"><a class="nav-link" href="forum.html">Diễn Đàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="categories.html">Khám Phá Chủ Đề</a></li>
+            <li class="nav-item"><a class="nav-link" href="events.html">Sự Kiện & Lễ Hội</a></li>
+            <li class="nav-item"><a class="nav-link" href="ban-do-paris.html">Bản Đồ Paris</a></li>
+            <li class="nav-item"><a class="nav-link" href="about.html">Giới Thiệu</a></li>
+        </ul>
+    </div>
+</div>
+
+<main class="container my-3 my-md-4">
+    <div class="sv-breadcrumb">
+        <a href="index.html">Trang chủ</a> / <span>Superadmin Dashboard</span>
+    </div>
+
+    <div class="sv-card mb-3">
+        <div class="sv-card__hd"><i class="fa-solid fa-gauge-high me-2 text-primary"></i>Tổng quan hệ thống</div>
+        <div class="p-3">
+            <div id="overview-status" class="sv-admin-muted mb-2"></div>
+            <div class="sv-admin-grid">
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">Tổng thành viên</div>
+                    <div class="sv-kpi__value" id="kpi-users">--</div>
+                </div>
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">Admin</div>
+                    <div class="sv-kpi__value" id="kpi-admins">--</div>
+                </div>
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">Superadmin</div>
+                    <div class="sv-kpi__value" id="kpi-superadmins">--</div>
+                </div>
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">Bài viết (tổng)</div>
+                    <div class="sv-kpi__value" id="kpi-posts">--</div>
+                </div>
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">Bài viết đã đăng</div>
+                    <div class="sv-kpi__value" id="kpi-posts-published">--</div>
+                </div>
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">Bài viết chờ duyệt</div>
+                    <div class="sv-kpi__value" id="kpi-posts-pending">--</div>
+                </div>
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">Bình luận</div>
+                    <div class="sv-kpi__value" id="kpi-comments">--</div>
+                </div>
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">Sự kiện</div>
+                    <div class="sv-kpi__value" id="kpi-events">--</div>
+                </div>
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">Đăng ký Newsletter</div>
+                    <div class="sv-kpi__value" id="kpi-newsletters">--</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sv-card mb-3" id="role-management-card">
+        <div class="sv-card__hd"><i class="fa-solid fa-user-shield me-2 text-primary"></i>Quản lý quyền Admin</div>
+        <div class="p-3">
+            <div class="row g-2 align-items-end">
+                <div class="col-md-5">
+                    <label class="form-label fw-semibold" for="role-identity">Nickname hoặc Email</label>
+                    <input id="role-identity" class="form-control" type="text" placeholder="vd: minh-anh hoặc email@example.com">
+                    <div class="form-text">Nhập nickname hoặc email để đổi quyền.</div>
+                </div>
+                <div class="col-md-3">
+                    <label class="form-label fw-semibold" for="role-select">Vai trò</label>
+                    <select id="role-select" class="form-select">
+                        <option value="ADMIN">ADMIN</option>
+                        <option value="USER">USER</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button id="role-apply" class="btn btn-primary w-100">Cập nhật</button>
+                </div>
+                <div class="col-md-2">
+                    <div id="role-status" class="sv-admin-muted"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sv-card mb-3">
+        <div class="sv-card__hd"><i class="fa-solid fa-chart-line me-2 text-primary"></i>Thống kê truy cập</div>
+        <div class="p-3">
+            <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
+                <label for="admin-days" class="fw-semibold">Khoảng thời gian</label>
+                <select id="admin-days" class="form-select form-select-sm" style="width:140px;">
+                    <option value="7">7 ngày</option>
+                    <option value="14">14 ngày</option>
+                    <option value="30" selected>30 ngày</option>
+                    <option value="90">90 ngày</option>
+                </select>
+                <button id="admin-refresh" class="btn btn-sm btn-outline-primary">Làm mới</button>
+                <div id="admin-status" class="sv-admin-muted"></div>
+            </div>
+
+            <div class="sv-admin-grid mb-3">
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">Tổng lượt truy cập</div>
+                    <div class="sv-kpi__value" id="kpi-total">--</div>
+                </div>
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">Unique IP</div>
+                    <div class="sv-kpi__value" id="kpi-unique">--</div>
+                </div>
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">Quốc gia nổi bật</div>
+                    <div class="sv-kpi__value" id="kpi-country">--</div>
+                </div>
+            </div>
+
+            <div class="row g-3">
+                <div class="col-lg-5">
+                    <div class="sv-soft-card">
+                        <div class="fw-bold mb-2">Top quốc gia</div>
+                        <div id="country-list" class="sv-list-rows"></div>
+                    </div>
+                </div>
+                <div class="col-lg-7">
+                    <div class="sv-soft-card">
+                        <div class="fw-bold mb-2">Top đường dẫn</div>
+                        <div id="path-list" class="sv-list-rows"></div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="sv-soft-card">
+                        <div class="fw-bold mb-2">Top IP</div>
+                        <table class="sv-admin-table">
+                            <thead>
+                                <tr>
+                                    <th>IP</th>
+                                    <th>Country</th>
+                                    <th>Visits</th>
+                                </tr>
+                            </thead>
+                            <tbody id="ip-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <div class="sv-meta mt-3">Lưu ý: dữ liệu dựa trên IP, có thể bị ảnh hưởng bởi proxy/VPN.</div>
+        </div>
+    </div>
+</main>
+
+<footer class="container py-4">
+    <div class="row">
+        <div class="col-md">
+            <div class="sv-brand d-flex align-items-center mb-2">
+                <div class="sv-brand__logo" style="width:36px; height:36px; font-size:14px;">SVP</div>
+                <strong class="ms-2">SVP – Kết Nối • Chia Sẻ • Thành Công</strong>
+            </div>
+            <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
+        </div>
+        <div class="col-md text-md-end mt-2 mt-md-0">
+            <a class="me-3" href="terms.html">Điều khoản</a>
+            <a class="me-3" href="security.html">Bảo mật</a>
+            <a href="contact.html">Liên hệ</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="avatar-utils.js"></script>
+<script src="auth-topbar.js"></script>
+<script>
+    (function () {
+        const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+        const daysSelect = document.getElementById('admin-days');
+        const refreshBtn = document.getElementById('admin-refresh');
+        const statusEl = document.getElementById('admin-status');
+        const overviewStatusEl = document.getElementById('overview-status');
+        const usersEl = document.getElementById('kpi-users');
+        const adminsEl = document.getElementById('kpi-admins');
+        const superadminsEl = document.getElementById('kpi-superadmins');
+        const postsEl = document.getElementById('kpi-posts');
+        const postsPublishedEl = document.getElementById('kpi-posts-published');
+        const postsPendingEl = document.getElementById('kpi-posts-pending');
+        const commentsEl = document.getElementById('kpi-comments');
+        const eventsEl = document.getElementById('kpi-events');
+        const newslettersEl = document.getElementById('kpi-newsletters');
+        const totalEl = document.getElementById('kpi-total');
+        const uniqueEl = document.getElementById('kpi-unique');
+        const countryEl = document.getElementById('kpi-country');
+        const countryList = document.getElementById('country-list');
+        const pathList = document.getElementById('path-list');
+        const ipList = document.getElementById('ip-list');
+        const roleIdentity = document.getElementById('role-identity');
+        const roleSelect = document.getElementById('role-select');
+        const roleApplyBtn = document.getElementById('role-apply');
+        const roleStatus = document.getElementById('role-status');
+        const roleCard = document.getElementById('role-management-card');
+
+        const setStatus = (text, isError) => {
+            statusEl.textContent = text || '';
+            statusEl.className = isError ? 'sv-admin-error' : 'sv-admin-muted';
+        };
+
+        const setOverviewStatus = (text, isError) => {
+            if (!overviewStatusEl) return;
+            overviewStatusEl.textContent = text || '';
+            overviewStatusEl.className = isError ? 'sv-admin-error mb-2' : 'sv-admin-muted mb-2';
+        };
+
+        const setOverviewValue = (el, value) => {
+            if (!el) return;
+            el.textContent = Number.isFinite(value) ? value.toLocaleString('vi-VN') : '--';
+        };
+
+        const setRoleStatus = (text, isError) => {
+            if (!roleStatus) return;
+            roleStatus.textContent = text || '';
+            roleStatus.className = isError ? 'sv-admin-error' : 'sv-admin-muted';
+        };
+
+        const renderOverview = (payload) => {
+            setOverviewValue(usersEl, payload.totalUsers);
+            setOverviewValue(adminsEl, payload.totalAdmins);
+            setOverviewValue(superadminsEl, payload.totalSuperadmins);
+            setOverviewValue(postsEl, payload.totalPosts);
+            setOverviewValue(postsPublishedEl, payload.publishedPosts);
+            setOverviewValue(postsPendingEl, payload.pendingPosts);
+            setOverviewValue(commentsEl, payload.totalComments);
+            setOverviewValue(eventsEl, payload.totalEvents);
+            setOverviewValue(newslettersEl, payload.activeNewsletters);
+        };
+
+        const renderBarRow = (label, value, max) => {
+            const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+            return `
+                <div class="sv-list-row">
+                    <div>
+                        <div class="fw-semibold">${label}</div>
+                        <div class="sv-admin-muted">${value.toLocaleString('vi-VN')} lượt</div>
+                    </div>
+                    <div style="width:45%;">
+                        <div class="sv-bar"><div class="sv-bar__fill" style="width:${pct}%;"></div></div>
+                    </div>
+                </div>
+            `;
+        };
+
+        const render = (payload) => {
+            totalEl.textContent = payload.totalVisits.toLocaleString('vi-VN');
+            uniqueEl.textContent = payload.uniqueIps.toLocaleString('vi-VN');
+            const topCountry = payload.countries[0];
+            countryEl.textContent = topCountry ? `${topCountry.country} (${topCountry.visits.toLocaleString('vi-VN')})` : '--';
+
+            const maxCountry = payload.countries.reduce((max, item) => Math.max(max, item.visits), 0);
+            countryList.innerHTML = payload.countries.length
+                ? payload.countries.map((item) => renderBarRow(item.country, item.visits, maxCountry)).join('')
+                : '<div class="sv-admin-muted">Chưa có dữ liệu.</div>';
+
+            const maxPath = payload.paths.reduce((max, item) => Math.max(max, item.visits), 0);
+            pathList.innerHTML = payload.paths.length
+                ? payload.paths.map((item) => renderBarRow(item.path, item.visits, maxPath)).join('')
+                : '<div class="sv-admin-muted">Chưa có dữ liệu.</div>';
+
+            ipList.innerHTML = payload.ips.length
+                ? payload.ips.map((item) => `
+                    <tr>
+                        <td>${item.ip}</td>
+                        <td>${item.country || 'ZZ'}</td>
+                        <td>${item.visits.toLocaleString('vi-VN')}</td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="3" class="sv-admin-muted">Chưa có dữ liệu.</td></tr>';
+        };
+
+        const load = async () => {
+            setStatus('Đang tải...', false);
+            try {
+                const token = window.SVPAuth?.getValidAccessToken ? await window.SVPAuth.getValidAccessToken() : '';
+                if (!token) {
+                    throw new Error('Bạn cần đăng nhập bằng tài khoản superadmin.');
+                }
+                const days = Number(daysSelect.value || 30);
+                const response = await fetch(`${API_BASE_URL}/admin/dashboard/visits?days=${encodeURIComponent(days)}`, {
+                    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Không thể tải dashboard.');
+                }
+                render(payload);
+                setStatus(`Cập nhật ${days} ngày gần nhất.`, false);
+            } catch (error) {
+                setStatus(error.message || 'Không thể tải dữ liệu.', true);
+            }
+        };
+
+        const applyRole = async () => {
+            if (!roleIdentity || !roleSelect) return;
+            const identity = roleIdentity.value.trim();
+            if (!identity) {
+                setRoleStatus('Nhập nickname hoặc email.', true);
+                return;
+            }
+            setRoleStatus('Đang cập nhật...', false);
+            try {
+                const token = window.SVPAuth?.getValidAccessToken ? await window.SVPAuth.getValidAccessToken() : '';
+                if (!token) {
+                    throw new Error('Bạn cần đăng nhập bằng tài khoản superadmin.');
+                }
+                const payload = {
+                    role: roleSelect.value
+                };
+                if (identity.includes('@')) {
+                    payload.email = identity;
+                } else {
+                    payload.nickname = identity;
+                }
+                const response = await fetch(`${API_BASE_URL}/admin/users/role`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(data.error || 'Không thể cập nhật quyền.');
+                }
+                setRoleStatus(`Đã cập nhật ${data.nickname || data.email} → ${data.role}.`, false);
+                await loadOverview();
+            } catch (error) {
+                setRoleStatus(error.message || 'Không thể cập nhật quyền.', true);
+            }
+        };
+
+        const loadOverview = async () => {
+            setOverviewStatus('Đang tải...', false);
+            try {
+                const token = window.SVPAuth?.getValidAccessToken ? await window.SVPAuth.getValidAccessToken() : '';
+                if (!token) {
+                    throw new Error('Bạn cần đăng nhập bằng tài khoản superadmin.');
+                }
+                const response = await fetch(`${API_BASE_URL}/admin/dashboard/overview`, {
+                    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Không thể tải tổng quan.');
+                }
+                renderOverview(payload);
+                setOverviewStatus('Cập nhật dữ liệu tổng quan.', false);
+            } catch (error) {
+                setOverviewStatus(error.message || 'Không thể tải tổng quan.', true);
+            }
+        };
+
+        const loadAll = async () => {
+            const token = window.SVPAuth?.getValidAccessToken ? await window.SVPAuth.getValidAccessToken() : '';
+            if (!token) {
+                setStatus('Bạn cần đăng nhập bằng tài khoản admin.', true);
+                setOverviewStatus('Bạn cần đăng nhập bằng tài khoản admin.', true);
+                if (roleCard) roleCard.style.display = 'none';
+                return;
+            }
+            const payload = window.SVPAuth?.parseJwtPayload ? window.SVPAuth.parseJwtPayload(token) : {};
+            const role = String(payload?.role || '').toUpperCase();
+            if (roleCard) {
+                roleCard.style.display = role === 'SUPERADMIN' ? '' : 'none';
+            }
+            if (role !== 'SUPERADMIN' && role !== 'ADMIN') {
+                setStatus('Bạn không có quyền truy cập dashboard.', true);
+                setOverviewStatus('Bạn không có quyền truy cập dashboard.', true);
+                return;
+            }
+            await Promise.all([loadOverview(), load()]);
+        };
+
+        if (roleApplyBtn) {
+            roleApplyBtn.addEventListener('click', applyRole);
+        }
+        refreshBtn.addEventListener('click', loadAll);
+        daysSelect.addEventListener('change', load);
+        loadAll();
+    })();
+</script>
+</body>
+</html>

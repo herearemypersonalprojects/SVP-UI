@@ -195,6 +195,10 @@
         const profileHref = nickname
             ? "profile.html?nickname=" + encodeURIComponent(nickname)
             : "profile.html";
+        const role = String(payload.role || "").toUpperCase();
+        const dashboardLink = role === "SUPERADMIN" || role === "ADMIN"
+            ? '<a class="sv-auth-dashboard" href="admin_dashboard.html">Dashboard</a>'
+            : "";
         const avatarSeed = nickname || email || displayName;
         const palette = window.SVPAvatar && typeof window.SVPAvatar.palette === "function"
             ? window.SVPAvatar.palette(avatarSeed)
@@ -209,6 +213,7 @@
             '<span class="sv-auth-avatar"' + avatarStyle + ">" + escapeHtml(initial) + "</span>" +
             '<span class="sv-auth-name">' + escapeHtml(displayName) + "</span>" +
             "</a>" +
+            dashboardLink +
             '<button id="sv-auth-logout" class="sv-auth-logout" type="button">Đăng xuất</button>' +
             "</div>"
         );
@@ -231,8 +236,44 @@
         getValidAccessToken
     };
 
+    const trackVisit = () => {
+        try {
+            const today = new Date().toISOString().slice(0, 10);
+            const path = window.location.pathname + window.location.search;
+            const key = "svp.visit." + today + "." + encodeURIComponent(path);
+            if (localStorage.getItem(key)) {
+                return;
+            }
+            const payload = {
+                path,
+                referrer: document.referrer || ""
+            };
+            const url = API_BASE_URL + "/stats/visit";
+            if (navigator.sendBeacon) {
+                const ok = navigator.sendBeacon(
+                    url,
+                    new Blob([JSON.stringify(payload)], { type: "text/plain;charset=UTF-8" })
+                );
+                if (ok) {
+                    localStorage.setItem(key, "1");
+                    return;
+                }
+            }
+            fetch(url, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+                keepalive: true
+            }).then(() => {
+                localStorage.setItem(key, "1");
+            }).catch(() => {});
+        } catch (_) {
+        }
+    };
+
     (async () => {
         await getValidAccessToken();
         renderTopbar();
+        trackVisit();
     })();
 })();

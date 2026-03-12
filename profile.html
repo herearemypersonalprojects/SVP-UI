@@ -133,6 +133,7 @@
                     <div class="sv-profile-avatar" id="profile-avatar">?</div>
                     <div class="sv-profile-name" id="profile-display-name">Đang tải...</div>
                     <div class="sv-profile-nickname" id="profile-nickname"></div>
+                    <div class="sv-profile-meta" id="profile-role"></div>
                     <div class="sv-profile-meta" id="profile-email"></div>
                 </div>
             </div>
@@ -207,6 +208,7 @@
         const avatarEl = document.getElementById('profile-avatar');
         const nameEl = document.getElementById('profile-display-name');
         const nicknameEl = document.getElementById('profile-nickname');
+        const roleEl = document.getElementById('profile-role');
         const emailEl = document.getElementById('profile-email');
         const formEl = document.getElementById('profile-form');
         const readonlyEl = document.getElementById('profile-readonly');
@@ -287,7 +289,10 @@
             if (nickname) params.set('nickname', nickname);
             if (!nickname && userId) params.set('userId', userId);
             const response = await fetch(`${API_BASE_URL}/users/profile?${params.toString()}`, {
-                headers: { Accept: 'application/json' }
+                headers: {
+                    Accept: 'application/json',
+                    Authorization: accessToken ? `Bearer ${accessToken}` : ''
+                }
             });
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) {
@@ -341,6 +346,7 @@
             const displayName = profile.displayName || profile.nickname || 'Thành viên';
             if (nameEl) nameEl.textContent = displayName;
             if (nicknameEl) nicknameEl.textContent = profile.nickname ? `@${profile.nickname}` : '';
+            if (roleEl) roleEl.textContent = profile.role ? `Vai trò: ${profile.role}` : '';
             if (emailEl) {
                 if (isSelf && me?.email) {
                     emailEl.textContent = me.email;
@@ -375,6 +381,11 @@
             let userId = params.get('userId');
 
             me = await fetchMe();
+            if (!accessToken) {
+                setStatus('Bạn cần đăng nhập để xem hồ sơ.', 'error');
+                setEditable(false);
+                return;
+            }
             if (!nickname && !userId && me?.nickname) {
                 nickname = me.nickname;
                 window.history.replaceState({}, '', buildProfileHref(nickname));

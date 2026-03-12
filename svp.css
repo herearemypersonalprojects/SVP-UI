@@ -85,6 +85,21 @@
             text-decoration:none;
             color:inherit;
         }
+        .sv-auth-dashboard{
+            display:inline-flex;
+            align-items:center;
+            padding:.3rem .65rem;
+            border-radius:999px;
+            background:#0f172a;
+            color:#fff;
+            font-weight:700;
+            font-size:.8rem;
+            text-decoration:none;
+        }
+        .sv-auth-dashboard:hover{
+            background:#1e293b;
+            color:#fff;
+        }
         .sv-auth-name{
             color:#0f172a; font-weight:700; max-width:140px;
             overflow:hidden; text-overflow:ellipsis; white-space:nowrap;

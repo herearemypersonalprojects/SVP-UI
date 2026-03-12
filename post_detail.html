@@ -110,6 +110,24 @@
             font-size: .85rem;
             font-weight: 600;
         }
+        .pd-stat--action {
+            cursor: pointer;
+            transition: transform .12s ease, background .12s ease, box-shadow .12s ease;
+        }
+        .pd-stat--action:hover {
+            background: #dbeafe;
+            box-shadow: 0 6px 16px rgba(30, 58, 138, 0.12);
+            transform: translateY(-1px);
+        }
+        .pd-stat--active {
+            background: #1e3a8a;
+            color: #fff;
+            border-color: #1e3a8a;
+        }
+        .pd-stat--loading {
+            opacity: .6;
+            pointer-events: none;
+        }
 
         /* Article body typography */
         .pd-body {
@@ -394,7 +412,7 @@
                     <div class="pd-author-meta" id="pd-author-meta"></div>
                 </div>
                 <div class="ms-auto d-flex gap-2 flex-wrap">
-                    <span class="pd-stat" id="pd-likes"><i class="fa-regular fa-thumbs-up"></i>--</span>
+                    <span class="pd-stat pd-stat--action" id="pd-likes" role="button" tabindex="0" aria-label="Thích bài viết"><i class="fa-regular fa-thumbs-up"></i>--</span>
                     <span class="pd-stat" id="pd-comment-count"><i class="fa-regular fa-comments"></i>--</span>
                 </div>
             </div>
@@ -536,6 +554,7 @@
     const MAX_REPLY_IMAGE_UPLOAD_BYTES = 88 * 1024;        // 88 KB
     const METRIC_KEY = 'svp.postDetail.metrics.v1';
     const LOCAL_COMMENT_PREFIX = 'svp.postDetail.localComments.v1.';
+    const LIKE_KEY_PREFIX = 'svp.postDetail.like.v1.';
 
     const CATEGORY_NAMES = {
         1: 'Học tập và nghiên cứu tại Pháp',
@@ -597,6 +616,12 @@
     const replyClearBtn      = document.getElementById('reply-clear');
     const replySubmitBtn     = replyForm ? replyForm.querySelector('button[type="submit"]') : null;
     let replyImageObjectUrl  = '';
+    let currentPostId = 0;
+    let currentLikeCount = 0;
+    let currentPost = null;
+    let currentCommentCount = 0;
+    let likeInFlight = false;
+    let likeHandlerAttached = false;
 
     /* ── Utilities ── */
     const escapeHtml = (v) => String(v ?? '')
@@ -628,6 +653,60 @@
         const h = Math.floor(diff/60);
         if (h < 24) return `${h} giờ trước`;
         return `${Math.floor(h/24)} ngày trước`;
+    };
+
+    const hasLiked = (postId) => {
+        try { return localStorage.getItem(`${LIKE_KEY_PREFIX}${postId}`) === '1'; }
+        catch { return false; }
+    };
+    const setLiked = (postId) => {
+        try { localStorage.setItem(`${LIKE_KEY_PREFIX}${postId}`, '1'); } catch {}
+    };
+    const renderLikeBadge = () => {
+        if (!likesEl) return;
+        const liked = currentPostId && hasLiked(currentPostId);
+        const iconClass = liked ? 'fa-solid' : 'fa-regular';
+        likesEl.innerHTML = `<i class="${iconClass} fa-thumbs-up"></i>${currentLikeCount.toLocaleString('vi-VN')} thích`;
+        likesEl.classList.toggle('pd-stat--active', Boolean(liked));
+        likesEl.setAttribute('aria-pressed', liked ? 'true' : 'false');
+    };
+    const attachLikeHandler = () => {
+        if (!likesEl || likeHandlerAttached) return;
+        likeHandlerAttached = true;
+        const trigger = async () => {
+            if (!currentPostId || likeInFlight || hasLiked(currentPostId)) return;
+            likeInFlight = true;
+            likesEl.classList.add('pd-stat--loading');
+            try {
+                const res = await fetch(`${API_BASE_URL}/posts/${encodeURIComponent(currentPostId)}/like`, {
+                    method: 'POST',
+                    headers: { Accept: 'application/json' }
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    throw new Error(data.error || 'Không thể cập nhật lượt thích.');
+                }
+                currentLikeCount = Number(data.likeCount ?? (currentLikeCount + 1));
+                setLiked(currentPostId);
+                renderLikeBadge();
+                if (currentPost) {
+                    currentPost.likeCount = currentLikeCount;
+                    renderKpis(currentPost, currentCommentCount);
+                }
+            } catch (err) {
+                console.warn(err);
+            } finally {
+                likeInFlight = false;
+                likesEl.classList.remove('pd-stat--loading');
+            }
+        };
+        likesEl.addEventListener('click', trigger);
+        likesEl.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                trigger();
+            }
+        });
     };
 
     const getCategoryName = (id) => CATEGORY_NAMES[id] || `Chuyên mục #${id||'?'}`;
@@ -926,7 +1005,9 @@
         if (authorMetaEl) authorMetaEl.textContent = `Đăng ngày ${formatDate(post.createdAt)}`;
 
         // Stats badges
-        if (likesEl) likesEl.innerHTML = `<i class="fa-regular fa-thumbs-up"></i>${post.likeCount.toLocaleString('vi-VN')} thích`;
+        currentPostId = post.postId;
+        currentLikeCount = post.likeCount;
+        renderLikeBadge();
         if (commentCountEl) commentCountEl.innerHTML = `<i class="fa-regular fa-comments"></i>${commentCount.toLocaleString('vi-VN')} bình luận`;
     };
 
@@ -1249,6 +1330,8 @@
         updateMetric(postId, prev => ({ views: prev.views+1, comments: Math.max(prev.comments, comments.length) }));
 
         // Render everything
+        currentPost = post;
+        currentCommentCount = comments.length;
         renderHero(post.contentHtml);
         renderPostHeader(post, comments.length);
         renderBody(post);
@@ -1256,6 +1339,7 @@
         renderComments(comments);
         renderKpis(post, comments.length);
         renderRelated(postId, post.categoryId);
+        attachLikeHandler();
 
         // Form
         prefillForm();

@@ -1,5 +1,16 @@
 (function () {
-    const API_BASE_URL = window.SVP_API_BASE_URL || "http://localhost:8080";
+    const fallbackBase = (() => {
+        const origin = window.location.origin || "";
+        const isLocal = origin.includes("localhost") || origin.includes("127.0.0.1");
+        if (isLocal) {
+            return "http://localhost:8080";
+        }
+        if (origin && origin !== "null") {
+            return origin;
+        }
+        return "http://localhost:8080";
+    })();
+    const API_BASE_URL = window.SVP_API_BASE_URL || fallbackBase;
     const REFRESH_SKEW_MS = 60 * 1000;
     const MIN_REFRESH_DELAY_MS = 5 * 1000;
     const RETRY_REFRESH_DELAY_MS = 30 * 1000;
@@ -297,32 +308,33 @@
         try {
             const today = new Date().toISOString().slice(0, 10);
             const path = window.location.pathname + window.location.search;
-            const key = "svp.visit." + today + "." + encodeURIComponent(path);
-            if (localStorage.getItem(key)) {
-                return;
+            const key = "svp.visit.v2." + today + "." + encodeURIComponent(path);
+            let storageOk = true;
+            try {
+                if (localStorage.getItem(key)) {
+                    return;
+                }
+            } catch (_) {
+                storageOk = false;
             }
             const payload = {
                 path,
                 referrer: document.referrer || ""
             };
             const url = API_BASE_URL + "/stats/visit";
-            if (navigator.sendBeacon) {
-                const ok = navigator.sendBeacon(
-                    url,
-                    new Blob([JSON.stringify(payload)], { type: "text/plain;charset=UTF-8" })
-                );
-                if (ok) {
-                    localStorage.setItem(key, "1");
-                    return;
-                }
-            }
             fetch(url, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
                 keepalive: true
-            }).then(() => {
-                localStorage.setItem(key, "1");
+            }).then((res) => {
+                if (!res.ok || !storageOk) {
+                    return;
+                }
+                try {
+                    localStorage.setItem(key, "1");
+                } catch (_) {
+                }
             }).catch(() => {});
         } catch (_) {
         }

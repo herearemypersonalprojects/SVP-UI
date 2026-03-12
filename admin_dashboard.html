@@ -86,6 +86,25 @@
             color: #b91c1c;
             font-weight: 700;
         }
+        .sv-kpi--clickable {
+            cursor: pointer;
+            transition: transform .12s ease, box-shadow .12s ease;
+        }
+        .sv-kpi--clickable:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+        }
+        .sv-detail-close {
+            border: 0;
+            background: #e2e8f0;
+            color: #0f172a;
+            font-weight: 700;
+            border-radius: 999px;
+            padding: .3rem .75rem;
+        }
+        .sv-detail-close:hover {
+            background: #cbd5f5;
+        }
     </style>
 </head>
 <body>
@@ -131,42 +150,63 @@
         <div class="p-3">
             <div id="overview-status" class="sv-admin-muted mb-2"></div>
             <div class="sv-admin-grid">
-                <div class="sv-kpi">
+                <div class="sv-kpi sv-kpi--clickable" data-detail="users" tabindex="0" role="button">
                     <div class="sv-kpi__label">Tổng thành viên</div>
                     <div class="sv-kpi__value" id="kpi-users">--</div>
                 </div>
-                <div class="sv-kpi">
+                <div class="sv-kpi sv-kpi--clickable" data-detail="users" data-role="ADMIN" tabindex="0" role="button">
                     <div class="sv-kpi__label">Admin</div>
                     <div class="sv-kpi__value" id="kpi-admins">--</div>
                 </div>
-                <div class="sv-kpi">
+                <div class="sv-kpi sv-kpi--clickable" data-detail="users" data-role="SUPERADMIN" tabindex="0" role="button">
                     <div class="sv-kpi__label">Superadmin</div>
                     <div class="sv-kpi__value" id="kpi-superadmins">--</div>
                 </div>
-                <div class="sv-kpi">
+                <div class="sv-kpi sv-kpi--clickable" data-detail="posts" tabindex="0" role="button">
                     <div class="sv-kpi__label">Bài viết (tổng)</div>
                     <div class="sv-kpi__value" id="kpi-posts">--</div>
                 </div>
-                <div class="sv-kpi">
+                <div class="sv-kpi sv-kpi--clickable" data-detail="posts" data-status="PUBLISHED" tabindex="0" role="button">
                     <div class="sv-kpi__label">Bài viết đã đăng</div>
                     <div class="sv-kpi__value" id="kpi-posts-published">--</div>
                 </div>
-                <div class="sv-kpi">
+                <div class="sv-kpi sv-kpi--clickable" data-detail="posts" data-status="PENDING" tabindex="0" role="button">
                     <div class="sv-kpi__label">Bài viết chờ duyệt</div>
                     <div class="sv-kpi__value" id="kpi-posts-pending">--</div>
                 </div>
-                <div class="sv-kpi">
+                <div class="sv-kpi sv-kpi--clickable" data-detail="comments" tabindex="0" role="button">
                     <div class="sv-kpi__label">Bình luận</div>
                     <div class="sv-kpi__value" id="kpi-comments">--</div>
                 </div>
-                <div class="sv-kpi">
+                <div class="sv-kpi sv-kpi--clickable" data-detail="events" tabindex="0" role="button">
                     <div class="sv-kpi__label">Sự kiện</div>
                     <div class="sv-kpi__value" id="kpi-events">--</div>
                 </div>
-                <div class="sv-kpi">
+                <div class="sv-kpi sv-kpi--clickable" data-detail="newsletters" tabindex="0" role="button">
                     <div class="sv-kpi__label">Đăng ký Newsletter</div>
                     <div class="sv-kpi__value" id="kpi-newsletters">--</div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="sv-card mb-3 d-none" id="detail-card">
+        <div class="sv-card__hd d-flex align-items-center justify-content-between">
+            <span id="detail-title">Chi tiết</span>
+            <button id="detail-close" type="button" class="sv-detail-close">Đóng</button>
+        </div>
+        <div class="p-3">
+            <div id="detail-status" class="sv-admin-muted mb-2"></div>
+            <div class="table-responsive">
+                <table class="sv-admin-table">
+                    <thead id="detail-head"></thead>
+                    <tbody id="detail-body"></tbody>
+                </table>
+            </div>
+            <div id="detail-pagination" class="d-flex align-items-center gap-2 mt-2">
+                <button id="detail-prev" class="btn btn-sm btn-outline-secondary">Trước</button>
+                <div id="detail-page" class="sv-admin-muted"></div>
+                <button id="detail-next" class="btn btn-sm btn-outline-secondary">Sau</button>
             </div>
         </div>
     </div>
@@ -213,15 +253,15 @@
             </div>
 
             <div class="sv-admin-grid mb-3">
-                <div class="sv-kpi">
+                <div class="sv-kpi sv-kpi--clickable" data-detail="visits_total" tabindex="0" role="button">
                     <div class="sv-kpi__label">Tổng lượt truy cập</div>
                     <div class="sv-kpi__value" id="kpi-total">--</div>
                 </div>
-                <div class="sv-kpi">
+                <div class="sv-kpi sv-kpi--clickable" data-detail="visits_unique" tabindex="0" role="button">
                     <div class="sv-kpi__label">Unique IP</div>
                     <div class="sv-kpi__value" id="kpi-unique">--</div>
                 </div>
-                <div class="sv-kpi">
+                <div class="sv-kpi sv-kpi--clickable" data-detail="visits_country" tabindex="0" role="button">
                     <div class="sv-kpi__label">Quốc gia nổi bật</div>
                     <div class="sv-kpi__value" id="kpi-country">--</div>
                 </div>
@@ -310,6 +350,18 @@
         const roleStatus = document.getElementById('role-status');
         const roleCard = document.getElementById('role-management-card');
         const visitsCard = document.getElementById('visits-card');
+        const detailCard = document.getElementById('detail-card');
+        const detailTitleEl = document.getElementById('detail-title');
+        const detailStatusEl = document.getElementById('detail-status');
+        const detailHeadEl = document.getElementById('detail-head');
+        const detailBodyEl = document.getElementById('detail-body');
+        const detailPrevBtn = document.getElementById('detail-prev');
+        const detailNextBtn = document.getElementById('detail-next');
+        const detailPageEl = document.getElementById('detail-page');
+        const detailCloseBtn = document.getElementById('detail-close');
+
+        let lastVisitPayload = null;
+        let detailState = { type: '', role: '', status: '', page: 1, limit: 20 };
 
         const setStatus = (text, isError) => {
             statusEl.textContent = text || '';
@@ -361,6 +413,7 @@
         };
 
         const render = (payload) => {
+            lastVisitPayload = payload;
             totalEl.textContent = payload.totalVisits.toLocaleString('vi-VN');
             uniqueEl.textContent = payload.uniqueIps.toLocaleString('vi-VN');
             const topCountry = payload.countries[0];
@@ -385,6 +438,245 @@
                     </tr>
                 `).join('')
                 : '<tr><td colspan="3" class="sv-admin-muted">Chưa có dữ liệu.</td></tr>';
+        };
+
+        const escapeHtml = (value) => String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
+        const setDetailStatus = (text, isError) => {
+            if (!detailStatusEl) return;
+            detailStatusEl.textContent = text || '';
+            detailStatusEl.className = isError ? 'sv-admin-error mb-2' : 'sv-admin-muted mb-2';
+        };
+
+        const showDetailCard = () => {
+            if (detailCard) detailCard.classList.remove('d-none');
+        };
+
+        const hideDetailCard = () => {
+            if (detailCard) detailCard.classList.add('d-none');
+        };
+
+        const setDetailPagination = (enabled, hasMore) => {
+            if (!detailPrevBtn || !detailNextBtn || !detailPageEl) return;
+            if (!enabled) {
+                detailPrevBtn.disabled = true;
+                detailNextBtn.disabled = true;
+                detailPageEl.textContent = '';
+                return;
+            }
+            detailPrevBtn.disabled = detailState.page <= 1;
+            detailNextBtn.disabled = !hasMore;
+            detailPageEl.textContent = `Trang ${detailState.page}`;
+        };
+
+        const renderDetailTable = (headers, rowsHtml) => {
+            if (detailHeadEl) {
+                detailHeadEl.innerHTML = `<tr>${headers.map((label) => `<th>${escapeHtml(label)}</th>`).join('')}</tr>`;
+            }
+            if (detailBodyEl) {
+                const colspan = Math.max(1, headers.length);
+                detailBodyEl.innerHTML = rowsHtml || `<tr><td colspan="${colspan}" class="sv-admin-muted">Chưa có dữ liệu.</td></tr>`;
+            }
+        };
+
+        const buildDetailRows = (type, items) => {
+            switch (type) {
+                case 'users': {
+                    const headers = ['ID', 'Email', 'Nickname', 'Role', 'Ngày tạo'];
+                    const rows = items.map((item) => {
+                        const profile = item.nickname ? `profile.html?nickname=${encodeURIComponent(item.nickname)}` : '';
+                        const nicknameNode = profile
+                            ? `<a href="${profile}">${escapeHtml(item.nickname || '')}</a>`
+                            : escapeHtml(item.nickname || '');
+                        return `
+                            <tr>
+                                <td>${escapeHtml(item.userId)}</td>
+                                <td>${escapeHtml(item.email || '')}</td>
+                                <td>${nicknameNode}</td>
+                                <td>${escapeHtml(item.role || '')}</td>
+                                <td>${escapeHtml(item.createdAt || '')}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                    return { headers, rows };
+                }
+                case 'posts': {
+                    const headers = ['ID', 'Tiêu đề', 'Trạng thái', 'Loại', 'Tác giả', 'Ngày tạo'];
+                    const rows = items.map((item) => {
+                        const isArticle = Boolean(item.isArticle);
+                        const href = isArticle
+                            ? `post_detail.html?postId=${encodeURIComponent(item.postId)}`
+                            : `thread.html?postId=${encodeURIComponent(item.postId)}`;
+                        return `
+                            <tr>
+                                <td>${escapeHtml(item.postId)}</td>
+                                <td><a href="${href}">${escapeHtml(item.title || '')}</a></td>
+                                <td>${escapeHtml(item.status || '')}</td>
+                                <td>${isArticle ? 'Article' : 'Discussion'}</td>
+                                <td>${escapeHtml(item.authorNickname || '')}</td>
+                                <td>${escapeHtml(item.createdAt || '')}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                    return { headers, rows };
+                }
+                case 'comments': {
+                    const headers = ['ID', 'Post', 'Bài viết', 'Loại', 'Tác giả', 'Ngày tạo'];
+                    const rows = items.map((item) => {
+                        const isArticle = Boolean(item.isArticle);
+                        const href = isArticle
+                            ? `post_detail.html?postId=${encodeURIComponent(item.postId)}`
+                            : `thread.html?postId=${encodeURIComponent(item.postId)}`;
+                        return `
+                            <tr>
+                                <td>${escapeHtml(item.commentId)}</td>
+                                <td>${escapeHtml(item.postId)}</td>
+                                <td><a href="${href}">${escapeHtml(item.postTitle || '')}</a></td>
+                                <td>${isArticle ? 'Article' : 'Discussion'}</td>
+                                <td>${escapeHtml(item.authorNickname || '')}</td>
+                                <td>${escapeHtml(item.createdAt || '')}</td>
+                            </tr>
+                        `;
+                    }).join('');
+                    return { headers, rows };
+                }
+                case 'events': {
+                    const headers = ['ID', 'Tiêu đề', 'Thời gian', 'Ngày tạo'];
+                    const rows = items.map((item) => `
+                        <tr>
+                            <td>${escapeHtml(item.eventId)}</td>
+                            <td>${escapeHtml(item.title || '')}</td>
+                            <td>${escapeHtml(item.eventTime || '')}</td>
+                            <td>${escapeHtml(item.createdAt || '')}</td>
+                        </tr>
+                    `).join('');
+                    return { headers, rows };
+                }
+                case 'newsletters': {
+                    const headers = ['Email', 'Chuyên mục', 'Trạng thái', 'Ngày tạo'];
+                    const rows = items.map((item) => `
+                        <tr>
+                            <td>${escapeHtml(item.email || '')}</td>
+                            <td>${escapeHtml(Array.isArray(item.categoryIds) ? item.categoryIds.join(', ') : '')}</td>
+                            <td>${item.active ? 'Active' : 'Inactive'}</td>
+                            <td>${escapeHtml(item.createdAt || '')}</td>
+                        </tr>
+                    `).join('');
+                    return { headers, rows };
+                }
+                default:
+                    return { headers: ['Thông tin'], rows: '' };
+            }
+        };
+
+        const renderVisitsDetail = async (kind) => {
+            if (!lastVisitPayload) {
+                await load();
+            }
+            const payload = lastVisitPayload;
+            if (!payload) {
+                setDetailStatus('Chưa có dữ liệu truy cập.', true);
+                renderDetailTable(['Thông tin'], '');
+                setDetailPagination(false, false);
+                return;
+            }
+            if (kind === 'visits_total') {
+                const headers = ['Ngày', 'Lượt truy cập', 'Unique IP'];
+                const rows = payload.daily.map((item) => `
+                    <tr>
+                        <td>${escapeHtml(item.day)}</td>
+                        <td>${Number(item.visits || 0).toLocaleString('vi-VN')}</td>
+                        <td>${Number(item.uniqueIps || 0).toLocaleString('vi-VN')}</td>
+                    </tr>
+                `).join('');
+                renderDetailTable(headers, rows);
+            } else if (kind === 'visits_unique') {
+                const headers = ['IP', 'Country', 'Visits'];
+                const rows = payload.ips.map((item) => `
+                    <tr>
+                        <td>${escapeHtml(item.ip || '')}</td>
+                        <td>${escapeHtml(item.country || 'ZZ')}</td>
+                        <td>${Number(item.visits || 0).toLocaleString('vi-VN')}</td>
+                    </tr>
+                `).join('');
+                renderDetailTable(headers, rows);
+            } else {
+                const headers = ['Country', 'Visits', 'Unique IP'];
+                const rows = payload.countries.map((item) => `
+                    <tr>
+                        <td>${escapeHtml(item.country || 'ZZ')}</td>
+                        <td>${Number(item.visits || 0).toLocaleString('vi-VN')}</td>
+                        <td>${Number(item.uniqueIps || 0).toLocaleString('vi-VN')}</td>
+                    </tr>
+                `).join('');
+                renderDetailTable(headers, rows);
+            }
+            setDetailPagination(false, false);
+        };
+
+        const fetchDetail = async () => {
+            setDetailStatus('Đang tải...', false);
+            try {
+                const token = window.SVPAuth?.getValidAccessToken ? await window.SVPAuth.getValidAccessToken() : '';
+                if (!token) {
+                    throw new Error('Bạn cần đăng nhập bằng tài khoản admin.');
+                }
+                const params = new URLSearchParams();
+                params.set('type', detailState.type);
+                params.set('page', String(detailState.page));
+                params.set('limit', String(detailState.limit));
+                if (detailState.role) params.set('role', detailState.role);
+                if (detailState.status) params.set('status', detailState.status);
+                const response = await fetch(`${API_BASE_URL}/admin/dashboard/details?${params.toString()}`, {
+                    headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Không thể tải chi tiết.');
+                }
+                const detail = buildDetailRows(detailState.type, Array.isArray(payload.items) ? payload.items : []);
+                renderDetailTable(detail.headers, detail.rows);
+                setDetailPagination(true, Boolean(payload.hasMore));
+                setDetailStatus('', false);
+            } catch (error) {
+                setDetailStatus(error.message || 'Không thể tải chi tiết.', true);
+                renderDetailTable(['Thông tin'], '');
+                setDetailPagination(false, false);
+            }
+        };
+
+        const openDetail = async (type, role, status) => {
+            detailState = {
+                type,
+                role: role || '',
+                status: status || '',
+                page: 1,
+                limit: 20
+            };
+            if (detailTitleEl) {
+                const titleMap = {
+                    users: 'Danh sách thành viên',
+                    posts: 'Danh sách bài viết',
+                    comments: 'Danh sách bình luận',
+                    events: 'Danh sách sự kiện',
+                    newsletters: 'Danh sách newsletter',
+                    visits_total: 'Chi tiết lượt truy cập theo ngày',
+                    visits_unique: 'Chi tiết IP truy cập',
+                    visits_country: 'Chi tiết quốc gia'
+                };
+                detailTitleEl.textContent = titleMap[type] || 'Chi tiết';
+            }
+            showDetailCard();
+            if (type.startsWith('visits_')) {
+                await renderVisitsDetail(type);
+            } else {
+                await fetchDetail();
+            }
         };
 
         const load = async () => {
@@ -519,6 +811,38 @@
         if (roleApplyBtn) {
             roleApplyBtn.addEventListener('click', applyRole);
         }
+        if (detailCloseBtn) {
+            detailCloseBtn.addEventListener('click', hideDetailCard);
+        }
+        if (detailPrevBtn) {
+            detailPrevBtn.addEventListener('click', () => {
+                if (detailState.page > 1) {
+                    detailState.page -= 1;
+                    fetchDetail();
+                }
+            });
+        }
+        if (detailNextBtn) {
+            detailNextBtn.addEventListener('click', () => {
+                detailState.page += 1;
+                fetchDetail();
+            });
+        }
+
+        document.querySelectorAll('[data-detail]').forEach((node) => {
+            const handler = () => {
+                const type = node.getAttribute('data-detail') || '';
+                if (!type) return;
+                openDetail(type, node.getAttribute('data-role') || '', node.getAttribute('data-status') || '');
+            };
+            node.addEventListener('click', handler);
+            node.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter' || event.key === ' ') {
+                    event.preventDefault();
+                    handler();
+                }
+            });
+        });
         refreshBtn.addEventListener('click', loadAll);
         daysSelect.addEventListener('change', load);
         loadAll();

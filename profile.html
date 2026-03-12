@@ -358,6 +358,14 @@
             renderAvatar(previewAvatar, displayName, profile.avatarUrl, profile.nickname || profile.userId);
             if (displayInput) displayInput.value = displayName;
             if (avatarUrlInput) avatarUrlInput.value = profile.avatarUrl || '';
+            if (isSelf) {
+                localStorage.setItem('userDisplayName', displayName);
+                if (profile.avatarUrl) {
+                    localStorage.setItem('userAvatarUrl', profile.avatarUrl);
+                } else {
+                    localStorage.removeItem('userAvatarUrl');
+                }
+            }
         };
 
         const updatePreview = () => {

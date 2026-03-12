@@ -174,7 +174,23 @@
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
 
-    const renderTopbar = () => {
+    const resolveAvatarUrl = (raw) => {
+        const value = String(raw || "").trim();
+        if (!value) {
+            return "";
+        }
+        try {
+            const url = new URL(value, window.location.href);
+            if (url.protocol !== "http:" && url.protocol !== "https:") {
+                return "";
+            }
+            return url.href;
+        } catch (_) {
+            return "";
+        }
+    };
+
+    const renderTopbar = (profileOverride) => {
         if (!authBox) {
             return;
         }
@@ -190,7 +206,9 @@
         const payload = parseJwtPayload(token) || {};
         const nickname = (localStorage.getItem("userNickname") || payload.nickname || "").trim();
         const email = (localStorage.getItem("userEmail") || payload.email || "").trim();
-        const displayName = nickname || email || "Tai khoan";
+        const displayName = (profileOverride && profileOverride.displayName)
+            ? String(profileOverride.displayName).trim()
+            : (localStorage.getItem("userDisplayName") || nickname || email || "Tai khoan");
         const initial = (displayName.charAt(0) || "U").toUpperCase();
         const profileHref = nickname
             ? "profile.html?nickname=" + encodeURIComponent(nickname)
@@ -203,9 +221,13 @@
         const palette = window.SVPAvatar && typeof window.SVPAvatar.palette === "function"
             ? window.SVPAvatar.palette(avatarSeed)
             : null;
-        const avatarStyle = palette
-            ? ' style="background:' + escapeHtml(palette.bg) + ';color:' + escapeHtml(palette.fg) + ';"'
-            : "";
+        const storedAvatarUrl = localStorage.getItem("userAvatarUrl") || "";
+        const avatarUrl = resolveAvatarUrl(profileOverride?.avatarUrl || storedAvatarUrl);
+        const avatarStyle = avatarUrl
+            ? ' style="background-image:url(\'' + escapeHtml(avatarUrl) + '\');background-size:cover;background-position:center;color:transparent;"'
+            : (palette
+                ? ' style="background:' + escapeHtml(palette.bg) + ';color:' + escapeHtml(palette.fg) + ';"'
+                : "");
 
         authBox.innerHTML = (
             '<div class="sv-auth-user" title="' + escapeHtml(email || displayName) + '">' +
@@ -234,6 +256,41 @@
         removeSession,
         refreshAccessToken,
         getValidAccessToken
+    };
+
+    const refreshProfileAvatar = async () => {
+        const existingAvatar = localStorage.getItem("userAvatarUrl");
+        if (existingAvatar) {
+            return;
+        }
+        const accessToken = await getValidAccessToken();
+        if (!accessToken) {
+            return;
+        }
+        try {
+            const response = await fetch(`${API_BASE_URL}/me`, {
+                headers: { Authorization: `Bearer ${accessToken}`, Accept: "application/json" }
+            });
+            if (!response.ok) {
+                return;
+            }
+            const payload = await response.json().catch(() => ({}));
+            if (payload.displayName) {
+                localStorage.setItem("userDisplayName", String(payload.displayName));
+            } else if (payload.nickname) {
+                localStorage.removeItem("userDisplayName");
+            }
+            if (payload.avatarUrl) {
+                localStorage.setItem("userAvatarUrl", String(payload.avatarUrl));
+            } else {
+                localStorage.removeItem("userAvatarUrl");
+            }
+            renderTopbar({
+                displayName: payload.displayName || payload.nickname || payload.email,
+                avatarUrl: payload.avatarUrl
+            });
+        } catch (_) {
+        }
     };
 
     const trackVisit = () => {
@@ -274,6 +331,7 @@
     (async () => {
         await getValidAccessToken();
         renderTopbar();
+        void refreshProfileAvatar();
         trackVisit();
     })();
 })();

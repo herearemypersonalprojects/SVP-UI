@@ -547,18 +547,36 @@
                 : null;
         };
 
+        const resolveAvatarUrl = (raw) => {
+            const value = String(raw || '').trim();
+            if (!value) return '';
+            try {
+                const url = new URL(value, window.location.href);
+                if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+                    return '';
+                }
+                return url.href;
+            } catch (_) {
+                return '';
+            }
+        };
+
         const buildProfileHref = (nickname, userId) => {
             if (nickname) return `profile.html?nickname=${encodeURIComponent(nickname)}`;
             if (userId) return `profile.html?userId=${encodeURIComponent(userId)}`;
             return '';
         };
 
-        const renderInitialAvatar = (name, seed, profileHref) => {
+        const renderInitialAvatar = (name, seed, avatarUrl, profileHref) => {
+            const safeAvatarUrl = resolveAvatarUrl(avatarUrl);
             const palette = getAvatarPalette(seed ?? name);
-            const avatarStyle = palette
-                ? ` style="background:${escapeHtml(palette.bg)};color:${escapeHtml(palette.fg)};"`
-                : '';
-            const avatarNode = `<div class="sv-thread-post__avatar"${avatarStyle}>${escapeHtml(getInitial(name))}</div>`;
+            const avatarStyle = safeAvatarUrl
+                ? ` style="background-image:url('${escapeHtml(safeAvatarUrl)}');background-size:cover;background-position:center;color:transparent;"`
+                : (palette
+                    ? ` style="background:${escapeHtml(palette.bg)};color:${escapeHtml(palette.fg)};"`
+                    : '');
+            const avatarLabel = safeAvatarUrl ? '' : escapeHtml(getInitial(name));
+            const avatarNode = `<div class="sv-thread-post__avatar"${avatarStyle}>${avatarLabel}</div>`;
             if (!profileHref) return avatarNode;
             return `<a class="sv-thread-post__author-link" href="${profileHref}" aria-label="Hồ sơ ${escapeHtml(name)}">${avatarNode}</a>`;
         };
@@ -643,6 +661,7 @@
                 authorSeed: String(commentAuthor.nickname || commentAuthor.userId || commentAuthor.displayName || comment?.authorName || 'anonymous'),
                 authorNickname: String(commentAuthor.nickname || ''),
                 authorUserId: String(commentAuthor.userId || ''),
+                authorAvatarUrl: String(commentAuthor.avatarUrl || commentAuthor.avatar_url || comment?.authorAvatarUrl || comment?.author_avatar_url || comment?.avatarUrl || comment?.avatar_url || ''),
                 createdAt: String(comment?.createdAt || comment?.created_at || ''),
                 contentLines: htmlToLines(commentContentHtml),
                 imageUrls: collectImageUrls(comment?.imageUrl || comment?.image_url || '', commentContentHtml)
@@ -662,6 +681,7 @@
                 authorSeed: String(author.nickname || author.userId || author.displayName || 'anonymous'),
                 authorNickname: String(author.nickname || ''),
                 authorUserId: String(author.userId || ''),
+                authorAvatarUrl: String(author.avatarUrl || author.avatar_url || post?.authorAvatarUrl || post?.author_avatar_url || post?.avatarUrl || post?.avatar_url || ''),
                 createdAt: String(post?.createdAt || ''),
                 updatedAt: String(post?.updatedAt || post?.createdAt || ''),
                 contentLines: htmlToLines(postContentHtml),
@@ -681,6 +701,7 @@
                 authorSeed: fallback.authorName,
                 authorNickname: '',
                 authorUserId: '',
+                authorAvatarUrl: '',
                 createdAt: fallback.createdAt,
                 updatedAt: fallback.createdAt,
                 contentLines: fallback.contentLines,
@@ -712,6 +733,7 @@
                 authorSeed: post.authorSeed || post.authorName,
                 authorNickname: post.authorNickname || '',
                 authorUserId: post.authorUserId || '',
+                authorAvatarUrl: post.authorAvatarUrl || '',
                 role: isOriginalPost ? 'Chủ thớt' : 'Thành viên',
                 createdAt: post.createdAt,
                 imageUrls: Array.isArray(post.imageUrls)
@@ -734,7 +756,7 @@
             postsEl.innerHTML = postItems.map((item) => `
                 <article class="sv-thread-post">
                     <aside class="sv-thread-post__author">
-                        ${renderInitialAvatar(item.authorName, item.authorSeed, buildProfileHref(item.authorNickname, item.authorUserId))}
+                        ${renderInitialAvatar(item.authorName, item.authorSeed, item.authorAvatarUrl, buildProfileHref(item.authorNickname, item.authorUserId))}
                         ${buildProfileHref(item.authorNickname, item.authorUserId)
                             ? `<a class="sv-thread-post__author-link" href="${buildProfileHref(item.authorNickname, item.authorUserId)}"><div class="sv-thread-post__name">${escapeHtml(item.authorName)}</div></a>`
                             : `<div class="sv-thread-post__name">${escapeHtml(item.authorName)}</div>`}

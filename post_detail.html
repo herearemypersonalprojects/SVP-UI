@@ -738,20 +738,24 @@
             : null;
     };
 
-    const normalizePost = (post) => ({
-        postId: Number(post?.postId ?? post?.id ?? 0),
-        categoryId: Number(post?.categoryId ?? 0),
-        title: post?.title || '',
-        contentHtml: post?.contentHtml || post?.content_html || post?.content || '',
-        createdAt: post?.createdAt || post?.created_at || new Date().toISOString(),
-        author: post?.author || {
-            userId: null,
-            nickname: post?.nickname || 'anonymous',
-            displayName: post?.authorDisplayName || post?.authorName || post?.nickname || 'Ẩn danh'
-        },
-        viewCount: Number(post?.viewCount ?? post?.views ?? 0),
-        likeCount: Number(post?.likeCount ?? post?.likes ?? 0)
-    });
+    const normalizePost = (post) => {
+        const rawAuthor = post?.author || {};
+        return {
+            postId: Number(post?.postId ?? post?.id ?? 0),
+            categoryId: Number(post?.categoryId ?? 0),
+            title: post?.title || '',
+            contentHtml: post?.contentHtml || post?.content_html || post?.content || '',
+            createdAt: post?.createdAt || post?.created_at || new Date().toISOString(),
+            author: {
+                userId: rawAuthor.userId || post?.authorUserId || post?.author_user_id || null,
+                nickname: rawAuthor.nickname || post?.authorNickname || post?.author_nickname || post?.nickname || 'anonymous',
+                displayName: rawAuthor.displayName || post?.authorDisplayName || post?.author_display_name || post?.authorName || post?.nickname || 'Ẩn danh',
+                avatarUrl: rawAuthor.avatarUrl || rawAuthor.avatar_url || post?.authorAvatarUrl || post?.author_avatar_url || post?.avatarUrl || post?.avatar_url || ''
+            },
+            viewCount: Number(post?.viewCount ?? post?.views ?? 0),
+            likeCount: Number(post?.likeCount ?? post?.likes ?? 0)
+        };
+    };
 
     const normalizeComment = (c) => {
         const author = c?.author || {};
@@ -764,6 +768,7 @@
             authorSeed: String(author.nickname || author.userId || author.displayName || c?.authorName || 'anonymous'),
             authorNickname: String(author.nickname || ''),
             authorUserId: String(author.userId || ''),
+            authorAvatarUrl: String(author.avatarUrl || author.avatar_url || c?.authorAvatarUrl || c?.author_avatar_url || c?.avatarUrl || c?.avatar_url || ''),
             createdAt: String(c?.createdAt || c?.created_at || ''),
             contentText: toPlainText(contentHtml) || String(c?.contentText || ''),
             imageUrl: directImg || embeddedImg
@@ -991,12 +996,23 @@
             ? `profile.html?nickname=${encodeURIComponent(author.nickname)}`
             : (author.userId ? `profile.html?userId=${encodeURIComponent(author.userId)}` : 'profile.html');
         if (authorAvatarEl) {
-            authorAvatarEl.textContent = getInitial(displayName);
-            const colorSeed = author.nickname || author.userId || displayName;
-            const palette = getAvatarPalette(colorSeed);
-            if (palette) {
-                authorAvatarEl.style.background = palette.bg;
-                authorAvatarEl.style.color = palette.fg;
+            const avatarUrl = toSafeHttpUrl(author.avatarUrl || author.avatar_url || '');
+            if (avatarUrl) {
+                authorAvatarEl.style.backgroundImage = `url('${escapeHtml(avatarUrl)}')`;
+                authorAvatarEl.style.backgroundSize = 'cover';
+                authorAvatarEl.style.backgroundPosition = 'center';
+                authorAvatarEl.style.backgroundColor = '#e2e8f0';
+                authorAvatarEl.textContent = '';
+                authorAvatarEl.style.color = 'transparent';
+            } else {
+                authorAvatarEl.style.backgroundImage = '';
+                authorAvatarEl.textContent = getInitial(displayName);
+                const colorSeed = author.nickname || author.userId || displayName;
+                const palette = getAvatarPalette(colorSeed);
+                if (palette) {
+                    authorAvatarEl.style.background = palette.bg;
+                    authorAvatarEl.style.color = palette.fg;
+                }
             }
         }
         if (authorLinkEl) authorLinkEl.href = profileHref;
@@ -1028,15 +1044,19 @@
     const renderCommentItem = (comment) => {
         const initial = getInitial(comment.authorName);
         const palette = getAvatarPalette(comment.authorSeed || comment.authorName);
-        const avatarStyle = palette
-            ? ` style="background:${escapeHtml(palette.bg)};color:${escapeHtml(palette.fg)};"`
-            : '';
+        const avatarUrl = toSafeHttpUrl(comment.authorAvatarUrl || '');
+        const avatarStyle = avatarUrl
+            ? ` style="background-image:url('${escapeHtml(avatarUrl)}');background-size:cover;background-position:center;color:transparent;"`
+            : (palette
+                ? ` style="background:${escapeHtml(palette.bg)};color:${escapeHtml(palette.fg)};"`
+                : '');
         const profileHref = comment.authorNickname
             ? `profile.html?nickname=${encodeURIComponent(comment.authorNickname)}`
             : (comment.authorUserId ? `profile.html?userId=${encodeURIComponent(comment.authorUserId)}` : '');
+        const avatarLabel = avatarUrl ? '' : escapeHtml(initial);
         const avatarNode = profileHref
-            ? `<a class="pd-comment-link" href="${profileHref}" aria-label="Hồ sơ ${escapeHtml(comment.authorName)}"><div class="pd-comment-avatar"${avatarStyle}>${escapeHtml(initial)}</div></a>`
-            : `<div class="pd-comment-avatar"${avatarStyle}>${escapeHtml(initial)}</div>`;
+            ? `<a class="pd-comment-link" href="${profileHref}" aria-label="Hồ sơ ${escapeHtml(comment.authorName)}"><div class="pd-comment-avatar"${avatarStyle}>${avatarLabel}</div></a>`
+            : `<div class="pd-comment-avatar"${avatarStyle}>${avatarLabel}</div>`;
         const nameNode = profileHref
             ? `<a class="pd-comment-link" href="${profileHref}"><span class="pd-comment-name">${escapeHtml(comment.authorName)}</span></a>`
             : `<span class="pd-comment-name">${escapeHtml(comment.authorName)}</span>`;

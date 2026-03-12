@@ -14,6 +14,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="svp.css">
     <link rel="stylesheet" href="dropdown-hover.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="" />
     <style>
         .sv-admin-grid {
             display: grid;
@@ -105,6 +106,11 @@
         .sv-detail-close:hover {
             background: #cbd5f5;
         }
+        .sv-map {
+            height: 320px;
+            border-radius: 12px;
+            border: 1px solid var(--sv-border);
+        }
     </style>
 </head>
 <body>
@@ -158,9 +164,9 @@
                     <div class="sv-kpi__label">Admin</div>
                     <div class="sv-kpi__value" id="kpi-admins">--</div>
                 </div>
-                <div class="sv-kpi sv-kpi--clickable" data-detail="users" data-role="SUPERADMIN" tabindex="0" role="button">
-                    <div class="sv-kpi__label">Superadmin</div>
-                    <div class="sv-kpi__value" id="kpi-superadmins">--</div>
+                <div class="sv-kpi sv-kpi--clickable" data-detail="visits_total" tabindex="0" role="button">
+                    <div class="sv-kpi__label">Tổng lượt truy cập</div>
+                    <div class="sv-kpi__value" id="kpi-visits-overview">--</div>
                 </div>
                 <div class="sv-kpi sv-kpi--clickable" data-detail="posts" tabindex="0" role="button">
                     <div class="sv-kpi__label">Bài viết (tổng)</div>
@@ -257,21 +263,21 @@
                     <div class="sv-kpi__label">Tổng lượt truy cập</div>
                     <div class="sv-kpi__value" id="kpi-total">--</div>
                 </div>
-                <div class="sv-kpi sv-kpi--clickable" data-detail="visits_unique" tabindex="0" role="button">
+                <div class="sv-kpi sv-kpi--clickable" id="kpi-unique-card" data-detail="visits_unique" tabindex="0" role="button">
                     <div class="sv-kpi__label">Unique IP</div>
                     <div class="sv-kpi__value" id="kpi-unique">--</div>
                 </div>
-                <div class="sv-kpi sv-kpi--clickable" data-detail="visits_country" tabindex="0" role="button">
-                    <div class="sv-kpi__label">Quốc gia nổi bật</div>
-                    <div class="sv-kpi__value" id="kpi-country">--</div>
+                <div class="sv-kpi sv-kpi--clickable" data-detail="visits_city" tabindex="0" role="button">
+                    <div class="sv-kpi__label">Thành phố nổi bật</div>
+                    <div class="sv-kpi__value" id="kpi-city">--</div>
                 </div>
             </div>
 
             <div class="row g-3">
                 <div class="col-lg-5">
                     <div class="sv-soft-card">
-                        <div class="fw-bold mb-2">Top quốc gia</div>
-                        <div id="country-list" class="sv-list-rows"></div>
+                        <div class="fw-bold mb-2">Top thành phố</div>
+                        <div id="city-list" class="sv-list-rows"></div>
                     </div>
                 </div>
                 <div class="col-lg-7">
@@ -282,12 +288,19 @@
                 </div>
                 <div class="col-12">
                     <div class="sv-soft-card">
+                        <div class="fw-bold mb-2">Bản đồ truy cập theo thành phố</div>
+                        <div id="city-map" class="sv-map"></div>
+                        <div id="city-map-note" class="sv-admin-muted mt-2"></div>
+                    </div>
+                </div>
+                <div class="col-12" id="visits-ip-section">
+                    <div class="sv-soft-card">
                         <div class="fw-bold mb-2">Top IP</div>
                         <table class="sv-admin-table">
                             <thead>
                                 <tr>
                                     <th>IP</th>
-                                    <th>Country</th>
+                                    <th>City</th>
                                     <th>Visits</th>
                                 </tr>
                             </thead>
@@ -320,6 +333,7 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
 <script src="avatar-utils.js"></script>
 <script src="auth-topbar.js"></script>
 <script>
@@ -331,7 +345,7 @@
         const overviewStatusEl = document.getElementById('overview-status');
         const usersEl = document.getElementById('kpi-users');
         const adminsEl = document.getElementById('kpi-admins');
-        const superadminsEl = document.getElementById('kpi-superadmins');
+        const visitsOverviewEl = document.getElementById('kpi-visits-overview');
         const postsEl = document.getElementById('kpi-posts');
         const postsPublishedEl = document.getElementById('kpi-posts-published');
         const postsPendingEl = document.getElementById('kpi-posts-pending');
@@ -340,10 +354,14 @@
         const newslettersEl = document.getElementById('kpi-newsletters');
         const totalEl = document.getElementById('kpi-total');
         const uniqueEl = document.getElementById('kpi-unique');
-        const countryEl = document.getElementById('kpi-country');
-        const countryList = document.getElementById('country-list');
+        const cityEl = document.getElementById('kpi-city');
+        const cityList = document.getElementById('city-list');
+        const cityMapEl = document.getElementById('city-map');
+        const cityMapNote = document.getElementById('city-map-note');
         const pathList = document.getElementById('path-list');
         const ipList = document.getElementById('ip-list');
+        const visitsIpSection = document.getElementById('visits-ip-section');
+        const visitsUniqueCard = document.getElementById('kpi-unique-card');
         const roleIdentity = document.getElementById('role-identity');
         const roleSelect = document.getElementById('role-select');
         const roleApplyBtn = document.getElementById('role-apply');
@@ -362,6 +380,129 @@
 
         let lastVisitPayload = null;
         let detailState = { type: '', role: '', status: '', page: 1, limit: 20 };
+        let currentRole = '';
+        let cityMap = null;
+        let cityLayer = null;
+        let lastCityItems = [];
+        const ipGeoCache = new Map();
+
+        const canViewIpDetails = () => currentRole === 'SUPERADMIN';
+
+        const normalizeIpForLookup = (ip) => String(ip || '').trim().replace(/^\[(.+)]$/, '$1').replace(/\/(\d+)$/, '');
+        const normalizeIpForDisplay = (ip) => normalizeIpForLookup(ip).replace(/%\w+$/, '');
+
+        const ensureCityMap = () => {
+            if (!cityMapEl) return null;
+            if (cityMap) return cityMap;
+            cityMap = L.map(cityMapEl, { scrollWheelZoom: false }).setView([48.8566, 2.3522], 4);
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                maxZoom: 18,
+                attribution: '&copy; OpenStreetMap contributors'
+            }).addTo(cityMap);
+            cityLayer = L.layerGroup().addTo(cityMap);
+            return cityMap;
+        };
+
+        const fetchIpGeo = async (ip) => {
+            const normalizedIp = normalizeIpForLookup(ip);
+            if (!normalizedIp) return null;
+            if (ipGeoCache.has(normalizedIp)) return ipGeoCache.get(normalizedIp);
+            const url = `https://ipapi.co/${encodeURIComponent(normalizedIp)}/json/`;
+            try {
+                const response = await fetch(url, { headers: { Accept: 'application/json' } });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || data.error) {
+                    ipGeoCache.set(normalizedIp, null);
+                    return null;
+                }
+                const result = {
+                    city: data.city || '',
+                    country: data.country_name || data.country || '',
+                    countryCode: data.country_code || data.country_code_iso3 || '',
+                    lat: Number(data.latitude),
+                    lon: Number(data.longitude)
+                };
+                ipGeoCache.set(normalizedIp, result);
+                return result;
+            } catch (_) {
+                ipGeoCache.set(normalizedIp, null);
+                return null;
+            }
+        };
+
+        const buildCitiesFromIps = async (ips) => {
+            const cities = new Map();
+            for (const item of ips) {
+                const geo = await fetchIpGeo(item.ip);
+                if (!geo || !geo.city || !Number.isFinite(geo.lat) || !Number.isFinite(geo.lon)) {
+                    continue;
+                }
+                const key = `${geo.city}|${geo.countryCode}`;
+                const current = cities.get(key) || {
+                    city: geo.city,
+                    country: geo.country,
+                    countryCode: geo.countryCode,
+                    lat: geo.lat,
+                    lon: geo.lon,
+                    visits: 0
+                };
+                current.visits += Number(item.visits || 0);
+                cities.set(key, current);
+            }
+            return Array.from(cities.values()).sort((a, b) => b.visits - a.visits);
+        };
+
+        const resolveCityCoordinates = async (cityName, country) => {
+            const query = [cityName, country].filter(Boolean).join(', ');
+            if (!query) return null;
+            const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
+            const response = await fetch(url, { headers: { Accept: 'application/json' } });
+            const data = await response.json().catch(() => []);
+            if (!Array.isArray(data) || !data.length) return null;
+            return { lat: Number(data[0].lat), lon: Number(data[0].lon) };
+        };
+
+        const renderCityMap = async (cities) => {
+            if (!cityMapEl) return;
+            const map = ensureCityMap();
+            if (!map || !cityLayer) return;
+            cityLayer.clearLayers();
+
+            if (!Array.isArray(cities) || !cities.length) {
+                if (cityMapNote) cityMapNote.textContent = 'Chưa có dữ liệu thành phố.';
+                return;
+            }
+
+            if (cityMapNote) cityMapNote.textContent = '';
+            const bounds = [];
+            for (const item of cities) {
+                const cityName = item.city || item.name || '';
+                const lat = Number(item.lat);
+                const lon = Number(item.lon);
+                let coords = null;
+                if (Number.isFinite(lat) && Number.isFinite(lon)) {
+                    coords = { lat, lon };
+                } else {
+                    coords = await resolveCityCoordinates(cityName, item.country || item.countryCode);
+                }
+                if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lon)) {
+                    continue;
+                }
+                const visits = Number(item.visits || 0);
+                const label = cityName ? `${cityName} (${visits.toLocaleString('vi-VN')})` : visits.toLocaleString('vi-VN');
+                L.circleMarker([coords.lat, coords.lon], {
+                    radius: Math.max(4, Math.min(16, Math.round(Math.log10(visits + 1) * 6))),
+                    color: '#2563eb',
+                    fillColor: '#60a5fa',
+                    fillOpacity: 0.7,
+                    weight: 1
+                }).addTo(cityLayer).bindPopup(label);
+                bounds.push([coords.lat, coords.lon]);
+            }
+            if (bounds.length) {
+                map.fitBounds(bounds, { padding: [30, 30] });
+            }
+        };
 
         const setStatus = (text, isError) => {
             statusEl.textContent = text || '';
@@ -388,7 +529,6 @@
         const renderOverview = (payload) => {
             setOverviewValue(usersEl, payload.totalUsers);
             setOverviewValue(adminsEl, payload.totalAdmins);
-            setOverviewValue(superadminsEl, payload.totalSuperadmins);
             setOverviewValue(postsEl, payload.totalPosts);
             setOverviewValue(postsPublishedEl, payload.publishedPosts);
             setOverviewValue(postsPendingEl, payload.pendingPosts);
@@ -412,32 +552,50 @@
             `;
         };
 
-        const render = (payload) => {
+        const render = async (payload) => {
             lastVisitPayload = payload;
+            setOverviewValue(visitsOverviewEl, payload.totalVisits);
             totalEl.textContent = payload.totalVisits.toLocaleString('vi-VN');
             uniqueEl.textContent = payload.uniqueIps.toLocaleString('vi-VN');
-            const topCountry = payload.countries[0];
-            countryEl.textContent = topCountry ? `${topCountry.country} (${topCountry.visits.toLocaleString('vi-VN')})` : '--';
 
-            const maxCountry = payload.countries.reduce((max, item) => Math.max(max, item.visits), 0);
-            countryList.innerHTML = payload.countries.length
-                ? payload.countries.map((item) => renderBarRow(item.country, item.visits, maxCountry)).join('')
-                : '<div class="sv-admin-muted">Chưa có dữ liệu.</div>';
+            let cities = Array.isArray(payload.cities) ? payload.cities : [];
+            if (!cities.length && canViewIpDetails() && Array.isArray(payload.ips) && payload.ips.length) {
+                cities = await buildCitiesFromIps(payload.ips);
+            }
+            lastCityItems = cities;
+
+            const topCity = cities[0];
+            cityEl.textContent = topCity ? `${topCity.city || topCity.name || '--'} (${Number(topCity.visits || 0).toLocaleString('vi-VN')})` : '--';
+
+            const maxCity = cities.reduce((max, item) => Math.max(max, Number(item.visits || 0)), 0);
+            cityList.innerHTML = cities.length
+                ? cities.map((item) => renderBarRow(item.city || item.name || '--', Number(item.visits || 0), maxCity)).join('')
+                : '<div class="sv-admin-muted">Chưa có dữ liệu thành phố.</div>';
+
+            renderCityMap(cities);
 
             const maxPath = payload.paths.reduce((max, item) => Math.max(max, item.visits), 0);
             pathList.innerHTML = payload.paths.length
                 ? payload.paths.map((item) => renderBarRow(item.path, item.visits, maxPath)).join('')
                 : '<div class="sv-admin-muted">Chưa có dữ liệu.</div>';
 
-            ipList.innerHTML = payload.ips.length
-                ? payload.ips.map((item) => `
-                    <tr>
-                        <td>${item.ip}</td>
-                        <td>${item.country || 'ZZ'}</td>
-                        <td>${item.visits.toLocaleString('vi-VN')}</td>
-                    </tr>
-                `).join('')
-                : '<tr><td colspan="3" class="sv-admin-muted">Chưa có dữ liệu.</td></tr>';
+            if (Array.isArray(payload.ips) && payload.ips.length) {
+                const rows = await Promise.all(payload.ips.map(async (item) => {
+                    const geo = await fetchIpGeo(item.ip);
+                    const cityLabel = geo?.city || geo?.country || '--';
+                    const ipLabel = normalizeIpForDisplay(item.ip) || '--';
+                    return `
+                        <tr>
+                            <td>${escapeHtml(ipLabel)}</td>
+                            <td>${escapeHtml(cityLabel)}</td>
+                            <td>${Number(item.visits || 0).toLocaleString('vi-VN')}</td>
+                        </tr>
+                    `;
+                }));
+                ipList.innerHTML = rows.join('');
+            } else {
+                ipList.innerHTML = '<tr><td colspan="3" class="sv-admin-muted">Chưa có dữ liệu.</td></tr>';
+            }
         };
 
         const escapeHtml = (value) => String(value ?? '')
@@ -578,6 +736,10 @@
             if (!lastVisitPayload) {
                 await load();
             }
+            if (kind === 'visits_unique' && !canViewIpDetails()) {
+                setStatus('Chi tiết IP chỉ dành cho superadmin.', true);
+                return;
+            }
             const payload = lastVisitPayload;
             if (!payload) {
                 setDetailStatus('Chưa có dữ liệu truy cập.', true);
@@ -596,22 +758,27 @@
                 `).join('');
                 renderDetailTable(headers, rows);
             } else if (kind === 'visits_unique') {
-                const headers = ['IP', 'Country', 'Visits'];
-                const rows = payload.ips.map((item) => `
-                    <tr>
-                        <td>${escapeHtml(item.ip || '')}</td>
-                        <td>${escapeHtml(item.country || 'ZZ')}</td>
-                        <td>${Number(item.visits || 0).toLocaleString('vi-VN')}</td>
-                    </tr>
-                `).join('');
-                renderDetailTable(headers, rows);
+                const headers = ['IP', 'City', 'Visits'];
+                const rows = await Promise.all(payload.ips.map(async (item) => {
+                    const geo = await fetchIpGeo(item.ip);
+                    const cityLabel = geo?.city || geo?.country || '--';
+                    const ipLabel = normalizeIpForDisplay(item.ip) || '--';
+                    return `
+                        <tr>
+                            <td>${escapeHtml(ipLabel)}</td>
+                            <td>${escapeHtml(cityLabel)}</td>
+                            <td>${Number(item.visits || 0).toLocaleString('vi-VN')}</td>
+                        </tr>
+                    `;
+                }));
+                renderDetailTable(headers, rows.join(''));
             } else {
-                const headers = ['Country', 'Visits', 'Unique IP'];
-                const rows = payload.countries.map((item) => `
+                const headers = ['Thành phố', 'Lượt truy cập'];
+                const cities = lastCityItems;
+                const rows = cities.map((item) => `
                     <tr>
-                        <td>${escapeHtml(item.country || 'ZZ')}</td>
+                        <td>${escapeHtml(item.city || item.name || '--')}</td>
                         <td>${Number(item.visits || 0).toLocaleString('vi-VN')}</td>
-                        <td>${Number(item.uniqueIps || 0).toLocaleString('vi-VN')}</td>
                     </tr>
                 `).join('');
                 renderDetailTable(headers, rows);
@@ -651,6 +818,10 @@
         };
 
         const openDetail = async (type, role, status) => {
+            if (type === 'visits_unique' && !canViewIpDetails()) {
+                setStatus('Chi tiết IP chỉ dành cho superadmin.', true);
+                return;
+            }
             detailState = {
                 type,
                 role: role || '',
@@ -667,7 +838,7 @@
                     newsletters: 'Danh sách newsletter',
                     visits_total: 'Chi tiết lượt truy cập theo ngày',
                     visits_unique: 'Chi tiết IP truy cập',
-                    visits_country: 'Chi tiết quốc gia'
+                    visits_city: 'Chi tiết thành phố'
                 };
                 detailTitleEl.textContent = titleMap[type] || 'Chi tiết';
             }
@@ -694,7 +865,7 @@
                 if (!response.ok) {
                     throw new Error(payload.error || 'Không thể tải dashboard.');
                 }
-                render(payload);
+                await render(payload);
                 setStatus(`Cập nhật ${days} ngày gần nhất.`, false);
             } catch (error) {
                 setStatus(error.message || 'Không thể tải dữ liệu.', true);
@@ -790,18 +961,25 @@
                 return '';
             };
             const role = await resolveRole();
+            currentRole = role;
             if (roleCard) {
                 roleCard.style.display = role === 'SUPERADMIN' ? '' : 'none';
             }
             if (visitsCard) {
-                visitsCard.style.display = role === 'SUPERADMIN' ? '' : 'none';
+                visitsCard.style.display = role === 'SUPERADMIN' || role === 'ADMIN' ? '' : 'none';
+            }
+            if (visitsIpSection) {
+                visitsIpSection.style.display = canViewIpDetails() ? '' : 'none';
+            }
+            if (visitsUniqueCard && !canViewIpDetails()) {
+                visitsUniqueCard.removeAttribute('data-detail');
             }
             if (role !== 'SUPERADMIN' && role !== 'ADMIN') {
                 setStatus('Bạn không có quyền truy cập dashboard.', true);
                 setOverviewStatus('Bạn không có quyền truy cập dashboard.', true);
                 return;
             }
-            if (role === 'SUPERADMIN') {
+            if (role === 'SUPERADMIN' || role === 'ADMIN') {
                 await Promise.all([loadOverview(), load()]);
             } else {
                 await loadOverview();

@@ -80,6 +80,13 @@
             color: #0f172a;
             line-height: 1.2;
         }
+        .pd-author-link {
+            text-decoration: none;
+            color: inherit;
+        }
+        .pd-author-link:hover .pd-author-name {
+            text-decoration: underline;
+        }
         .pd-author-meta {
             color: #64748b;
             font-size: .84rem;
@@ -189,6 +196,13 @@
             font-weight: 800;
             font-size: .9rem;
             flex-shrink: 0;
+        }
+        .pd-comment-link {
+            text-decoration: none;
+            color: inherit;
+        }
+        .pd-comment-link:hover .pd-comment-name {
+            text-decoration: underline;
         }
         .pd-comment-name {
             font-weight: 700;
@@ -370,9 +384,13 @@
 
             <!-- Author bar -->
             <div class="pd-author-bar">
-                <div class="pd-author-avatar" id="pd-author-avatar">?</div>
+                <a class="pd-author-link" id="pd-author-link" href="profile.html">
+                    <div class="pd-author-avatar" id="pd-author-avatar">?</div>
+                </a>
                 <div>
-                    <div class="pd-author-name" id="pd-author-name">Đang tải...</div>
+                    <a class="pd-author-link" id="pd-author-name-link" href="profile.html">
+                        <div class="pd-author-name" id="pd-author-name">Đang tải...</div>
+                    </a>
                     <div class="pd-author-meta" id="pd-author-meta"></div>
                 </div>
                 <div class="ms-auto d-flex gap-2 flex-wrap">
@@ -549,6 +567,8 @@
     const readtimeEl     = document.getElementById('pd-readtime');
     const titleEl        = document.getElementById('pd-title');
     const authorAvatarEl = document.getElementById('pd-author-avatar');
+    const authorLinkEl = document.getElementById('pd-author-link');
+    const authorNameLinkEl = document.getElementById('pd-author-name-link');
     const authorNameEl   = document.getElementById('pd-author-name');
     const authorMetaEl   = document.getElementById('pd-author-meta');
     const likesEl        = document.getElementById('pd-likes');
@@ -663,6 +683,8 @@
             id: Number(c?.commentId || c?.id || Date.now()),
             authorName: String(author.displayName || author.nickname || c?.authorName || 'Ẩn danh'),
             authorSeed: String(author.nickname || author.userId || author.displayName || c?.authorName || 'anonymous'),
+            authorNickname: String(author.nickname || ''),
+            authorUserId: String(author.userId || ''),
             createdAt: String(c?.createdAt || c?.created_at || ''),
             contentText: toPlainText(contentHtml) || String(c?.contentText || ''),
             imageUrl: directImg || embeddedImg
@@ -886,6 +908,9 @@
         if (titleEl) titleEl.textContent = post.title || 'Chưa có tiêu đề';
 
         // Author
+        const profileHref = author.nickname
+            ? `profile.html?nickname=${encodeURIComponent(author.nickname)}`
+            : (author.userId ? `profile.html?userId=${encodeURIComponent(author.userId)}` : 'profile.html');
         if (authorAvatarEl) {
             authorAvatarEl.textContent = getInitial(displayName);
             const colorSeed = author.nickname || author.userId || displayName;
@@ -895,6 +920,8 @@
                 authorAvatarEl.style.color = palette.fg;
             }
         }
+        if (authorLinkEl) authorLinkEl.href = profileHref;
+        if (authorNameLinkEl) authorNameLinkEl.href = profileHref;
         if (authorNameEl) authorNameEl.textContent = displayName;
         if (authorMetaEl) authorMetaEl.textContent = `Đăng ngày ${formatDate(post.createdAt)}`;
 
@@ -923,6 +950,15 @@
         const avatarStyle = palette
             ? ` style="background:${escapeHtml(palette.bg)};color:${escapeHtml(palette.fg)};"`
             : '';
+        const profileHref = comment.authorNickname
+            ? `profile.html?nickname=${encodeURIComponent(comment.authorNickname)}`
+            : (comment.authorUserId ? `profile.html?userId=${encodeURIComponent(comment.authorUserId)}` : '');
+        const avatarNode = profileHref
+            ? `<a class="pd-comment-link" href="${profileHref}" aria-label="Hồ sơ ${escapeHtml(comment.authorName)}"><div class="pd-comment-avatar"${avatarStyle}>${escapeHtml(initial)}</div></a>`
+            : `<div class="pd-comment-avatar"${avatarStyle}>${escapeHtml(initial)}</div>`;
+        const nameNode = profileHref
+            ? `<a class="pd-comment-link" href="${profileHref}"><span class="pd-comment-name">${escapeHtml(comment.authorName)}</span></a>`
+            : `<span class="pd-comment-name">${escapeHtml(comment.authorName)}</span>`;
         const safeImage = comment.imageUrl ? `
             <div class="pd-comment-media">
                 <img src="${escapeHtml(comment.imageUrl)}" alt="Ảnh đính kèm" loading="lazy" decoding="async">
@@ -933,8 +969,8 @@
         return `
             <article class="pd-comment-item" id="comment-${comment.id}">
                 <div class="pd-comment-item__header">
-                    <div class="pd-comment-avatar"${avatarStyle}>${escapeHtml(initial)}</div>
-                    <span class="pd-comment-name">${escapeHtml(comment.authorName)}</span>
+                    ${avatarNode}
+                    ${nameNode}
                     <span class="pd-comment-date">${escapeHtml(timeLabel)}</span>
                 </div>
                 ${safeImage}

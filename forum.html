@@ -440,6 +440,8 @@
                 categoryId,
                 categoryName,
                 authorName,
+                authorNickname: String(author.nickname || ''),
+                authorUserId: String(author.userId || ''),
                 createdAt: String(post?.createdAt || ''),
                 excerpt: excerptFromHtml(post?.contentHtml || '', 180)
             };
@@ -527,11 +529,17 @@
             listEl.innerHTML = items.map((thread) => {
                 const metrics = getMetrics(thread.threadId);
                 const lastActive = metrics.lastCommentAt || thread.createdAt;
+                const profileHref = thread.authorNickname
+                    ? `profile.html?nickname=${encodeURIComponent(thread.authorNickname)}`
+                    : (thread.authorUserId ? `profile.html?userId=${encodeURIComponent(thread.authorUserId)}` : '');
+                const authorNode = profileHref
+                    ? `<strong class="sv-forum-author" data-profile="${escapeHtml(profileHref)}" role="link" tabindex="0">${escapeHtml(thread.authorName)}</strong>`
+                    : `<strong>${escapeHtml(thread.authorName)}</strong>`;
                 return `
                     <a class="sv-forum-row" href="thread.html?postId=${encodeURIComponent(thread.threadId)}">
                         <div class="sv-forum-topic">
                             <div class="sv-forum-topic__title">${escapeHtml(thread.title)}</div>
-                            <div class="sv-forum-topic__meta">Tạo bởi <strong>${escapeHtml(thread.authorName)}</strong> • ${escapeHtml(formatDateTime(thread.createdAt))}</div>
+                            <div class="sv-forum-topic__meta">Tạo bởi ${authorNode} • ${escapeHtml(formatDateTime(thread.createdAt))}</div>
                             <div class="sv-forum-topic__excerpt">${escapeHtml(thread.excerpt || 'Nội dung chi tiết trong thread...')}</div>
                         </div>
                         <div><span class="sv-tag">${escapeHtml(thread.categoryName)}</span></div>
@@ -674,6 +682,27 @@
                     }
                 }
                 render();
+            });
+
+            listEl.addEventListener('click', (event) => {
+                const target = event.target.closest('.sv-forum-author[data-profile]');
+                if (!target) return;
+                event.preventDefault();
+                event.stopPropagation();
+                const href = target.getAttribute('data-profile');
+                if (href) {
+                    window.location.href = href;
+                }
+            });
+            listEl.addEventListener('keydown', (event) => {
+                if (event.key !== 'Enter' && event.key !== ' ') return;
+                const target = event.target.closest('.sv-forum-author[data-profile]');
+                if (!target) return;
+                event.preventDefault();
+                const href = target.getAttribute('data-profile');
+                if (href) {
+                    window.location.href = href;
+                }
             });
         };
 

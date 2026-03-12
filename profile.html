@@ -1,0 +1,463 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Hồ sơ thành viên - SVP</title>
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+    <link rel="shortcut icon" href="assets/icons/favicon.svg">
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="svp.css">
+    <link rel="stylesheet" href="dropdown-hover.css">
+    <style>
+        .sv-profile-card {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-align: center;
+            gap: .5rem;
+            padding: 1.4rem 1.2rem;
+        }
+        .sv-profile-avatar {
+            width: 110px;
+            height: 110px;
+            border-radius: 50%;
+            background: #e2e8f0 center/cover no-repeat;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #fff;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, 0.1);
+        }
+        .sv-profile-name {
+            font-family: var(--sv-title-font);
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .sv-profile-nickname {
+            color: var(--sv-muted);
+            font-weight: 600;
+        }
+        .sv-profile-meta {
+            color: var(--sv-muted);
+            font-size: .9rem;
+        }
+        .sv-profile-form .form-label {
+            font-weight: 700;
+            color: #0f172a;
+        }
+        .sv-profile-form .form-control {
+            border-radius: 10px;
+        }
+        .sv-profile-form .form-text {
+            color: var(--sv-muted);
+        }
+        .sv-profile-status {
+            min-height: 22px;
+        }
+        .sv-profile-preview {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            padding: .75rem;
+            border: 1px dashed #dbeafe;
+            border-radius: 12px;
+            background: #f8fafc;
+        }
+        .sv-profile-preview .sv-profile-avatar {
+            width: 64px;
+            height: 64px;
+            font-size: 1.25rem;
+        }
+        .sv-profile-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .6rem;
+        }
+        .sv-profile-readonly {
+            color: var(--sv-muted);
+            font-size: .95rem;
+        }
+    </style>
+</head>
+<body>
+
+<div class="sv-topbar pt-2 pb-1">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="sv-brand">
+            <img class="sv-brand__logo-img" src="assets/icons/logo_svp.png" alt="SVP" width="102" height="112" />
+            <div class="sv-brand__title">
+                <h1>DIỄN ĐÀN SINH VIÊN & TRI THỨC VIỆT TẠI PHÁP <span class="sv-brand__accent">(SVP)</span></h1>
+                <div class="sv-brand__divider"></div>
+                <small class="sv-brand__tagline">Kết Nối – Chia Sẻ – Thành Công</small>
+            </div>
+        </div>
+
+        <div id="sv-auth-box" class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <a class="btn btn-outline-secondary" href="signup.html">Đăng Ký</a>
+            <a class="btn btn-primary" href="login.html">Đăng Nhập</a>
+        </div>
+    </div>
+</div>
+
+<div class="sv-nav">
+    <div class="container d-flex align-items-center justify-content-between">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link" href="index.html">Trang Chủ</a></li>
+            <li class="nav-item"><a class="nav-link" href="forum.html">Diễn Đàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="categories.html">Khám Phá Chủ Đề</a></li>
+            <li class="nav-item"><a class="nav-link" href="events.html">Sự Kiện & Lễ Hội</a></li>
+            <li class="nav-item"><a class="nav-link" href="ban-do-paris.html">Bản Đồ Paris</a></li>
+            <li class="nav-item"><a class="nav-link" href="about.html">Giới Thiệu</a></li>
+        </ul>
+    </div>
+</div>
+
+<main class="container my-3 my-md-4">
+    <div class="sv-breadcrumb">
+        <a href="index.html">Trang chủ</a> / <span>Hồ sơ thành viên</span>
+    </div>
+
+    <div class="row g-3">
+        <div class="col-lg-4">
+            <div class="sv-card">
+                <div class="sv-profile-card">
+                    <div class="sv-profile-avatar" id="profile-avatar">?</div>
+                    <div class="sv-profile-name" id="profile-display-name">Đang tải...</div>
+                    <div class="sv-profile-nickname" id="profile-nickname"></div>
+                    <div class="sv-profile-meta" id="profile-email"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-8">
+            <div class="sv-card">
+                <div class="sv-card__hd"><i class="fa-solid fa-user-pen me-2 text-primary"></i>Không gian thành viên</div>
+                <div class="p-3">
+                    <form id="profile-form" class="sv-profile-form">
+                        <div class="mb-3">
+                            <label class="form-label" for="profile-display-input">Tên hiển thị</label>
+                            <input class="form-control" id="profile-display-input" type="text" maxlength="80" placeholder="Tên hiển thị">
+                            <div class="form-text">Tên hiển thị sẽ xuất hiện trên bài viết và bình luận.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="profile-avatar-url">Ảnh đại diện (URL)</label>
+                            <input class="form-control" id="profile-avatar-url" type="url" placeholder="https://...">
+                            <div class="form-text">Dán URL ảnh hoặc tải ảnh ở bên dưới.</div>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label" for="profile-avatar-file">Tải ảnh mới</label>
+                            <input class="form-control" id="profile-avatar-file" type="file" accept="image/*">
+                            <div class="form-text">PNG/JPG, tối đa 2MB.</div>
+                        </div>
+                        <div class="sv-profile-preview mb-3">
+                            <div class="sv-profile-avatar" id="profile-preview-avatar">?</div>
+                            <div>
+                                <div class="fw-semibold">Xem trước ảnh đại diện</div>
+                                <div class="sv-meta" id="profile-preview-label">Chưa có thay đổi</div>
+                            </div>
+                        </div>
+                        <div class="sv-profile-actions mb-2">
+                            <button class="btn btn-primary" type="submit">Lưu thay đổi</button>
+                            <button class="btn btn-outline-secondary" type="button" id="profile-clear-avatar">Gỡ avatar</button>
+                        </div>
+                        <div id="profile-status" class="sv-profile-status small"></div>
+                    </form>
+                    <div id="profile-readonly" class="sv-profile-readonly d-none">
+                        Bạn đang xem hồ sơ của thành viên khác. Hãy đăng nhập bằng tài khoản của bạn để chỉnh sửa.
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="container py-4">
+    <div class="row">
+        <div class="col-md">
+            <div class="sv-brand d-flex align-items-center mb-2">
+                <div class="sv-brand__logo" style="width:36px; height:36px; font-size:14px;">SVP</div>
+                <strong class="ms-2">SVP – Kết Nối • Chia Sẻ • Thành Công</strong>
+            </div>
+            <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
+        </div>
+        <div class="col-md text-md-end mt-2 mt-md-0">
+            <a class="me-3" href="terms.html">Điều khoản</a>
+            <a class="me-3" href="security.html">Bảo mật</a>
+            <a href="contact.html">Liên hệ</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="avatar-utils.js"></script>
+<script src="auth-topbar.js"></script>
+<script>
+    (function () {
+        const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+        const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+        const avatarEl = document.getElementById('profile-avatar');
+        const nameEl = document.getElementById('profile-display-name');
+        const nicknameEl = document.getElementById('profile-nickname');
+        const emailEl = document.getElementById('profile-email');
+        const formEl = document.getElementById('profile-form');
+        const readonlyEl = document.getElementById('profile-readonly');
+        const displayInput = document.getElementById('profile-display-input');
+        const avatarUrlInput = document.getElementById('profile-avatar-url');
+        const avatarFileInput = document.getElementById('profile-avatar-file');
+        const previewAvatar = document.getElementById('profile-preview-avatar');
+        const previewLabel = document.getElementById('profile-preview-label');
+        const statusEl = document.getElementById('profile-status');
+        const clearAvatarBtn = document.getElementById('profile-clear-avatar');
+
+        let accessToken = '';
+        let me = null;
+        let profile = null;
+        let isSelf = false;
+
+        const escapeHtml = (value) => String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+
+        const setStatus = (text, type) => {
+            statusEl.textContent = text || '';
+            statusEl.className = 'sv-profile-status small';
+            if (type === 'error') statusEl.classList.add('text-danger');
+            if (type === 'success') statusEl.classList.add('text-success');
+        };
+
+        const buildProfileHref = (nickname, userId) => {
+            if (nickname) return `profile.html?nickname=${encodeURIComponent(nickname)}`;
+            if (userId) return `profile.html?userId=${encodeURIComponent(userId)}`;
+            return 'profile.html';
+        };
+
+        const renderAvatar = (targetEl, displayName, avatarUrl, seed) => {
+            if (!targetEl) return;
+            const safeName = String(displayName || '').trim();
+            const fallbackInitial = window.SVPAvatar?.initial ? window.SVPAvatar.initial(safeName) : (safeName.charAt(0) || 'U').toUpperCase();
+            const palette = window.SVPAvatar?.palette ? window.SVPAvatar.palette(seed || safeName) : { bg: '#e2e8f0', fg: '#475569' };
+            if (avatarUrl) {
+                targetEl.style.backgroundImage = `url('${escapeHtml(avatarUrl)}')`;
+                targetEl.style.backgroundColor = '#e2e8f0';
+                targetEl.textContent = '';
+                targetEl.style.color = '#fff';
+            } else {
+                targetEl.style.backgroundImage = '';
+                targetEl.style.backgroundColor = palette.bg;
+                targetEl.textContent = fallbackInitial;
+                targetEl.style.color = palette.fg;
+            }
+        };
+
+        const fetchMe = async () => {
+            if (!window.SVPAuth?.getValidAccessToken) return null;
+            accessToken = await window.SVPAuth.getValidAccessToken();
+            if (!accessToken) return null;
+            const response = await fetch(`${API_BASE_URL}/me`, {
+                headers: { Authorization: `Bearer ${accessToken}` }
+            });
+            if (response.ok) {
+                return await response.json();
+            }
+            // Fallback to token/localStorage when /me fails (network, CORS, etc.)
+            const payload = window.SVPAuth?.parseJwtPayload
+                ? window.SVPAuth.parseJwtPayload(accessToken) || {}
+                : {};
+            return {
+                userId: payload.userId || null,
+                email: payload.email || localStorage.getItem('userEmail') || '',
+                nickname: payload.nickname || localStorage.getItem('userNickname') || ''
+            };
+        };
+
+        const fetchProfile = async (nickname, userId) => {
+            const params = new URLSearchParams();
+            if (nickname) params.set('nickname', nickname);
+            if (!nickname && userId) params.set('userId', userId);
+            const response = await fetch(`${API_BASE_URL}/users/profile?${params.toString()}`, {
+                headers: { Accept: 'application/json' }
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload.error || 'Không thể tải hồ sơ.');
+            }
+            return payload;
+        };
+
+        const uploadAvatarFile = async (file) => {
+            if (!file) return '';
+            if (file.size > AVATAR_MAX_BYTES) {
+                throw new Error('Ảnh vượt quá 2MB.');
+            }
+            const presignResponse = await fetch(`${API_BASE_URL}/api/upload/post-image`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                body: JSON.stringify({ filename: file.name, contentType: file.type })
+            });
+            const presignPayload = await presignResponse.json().catch(() => ({}));
+            if (!presignResponse.ok) {
+                throw new Error(presignPayload.error || 'Không thể tạo link upload.');
+            }
+            await fetch(presignPayload.uploadUrl, {
+                method: presignPayload.method || 'PUT',
+                headers: { 'Content-Type': presignPayload.contentType || file.type },
+                body: file
+            });
+            return presignPayload.publicUrl || '';
+        };
+
+        const updateProfile = async (displayName, avatarUrl) => {
+            if (!accessToken) throw new Error('Bạn cần đăng nhập để cập nhật hồ sơ.');
+            const response = await fetch(`${API_BASE_URL}/me/profile`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    Authorization: `Bearer ${accessToken}`
+                },
+                body: JSON.stringify({ displayName, avatarUrl })
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload.error || 'Không thể cập nhật hồ sơ.');
+            }
+            return payload;
+        };
+
+        const renderProfile = () => {
+            if (!profile) return;
+            const displayName = profile.displayName || profile.nickname || 'Thành viên';
+            if (nameEl) nameEl.textContent = displayName;
+            if (nicknameEl) nicknameEl.textContent = profile.nickname ? `@${profile.nickname}` : '';
+            if (emailEl) {
+                if (isSelf && me?.email) {
+                    emailEl.textContent = me.email;
+                } else {
+                    emailEl.textContent = '';
+                }
+            }
+            renderAvatar(avatarEl, displayName, profile.avatarUrl, profile.nickname || profile.userId);
+            renderAvatar(previewAvatar, displayName, profile.avatarUrl, profile.nickname || profile.userId);
+            if (displayInput) displayInput.value = displayName;
+            if (avatarUrlInput) avatarUrlInput.value = profile.avatarUrl || '';
+        };
+
+        const updatePreview = () => {
+            const displayName = displayInput.value.trim() || profile?.displayName || profile?.nickname || 'Thành viên';
+            const avatarUrl = avatarUrlInput.value.trim();
+            renderAvatar(previewAvatar, displayName, avatarUrl, profile?.nickname || profile?.userId);
+            previewLabel.textContent = avatarUrl ? 'Sẽ dùng URL ảnh mới.' : 'Ảnh đại diện sẽ theo chữ cái và màu mặc định.';
+        };
+
+        const setEditable = (editable) => {
+            if (!formEl || !readonlyEl) return;
+            formEl.classList.toggle('d-none', !editable);
+            readonlyEl.classList.toggle('d-none', editable);
+        };
+
+        const normalizeNickname = (value) => String(value ?? '').trim().toLowerCase();
+
+        const init = async () => {
+            const params = new URLSearchParams(window.location.search);
+            let nickname = params.get('nickname');
+            let userId = params.get('userId');
+
+            me = await fetchMe();
+            if (!nickname && !userId && me?.nickname) {
+                nickname = me.nickname;
+                window.history.replaceState({}, '', buildProfileHref(nickname));
+            }
+
+            if (!nickname && !userId) {
+                setStatus('Thiếu thông tin thành viên.', 'error');
+                setEditable(false);
+                return;
+            }
+
+            try {
+                profile = await fetchProfile(nickname, userId);
+            } catch (error) {
+                setStatus(error.message || 'Không thể tải hồ sơ.', 'error');
+                setEditable(false);
+                return;
+            }
+
+            const profileNick = normalizeNickname(profile?.nickname);
+            const meNick = normalizeNickname(me?.nickname);
+            const storedNick = normalizeNickname(localStorage.getItem('userNickname'));
+            const hasToken = Boolean(accessToken);
+            isSelf = Boolean(profileNick && (
+                (meNick && meNick === profileNick) ||
+                (hasToken && storedNick && storedNick === profileNick)
+            ));
+            setEditable(isSelf);
+            renderProfile();
+            updatePreview();
+        };
+
+        if (avatarUrlInput) {
+            avatarUrlInput.addEventListener('input', updatePreview);
+        }
+        if (displayInput) {
+            displayInput.addEventListener('input', updatePreview);
+        }
+        if (avatarFileInput) {
+            avatarFileInput.addEventListener('change', () => {
+                const file = avatarFileInput.files && avatarFileInput.files[0] ? avatarFileInput.files[0] : null;
+                if (file) {
+                    previewLabel.textContent = `Sẵn sàng tải ảnh: ${file.name}`;
+                } else {
+                    updatePreview();
+                }
+            });
+        }
+        if (clearAvatarBtn) {
+            clearAvatarBtn.addEventListener('click', () => {
+                avatarUrlInput.value = '';
+                avatarFileInput.value = '';
+                updatePreview();
+            });
+        }
+
+        if (formEl) {
+            formEl.addEventListener('submit', async (event) => {
+                event.preventDefault();
+                if (!isSelf) return;
+                setStatus('Đang lưu...', '');
+                try {
+                    let avatarUrl = avatarUrlInput.value.trim();
+                    const file = avatarFileInput.files && avatarFileInput.files[0] ? avatarFileInput.files[0] : null;
+                    if (file) {
+                        previewLabel.textContent = 'Đang tải ảnh lên...';
+                        avatarUrl = await uploadAvatarFile(file);
+                        avatarUrlInput.value = avatarUrl;
+                    }
+                    const displayName = displayInput.value.trim();
+                    const updated = await updateProfile(displayName, avatarUrl);
+                    profile = updated;
+                    renderProfile();
+                    updatePreview();
+                    setStatus('Đã cập nhật hồ sơ.', 'success');
+                } catch (error) {
+                    setStatus(error.message || 'Không thể cập nhật hồ sơ.', 'error');
+                }
+            });
+        }
+
+        init();
+    })();
+</script>
+</body>
+</html>

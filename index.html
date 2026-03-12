@@ -743,6 +743,12 @@
             const safeDate = escapeHtml(formatDate(post.createdAt));
             const safeLead = escapeHtml(buildLead(post.contentHtml));
             const safeCover = escapeHtml(extractCover(post.contentHtml));
+            const authorProfileHref = author.nickname
+                ? `profile.html?nickname=${encodeURIComponent(author.nickname)}`
+                : (author.userId ? `profile.html?userId=${encodeURIComponent(author.userId)}` : '');
+            const authorLabel = authorProfileHref
+                ? `<a class="sv-author-link" href="${authorProfileHref}">${safeAuthor}</a>`
+                : safeAuthor;
             const status = String(post.status || '').toUpperCase();
             const pendingNote = status === 'PENDING'
                 ? `<div class="sv-meta text-danger mt-2">Hãy kiểm tra hòm thư và xác nhận đăng bài này.</div>`
@@ -756,7 +762,7 @@
                         <span class="sv-meta">${safeReadTime}</span>
                     </div>
                     <h2 class="sv-article__title">${safeTitle}</h2>
-                    <div class="sv-article__meta">Bởi ${safeAuthor} • Cập nhật ${safeDate}</div>
+                    <div class="sv-article__meta">Bởi ${authorLabel} • Cập nhật ${safeDate}</div>
                     <p class="sv-article__lead">${safeLead}</p>
                     ${pendingNote}
                     <a class="sv-article__cover d-block" href="${detailHref}" style="background-image:url('${safeCover}')" tabindex="-1" aria-hidden="true"></a>
@@ -825,7 +831,9 @@
                     ? categoryLabels.join(', ')
                     : 'Đang cập nhật chủ đề'
             );
-            const profileHref = `forum.html?author=${encodeURIComponent(author.nickname || author.userId || '')}`;
+            const profileHref = author.nickname
+                ? `profile.html?nickname=${encodeURIComponent(author.nickname)}`
+                : (author.userId ? `profile.html?userId=${encodeURIComponent(author.userId)}` : 'profile.html');
 
             let avatarHtml;
             const avatarUrl = resolveAvatarUrl(author.avatarUrl ?? author.avatar_url);
@@ -840,10 +848,11 @@
                     : { bg: '#e2e8f0', fg: '#475569' };
                 avatarHtml = `<div class="avatar avatar--initial" style="background:${escapeHtml(palette.bg)};color:${escapeHtml(palette.fg)};">${initial}</div>`;
             }
+            const avatarLink = `<a class="sv-member-link" href="${profileHref}" aria-label="Hồ sơ ${safeName}">${avatarHtml}</a>`;
 
             return `
                 <div class="member">
-                    ${avatarHtml}
+                    ${avatarLink}
                     <div>
                         <div class="name"><a href="${profileHref}">${safeName}</a></div>
                         <div class="role">${safeRole}</div>

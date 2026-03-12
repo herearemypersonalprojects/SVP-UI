@@ -192,6 +192,9 @@
         const email = (localStorage.getItem("userEmail") || payload.email || "").trim();
         const displayName = nickname || email || "Tai khoan";
         const initial = (displayName.charAt(0) || "U").toUpperCase();
+        const profileHref = nickname
+            ? "profile.html?nickname=" + encodeURIComponent(nickname)
+            : "profile.html";
         const avatarSeed = nickname || email || displayName;
         const palette = window.SVPAvatar && typeof window.SVPAvatar.palette === "function"
             ? window.SVPAvatar.palette(avatarSeed)
@@ -202,8 +205,10 @@
 
         authBox.innerHTML = (
             '<div class="sv-auth-user" title="' + escapeHtml(email || displayName) + '">' +
+            '<a class="sv-auth-link" href="' + profileHref + '">' +
             '<span class="sv-auth-avatar"' + avatarStyle + ">" + escapeHtml(initial) + "</span>" +
             '<span class="sv-auth-name">' + escapeHtml(displayName) + "</span>" +
+            "</a>" +
             '<button id="sv-auth-logout" class="sv-auth-logout" type="button">Đăng xuất</button>' +
             "</div>"
         );

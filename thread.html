@@ -36,6 +36,14 @@
             font-size: 1.75rem;
             font-weight: 800;
         }
+        .sv-thread-author-link {
+            text-decoration: none;
+            color: inherit;
+            font-weight: 700;
+        }
+        .sv-thread-author-link:hover {
+            text-decoration: underline;
+        }
         .sv-thread-post {
             display: grid;
             grid-template-columns: 180px minmax(0, 1fr);
@@ -66,6 +74,13 @@
             font-weight: 800;
             color: #0f172a;
             line-height: 1.25;
+        }
+        .sv-thread-post__author-link {
+            text-decoration: none;
+            color: inherit;
+        }
+        .sv-thread-post__author-link:hover .sv-thread-post__name {
+            text-decoration: underline;
         }
         .sv-thread-post__role {
             margin-top: .25rem;
@@ -532,12 +547,20 @@
                 : null;
         };
 
-        const renderInitialAvatar = (name, seed) => {
+        const buildProfileHref = (nickname, userId) => {
+            if (nickname) return `profile.html?nickname=${encodeURIComponent(nickname)}`;
+            if (userId) return `profile.html?userId=${encodeURIComponent(userId)}`;
+            return '';
+        };
+
+        const renderInitialAvatar = (name, seed, profileHref) => {
             const palette = getAvatarPalette(seed ?? name);
             const avatarStyle = palette
                 ? ` style="background:${escapeHtml(palette.bg)};color:${escapeHtml(palette.fg)};"`
                 : '';
-            return `<div class="sv-thread-post__avatar"${avatarStyle}>${escapeHtml(getInitial(name))}</div>`;
+            const avatarNode = `<div class="sv-thread-post__avatar"${avatarStyle}>${escapeHtml(getInitial(name))}</div>`;
+            if (!profileHref) return avatarNode;
+            return `<a class="sv-thread-post__author-link" href="${profileHref}" aria-label="Hồ sơ ${escapeHtml(name)}">${avatarNode}</a>`;
         };
 
         const getRequestedThread = () => {
@@ -618,6 +641,8 @@
                 id: Number(comment?.commentId || comment?.comment_id || Date.now()),
                 authorName: String(commentAuthor.displayName || commentAuthor.nickname || comment?.authorName || 'Thành viên'),
                 authorSeed: String(commentAuthor.nickname || commentAuthor.userId || commentAuthor.displayName || comment?.authorName || 'anonymous'),
+                authorNickname: String(commentAuthor.nickname || ''),
+                authorUserId: String(commentAuthor.userId || ''),
                 createdAt: String(comment?.createdAt || comment?.created_at || ''),
                 contentLines: htmlToLines(commentContentHtml),
                 imageUrls: collectImageUrls(comment?.imageUrl || comment?.image_url || '', commentContentHtml)
@@ -635,6 +660,8 @@
                 categoryId: Number(post?.categoryId || 0),
                 authorName: String(author.displayName || author.nickname || 'Thành viên SVP'),
                 authorSeed: String(author.nickname || author.userId || author.displayName || 'anonymous'),
+                authorNickname: String(author.nickname || ''),
+                authorUserId: String(author.userId || ''),
                 createdAt: String(post?.createdAt || ''),
                 updatedAt: String(post?.updatedAt || post?.createdAt || ''),
                 contentLines: htmlToLines(postContentHtml),
@@ -652,6 +679,8 @@
                 categoryId: fallback.categoryId,
                 authorName: fallback.authorName,
                 authorSeed: fallback.authorName,
+                authorNickname: '',
+                authorUserId: '',
                 createdAt: fallback.createdAt,
                 updatedAt: fallback.createdAt,
                 contentLines: fallback.contentLines,
@@ -668,7 +697,10 @@
             viewsEl.textContent = `${metrics.views} lượt xem`;
             repliesEl.textContent = `${totalReplies} phản hồi`;
             titleEl.textContent = thread.title;
-            authorEl.textContent = `Khởi tạo bởi ${thread.authorName}`;
+            const profileHref = buildProfileHref(thread.authorNickname, thread.authorUserId);
+            authorEl.innerHTML = profileHref
+                ? `Khởi tạo bởi <a class="sv-thread-author-link" href="${profileHref}">${escapeHtml(thread.authorName)}</a>`
+                : `Khởi tạo bởi ${escapeHtml(thread.authorName)}`;
             tagsEl.innerHTML = `<span class="sv-tag">${escapeHtml(categoryName)}</span><span class="sv-tag">${escapeHtml(timeAgo(thread.updatedAt || thread.createdAt))}</span>`;
         };
 
@@ -678,6 +710,8 @@
                 isOriginalPost,
                 authorName: post.authorName,
                 authorSeed: post.authorSeed || post.authorName,
+                authorNickname: post.authorNickname || '',
+                authorUserId: post.authorUserId || '',
                 role: isOriginalPost ? 'Chủ thớt' : 'Thành viên',
                 createdAt: post.createdAt,
                 imageUrls: Array.isArray(post.imageUrls)
@@ -700,8 +734,10 @@
             postsEl.innerHTML = postItems.map((item) => `
                 <article class="sv-thread-post">
                     <aside class="sv-thread-post__author">
-                        ${renderInitialAvatar(item.authorName, item.authorSeed)}
-                        <div class="sv-thread-post__name">${escapeHtml(item.authorName)}</div>
+                        ${renderInitialAvatar(item.authorName, item.authorSeed, buildProfileHref(item.authorNickname, item.authorUserId))}
+                        ${buildProfileHref(item.authorNickname, item.authorUserId)
+                            ? `<a class="sv-thread-post__author-link" href="${buildProfileHref(item.authorNickname, item.authorUserId)}"><div class="sv-thread-post__name">${escapeHtml(item.authorName)}</div></a>`
+                            : `<div class="sv-thread-post__name">${escapeHtml(item.authorName)}</div>`}
                         <div class="sv-thread-post__role">${escapeHtml(item.role)}</div>
                     </aside>
                     <div class="sv-thread-post__body">

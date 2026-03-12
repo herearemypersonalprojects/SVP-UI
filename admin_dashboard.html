@@ -197,7 +197,7 @@
         </div>
     </div>
 
-    <div class="sv-card mb-3">
+    <div class="sv-card mb-3" id="visits-card">
         <div class="sv-card__hd"><i class="fa-solid fa-chart-line me-2 text-primary"></i>Thống kê truy cập</div>
         <div class="p-3">
             <div class="d-flex flex-wrap align-items-center gap-2 mb-3">
@@ -309,6 +309,7 @@
         const roleApplyBtn = document.getElementById('role-apply');
         const roleStatus = document.getElementById('role-status');
         const roleCard = document.getElementById('role-management-card');
+        const visitsCard = document.getElementById('visits-card');
 
         const setStatus = (text, isError) => {
             statusEl.textContent = text || '';
@@ -500,12 +501,19 @@
             if (roleCard) {
                 roleCard.style.display = role === 'SUPERADMIN' ? '' : 'none';
             }
+            if (visitsCard) {
+                visitsCard.style.display = role === 'SUPERADMIN' ? '' : 'none';
+            }
             if (role !== 'SUPERADMIN' && role !== 'ADMIN') {
                 setStatus('Bạn không có quyền truy cập dashboard.', true);
                 setOverviewStatus('Bạn không có quyền truy cập dashboard.', true);
                 return;
             }
-            await Promise.all([loadOverview(), load()]);
+            if (role === 'SUPERADMIN') {
+                await Promise.all([loadOverview(), load()]);
+            } else {
+                await loadOverview();
+            }
         };
 
         if (roleApplyBtn) {

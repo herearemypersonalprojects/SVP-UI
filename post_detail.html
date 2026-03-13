@@ -1229,7 +1229,7 @@
                         'Content-Type':'application/json', Accept:'application/json',
                         ...(accessToken?{Authorization:`Bearer ${accessToken}`}:{})
                     },
-                    body: JSON.stringify({ email, contentHtml, imageUrl: uploadedUrl })
+                    body: JSON.stringify({ email, displayName: name, contentHtml, imageUrl: uploadedUrl })
                 });
                 const data = await res.json().catch(()=>({}));
                 if (!res.ok) throw new Error(data.error || `Lỗi ${res.status}`);

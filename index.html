@@ -645,6 +645,7 @@
 
         const toPlainText = (html) => String(html ?? '')
             .replace(/<[^>]+>/g, ' ')
+            .replace(/<[^>]*$/g, '')
             .replace(/&nbsp;/g, ' ')
             .replace(/&amp;/g, '&')
             .replace(/&lt;/g, '<')
@@ -668,7 +669,10 @@
             if (!plainText) {
                 return '';
             }
-            return plainText.slice(0, PREVIEW_LEAD_MAX_CHARS).trim();
+            let text = plainText.slice(0, PREVIEW_LEAD_MAX_CHARS).trim();
+            // Remove any trailing incomplete HTML tag fragment (e.g. "<a hre")
+            text = text.replace(/<[^>]*$/, '').trim();
+            return text;
         };
 
         const buildLead = (contentHtml) => {

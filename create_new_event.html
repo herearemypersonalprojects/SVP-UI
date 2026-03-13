@@ -226,6 +226,7 @@
 
         const normalizeEmail = (value) => (value || '').trim().toLowerCase();
         const isValidEmail = (value) => /^[^\s@]+@[^\s@]+$/.test(value);
+        const editEventId = new URLSearchParams(window.location.search).get('editEventId');
         const sanitizeUrl = (value) => {
             const raw = String(value || '').trim();
             if (!/^https?:\/\//i.test(raw)) return '';
@@ -402,28 +403,6 @@
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
-            let sessionEmail = '';
-            try {
-                sessionEmail = await getSessionEmail();
-            } catch (_) {
-                sessionEmail = '';
-            }
-            const manualEmail = normalizeEmail(emailInput.value);
-            const email = sessionEmail || manualEmail;
-            if (!email) {
-                emailWrap.classList.remove('d-none');
-                setFeedback('Bạn chưa đăng nhập. Vui lòng nhập email để đăng sự kiện.', 'error');
-                return;
-            }
-            if (!sessionEmail && !isValidEmail(email)) {
-                emailWrap.classList.remove('d-none');
-                setFeedback('Email chưa hợp lệ.', 'error');
-                return;
-            }
-            if (sessionEmail) {
-                emailInput.value = sessionEmail;
-                emailWrap.classList.add('d-none');
-            }
 
             const title = titleInput.value.trim();
             const content = buildEventContent();
@@ -442,13 +421,23 @@
             if (!Number.isFinite(price) || price < 0) return setFeedback('Giá vé không hợp lệ.', 'error');
             if (rawImageUrl && !safeImageUrl) return setFeedback('Link ảnh sự kiện không hợp lệ (cần bắt đầu bằng http:// hoặc https://).', 'error');
 
+            if (!editEventId) {
+                let sessionEmail = '';
+                try { sessionEmail = await getSessionEmail(); } catch (_) {}
+                const manualEmail = normalizeEmail(emailInput.value);
+                const email = sessionEmail || manualEmail;
+                if (!email) { emailWrap.classList.remove('d-none'); setFeedback('Bạn chưa đăng nhập. Vui lòng nhập email để đăng sự kiện.', 'error'); return; }
+                if (!sessionEmail && !isValidEmail(email)) { emailWrap.classList.remove('d-none'); setFeedback('Email chưa hợp lệ.', 'error'); return; }
+                if (sessionEmail) { emailInput.value = sessionEmail; emailWrap.classList.add('d-none'); }
+            }
+
             const submitBtn = form.querySelector('button[type="submit"]');
             const oldLabel = submitBtn ? submitBtn.innerHTML : '';
             if (submitBtn) {
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang gửi...';
             }
-            setFeedback('Đang gửi sự kiện, vui lòng đợi...', 'info');
+            setFeedback(editEventId ? 'Đang cập nhật sự kiện...' : 'Đang gửi sự kiện, vui lòng đợi...', 'info');
 
             try {
                 const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
@@ -456,38 +445,51 @@
                     : (localStorage.getItem('accessToken') || '');
                 const imageUrl = await uploadSelectedImageIfNeeded(accessToken);
 
-                const response = await fetch(`${API_BASE_URL}/events`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-                    },
-                    body: JSON.stringify({ email, title, content, eventTime, online, address, imageUrl, price: price > 0 ? price : 0 })
-                });
-
-                const payload = await response.json().catch(() => ({}));
-                if (!response.ok) {
-                    setFeedback(payload.error || 'Không thể tạo sự kiện.', 'error');
-                    return;
+                if (editEventId) {
+                    // ── Edit mode: PATCH ──
+                    const res = await fetch(`${API_BASE_URL}/events/${editEventId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+                        },
+                        body: JSON.stringify({ title, content, eventTime, online, address, imageUrl, price: price > 0 ? price : 0 })
+                    });
+                    const payload = await res.json().catch(() => ({}));
+                    if (!res.ok) { setFeedback(payload.error || 'Không thể cập nhật sự kiện.', 'error'); return; }
+                    setFeedback('Sự kiện đã được cập nhật thành công!', 'success');
+                    setTimeout(() => { window.location.href = `event_detail.html?eventId=${editEventId}`; }, 600);
+                } else {
+                    // ── Create mode: POST ──
+                    const email = normalizeEmail(emailInput.value);
+                    const response = await fetch(`${API_BASE_URL}/events`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+                        },
+                        body: JSON.stringify({ email, title, content, eventTime, online, address, imageUrl, price: price > 0 ? price : 0 })
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) { setFeedback(payload.error || 'Không thể tạo sự kiện.', 'error'); return; }
+                    const eventId = Number(payload.eventId || 0);
+                    setFeedback(`Sự kiện #${eventId || 'N/A'} đã được tạo thành công.`, 'success');
+                    localStorage.setItem('userEmail', email);
+                    form.reset();
+                    emailInput.value = email;
+                    clearImageFilePreview();
+                    setUploadStatus('', 'info');
+                    preview();
+                    setTimeout(() => {
+                        window.location.href = eventId > 0
+                            ? `event_detail.html?eventId=${encodeURIComponent(eventId)}`
+                            : 'events.html';
+                    }, 700);
                 }
-
-                const eventId = Number(payload.eventId || 0);
-                setFeedback(`Sự kiện #${eventId || 'N/A'} đã được tạo thành công.`, 'success');
-                localStorage.setItem('userEmail', email);
-                form.reset();
-                emailInput.value = email;
-                clearImageFilePreview();
-                setUploadStatus('', 'info');
-                preview();
-                setTimeout(() => {
-                    window.location.href = eventId > 0
-                        ? `event_detail.html?eventId=${encodeURIComponent(eventId)}`
-                        : 'events.html';
-                }, 700);
             } catch (error) {
-                const message = error && error.message ? error.message : 'Không thể kết nối API.';
-                setFeedback(message, 'error');
+                setFeedback(error?.message || 'Không thể kết nối API.', 'error');
             } finally {
                 if (submitBtn) {
                     submitBtn.disabled = false;
@@ -502,6 +504,50 @@
             emailWrap.classList.add('d-none');
         }
         preview();
+
+        /* ── Edit mode: load existing data ── */
+        if (editEventId) {
+            const heroTitle = document.querySelector('.sv-page-hero__title');
+            if (heroTitle) heroTitle.textContent = 'Chỉnh sửa sự kiện';
+            const heroSub = document.querySelector('.sv-page-hero__subtitle');
+            if (heroSub) heroSub.textContent = 'Chỉnh sửa thông tin sự kiện đã tạo.';
+            document.title = 'Chỉnh sửa sự kiện - SVP';
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-save me-2"></i>Lưu thay đổi';
+            emailWrap.classList.add('d-none');
+
+            (async () => {
+                try {
+                    const headers = { Accept: 'application/json' };
+                    const token = localStorage.getItem('accessToken') || '';
+                    if (token) headers.Authorization = `Bearer ${token}`;
+                    const res = await fetch(`${API_BASE_URL}/events/${editEventId}`, { headers });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) { setFeedback(data.error || 'Không thể tải sự kiện.', 'error'); return; }
+                    const ev = data.event && typeof data.event === 'object' ? data.event : data;
+                    titleInput.value = ev.title || '';
+                    if (ev.eventTime || ev.event_time) {
+                        const dt = new Date(ev.eventTime || ev.event_time);
+                        if (!isNaN(dt.getTime())) {
+                            dateInput.value = dt.toISOString().slice(0, 10);
+                            timeInput.value = dt.toISOString().slice(11, 16);
+                        }
+                    }
+                    locationInput.value = ev.address || '';
+                    priceInput.value = ev.price || '';
+                    onlineInput.checked = Boolean(ev.online);
+                    imageUrlInput.value = ev.imageUrl || ev.image_url || '';
+                    const content = ev.content || '';
+                    const lines = content.split('\n\n');
+                    descriptionInput.value = lines[0] || '';
+                    lines.forEach(line => {
+                        if (line.startsWith('Loại sự kiện: ')) typeInput.value = line.replace('Loại sự kiện: ', '');
+                        if (line.startsWith('Tags: ')) tagsInput.value = line.replace('Tags: ', '');
+                    });
+                    preview();
+                } catch { setFeedback('Không thể kết nối API.', 'error'); }
+            })();
+        }
     })();
 </script>
 <script src="avatar-utils.js"></script>

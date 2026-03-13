@@ -743,10 +743,12 @@
         const rawAuthor = post?.author || {};
         return {
             postId: Number(post?.postId ?? post?.id ?? 0),
+            userId: String(post?.userId || post?.user_id || ''),
             categoryId: Number(post?.categoryId ?? 0),
             title: post?.title || '',
             contentHtml: post?.contentHtml || post?.content_html || post?.content || '',
             createdAt: post?.createdAt || post?.created_at || new Date().toISOString(),
+            status: String(post?.status || 'PUBLISHED'),
             author: {
                 userId: rawAuthor.userId || post?.authorUserId || post?.author_user_id || null,
                 nickname: rawAuthor.nickname || post?.authorNickname || post?.author_nickname || post?.nickname || 'anonymous',
@@ -765,6 +767,7 @@
         const embeddedImg = toSafeHttpUrl(extractFirstImageSrc(contentHtml));
         return {
             id: Number(c?.commentId || c?.id || Date.now()),
+            postId: Number(c?.postId || c?.post_id || 0),
             authorName: String(author.displayName || author.nickname || c?.authorName || 'Ẩn danh'),
             authorSeed: String(author.nickname || author.userId || author.displayName || c?.authorName || 'anonymous'),
             authorNickname: String(author.nickname || ''),
@@ -772,7 +775,8 @@
             authorAvatarUrl: String(author.avatarUrl || author.avatar_url || c?.authorAvatarUrl || c?.author_avatar_url || c?.avatarUrl || c?.avatar_url || ''),
             createdAt: String(c?.createdAt || c?.created_at || ''),
             contentText: toPlainText(contentHtml) || String(c?.contentText || ''),
-            imageUrl: directImg || embeddedImg
+            imageUrl: directImg || embeddedImg,
+            hidden: Boolean(c?.hidden)
         };
     };
 
@@ -1026,6 +1030,9 @@
         currentLikeCount = post.likeCount;
         renderLikeBadge();
         if (commentCountEl) commentCountEl.innerHTML = `<i class="fa-regular fa-comments"></i>${commentCount.toLocaleString('vi-VN')} bình luận`;
+
+        // Admin/owner action buttons
+        renderPostActions(post);
     };
 
     const renderBody = (post) => {
@@ -1093,6 +1100,10 @@
             return;
         }
         commentListEl.innerHTML = `<div class="pd-comment-list">${comments.map(renderCommentItem).join('')}</div>`;
+        comments.forEach(c => {
+            const el = document.getElementById(`comment-${c.id}`);
+            if (el) renderCommentActions(el, c);
+        });
     };
 
     const renderKpis = (post, commentCount) => {
@@ -1300,6 +1311,148 @@
     };
 
     /* ── Main load ── */
+    const getCallerInfo = () => {
+        const token = localStorage.getItem('accessToken') || '';
+        if (!token) return { nickname: '', role: '' };
+        const payload = (window.SVPAuth && window.SVPAuth.parseJwtPayload) ? window.SVPAuth.parseJwtPayload(token) : null;
+        if (!payload) return { nickname: '', role: '' };
+        return {
+            nickname: String(payload.nickname || ''),
+            role: String(payload.role || '').toUpperCase()
+        };
+    };
+
+    const renderPostActions = (post) => {
+        const anchor = document.querySelector('.pd-author-bar');
+        if (!anchor) return;
+        const existing = document.getElementById('pd-post-actions');
+        if (existing) existing.remove();
+
+        const caller = getCallerInfo();
+        const authorNickname = post.author?.nickname || '';
+        const isOwner = caller.nickname && authorNickname && caller.nickname === authorNickname;
+        const isSuperadmin = caller.role === 'SUPERADMIN';
+        const isAdmin = caller.role === 'ADMIN' || isSuperadmin;
+        const canEdit = isOwner || isSuperadmin;
+        const canHide = isAdmin;
+        if (!canEdit && !canHide) return;
+
+        const container = document.createElement('div');
+        container.id = 'pd-post-actions';
+        container.className = 'd-flex flex-wrap gap-2 mb-3';
+
+        if (canEdit) {
+            const editBtn = document.createElement('button');
+            editBtn.className = 'btn btn-sm btn-outline-primary';
+            editBtn.innerHTML = '<i class="fa-solid fa-pen-to-square me-1"></i>Sửa bài viết';
+            editBtn.addEventListener('click', () => {
+                window.location.href = `create_new_article.html?editPostId=${post.postId}`;
+            });
+            container.appendChild(editBtn);
+        }
+
+        if (canHide) {
+            const isHidden = post.status === 'HIDDEN';
+            const hideBtn = document.createElement('button');
+            hideBtn.className = isHidden ? 'btn btn-sm btn-outline-success' : 'btn btn-sm btn-outline-warning';
+            hideBtn.innerHTML = isHidden
+                ? '<i class="fa-solid fa-eye me-1"></i>Hiện bài viết'
+                : '<i class="fa-solid fa-eye-slash me-1"></i>Ẩn bài viết';
+            hideBtn.addEventListener('click', async () => {
+                const token = await (window.SVPAuth && window.SVPAuth.getValidAccessToken ? window.SVPAuth.getValidAccessToken() : Promise.resolve(localStorage.getItem('accessToken')));
+                if (!token) { alert('Vui lòng đăng nhập.'); return; }
+                const endpoint = isHidden ? 'unhide' : 'hide';
+                try {
+                    const res = await fetch(`${API_BASE_URL}/posts/${post.postId}/${endpoint}`, {
+                        method: 'PATCH',
+                        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+                    });
+                    if (!res.ok) { const e = await res.json().catch(()=>({})); alert(e.error || 'Thao tác thất bại.'); return; }
+                    window.location.reload();
+                } catch { alert('Không thể kết nối máy chủ.'); }
+            });
+            container.appendChild(hideBtn);
+
+            if (isHidden) {
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-warning text-dark align-self-center';
+                badge.textContent = 'BÀI VIẾT ĐÃ ẨN';
+                container.appendChild(badge);
+            }
+        }
+
+        anchor.insertAdjacentElement('afterend', container);
+    };
+
+    const renderCommentActions = (commentEl, comment) => {
+        const caller = getCallerInfo();
+        const isOwner = caller.nickname && comment.authorNickname && caller.nickname === comment.authorNickname;
+        const isSuperadmin = caller.role === 'SUPERADMIN';
+        const isAdmin = caller.role === 'ADMIN' || isSuperadmin;
+        const canEdit = isOwner || isSuperadmin;
+        const canHide = isAdmin;
+        if (!canEdit && !canHide) return;
+
+        const actionsRow = commentEl.querySelector('.pd-reply-actions');
+        if (!actionsRow) return;
+
+        if (canEdit) {
+            const editBtn = document.createElement('button');
+            editBtn.type = 'button';
+            editBtn.innerHTML = '<i class="fa-solid fa-pen me-1"></i>Sửa';
+            editBtn.addEventListener('click', () => {
+                const textEl = commentEl.querySelector('.pd-comment-text');
+                if (!textEl) return;
+                const currentText = textEl.textContent;
+                const newText = prompt('Sửa bình luận:', currentText);
+                if (newText === null || newText.trim() === '') return;
+                (async () => {
+                    const token = await (window.SVPAuth && window.SVPAuth.getValidAccessToken ? window.SVPAuth.getValidAccessToken() : Promise.resolve(localStorage.getItem('accessToken')));
+                    if (!token) { alert('Vui lòng đăng nhập.'); return; }
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/posts/${comment.postId}/comments/${comment.id}`, {
+                            method: 'PATCH',
+                            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}`, Accept: 'application/json' },
+                            body: JSON.stringify({ contentHtml: newText.trim() })
+                        });
+                        if (!res.ok) { const e = await res.json().catch(()=>({})); alert(e.error || 'Cập nhật thất bại.'); return; }
+                        textEl.textContent = newText.trim();
+                    } catch { alert('Không thể kết nối máy chủ.'); }
+                })();
+            });
+            actionsRow.appendChild(editBtn);
+        }
+
+        if (canHide) {
+            const isHidden = comment.hidden;
+            const hideBtn = document.createElement('button');
+            hideBtn.type = 'button';
+            hideBtn.innerHTML = isHidden
+                ? '<i class="fa-solid fa-eye me-1"></i>Hiện'
+                : '<i class="fa-solid fa-eye-slash me-1"></i>Ẩn';
+            if (isHidden) {
+                const badge = document.createElement('span');
+                badge.className = 'badge bg-warning text-dark ms-2';
+                badge.textContent = 'ĐÃ ẨN';
+                commentEl.querySelector('.pd-comment-item__header')?.appendChild(badge);
+            }
+            hideBtn.addEventListener('click', async () => {
+                const token = await (window.SVPAuth && window.SVPAuth.getValidAccessToken ? window.SVPAuth.getValidAccessToken() : Promise.resolve(localStorage.getItem('accessToken')));
+                if (!token) { alert('Vui lòng đăng nhập.'); return; }
+                const endpoint = isHidden ? 'unhide' : 'hide';
+                try {
+                    const res = await fetch(`${API_BASE_URL}/posts/${comment.postId}/comments/${comment.id}/${endpoint}`, {
+                        method: 'PATCH',
+                        headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+                    });
+                    if (!res.ok) { const e = await res.json().catch(()=>({})); alert(e.error || 'Thao tác thất bại.'); return; }
+                    window.location.reload();
+                } catch { alert('Không thể kết nối máy chủ.'); }
+            });
+            actionsRow.appendChild(hideBtn);
+        }
+    };
+
     const init = async () => {
         const params = new URLSearchParams(window.location.search);
         const postId = Number(params.get('postId')||0);
@@ -1313,7 +1466,10 @@
         let post, apiComments = [];
 
         try {
-            const res = await fetch(`${API_BASE_URL}/posts/${postId}`, { headers:{Accept:'application/json'} });
+            const headers = { Accept: 'application/json' };
+            const token = localStorage.getItem('accessToken') || '';
+            if (token) headers.Authorization = `Bearer ${token}`;
+            const res = await fetch(`${API_BASE_URL}/posts/${postId}`, { headers });
             const data = await res.json().catch(()=>({}));
             if (!res.ok) throw new Error(data.error||`API ${res.status}`);
 

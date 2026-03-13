@@ -225,6 +225,78 @@
             loadingEl.classList.add('d-none');
             errorEl.classList.add('d-none');
             bodyEl.classList.remove('d-none');
+
+            // Render admin/owner actions
+            renderEventActions(event);
+        };
+
+        const getCallerInfo = () => {
+            const token = localStorage.getItem('accessToken') || '';
+            if (!token) return { nickname: '', role: '' };
+            const payload = (window.SVPAuth && window.SVPAuth.parseJwtPayload) ? window.SVPAuth.parseJwtPayload(token) : null;
+            if (!payload) return { nickname: '', role: '' };
+            return {
+                nickname: String(payload.nickname || ''),
+                role: String(payload.role || '').toUpperCase()
+            };
+        };
+
+        const renderEventActions = (event) => {
+            const caller = getCallerInfo();
+            const organizerNickname = event.organizer?.nickname || event.organizer?.displayName || '';
+            const isOwner = caller.nickname && organizerNickname && caller.nickname === organizerNickname;
+            const isSuperadmin = caller.role === 'SUPERADMIN';
+            const isAdmin = caller.role === 'ADMIN' || isSuperadmin;
+            const canEdit = isOwner || isSuperadmin;
+            const canHide = isAdmin;
+            if (!canEdit && !canHide) return;
+
+            const titleEl2 = document.getElementById('event-detail-title');
+            if (!titleEl2) return;
+
+            const container = document.createElement('div');
+            container.className = 'd-flex flex-wrap gap-2 mb-3';
+
+            if (canEdit) {
+                const editBtn = document.createElement('button');
+                editBtn.className = 'btn btn-sm btn-outline-primary';
+                editBtn.innerHTML = '<i class="fa-solid fa-pen-to-square me-1"></i>Sửa sự kiện';
+                editBtn.addEventListener('click', () => {
+                    window.location.href = `create_new_event.html?editEventId=${event.eventId}`;
+                });
+                container.appendChild(editBtn);
+            }
+
+            if (canHide) {
+                const isHidden = Boolean(event.hidden);
+                const hideBtn = document.createElement('button');
+                hideBtn.className = isHidden ? 'btn btn-sm btn-outline-success' : 'btn btn-sm btn-outline-warning';
+                hideBtn.innerHTML = isHidden
+                    ? '<i class="fa-solid fa-eye me-1"></i>Hiện sự kiện'
+                    : '<i class="fa-solid fa-eye-slash me-1"></i>Ẩn sự kiện';
+                hideBtn.addEventListener('click', async () => {
+                    const token = await (window.SVPAuth && window.SVPAuth.getValidAccessToken ? window.SVPAuth.getValidAccessToken() : Promise.resolve(localStorage.getItem('accessToken')));
+                    if (!token) { alert('Vui lòng đăng nhập.'); return; }
+                    const endpoint = isHidden ? 'unhide' : 'hide';
+                    try {
+                        const res = await fetch(`${API_BASE_URL}/events/${event.eventId}/${endpoint}`, {
+                            method: 'PATCH',
+                            headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
+                        });
+                        if (!res.ok) { const e = await res.json().catch(()=>({})); alert(e.error || 'Thao tác thất bại.'); return; }
+                        window.location.reload();
+                    } catch { alert('Không thể kết nối máy chủ.'); }
+                });
+                container.appendChild(hideBtn);
+                if (isHidden) {
+                    const badge = document.createElement('span');
+                    badge.className = 'badge bg-warning text-dark align-self-center';
+                    badge.textContent = 'SỰ KIỆN ĐÃ ẨN';
+                    container.appendChild(badge);
+                }
+            }
+
+            titleEl2.insertAdjacentElement('afterend', container);
         };
 
         const showError = (message) => {

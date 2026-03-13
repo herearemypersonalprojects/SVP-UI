@@ -271,6 +271,7 @@
         let pendingCoverFile = null;
         let pendingCoverPreviewUrl = '';
         const MAX_IMAGE_UPLOAD_BYTES = 100 * 1024;
+        const editPostId = new URLSearchParams(window.location.search).get('editPostId');
 
         if (!form || !titleInput || !contentEditor || !contentHiddenInput || !coverUrlInput || !coverFileInput || !coverPreview || !coverUploadStatus || !categoryInput || !feedback || !emailWrap || !emailInput) {
             return;
@@ -923,27 +924,6 @@
                 return;
             }
 
-            const sessionEmail = await getSessionEmail();
-            const manualEmail = normalizeEmail(emailInput.value);
-            const email = sessionEmail || manualEmail;
-            if (!email) {
-                emailWrap.classList.remove('d-none');
-                setFeedback('Bạn chưa đăng nhập. Vui lòng nhập email để xác thực đăng bài.', 'error');
-                emailInput.focus();
-                return;
-            }
-            if (!sessionEmail && !isValidEmail(email)) {
-                emailWrap.classList.remove('d-none');
-                setFeedback('Email chưa hợp lệ.', 'error');
-                emailInput.focus();
-                return;
-            }
-
-            if (sessionEmail) {
-                emailInput.value = sessionEmail;
-                emailWrap.classList.add('d-none');
-            }
-
             const title = titleInput.value.trim();
             const categoryId = Number(categoryInput.value);
             if (!title || title.length < 5) {
@@ -956,13 +936,35 @@
                 return;
             }
 
+            if (!editPostId) {
+                const sessionEmail = await getSessionEmail();
+                const manualEmail = normalizeEmail(emailInput.value);
+                const email = sessionEmail || manualEmail;
+                if (!email) {
+                    emailWrap.classList.remove('d-none');
+                    setFeedback('Bạn chưa đăng nhập. Vui lòng nhập email để xác thực đăng bài.', 'error');
+                    emailInput.focus();
+                    return;
+                }
+                if (!sessionEmail && !isValidEmail(email)) {
+                    emailWrap.classList.remove('d-none');
+                    setFeedback('Email chưa hợp lệ.', 'error');
+                    emailInput.focus();
+                    return;
+                }
+                if (sessionEmail) {
+                    emailInput.value = sessionEmail;
+                    emailWrap.classList.add('d-none');
+                }
+            }
+
             const submitBtn = form.querySelector('button[type="submit"]');
             const oldLabel = submitBtn ? submitBtn.innerHTML : '';
             if (submitBtn) {
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang gửi...';
             }
-            setFeedback('Đang gửi bài viết, vui lòng đợi...', 'info');
+            setFeedback(editPostId ? 'Đang cập nhật bài viết...' : 'Đang gửi bài viết, vui lòng đợi...', 'info');
 
             try {
                 const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
@@ -1002,70 +1004,68 @@
                     contentEditor.focus();
                     return;
                 }
-                const response = await fetch(`${API_BASE_URL}/posts/articles`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        Accept: 'application/json',
-                        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-                    },
-                    body: JSON.stringify({
-                        email,
-                        categoryId,
-                        title,
-                        contentHtml
-                    })
-                });
-                const payload = await response.json().catch(() => ({}));
-                if (!response.ok) {
-                    setFeedback(payload.error || 'Không thể gửi bài viết.', 'error');
-                    return;
-                }
 
-                const postId = payload.postId || 'N/A';
-                const status = String(payload.status || '').toUpperCase();
-                const expiresAt = payload.verifyExpiresAt || '';
-                const debugLink = payload.verifyLink ? `\nLink xác thực (dev): ${payload.verifyLink}` : '';
-                if (status === 'PUBLISHED') {
-                    setFeedback(
-                        `Bài viết #${postId} đã được xuất bản ngay với trạng thái PUBLISHED.`,
-                        'success'
-                    );
+                if (editPostId) {
+                    // ── Edit mode: PATCH ──
+                    const res = await fetch(`${API_BASE_URL}/posts/${editPostId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+                        },
+                        body: JSON.stringify({ title, categoryId, contentHtml })
+                    });
+                    const payload = await res.json().catch(() => ({}));
+                    if (!res.ok) { setFeedback(payload.error || 'Không thể cập nhật bài viết.', 'error'); return; }
+                    setFeedback('Bài viết đã được cập nhật thành công!', 'success');
+                    setTimeout(() => { window.location.href = `post_detail.html?postId=${editPostId}`; }, 600);
                 } else {
-                    setFeedback(
-                        `Bài viết #${postId} đã được tạo với trạng thái PENDING. Hãy kiểm tra email ${email} và bấm magic link để xuất bản.${expiresAt ? ` (Hết hạn: ${expiresAt})` : ''}${debugLink}`,
-                        'success'
-                    );
-                }
-                const authorName = (localStorage.getItem('userDisplayName') || localStorage.getItem('userNickname') || email || '').trim();
-                const localPost = {
-                    postId,
-                    categoryId,
-                    title,
-                    contentHtml,
-                    createdAt: new Date().toISOString(),
-                    status: status || 'PENDING',
-                    author: {
-                        displayName: authorName,
-                        nickname: (localStorage.getItem('userNickname') || '').trim()
+                    // ── Create mode: POST ──
+                    const email = normalizeEmail(emailInput.value);
+                    const response = await fetch(`${API_BASE_URL}/posts/articles`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+                        },
+                        body: JSON.stringify({ email, categoryId, title, contentHtml })
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        setFeedback(payload.error || 'Không thể gửi bài viết.', 'error');
+                        return;
                     }
-                };
-                try {
-                    localStorage.setItem('svp.latestSubmittedArticle', JSON.stringify(localPost));
-                } catch (_) {
+
+                    const postId = payload.postId || 'N/A';
+                    const status = String(payload.status || '').toUpperCase();
+                    const expiresAt = payload.verifyExpiresAt || '';
+                    const debugLink = payload.verifyLink ? `\nLink xác thực (dev): ${payload.verifyLink}` : '';
+                    if (status === 'PUBLISHED') {
+                        setFeedback(`Bài viết #${postId} đã được xuất bản ngay với trạng thái PUBLISHED.`, 'success');
+                    } else {
+                        setFeedback(`Bài viết #${postId} đã được tạo với trạng thái PENDING. Hãy kiểm tra email ${email} và bấm magic link để xuất bản.${expiresAt ? ` (Hết hạn: ${expiresAt})` : ''}${debugLink}`, 'success');
+                    }
+                    const authorName = (localStorage.getItem('userDisplayName') || localStorage.getItem('userNickname') || email || '').trim();
+                    const localPost = {
+                        postId, categoryId, title, contentHtml,
+                        createdAt: new Date().toISOString(),
+                        status: status || 'PENDING',
+                        author: { displayName: authorName, nickname: (localStorage.getItem('userNickname') || '').trim() }
+                    };
+                    try { localStorage.setItem('svp.latestSubmittedArticle', JSON.stringify(localPost)); } catch (_) {}
+                    localStorage.setItem('userEmail', email);
+                    form.reset();
+                    contentEditor.innerHTML = '';
+                    contentHiddenInput.value = '';
+                    cancelCoverUrlResolve();
+                    clearPendingCoverFile();
+                    refreshCoverPreview();
+                    setCoverUploadStatus('', 'info');
+                    emailInput.value = email;
+                    setTimeout(() => { window.location.href = 'index.html'; }, 600);
                 }
-                localStorage.setItem('userEmail', email);
-                form.reset();
-                contentEditor.innerHTML = '';
-                contentHiddenInput.value = '';
-                cancelCoverUrlResolve();
-                clearPendingCoverFile();
-                refreshCoverPreview();
-                setCoverUploadStatus('', 'info');
-                emailInput.value = email;
-                setTimeout(() => {
-                    window.location.href = 'index.html';
-                }, 600);
             } catch (_) {
                 setFeedback('Không thể kết nối API.', 'error');
             } finally {
@@ -1083,6 +1083,34 @@
         }
         refreshCoverPreview();
         updateDraft();
+
+        /* ── Edit mode: load existing data ── */
+        if (editPostId) {
+            const heroTitle = document.querySelector('.sv-page-hero__title');
+            if (heroTitle) heroTitle.textContent = 'Chỉnh sửa bài viết';
+            const heroSub = document.querySelector('.sv-page-hero__subtitle');
+            if (heroSub) heroSub.textContent = 'Chỉnh sửa nội dung bài viết đã đăng.';
+            document.title = 'Chỉnh sửa bài viết - SVP';
+            const submitBtn = form.querySelector('button[type="submit"]');
+            if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-save me-2"></i>Lưu thay đổi';
+            emailWrap.classList.add('d-none');
+
+            (async () => {
+                try {
+                    const headers = { Accept: 'application/json' };
+                    const token = localStorage.getItem('accessToken') || '';
+                    if (token) headers.Authorization = `Bearer ${token}`;
+                    const res = await fetch(`${API_BASE_URL}/posts/${editPostId}`, { headers });
+                    const data = await res.json().catch(() => ({}));
+                    if (!res.ok) { setFeedback(data.error || 'Không thể tải bài viết.', 'error'); return; }
+                    const post = data.post && typeof data.post === 'object' ? data.post : data;
+                    titleInput.value = post.title || '';
+                    categoryInput.value = String(post.categoryId || 1);
+                    contentEditor.innerHTML = post.contentHtml || post.content_html || '';
+                    updateDraft();
+                } catch { setFeedback('Không thể tải bài viết.', 'error'); }
+            })();
+        }
     })();
 </script>
 <script src="avatar-utils.js"></script>

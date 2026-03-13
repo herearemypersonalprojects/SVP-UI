@@ -48,6 +48,7 @@
         localStorage.removeItem("refreshToken");
         localStorage.removeItem("userEmail");
         localStorage.removeItem("userNickname");
+        localStorage.removeItem("userDisplayName");
         localStorage.removeItem("userId");
     };
 
@@ -67,6 +68,9 @@
         }
         if (payload.nickname) {
             localStorage.setItem("userNickname", payload.nickname);
+        }
+        if (payload.displayName) {
+            localStorage.setItem("userDisplayName", payload.displayName);
         }
         if (payload.userId !== undefined && payload.userId !== null) {
             localStorage.setItem("userId", String(payload.userId));
@@ -219,7 +223,7 @@
         const email = (localStorage.getItem("userEmail") || payload.email || "").trim();
         const displayName = (profileOverride && profileOverride.displayName)
             ? String(profileOverride.displayName).trim()
-            : (localStorage.getItem("userDisplayName") || nickname || email || "Tai khoan");
+            : (localStorage.getItem("userDisplayName") || payload.displayName || nickname || email || "Tai khoan");
         const initial = (displayName.charAt(0) || "U").toUpperCase();
         const profileHref = nickname
             ? "profile.html?nickname=" + encodeURIComponent(nickname)

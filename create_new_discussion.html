@@ -744,7 +744,10 @@
                         contentHtml,
                         createdAt: new Date().toISOString(),
                         status: String(payload.status || 'PUBLISHED'),
-                        author: { displayName: localStorage.getItem('userNickname') || email, nickname: localStorage.getItem('userNickname') || email }
+                        author: {
+                            displayName: localStorage.getItem('userDisplayName') || localStorage.getItem('userNickname') || email,
+                            nickname: localStorage.getItem('userNickname') || ''
+                        }
                     }));
                 } catch (_) {
                 }

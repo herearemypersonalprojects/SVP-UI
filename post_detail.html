@@ -1239,7 +1239,7 @@
                 commentsRef.push(newComment);
 
                 localStorage.setItem('userEmail', email);
-                if (!localStorage.getItem('userNickname')) localStorage.setItem('userNickname', name);
+                localStorage.setItem('userDisplayName', name);
 
                 renderComments(commentsRef);
                 if (commentCountEl) commentCountEl.innerHTML = `<i class="fa-regular fa-comments"></i>${commentsRef.length.toLocaleString('vi-VN')} bình luận`;
@@ -1275,7 +1275,7 @@
                 renderKpis(post, commentsRef.length);
 
                 localStorage.setItem('userEmail', email);
-                if (!localStorage.getItem('userNickname')) localStorage.setItem('userNickname', name);
+                localStorage.setItem('userDisplayName', name);
 
                 replyForm.reset();
                 replyCharCountEl.textContent = '0/2000 ký tự';
@@ -1293,7 +1293,7 @@
 
     /* ── Pre-fill from localStorage ── */
     const prefillForm = () => {
-        const nick  = localStorage.getItem('userNickname')||'';
+        const nick  = localStorage.getItem('userDisplayName') || localStorage.getItem('userNickname') || '';
         const email = localStorage.getItem('userEmail')||'';
         if (nick && replyNameEl)  replyNameEl.value  = nick;
         if (email && replyEmailEl) replyEmailEl.value = email;

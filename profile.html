@@ -281,7 +281,8 @@
             return {
                 userId: payload.userId || null,
                 email: payload.email || localStorage.getItem('userEmail') || '',
-                nickname: payload.nickname || localStorage.getItem('userNickname') || ''
+                nickname: payload.nickname || localStorage.getItem('userNickname') || '',
+                displayName: payload.displayName || localStorage.getItem('userDisplayName') || ''
             };
         };
 
@@ -350,7 +351,7 @@
             if (!profile) return;
             const displayName = profile.displayName || profile.nickname || 'Thành viên';
             if (nameEl) nameEl.textContent = displayName;
-            if (nicknameEl) nicknameEl.textContent = profile.nickname ? `@${profile.nickname}` : '';
+            if (nicknameEl) nicknameEl.textContent = '';
             if (roleEl) roleEl.textContent = profile.role ? `Vai trò: ${profile.role}` : '';
             if (emailEl) {
                 if (isSelf && me?.email) {

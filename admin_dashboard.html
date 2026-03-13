@@ -669,17 +669,18 @@
         const buildDetailRows = (type, items) => {
             switch (type) {
                 case 'users': {
-                    const headers = ['ID', 'Email', 'Nickname', 'Role', 'Ngày tạo'];
+                    const headers = ['ID', 'Email', 'Tên hiển thị', 'Role', 'Ngày tạo'];
                     const rows = items.map((item) => {
                         const profile = item.nickname ? `profile.html?nickname=${encodeURIComponent(item.nickname)}` : '';
-                        const nicknameNode = profile
-                            ? `<a href="${profile}">${escapeHtml(item.nickname || '')}</a>`
-                            : escapeHtml(item.nickname || '');
+                        const displayName = item.displayName || item.nickname || '';
+                        const displayNameNode = profile
+                            ? `<a href="${profile}">${escapeHtml(displayName)}</a>`
+                            : escapeHtml(displayName);
                         return `
                             <tr>
                                 <td>${escapeHtml(item.userId)}</td>
                                 <td>${escapeHtml(item.email || '')}</td>
-                                <td>${nicknameNode}</td>
+                                <td>${displayNameNode}</td>
                                 <td>${escapeHtml(item.role || '')}</td>
                                 <td>${escapeHtml(item.createdAt || '')}</td>
                             </tr>
@@ -694,13 +695,14 @@
                         const href = isArticle
                             ? `post_detail.html?postId=${encodeURIComponent(item.postId)}`
                             : `thread.html?postId=${encodeURIComponent(item.postId)}`;
+                        const authorName = item.authorDisplayName || item.authorNickname || '';
                         return `
                             <tr>
                                 <td>${escapeHtml(item.postId)}</td>
                                 <td><a href="${href}">${escapeHtml(item.title || '')}</a></td>
                                 <td>${escapeHtml(item.status || '')}</td>
                                 <td>${isArticle ? 'Article' : 'Discussion'}</td>
-                                <td>${escapeHtml(item.authorNickname || '')}</td>
+                                <td>${escapeHtml(authorName)}</td>
                                 <td>${escapeHtml(item.createdAt || '')}</td>
                             </tr>
                         `;
@@ -714,13 +716,14 @@
                         const href = isArticle
                             ? `post_detail.html?postId=${encodeURIComponent(item.postId)}`
                             : `thread.html?postId=${encodeURIComponent(item.postId)}`;
+                        const authorName = item.authorDisplayName || item.authorNickname || '';
                         return `
                             <tr>
                                 <td>${escapeHtml(item.commentId)}</td>
                                 <td>${escapeHtml(item.postId)}</td>
                                 <td><a href="${href}">${escapeHtml(item.postTitle || '')}</a></td>
                                 <td>${isArticle ? 'Article' : 'Discussion'}</td>
-                                <td>${escapeHtml(item.authorNickname || '')}</td>
+                                <td>${escapeHtml(authorName)}</td>
                                 <td>${escapeHtml(item.createdAt || '')}</td>
                             </tr>
                         `;
@@ -940,7 +943,7 @@
                 if (!response.ok) {
                     throw new Error(data.error || 'Không thể cập nhật quyền.');
                 }
-                setRoleStatus(`Đã cập nhật ${data.nickname || data.email} → ${data.role}.`, false);
+                setRoleStatus(`Đã cập nhật ${data.displayName || data.nickname || data.email} → ${data.role}.`, false);
                 await loadOverview(true);
             } catch (error) {
                 setRoleStatus(error.message || 'Không thể cập nhật quyền.', true);

@@ -30,6 +30,7 @@
     const refreshToken = params.get('refreshToken') || '';
     const email = params.get('email') || '';
     const nickname = params.get('nickname') || '';
+    const displayName = params.get('displayName') || '';
     const userId = params.get('userId') || '';
 
     if (!accessToken || !refreshToken) {
@@ -42,6 +43,7 @@
     localStorage.setItem('refreshToken', refreshToken);
     if (email) localStorage.setItem('userEmail', email);
     if (nickname) localStorage.setItem('userNickname', nickname);
+    if (displayName) localStorage.setItem('userDisplayName', displayName);
     if (userId) localStorage.setItem('userId', userId);
 
     msg.textContent = 'Đăng nhập thành công. Đang chuyển về trang chủ...';
@@ -52,6 +54,5 @@
 </script>
 </body>
 </html>
-
 
 

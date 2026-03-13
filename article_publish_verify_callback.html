@@ -69,6 +69,7 @@
             refreshToken: asText(auth.refreshToken),
             email: asText(auth.email),
             nickname: asText(auth.nickname),
+            displayName: asText(auth.displayName),
             userId: asText(auth.userId),
             tokenType: asText(auth.tokenType),
             accessExpiresAt: asText(auth.accessExpiresAt),
@@ -116,6 +117,7 @@
         localStorage.setItem('refreshToken', normalized.refreshToken);
         if (normalized.email) localStorage.setItem('userEmail', normalized.email);
         if (normalized.nickname) localStorage.setItem('userNickname', normalized.nickname);
+        if (normalized.displayName) localStorage.setItem('userDisplayName', normalized.displayName);
         if (normalized.userId) localStorage.setItem('userId', normalized.userId);
         return true;
     };
@@ -184,6 +186,7 @@
         refreshToken: readParam('refreshToken'),
         email: readParam('email'),
         nickname: readParam('nickname'),
+        displayName: readParam('displayName'),
         userId: readParam('userId')
     });
     if (hashAuth) {
@@ -224,5 +227,4 @@
 </script>
 </body>
 </html>
-
 

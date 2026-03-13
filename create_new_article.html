@@ -1037,7 +1037,7 @@
                         'success'
                     );
                 }
-                const authorName = (localStorage.getItem('userNickname') || email || '').trim();
+                const authorName = (localStorage.getItem('userDisplayName') || localStorage.getItem('userNickname') || email || '').trim();
                 const localPost = {
                     postId,
                     categoryId,
@@ -1047,7 +1047,7 @@
                     status: status || 'PENDING',
                     author: {
                         displayName: authorName,
-                        nickname: authorName
+                        nickname: (localStorage.getItem('userNickname') || '').trim()
                     }
                 };
                 try {

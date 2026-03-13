@@ -688,11 +688,19 @@
             if (match && match[1]) {
                 return String(match[1]).trim();
             }
+            const directImageMatch = html.match(/https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?[^\s<>"']*)?/i);
+            if (directImageMatch && directImageMatch[0]) {
+                return String(directImageMatch[0]).trim();
+            }
             return '';
         };
 
-        const extractCover = (contentHtml) => {
-            const firstImage = extractFirstImageSrc(contentHtml);
+        const extractCover = (post) => {
+            const explicitCover = String(post?.coverImageUrl || post?.cover_image_url || '').trim();
+            if (explicitCover) {
+                return explicitCover;
+            }
+            const firstImage = extractFirstImageSrc(post?.contentHtml || post?.content_html || post?.content || '');
             return firstImage || DEFAULT_ARTICLE_COVER;
         };
 
@@ -703,6 +711,7 @@
             status: post?.status ?? post?.postStatus ?? null,
             title: post?.title || '',
             contentHtml: post?.contentHtml || post?.content_html || post?.content || '',
+            coverImageUrl: post?.coverImageUrl || post?.cover_image_url || '',
             createdAt: post?.createdAt || post?.created_at || new Date().toISOString(),
             author: post?.author || {
                 userId: post?.userId ?? post?.user_id ?? null,
@@ -743,7 +752,7 @@
             const safeAuthor = escapeHtml(author.displayName || author.nickname || 'Ẩn danh');
             const safeDate = escapeHtml(formatDate(post.createdAt));
             const safeLead = escapeHtml(buildLead(post.contentHtml));
-            const safeCover = escapeHtml(extractCover(post.contentHtml));
+            const safeCover = escapeHtml(extractCover(post));
             const authorProfileHref = author.nickname
                 ? `profile.html?nickname=${encodeURIComponent(author.nickname)}`
                 : (author.userId ? `profile.html?userId=${encodeURIComponent(author.userId)}` : '');

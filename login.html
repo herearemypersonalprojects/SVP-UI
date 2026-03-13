@@ -63,6 +63,7 @@
             localStorage.setItem('refreshToken', payload.refreshToken || '');
             if (payload.email) localStorage.setItem('userEmail', payload.email);
             if (payload.nickname) localStorage.setItem('userNickname', payload.nickname);
+            if (payload.displayName) localStorage.setItem('userDisplayName', payload.displayName);
             if (payload.userId) localStorage.setItem('userId', payload.userId);
             setMsg('Đăng nhập thành công, đang chuyển trang...', true);
             window.location.replace('index.html');
@@ -97,5 +98,4 @@
 </script>
 </body>
 </html>
-
 

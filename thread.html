@@ -1176,9 +1176,9 @@
         };
 
         const loadUserPrefill = () => {
-            const nickname = String(localStorage.getItem('userNickname') || '').trim();
+            const displayName = String(localStorage.getItem('userDisplayName') || localStorage.getItem('userNickname') || '').trim();
             const email = String(localStorage.getItem('userEmail') || '').trim();
-            if (nickname) replyNameEl.value = nickname;
+            if (displayName) replyNameEl.value = displayName;
             if (email) replyEmailEl.value = email;
         };
 
@@ -1356,9 +1356,7 @@
                     }));
 
                     localStorage.setItem('userEmail', email);
-                    if (!localStorage.getItem('userNickname')) {
-                        localStorage.setItem('userNickname', name);
-                    }
+                    localStorage.setItem('userDisplayName', name);
 
                     renderHeader(thread, nextMetrics, nextTotalReplies);
                     renderPosts(thread, apiComments, currentReplies);
@@ -1391,5 +1389,4 @@
 <script src="auth-topbar.js"></script>
 </body>
 </html>
-
 

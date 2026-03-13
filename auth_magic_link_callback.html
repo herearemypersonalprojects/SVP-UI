@@ -24,35 +24,70 @@
 <script src="auth-topbar.js"></script>
 <script>
 (() => {
+    const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
     const msg = document.getElementById('msg');
-    const params = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
-    const accessToken = params.get('accessToken') || '';
-    const refreshToken = params.get('refreshToken') || '';
-    const email = params.get('email') || '';
-    const nickname = params.get('nickname') || '';
-    const displayName = params.get('displayName') || '';
-    const userId = params.get('userId') || '';
+    const spinnerEl = document.querySelector('.spinner');
 
-    if (!accessToken || !refreshToken) {
-        msg.textContent = 'Không tìm thấy token đăng nhập. Vui lòng thử lại magic link.';
-        msg.className = 'err';
+    const hideSpinner = () => { if (spinnerEl) spinnerEl.style.display = 'none'; };
+
+    const applyTokens = (data) => {
+        const accessToken = data.accessToken || '';
+        const refreshToken = data.refreshToken || '';
+        if (!accessToken || !refreshToken) {
+            msg.textContent = 'Không tìm thấy token đăng nhập. Vui lòng thử lại.';
+            msg.className = 'err';
+            hideSpinner();
+            return;
+        }
+        localStorage.setItem('accessToken', accessToken);
+        localStorage.setItem('refreshToken', refreshToken);
+        if (data.email) localStorage.setItem('userEmail', data.email);
+        if (data.nickname) localStorage.setItem('userNickname', data.nickname);
+        if (data.displayName) localStorage.setItem('userDisplayName', data.displayName);
+        if (data.userId) localStorage.setItem('userId', data.userId);
+
+        msg.textContent = 'Đăng nhập thành công. Đang chuyển về trang chủ...';
+        setTimeout(() => { window.location.replace('index.html'); }, 500);
+    };
+
+    // New flow: token in query string → call backend API to verify
+    const queryToken = new URLSearchParams(window.location.search).get('token');
+    if (queryToken) {
+        (async () => {
+            try {
+                const url = `${API_BASE_URL}/auth/magic-link/verify?format=json&token=${encodeURIComponent(queryToken)}`;
+                const response = await fetch(url, {
+                    method: 'GET',
+                    headers: { Accept: 'application/json' }
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Magic link không hợp lệ hoặc đã hết hạn.');
+                }
+                // Remove token from URL to prevent re-use on refresh
+                window.history.replaceState(null, '', window.location.pathname);
+                applyTokens(payload);
+            } catch (err) {
+                msg.textContent = (err && err.message) || 'Không thể xác thực. Vui lòng thử lại.';
+                msg.className = 'err';
+                hideSpinner();
+            }
+        })();
         return;
     }
 
-    localStorage.setItem('accessToken', accessToken);
-    localStorage.setItem('refreshToken', refreshToken);
-    if (email) localStorage.setItem('userEmail', email);
-    if (nickname) localStorage.setItem('userNickname', nickname);
-    if (displayName) localStorage.setItem('userDisplayName', displayName);
-    if (userId) localStorage.setItem('userId', userId);
-
-    msg.textContent = 'Đăng nhập thành công. Đang chuyển về trang chủ...';
-    setTimeout(() => {
-        window.location.replace('index.html');
-    }, 500);
+    // Legacy flow: tokens already in hash fragment (from backend 302 redirect)
+    const hashParams = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
+    applyTokens({
+        accessToken: hashParams.get('accessToken') || '',
+        refreshToken: hashParams.get('refreshToken') || '',
+        email: hashParams.get('email') || '',
+        nickname: hashParams.get('nickname') || '',
+        displayName: hashParams.get('displayName') || '',
+        userId: hashParams.get('userId') || ''
+    });
 })();
 </script>
 </body>
 </html>
-
 

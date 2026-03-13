@@ -386,6 +386,29 @@
         let lastCityItems = [];
         const ipGeoCache = new Map();
 
+        const DASHBOARD_CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+        const dashboardCache = {
+            _key(name) { return `svp.admin.cache.${name}`; },
+            get(name) {
+                try {
+                    const raw = localStorage.getItem(this._key(name));
+                    if (!raw) return null;
+                    const entry = JSON.parse(raw);
+                    if (!entry || (Date.now() - entry.ts) > DASHBOARD_CACHE_TTL_MS) {
+                        localStorage.removeItem(this._key(name));
+                        return null;
+                    }
+                    return entry.data;
+                } catch (_) { return null; }
+            },
+            set(name, data) {
+                try { localStorage.setItem(this._key(name), JSON.stringify({ ts: Date.now(), data })); } catch (_) {}
+            },
+            clear(name) {
+                try { localStorage.removeItem(this._key(name)); } catch (_) {}
+            }
+        };
+
         const canViewIpDetails = () => currentRole === 'SUPERADMIN';
 
         const normalizeIpForLookup = (ip) => String(ip || '').trim().replace(/^\[(.+)]$/, '$1').replace(/\/(\d+)$/, '');
@@ -850,14 +873,23 @@
             }
         };
 
-        const load = async () => {
+        const load = async (forceRefresh) => {
             setStatus('Đang tải...', false);
             try {
+                const days = Number(daysSelect.value || 30);
+                const cacheKey = `visits_${days}`;
+                if (!forceRefresh) {
+                    const cached = dashboardCache.get(cacheKey);
+                    if (cached) {
+                        await render(cached);
+                        setStatus(`Dữ liệu từ cache (${days} ngày, tối đa 5 phút).`, false);
+                        return;
+                    }
+                }
                 const token = window.SVPAuth?.getValidAccessToken ? await window.SVPAuth.getValidAccessToken() : '';
                 if (!token) {
                     throw new Error('Bạn cần đăng nhập bằng tài khoản admin.');
                 }
-                const days = Number(daysSelect.value || 30);
                 const response = await fetch(`${API_BASE_URL}/admin/dashboard/visits?days=${encodeURIComponent(days)}`, {
                     headers: { Authorization: `Bearer ${token}`, Accept: 'application/json' }
                 });
@@ -865,6 +897,7 @@
                 if (!response.ok) {
                     throw new Error(payload.error || 'Không thể tải dashboard.');
                 }
+                dashboardCache.set(cacheKey, payload);
                 await render(payload);
                 setStatus(`Cập nhật ${days} ngày gần nhất.`, false);
             } catch (error) {
@@ -907,15 +940,23 @@
                     throw new Error(data.error || 'Không thể cập nhật quyền.');
                 }
                 setRoleStatus(`Đã cập nhật ${data.nickname || data.email} → ${data.role}.`, false);
-                await loadOverview();
+                await loadOverview(true);
             } catch (error) {
                 setRoleStatus(error.message || 'Không thể cập nhật quyền.', true);
             }
         };
 
-        const loadOverview = async () => {
+        const loadOverview = async (forceRefresh) => {
             setOverviewStatus('Đang tải...', false);
             try {
+                if (!forceRefresh) {
+                    const cached = dashboardCache.get('overview');
+                    if (cached) {
+                        renderOverview(cached);
+                        setOverviewStatus('Dữ liệu từ cache (tối đa 5 phút).', false);
+                        return;
+                    }
+                }
                 const token = window.SVPAuth?.getValidAccessToken ? await window.SVPAuth.getValidAccessToken() : '';
                 if (!token) {
                     throw new Error('Bạn cần đăng nhập bằng tài khoản admin.');
@@ -927,6 +968,7 @@
                 if (!response.ok) {
                     throw new Error(payload.error || 'Không thể tải tổng quan.');
                 }
+                dashboardCache.set('overview', payload);
                 renderOverview(payload);
                 setOverviewStatus('Cập nhật dữ liệu tổng quan.', false);
             } catch (error) {
@@ -934,7 +976,7 @@
             }
         };
 
-        const loadAll = async () => {
+        const loadAll = async (forceRefresh) => {
             const token = window.SVPAuth?.getValidAccessToken ? await window.SVPAuth.getValidAccessToken() : '';
             if (!token) {
                 setStatus('Bạn cần đăng nhập bằng tài khoản admin.', true);
@@ -980,9 +1022,9 @@
                 return;
             }
             if (role === 'SUPERADMIN' || role === 'ADMIN') {
-                await Promise.all([loadOverview(), load()]);
+                await Promise.all([loadOverview(forceRefresh), load(forceRefresh)]);
             } else {
-                await loadOverview();
+                await loadOverview(forceRefresh);
             }
         };
 
@@ -1021,7 +1063,7 @@
                 }
             });
         });
-        refreshBtn.addEventListener('click', loadAll);
+        refreshBtn.addEventListener('click', () => loadAll(true));
         daysSelect.addEventListener('change', load);
         loadAll();
     })();

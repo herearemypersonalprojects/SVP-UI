@@ -328,7 +328,7 @@
                 body: JSON.stringify(payload),
                 keepalive: true
             }).then((res) => {
-                if (!res.ok || !storageOk) {
+                if ((!res.ok && res.status !== 204) || !storageOk) {
                     return;
                 }
                 try {

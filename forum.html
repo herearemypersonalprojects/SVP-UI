@@ -459,8 +459,18 @@
 
         const mergeLocalDraft = (threads) => threads;
 
-        const fetchThreads = async () => {
-            const response = await fetch(`${API_BASE_URL}/posts/latest-discussions?limit=200`, {
+        const FORUM_FETCH_LIMIT = 50;
+        let hasMoreFromApi = true;
+        let lastFetchedCreatedAt = null;
+        let lastFetchedPostId = null;
+
+        const fetchThreads = async (append) => {
+            const params = new URLSearchParams({ limit: String(FORUM_FETCH_LIMIT) });
+            if (append && lastFetchedCreatedAt) {
+                params.set('beforeCreatedAt', lastFetchedCreatedAt);
+                if (lastFetchedPostId) params.set('beforePostId', String(lastFetchedPostId));
+            }
+            const response = await fetch(`${API_BASE_URL}/posts/latest-discussions?${params.toString()}`, {
                 method: 'GET',
                 headers: { Accept: 'application/json' }
             });
@@ -468,8 +478,15 @@
             if (!response.ok) {
                 throw new Error(payload.error || 'Không thể tải danh sách chủ đề.');
             }
-            const items = Array.isArray(payload.items) ? payload.items.map(normalizeApiThread) : [];
-            return items.filter((item) => item.threadId > 0);
+            const items = Array.isArray(payload.items) ? payload.items : [];
+            hasMoreFromApi = items.length >= FORUM_FETCH_LIMIT;
+            if (items.length > 0) {
+                const last = items[items.length - 1];
+                lastFetchedCreatedAt = last.createdAt || last.created_at || null;
+                lastFetchedPostId = last.postId || last.post_id || null;
+            }
+            const normalized = items.map(normalizeApiThread).filter((item) => item.threadId > 0);
+            return normalized;
         };
 
         const syncUrlState = () => {
@@ -557,7 +574,7 @@
             const totalPages = Math.max(1, Math.ceil(totalItems / PAGE_SIZE));
             state.page = Math.min(Math.max(1, state.page), totalPages);
 
-            if (totalPages <= 1) {
+            if (totalPages <= 1 && !hasMoreFromApi) {
                 paginationEl.innerHTML = '';
                 return;
             }
@@ -568,6 +585,9 @@
                 buttons.push(`<button class="btn btn-sm ${i === state.page ? 'btn-primary' : 'btn-outline-secondary'}" data-page="${i}">${i}</button>`);
             }
             buttons.push(`<button class="btn btn-sm btn-outline-secondary" data-page="next" ${state.page === totalPages ? 'disabled' : ''}>Sau</button>`);
+            if (hasMoreFromApi) {
+                buttons.push(`<button class="btn btn-sm btn-outline-primary ms-2" data-page="loadmore">Tải thêm...</button>`);
+            }
             paginationEl.innerHTML = buttons.join('');
         };
 
@@ -669,6 +689,11 @@
                 const pageToken = String(target.dataset.page || '');
                 if (!pageToken) return;
 
+                if (pageToken === 'loadmore') {
+                    loadMoreFromApi();
+                    return;
+                }
+
                 const filteredCount = filterThreads().length;
                 const totalPages = Math.max(1, Math.ceil(filteredCount / PAGE_SIZE));
                 if (pageToken === 'prev') {
@@ -706,12 +731,27 @@
             });
         };
 
+        const loadMoreFromApi = async () => {
+            if (!hasMoreFromApi) return;
+            try {
+                const moreThreads = await fetchThreads(true);
+                if (moreThreads.length) {
+                    const existingIds = new Set(state.threads.map((t) => t.threadId));
+                    const newItems = moreThreads.filter((t) => !existingIds.has(t.threadId));
+                    state.threads = state.threads.concat(newItems);
+                    render();
+                }
+            } catch (error) {
+                console.error('Cannot load more threads:', error);
+            }
+        };
+
         const load = async () => {
             buildCategorySelect();
             syncControls();
             listEl.innerHTML = '<div class="sv-forum-empty">Đang tải dữ liệu forum...</div>';
             try {
-                const apiThreads = await fetchThreads();
+                const apiThreads = await fetchThreads(false);
                 state.threads = mergeLocalDraft(apiThreads);
                 state.sourceLabel = 'API';
                 if (!state.threads.length) {

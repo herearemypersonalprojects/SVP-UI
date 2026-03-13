@@ -308,7 +308,11 @@
             }
             const presignResponse = await fetch(`${API_BASE_URL}/api/upload/post-image`, {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+                headers: {
+                    'Content-Type': 'application/json',
+                    Accept: 'application/json',
+                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+                },
                 body: JSON.stringify({ filename: file.name, contentType: file.type })
             });
             const presignPayload = await presignResponse.json().catch(() => ({}));

@@ -105,6 +105,38 @@
             color: #1f2937;
             line-height: 1.6;
         }
+        .sv-thread-post__content ul,
+        .sv-thread-post__content ol {
+            margin: 0 0 .75rem 1.25rem;
+            color: #1f2937;
+        }
+        .sv-thread-post__content li {
+            margin-bottom: .35rem;
+        }
+        .sv-thread-post__content blockquote {
+            margin: 0 0 .75rem;
+            padding: .65rem .8rem;
+            border-left: 4px solid #bfdbfe;
+            background: #f8fafc;
+            color: #334155;
+            border-radius: 8px;
+        }
+        .sv-thread-post__content pre {
+            margin: 0 0 .75rem;
+            padding: .75rem .85rem;
+            background: #0f172a;
+            color: #e2e8f0;
+            border-radius: 10px;
+            overflow-x: auto;
+            white-space: pre-wrap;
+        }
+        .sv-thread-post__content code {
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+        }
+        .sv-thread-post__content a {
+            color: #2563eb;
+            text-decoration: underline;
+        }
         .sv-thread-post__media {
             display: grid;
             gap: .6rem;
@@ -432,6 +464,14 @@
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
 
+        const linesToParagraphsHtml = (lines) => {
+            const items = Array.isArray(lines)
+                ? lines.map((line) => String(line || '').trim()).filter(Boolean)
+                : [];
+            if (!items.length) return '';
+            return items.map((line) => `<p>${escapeHtml(line)}</p>`).join('');
+        };
+
         const normalizeSafeImageUrl = (value) => {
             const raw = String(value || '').trim();
             if (!raw) return '';
@@ -442,6 +482,74 @@
             } catch (_) {
                 return '';
             }
+        };
+
+        const normalizeSafeHref = (value) => {
+            const raw = String(value || '').trim();
+            if (!raw) return '';
+            if (raw.startsWith('mailto:')) return raw;
+            try {
+                const parsed = new URL(raw, window.location.href);
+                if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+                    return '';
+                }
+                return parsed.href;
+            } catch (_) {
+                return '';
+            }
+        };
+
+        const sanitizeRichContentHtml = (html) => {
+            const raw = String(html || '').trim();
+            if (!raw) {
+                return '<p>Nội dung đang được cập nhật.</p>';
+            }
+
+            const template = document.createElement('template');
+            template.innerHTML = raw;
+
+            const allowedTags = new Set([
+                'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
+                'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+                'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'div', 'span'
+            ]);
+            const blockedTags = new Set([
+                'script', 'style', 'iframe', 'object', 'embed', 'form',
+                'input', 'button', 'textarea', 'select', 'option', 'link', 'meta'
+            ]);
+
+            const sanitizeNode = (node) => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    return escapeHtml(node.textContent || '');
+                }
+                if (node.nodeType !== Node.ELEMENT_NODE) {
+                    return '';
+                }
+
+                const tag = String(node.nodeName || '').toLowerCase();
+                if (blockedTags.has(tag) || tag === 'img') {
+                    return '';
+                }
+
+                const childrenHtml = Array.from(node.childNodes).map((child) => sanitizeNode(child)).join('');
+                if (!allowedTags.has(tag)) {
+                    return childrenHtml;
+                }
+                if (tag === 'br') {
+                    return '<br>';
+                }
+                if (tag === 'a') {
+                    const href = normalizeSafeHref(node.getAttribute('href'));
+                    const attrs = href
+                        ? ` href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"`
+                        : '';
+                    return `<a${attrs}>${childrenHtml}</a>`;
+                }
+                return `<${tag}>${childrenHtml}</${tag}>`;
+            };
+
+            const sanitized = Array.from(template.content.childNodes).map((node) => sanitizeNode(node)).join('').trim();
+            return sanitized || '<p>Nội dung đang được cập nhật.</p>';
         };
 
         const extractImageUrlsFromHtml = (html, maxItems = 4) => {
@@ -664,7 +772,7 @@
                 authorUserId: String(commentAuthor.userId || ''),
                 authorAvatarUrl: String(commentAuthor.avatarUrl || commentAuthor.avatar_url || comment?.authorAvatarUrl || comment?.author_avatar_url || comment?.avatarUrl || comment?.avatar_url || ''),
                 createdAt: String(comment?.createdAt || comment?.created_at || ''),
-                contentLines: htmlToLines(commentContentHtml),
+                contentHtml: commentContentHtml,
                 imageUrls: collectImageUrls(comment?.imageUrl || comment?.image_url || '', commentContentHtml)
             };
         };
@@ -685,7 +793,7 @@
                 authorAvatarUrl: String(author.avatarUrl || author.avatar_url || post?.authorAvatarUrl || post?.author_avatar_url || post?.avatarUrl || post?.avatar_url || ''),
                 createdAt: String(post?.createdAt || ''),
                 updatedAt: String(post?.updatedAt || post?.createdAt || ''),
-                contentLines: htmlToLines(postContentHtml),
+                contentHtml: postContentHtml,
                 imageUrls: collectImageUrls(post?.imageUrl || post?.image_url || '', postContentHtml),
                 comments: comments.map((comment) => normalizeApiComment(comment))
             };
@@ -705,6 +813,7 @@
                 authorAvatarUrl: '',
                 createdAt: fallback.createdAt,
                 updatedAt: fallback.createdAt,
+                contentHtml: linesToParagraphsHtml(fallback.contentLines),
                 contentLines: fallback.contentLines,
                 comments: fallback.comments
             };
@@ -737,6 +846,14 @@
                 authorAvatarUrl: post.authorAvatarUrl || '',
                 role: isOriginalPost ? 'Chủ thớt' : 'Thành viên',
                 createdAt: post.createdAt,
+                contentHtml: sanitizeRichContentHtml(
+                    String(post.contentHtml || post.content_html || '').trim()
+                    || linesToParagraphsHtml(post.contentLines)
+                ),
+                quoteText: htmlToLines(
+                    String(post.contentHtml || post.content_html || '').trim()
+                    || linesToParagraphsHtml(post.contentLines)
+                )[0] || '',
                 imageUrls: Array.isArray(post.imageUrls)
                     ? post.imageUrls.filter((url) => typeof url === 'string' && url)
                     : [],
@@ -769,7 +886,7 @@
                             <span>#${item.index}</span>
                         </div>
                         <div class="sv-thread-post__content">
-                            ${item.lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('')}
+                            ${item.contentHtml}
                         </div>
                         ${item.imageUrls.length ? `
                         <div class="sv-thread-post__media">
@@ -778,7 +895,7 @@
                         ` : ''}
                         <div class="sv-thread-post__actions">
                             <button type="button" data-reply="${escapeHtml(item.authorName)}">Trả lời</button>
-                            <button type="button" data-quote="${escapeHtml(item.lines[0] || '')}">Trích dẫn</button>
+                            <button type="button" data-quote="${escapeHtml(item.quoteText || '')}">Trích dẫn</button>
                         </div>
                     </div>
                 </article>
@@ -1389,4 +1506,3 @@
 <script src="auth-topbar.js"></script>
 </body>
 </html>
-

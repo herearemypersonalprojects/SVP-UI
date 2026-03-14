@@ -247,7 +247,7 @@
             const isOwner = caller.nickname && organizerNickname && caller.nickname === organizerNickname;
             const isSuperadmin = caller.role === 'SUPERADMIN';
             const isAdmin = caller.role === 'ADMIN' || isSuperadmin;
-            const canEdit = isOwner || isSuperadmin;
+            const canEdit = isOwner || isAdmin || isSuperadmin;
             const canHide = isAdmin;
             if (!canEdit && !canHide) return;
 

@@ -95,7 +95,7 @@
                             <div class="invalid-feedback">Bạn cần đồng ý trước khi gửi.</div>
                         </div>
 
-                        <button type="submit" class="btn btn-primary">
+                        <button id="contact-submit" type="submit" class="btn btn-primary">
                             <i class="fa-solid fa-paper-plane me-1"></i>Gửi liên hệ
                         </button>
                     </form>
@@ -103,6 +103,7 @@
                     <div id="contact-status" class="alert alert-success mt-3 d-none" role="status" aria-live="polite">
                         Liên hệ đã được gửi tới Ban quản trị SVP. Cảm ơn bạn!
                     </div>
+                    <div id="contact-error" class="alert alert-danger mt-3 d-none" role="alert" aria-live="polite"></div>
                 </div>
             </div>
         </div>
@@ -127,38 +128,78 @@
 </footer>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="config.js"></script>
 <script>
     (function () {
         const form = document.getElementById('svp-contact-form');
         const status = document.getElementById('contact-status');
-        if (!form || !status) return;
+        const errorBox = document.getElementById('contact-error');
+        const submitBtn = document.getElementById('contact-submit');
+        const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+        if (!form || !status || !errorBox || !submitBtn) return;
 
-        form.addEventListener('submit', function (event) {
+        const setSubmitting = (submitting) => {
+            submitBtn.disabled = submitting;
+            submitBtn.innerHTML = submitting
+                ? '<i class="fa-solid fa-spinner fa-spin me-1"></i>Đang gửi...'
+                : '<i class="fa-solid fa-paper-plane me-1"></i>Gửi liên hệ';
+        };
+
+        const hideMessages = () => {
+            status.classList.add('d-none');
+            errorBox.classList.add('d-none');
+            errorBox.textContent = '';
+        };
+
+        form.addEventListener('submit', async function (event) {
             event.preventDefault();
             event.stopPropagation();
+            hideMessages();
 
             if (!form.checkValidity()) {
                 form.classList.add('was-validated');
-                status.classList.add('d-none');
                 return;
             }
 
-            form.classList.remove('was-validated');
-            form.reset();
-            status.classList.remove('d-none');
+            form.classList.add('was-validated');
+            setSubmitting(true);
+
+            const payload = {
+                fullName: form.fullName.value.trim(),
+                email: form.email.value.trim(),
+                subject: form.subject.value.trim(),
+                message: form.message.value.trim()
+            };
+
+            try {
+                const response = await fetch(`${API_BASE_URL}/contact`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json'
+                    },
+                    body: JSON.stringify(payload)
+                });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(data.error || 'Không thể gửi liên hệ lúc này.');
+                }
+
+                form.reset();
+                form.classList.remove('was-validated');
+                status.classList.remove('d-none');
+            } catch (error) {
+                errorBox.textContent = error && error.message
+                    ? error.message
+                    : 'Không thể kết nối máy chủ. Vui lòng thử lại sau.';
+                errorBox.classList.remove('d-none');
+            } finally {
+                setSubmitting(false);
+            }
         });
     })();
 </script>
-<script src="config.js"></script>
 <script src="avatar-utils.js"></script>
 <script src="auth-topbar.js"></script>
 </body>
 </html>
-
-
-
-
-
-
-
-

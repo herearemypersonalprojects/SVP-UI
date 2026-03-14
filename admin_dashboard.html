@@ -290,6 +290,17 @@
                 </div>
                 <div class="col-12">
                     <div class="sv-soft-card">
+                        <div class="fw-bold mb-2">Truy cập gần đây</div>
+                        <div class="table-responsive">
+                            <table class="sv-admin-table">
+                                <thead id="recent-visits-head"></thead>
+                                <tbody id="recent-visits-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="sv-soft-card">
                         <div class="fw-bold mb-2">Bản đồ truy cập theo thành phố</div>
                         <div id="city-map" class="sv-map"></div>
                         <div id="city-map-note" class="sv-admin-muted mt-2"></div>
@@ -362,6 +373,8 @@
         const cityMapEl = document.getElementById('city-map');
         const cityMapNote = document.getElementById('city-map-note');
         const pathList = document.getElementById('path-list');
+        const recentVisitsHead = document.getElementById('recent-visits-head');
+        const recentVisitsList = document.getElementById('recent-visits-list');
         const ipList = document.getElementById('ip-list');
         const visitsIpSection = document.getElementById('visits-ip-section');
         const visitsUniqueCard = document.getElementById('kpi-unique-card');
@@ -416,6 +429,15 @@
 
         const normalizeIpForLookup = (ip) => String(ip || '').trim().replace(/^\[(.+)]$/, '$1').replace(/\/(\d+)$/, '');
         const normalizeIpForDisplay = (ip) => normalizeIpForLookup(ip).replace(/%\w+$/, '');
+        const pad2 = (value) => String(value).padStart(2, '0');
+        const formatVisitDateTime = (value) => {
+            if (!value) return '--';
+            const date = new Date(value);
+            if (Number.isNaN(date.getTime())) {
+                return String(value);
+            }
+            return `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${date.getFullYear()} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+        };
 
         const ensureCityMap = () => {
             if (!cityMapEl) return null;
@@ -605,6 +627,8 @@
                 ? payload.paths.map((item) => renderBarRow(item.path, item.visits, maxPath)).join('')
                 : '<div class="sv-admin-muted">Chưa có dữ liệu.</div>';
 
+            renderRecentVisitsTable(Array.isArray(payload.recentVisits) ? payload.recentVisits : []);
+
             if (Array.isArray(payload.ips) && payload.ips.length) {
                 const rows = await Promise.all(payload.ips.map(async (item) => {
                     const geo = await fetchIpGeo(item.ip);
@@ -630,6 +654,26 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+
+        const buildRecentVisitTable = (items) => {
+            const includeIp = canViewIpDetails();
+            const headers = includeIp ? ['Thời gian', 'Đường dẫn', 'IP'] : ['Thời gian', 'Đường dẫn'];
+            const rows = items.map((item) => `
+                <tr>
+                    <td>${escapeHtml(formatVisitDateTime(item.visitedAt))}</td>
+                    <td>${escapeHtml(item.path || '--')}</td>
+                    ${includeIp ? `<td>${escapeHtml(normalizeIpForDisplay(item.ip) || '--')}</td>` : ''}
+                </tr>
+            `).join('');
+            return { headers, rows };
+        };
+
+        const renderRecentVisitsTable = (items) => {
+            if (!recentVisitsHead || !recentVisitsList) return;
+            const detail = buildRecentVisitTable(Array.isArray(items) ? items : []);
+            recentVisitsHead.innerHTML = `<tr>${detail.headers.map((label) => `<th>${escapeHtml(label)}</th>`).join('')}</tr>`;
+            recentVisitsList.innerHTML = detail.rows || `<tr><td colspan="${detail.headers.length}" class="sv-admin-muted">Chưa có dữ liệu.</td></tr>`;
+        };
 
         const setDetailStatus = (text, isError) => {
             if (!detailStatusEl) return;
@@ -777,15 +821,21 @@
                 return;
             }
             if (kind === 'visits_total') {
-                const headers = ['Ngày', 'Lượt truy cập', 'Unique IP'];
-                const rows = payload.daily.map((item) => `
-                    <tr>
-                        <td>${escapeHtml(item.day)}</td>
-                        <td>${Number(item.visits || 0).toLocaleString('vi-VN')}</td>
-                        <td>${Number(item.uniqueIps || 0).toLocaleString('vi-VN')}</td>
-                    </tr>
-                `).join('');
-                renderDetailTable(headers, rows);
+                const recentVisits = Array.isArray(payload.recentVisits) ? payload.recentVisits : [];
+                if (recentVisits.length) {
+                    const detail = buildRecentVisitTable(recentVisits);
+                    renderDetailTable(detail.headers, detail.rows);
+                } else {
+                    const headers = ['Ngày', 'Lượt truy cập', 'Unique IP'];
+                    const rows = payload.daily.map((item) => `
+                        <tr>
+                            <td>${escapeHtml(item.day)}</td>
+                            <td>${Number(item.visits || 0).toLocaleString('vi-VN')}</td>
+                            <td>${Number(item.uniqueIps || 0).toLocaleString('vi-VN')}</td>
+                        </tr>
+                    `).join('');
+                    renderDetailTable(headers, rows);
+                }
             } else if (kind === 'visits_unique') {
                 const headers = ['IP', 'City', 'Visits'];
                 const rows = await Promise.all(payload.ips.map(async (item) => {
@@ -812,6 +862,7 @@
                 `).join('');
                 renderDetailTable(headers, rows);
             }
+            setDetailStatus('', false);
             setDetailPagination(false, false);
         };
 
@@ -865,7 +916,7 @@
                     comments: 'Danh sách bình luận',
                     events: 'Danh sách sự kiện',
                     newsletters: 'Danh sách newsletter',
-                    visits_total: 'Chi tiết lượt truy cập theo ngày',
+                    visits_total: 'Chi tiết lượt truy cập gần đây',
                     visits_unique: 'Chi tiết IP truy cập',
                     visits_city: 'Chi tiết thành phố'
                 };

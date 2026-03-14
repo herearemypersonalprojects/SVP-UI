@@ -8,6 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
     <link rel="shortcut icon" href="assets/icons/favicon.svg">
     <script src="seo.js"></script>
+    <link rel="stylesheet" href="auth-social.css">
     <style>
         * { box-sizing: border-box; font-family: Arial, sans-serif; }
         body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #f5f7fb; }
@@ -25,6 +26,15 @@
 <body>
 <div class="box">
     <h1>Đăng Nhập</h1>
+    <div id="social-auth" class="social-auth" hidden>
+        <div class="social-auth__stack">
+            <div id="google-signin-row" class="social-auth__google">
+                <div id="google-signin"></div>
+            </div>
+            <button id="btn-facebook" class="social-auth__btn social-auth__btn--facebook" type="button">Tiếp tục với Facebook</button>
+        </div>
+        <div id="social-divider" class="social-auth__divider"><span>hoặc dùng email</span></div>
+    </div>
     <input id="email" class="input" type="email" placeholder="Email" />
     <input id="password" class="input" type="password" placeholder="Mật khẩu" />
     <button id="btn-login" class="btn" type="button">Đăng Nhập</button>
@@ -33,6 +43,7 @@
     <div id="msg" class="hint"></div>
 </div>
 <script src="config.js"></script>
+<script src="auth-social.js"></script>
 <script src="auth-topbar.js"></script>
 <script>
 (() => {
@@ -96,6 +107,20 @@
             setMsg('Không thể kết nối máy chủ.', false);
         }
     });
+
+    if (window.SVPSocialAuth && typeof window.SVPSocialAuth.init === 'function') {
+        window.SVPSocialAuth.init({
+            mode: 'login',
+            redirectUrl: 'index.html',
+            sectionId: 'social-auth',
+            googleRowId: 'google-signin-row',
+            googleContainerId: 'google-signin',
+            facebookButtonId: 'btn-facebook',
+            dividerId: 'social-divider',
+            busyIds: ['email', 'password', 'btn-login', 'btn-forgot'],
+            setMessage: setMsg
+        });
+    }
 })();
 </script>
 </body>

@@ -404,6 +404,8 @@
         const METRIC_KEY = 'svp.forum.thread.metrics.v1';
         const LOCAL_REPLY_PREFIX = 'svp.thread.localReplies.v1.';
         const GUEST_REPLY_NAME_KEY = 'svp.thread.guestDisplayName';
+        const VIEW_TRACK_KEY_PREFIX = 'svp.thread.viewTrack.v1.';
+        const VIEW_TRACK_WINDOW_MS = 6 * 60 * 60 * 1000;
         const MAX_REPLY_IMAGE_SOURCE_BYTES = 10 * 1024 * 1024;
         const MAX_REPLY_IMAGE_UPLOAD_BYTES = 88 * 1024;
 
@@ -972,6 +974,26 @@
                 replies: Math.max(0, Math.floor(Number(raw.replies || 0))),
                 lastCommentAt: String(raw.lastCommentAt || '')
             };
+        };
+
+        const viewTrackKey = (threadId) => `${VIEW_TRACK_KEY_PREFIX}${threadId}`;
+
+        const shouldTrackThreadView = (threadId) => {
+            try {
+                const lastTrackedAt = Number(localStorage.getItem(viewTrackKey(threadId)) || 0);
+                if (Number.isFinite(lastTrackedAt) && (Date.now() - lastTrackedAt) < VIEW_TRACK_WINDOW_MS) {
+                    return false;
+                }
+            } catch (_) {
+            }
+            return true;
+        };
+
+        const markThreadViewTracked = (threadId) => {
+            try {
+                localStorage.setItem(viewTrackKey(threadId), String(Date.now()));
+            } catch (_) {
+            }
         };
 
         const localReplyKey = (threadId) => `${LOCAL_REPLY_PREFIX}${threadId}`;
@@ -1631,9 +1653,10 @@
                 statusEl.textContent = 'Thiếu postId. Hãy quay lại danh sách forum và chọn một chủ đề.';
                 return null;
             }
+            const shouldTrackView = shouldTrackThreadView(postId);
 
             try {
-                const response = await fetch(`${API_BASE_URL}/posts/${postId}`, {
+                const response = await fetch(`${API_BASE_URL}/posts/${postId}?trackView=${shouldTrackView ? 'true' : 'false'}`, {
                     method: 'GET',
                     headers: { Accept: 'application/json' }
                 });
@@ -1641,11 +1664,17 @@
                 if (!response.ok) {
                     throw new Error(payload.error || 'Không tìm thấy chủ đề.');
                 }
-                return normalizeApiThread(payload);
+                const normalized = normalizeApiThread(payload);
+                normalized.didTrackView = shouldTrackView;
+                return normalized;
             } catch (error) {
                 console.warn('Cannot load thread from API, trying fallback:', error);
                 if (topicFallback && FALLBACK_TOPICS[topicFallback]) {
-                    return buildFallbackThread(topicFallback);
+                    const fallbackThread = buildFallbackThread(topicFallback);
+                    if (fallbackThread) {
+                        fallbackThread.didTrackView = shouldTrackView;
+                    }
+                    return fallbackThread;
                 }
 
                 let localDiscussion = null;
@@ -1666,7 +1695,8 @@
                         updatedAt: String(localDiscussion.createdAt || new Date().toISOString()),
                         contentLines: htmlToLines(discussionContentHtml),
                         imageUrls: collectImageUrls(localDiscussion.imageUrl || localDiscussion.image_url || '', discussionContentHtml),
-                        comments: []
+                        comments: [],
+                        didTrackView: shouldTrackView
                     };
                 }
 
@@ -1688,7 +1718,8 @@
                         updatedAt: String(localArticle.createdAt || new Date().toISOString()),
                         contentLines: htmlToLines(articleContentHtml),
                         imageUrls: collectImageUrls(localArticle.imageUrl || localArticle.image_url || '', articleContentHtml),
-                        comments: []
+                        comments: [],
+                        didTrackView: shouldTrackView
                     };
                 }
                 throw error;
@@ -1709,13 +1740,16 @@
             if (!thread) {
                 return;
             }
+            if (thread.didTrackView !== false) {
+                markThreadViewTracked(thread.threadId);
+            }
 
             const localReplies = loadLocalReplies(thread.threadId);
             let apiComments = Array.isArray(thread.comments) ? thread.comments : [];
             const totalReplies = apiComments.length + localReplies.length;
 
             const metrics = updateThreadMetrics(thread.threadId, (prev) => ({
-                views: prev.views + 1,
+                views: prev.views + (thread.didTrackView === false ? 0 : 1),
                 replies: Math.max(prev.replies, totalReplies),
                 lastCommentAt: prev.lastCommentAt || thread.updatedAt || thread.createdAt
             }));

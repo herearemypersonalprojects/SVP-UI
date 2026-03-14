@@ -557,6 +557,8 @@
     const METRIC_KEY = 'svp.postDetail.metrics.v1';
     const LOCAL_COMMENT_PREFIX = 'svp.postDetail.localComments.v1.';
     const LIKE_KEY_PREFIX = 'svp.postDetail.like.v1.';
+    const VIEW_TRACK_KEY_PREFIX = 'svp.postDetail.viewTrack.v1.';
+    const VIEW_TRACK_WINDOW_MS = 6 * 60 * 60 * 1000;
 
     const CATEGORY_NAMES = {
         1: 'Học tập và nghiên cứu tại Pháp',
@@ -795,6 +797,20 @@
         metricStore[k] = { views: Math.max(0,Number(updater(cur).views||0)), comments: Math.max(0,Number(updater(cur).comments||0)) };
         saveMetrics(metricStore);
         return metricStore[k];
+    };
+
+    const viewTrackKey = (postId) => `${VIEW_TRACK_KEY_PREFIX}${postId}`;
+    const shouldTrackPostView = (postId) => {
+        try {
+            const lastTrackedAt = Number(localStorage.getItem(viewTrackKey(postId)) || 0);
+            if (Number.isFinite(lastTrackedAt) && (Date.now() - lastTrackedAt) < VIEW_TRACK_WINDOW_MS) {
+                return false;
+            }
+        } catch {}
+        return true;
+    };
+    const markPostViewTracked = (postId) => {
+        try { localStorage.setItem(viewTrackKey(postId), String(Date.now())); } catch {}
     };
 
     /* ── Local comments ── */
@@ -1516,12 +1532,13 @@
         }
 
         let post, apiComments = [];
+        const shouldTrackView = shouldTrackPostView(postId);
 
         try {
             const headers = { Accept: 'application/json' };
             const token = localStorage.getItem('accessToken') || '';
             if (token) headers.Authorization = `Bearer ${token}`;
-            const res = await fetch(`${API_BASE_URL}/posts/${postId}`, { headers });
+            const res = await fetch(`${API_BASE_URL}/posts/${postId}?trackView=${shouldTrackView ? 'true' : 'false'}`, { headers });
             const data = await res.json().catch(()=>({}));
             if (!res.ok) throw new Error(data.error||`API ${res.status}`);
 
@@ -1556,7 +1573,10 @@
         comments.sort((a,b) => (Date.parse(a.createdAt)||0) - (Date.parse(b.createdAt)||0));
 
         // Track view
-        updateMetric(postId, prev => ({ views: prev.views+1, comments: Math.max(prev.comments, comments.length) }));
+        if (shouldTrackView) {
+            markPostViewTracked(postId);
+        }
+        updateMetric(postId, prev => ({ views: prev.views + (shouldTrackView ? 1 : 0), comments: Math.max(prev.comments, comments.length) }));
 
         // Render everything
         currentPost = post;

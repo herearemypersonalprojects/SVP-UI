@@ -14,6 +14,8 @@
     const REFRESH_SKEW_MS = 60 * 1000;
     const MIN_REFRESH_DELAY_MS = 5 * 1000;
     const RETRY_REFRESH_DELAY_MS = 30 * 1000;
+    const PROFILE_CACHE_KEY = "svp.auth.profileCache.v1";
+    const PROFILE_CACHE_TTL_MS = 15 * 60 * 1000;
     const authBox = document.querySelector(".sv-auth");
     const guestAuthMarkup = authBox ? authBox.innerHTML : "";
     let refreshTimer = null;
@@ -43,6 +45,59 @@
         }
     };
 
+    const getProfileCacheSessionKey = () => {
+        const token = localStorage.getItem("accessToken") || "";
+        const payload = parseJwtPayload(token) || {};
+        return String(localStorage.getItem("userId") || payload.sub || payload.email || "").trim();
+    };
+
+    const clearProfileCache = () => {
+        localStorage.removeItem(PROFILE_CACHE_KEY);
+    };
+
+    const readFreshProfileCache = () => {
+        const sessionKey = getProfileCacheSessionKey();
+        if (!sessionKey) {
+            return null;
+        }
+        try {
+            const raw = JSON.parse(localStorage.getItem(PROFILE_CACHE_KEY) || "null");
+            if (!raw || typeof raw !== "object") {
+                return null;
+            }
+            if (String(raw.sessionKey || "") !== sessionKey) {
+                return null;
+            }
+            const ts = Number(raw.ts || 0);
+            if (!Number.isFinite(ts) || (Date.now() - ts) > PROFILE_CACHE_TTL_MS) {
+                return null;
+            }
+            return raw.profile && typeof raw.profile === "object" ? raw.profile : null;
+        } catch (_) {
+            return null;
+        }
+    };
+
+    const saveProfileCache = (profile) => {
+        const sessionKey = getProfileCacheSessionKey();
+        if (!sessionKey || !profile || typeof profile !== "object") {
+            return;
+        }
+        try {
+            localStorage.setItem(PROFILE_CACHE_KEY, JSON.stringify({
+                sessionKey,
+                ts: Date.now(),
+                profile: {
+                    displayName: String(profile.displayName || "").trim(),
+                    avatarUrl: resolveAvatarUrl(profile.avatarUrl || ""),
+                    email: String(profile.email || "").trim(),
+                    nickname: String(profile.nickname || "").trim()
+                }
+            }));
+        } catch (_) {
+        }
+    };
+
     const removeSession = () => {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
@@ -50,6 +105,8 @@
         localStorage.removeItem("userNickname");
         localStorage.removeItem("userDisplayName");
         localStorage.removeItem("userId");
+        localStorage.removeItem("userAvatarUrl");
+        clearProfileCache();
     };
 
     const saveSession = (payload) => {
@@ -274,6 +331,11 @@
     };
 
     const refreshProfileAvatar = async () => {
+        const cachedProfile = readFreshProfileCache();
+        if (cachedProfile) {
+            renderTopbar(cachedProfile);
+            return;
+        }
         const existingAvatar = localStorage.getItem("userAvatarUrl");
         if (existingAvatar) {
             return;
@@ -300,6 +362,12 @@
             } else {
                 localStorage.removeItem("userAvatarUrl");
             }
+            saveProfileCache({
+                displayName: payload.displayName || payload.nickname || payload.email,
+                avatarUrl: payload.avatarUrl,
+                email: payload.email,
+                nickname: payload.nickname
+            });
             renderTopbar({
                 displayName: payload.displayName || payload.nickname || payload.email,
                 avatarUrl: payload.avatarUrl

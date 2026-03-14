@@ -199,6 +199,23 @@
         .sv-reply-image-preview.is-visible {
             display: block;
         }
+        .sv-captcha {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .65rem .9rem;
+            align-items: center;
+            padding: .75rem .85rem;
+            border: 1px dashed #cbd5e1;
+            border-radius: 10px;
+            background: #f8fafc;
+        }
+        .sv-captcha__q {
+            min-width: 96px;
+            color: #0f172a;
+            font-size: .98rem;
+            font-weight: 800;
+            font-variant-numeric: tabular-nums;
+        }
         .sv-sticky {
             position: sticky;
             top: 1rem;
@@ -297,14 +314,22 @@
                 <div class="sv-card__hd"><i class="fa-solid fa-pen me-2 text-primary"></i>Gửi phản hồi</div>
                 <form id="reply-form" class="p-3" novalidate>
                     <div id="reply-session-hint" class="sv-meta mb-3 d-none"></div>
-                    <div id="reply-identity-fields" class="row g-2">
-                        <div class="col-md-6">
-                            <label for="reply-name" class="form-label">Tên hiển thị</label>
-                            <input id="reply-name" class="form-control" type="text" placeholder="Ví dụ: Minh Đức" required>
+                    <div id="reply-guest-fields">
+                        <div class="sv-meta mb-3">
+                            Phản hồi với tư cách khách. Chỉ cần tên hiển thị, hệ thống không tạo tài khoản người dùng.
                         </div>
-                        <div class="col-md-6">
-                            <label for="reply-email" class="form-label">Email</label>
-                            <input id="reply-email" class="form-control" type="email" placeholder="ban@example.com" required>
+                        <div id="reply-identity-fields" class="row g-2">
+                            <div class="col-md-6">
+                                <label for="reply-name" class="form-label">Tên hiển thị</label>
+                                <input id="reply-name" class="form-control" type="text" placeholder="Ví dụ: Minh Đức" autocomplete="nickname" required>
+                            </div>
+                        </div>
+                        <div id="reply-captcha-fields" class="mt-3">
+                            <label for="reply-captcha-a" class="form-label">Xác nhận bạn không phải bot</label>
+                            <div class="sv-captcha">
+                                <div id="reply-captcha-q" class="sv-captcha__q"></div>
+                                <input id="reply-captcha-a" class="form-control" type="text" inputmode="numeric" autocomplete="off" placeholder="Nhập kết quả" style="max-width:220px;">
+                            </div>
                         </div>
                     </div>
                     <div class="mt-3">
@@ -312,7 +337,7 @@
                         <textarea id="reply-message" class="form-control" rows="5" maxlength="2000" placeholder="Chia sẻ câu trả lời, kinh nghiệm hoặc câu hỏi bổ sung..." required></textarea>
                         <div id="reply-char-count" class="sv-char-count">0/2000 ký tự</div>
                     </div>
-                    <div class="mt-3">
+                    <div id="reply-image-fields" class="mt-3">
                         <label for="reply-image" class="form-label">Ảnh đính kèm (tuỳ chọn)</label>
                         <input id="reply-image" class="form-control" type="file" accept="image/*">
                         <div id="reply-image-status" class="sv-meta mt-2"></div>
@@ -378,6 +403,7 @@
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
         const METRIC_KEY = 'svp.forum.thread.metrics.v1';
         const LOCAL_REPLY_PREFIX = 'svp.thread.localReplies.v1.';
+        const GUEST_REPLY_NAME_KEY = 'svp.thread.guestDisplayName';
         const MAX_REPLY_IMAGE_SOURCE_BYTES = 10 * 1024 * 1024;
         const MAX_REPLY_IMAGE_UPLOAD_BYTES = 88 * 1024;
 
@@ -446,12 +472,16 @@
         const relatedEl = document.getElementById('related-list');
 
         const replyForm = document.getElementById('reply-form');
+        const replyGuestFieldsEl = document.getElementById('reply-guest-fields');
         const replyIdentityFieldsEl = document.getElementById('reply-identity-fields');
         const replySessionHintEl = document.getElementById('reply-session-hint');
         const replyNameEl = document.getElementById('reply-name');
-        const replyEmailEl = document.getElementById('reply-email');
+        const replyCaptchaFieldsEl = document.getElementById('reply-captcha-fields');
+        const replyCaptchaQuestionEl = document.getElementById('reply-captcha-q');
+        const replyCaptchaAnswerEl = document.getElementById('reply-captcha-a');
         const replyMessageEl = document.getElementById('reply-message');
         const replyCharCountEl = document.getElementById('reply-char-count');
+        const replyImageFieldsEl = document.getElementById('reply-image-fields');
         const replyImageEl = document.getElementById('reply-image');
         const replyImageStatusEl = document.getElementById('reply-image-status');
         const replyImagePreviewEl = document.getElementById('reply-image-preview');
@@ -461,9 +491,10 @@
         const scrollReplyBtn = document.getElementById('btn-scroll-reply');
         const replySubmitBtn = replyForm.querySelector('button[type="submit"]');
         let replyImagePreviewObjectUrl = '';
+        let replyCaptchaAnswer = null;
         let pendingReplyTarget = '';
 
-        if (!breadcrumbEl || !categoryEl || !createdEl || !viewsEl || !repliesEl || !titleEl || !authorEl || !tagsEl || !postsCountEl || !statusEl || !postsEl || !kpisEl || !relatedEl || !replyForm || !replyIdentityFieldsEl || !replySessionHintEl || !replyNameEl || !replyEmailEl || !replyMessageEl || !replyCharCountEl || !replyImageEl || !replyImageStatusEl || !replyImagePreviewEl || !replyImageClearBtn || !replyFeedbackEl || !replyClearBtn || !scrollReplyBtn || !replySubmitBtn) {
+        if (!breadcrumbEl || !categoryEl || !createdEl || !viewsEl || !repliesEl || !titleEl || !authorEl || !tagsEl || !postsCountEl || !statusEl || !postsEl || !kpisEl || !relatedEl || !replyForm || !replyGuestFieldsEl || !replyIdentityFieldsEl || !replySessionHintEl || !replyNameEl || !replyCaptchaFieldsEl || !replyCaptchaQuestionEl || !replyCaptchaAnswerEl || !replyMessageEl || !replyCharCountEl || !replyImageFieldsEl || !replyImageEl || !replyImageStatusEl || !replyImagePreviewEl || !replyImageClearBtn || !replyFeedbackEl || !replyClearBtn || !scrollReplyBtn || !replySubmitBtn) {
             return;
         }
 
@@ -647,27 +678,45 @@
             };
         };
 
+        const generateReplyCaptcha = () => {
+            const a = Math.floor(Math.random() * 9) + 1;
+            const b = Math.floor(Math.random() * 9) + 1;
+            replyCaptchaAnswer = a + b;
+            replyCaptchaQuestionEl.textContent = `${a} + ${b} = ?`;
+            replyCaptchaAnswerEl.value = '';
+        };
+
         const syncReplyIdentityUi = () => {
             const identity = peekAuthenticatedReplyIdentity();
+            const wasGuestHidden = replyGuestFieldsEl.classList.contains('d-none');
             if (identity.isAuthenticated) {
                 replyNameEl.value = identity.displayName;
-                replyEmailEl.value = identity.email;
-                replyIdentityFieldsEl.classList.add('d-none');
+                replyGuestFieldsEl.classList.add('d-none');
                 replyNameEl.required = false;
-                replyEmailEl.required = false;
                 replyNameEl.disabled = true;
-                replyEmailEl.disabled = true;
+                replyCaptchaAnswerEl.required = false;
+                replyCaptchaAnswerEl.disabled = true;
+                replyImageFieldsEl.classList.remove('d-none');
+                replyImageEl.disabled = false;
+                replyImageClearBtn.disabled = false;
                 replySessionHintEl.classList.remove('d-none');
                 replySessionHintEl.innerHTML = `<i class="fa-solid fa-circle-check me-1 text-success"></i>Đang phản hồi với <strong>${escapeHtml(identity.label)}</strong>.`;
                 return identity;
             }
-            replyIdentityFieldsEl.classList.remove('d-none');
+            replyGuestFieldsEl.classList.remove('d-none');
             replyNameEl.required = true;
-            replyEmailEl.required = true;
             replyNameEl.disabled = false;
-            replyEmailEl.disabled = false;
+            replyCaptchaAnswerEl.required = true;
+            replyCaptchaAnswerEl.disabled = false;
+            replyImageFieldsEl.classList.add('d-none');
+            replyImageEl.disabled = true;
+            replyImageClearBtn.disabled = true;
+            clearReplyImageInput({ clearStatus: true });
             replySessionHintEl.classList.add('d-none');
             replySessionHintEl.textContent = '';
+            if (wasGuestHidden || replyCaptchaAnswer === null) {
+                generateReplyCaptcha();
+            }
             return identity;
         };
 
@@ -1336,6 +1385,26 @@
             }
         };
 
+        const resetReplyComposer = (options = {}) => {
+            const preserveGuestName = options.preserveGuestName !== false;
+            const clearFeedback = options.clearFeedback !== false;
+            const guestDisplayName = preserveGuestName ? String(replyNameEl.value || '').trim() : '';
+
+            replyForm.reset();
+            pendingReplyTarget = '';
+            clearReplyImageInput({ clearStatus: true });
+            replyCharCountEl.textContent = '0/2000 ký tự';
+            syncReplyIdentityUi();
+
+            if (!peekAuthenticatedReplyIdentity().isAuthenticated) {
+                replyNameEl.value = guestDisplayName;
+                generateReplyCaptcha();
+            }
+            if (clearFeedback) {
+                setReplyFeedback('', 'info');
+            }
+        };
+
         const uploadReplyImageToCloudflare = async (file) => {
             const mimeType = String(file?.type || '').toLowerCase();
             if (!mimeType.startsWith('image/')) {
@@ -1437,7 +1506,7 @@
             return html;
         };
 
-        const createCommentViaApi = async (threadId, email, displayName, contentHtml, imageUrl) => {
+        const createCommentViaApi = async (threadId, displayName, contentHtml, imageUrl) => {
             const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
                 ? await window.SVPAuth.getValidAccessToken()
                 : (localStorage.getItem('accessToken') || '');
@@ -1448,7 +1517,7 @@
                     Accept: 'application/json',
                     ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
                 },
-                body: JSON.stringify({ email, displayName, contentHtml, imageUrl })
+                body: JSON.stringify({ displayName, contentHtml, imageUrl })
             });
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) {
@@ -1511,12 +1580,7 @@
             });
 
             replyClearBtn.addEventListener('click', () => {
-                replyForm.reset();
-                pendingReplyTarget = '';
-                syncReplyIdentityUi();
-                replyCharCountEl.textContent = '0/2000 ký tự';
-                clearReplyImageInput({ clearStatus: true });
-                setReplyFeedback('', 'info');
+                resetReplyComposer({ preserveGuestName: true, clearFeedback: true });
             });
 
             scrollReplyBtn.addEventListener('click', () => {
@@ -1557,10 +1621,8 @@
             if (identity.isAuthenticated) {
                 return;
             }
-            const displayName = String(localStorage.getItem('userDisplayName') || localStorage.getItem('userNickname') || '').trim();
-            const email = String(localStorage.getItem('userEmail') || '').trim();
+            const displayName = String(localStorage.getItem(GUEST_REPLY_NAME_KEY) || '').trim();
             if (displayName) replyNameEl.value = displayName;
-            if (email) replyEmailEl.value = email;
         };
 
         const loadThread = async () => {
@@ -1671,9 +1733,7 @@
                 const name = isAuthenticated
                     ? String(authenticatedIdentity.displayName || '').trim()
                     : String(replyNameEl.value || '').trim();
-                const email = isAuthenticated
-                    ? String(authenticatedIdentity.email || '').trim()
-                    : String(replyEmailEl.value || '').trim();
+                const captchaInput = Number(String(replyCaptchaAnswerEl.value || '').trim());
                 const message = String(replyMessageEl.value || '').trim();
                 const selectedImageFile = replyImageEl.files && replyImageEl.files[0] ? replyImageEl.files[0] : null;
 
@@ -1682,16 +1742,10 @@
                     replyNameEl.focus();
                     return;
                 }
-                if (!/^[^\s@]+@[^\s@]+$/.test(email)) {
-                    setReplyFeedback(
-                        isAuthenticated
-                            ? 'Phiên đăng nhập không còn hợp lệ. Vui lòng đăng nhập lại rồi thử gửi phản hồi.'
-                            : 'Email chưa hợp lệ.',
-                        'error'
-                    );
-                    if (!isAuthenticated) {
-                        replyEmailEl.focus();
-                    }
+                if (!isAuthenticated && (!Number.isFinite(captchaInput) || captchaInput !== replyCaptchaAnswer)) {
+                    setReplyFeedback('Phép tính xác nhận chưa đúng.', 'error');
+                    generateReplyCaptcha();
+                    replyCaptchaAnswerEl.focus();
                     return;
                 }
                 if (!message && !selectedImageFile) {
@@ -1702,6 +1756,10 @@
                 if (message && message.length < 5 && !selectedImageFile) {
                     setReplyFeedback('Nội dung phản hồi cần tối thiểu 5 ký tự (hoặc thêm ảnh đính kèm).', 'error');
                     replyMessageEl.focus();
+                    return;
+                }
+                if (!isAuthenticated && selectedImageFile) {
+                    setReplyFeedback('Ảnh đính kèm chỉ khả dụng cho thành viên đã đăng nhập.', 'error');
                     return;
                 }
                 if (selectedImageFile) {
@@ -1735,7 +1793,6 @@
                     const contentHtml = contentHtmlFromReplyText(message, pendingReplyTarget);
                     const createdComment = await createCommentViaApi(
                         thread.threadId,
-                        email,
                         name,
                         contentHtml,
                         uploadedImageUrl
@@ -1751,22 +1808,22 @@
                         lastCommentAt: createdComment.createdAt || new Date().toISOString()
                     }));
 
-                    if (email) {
-                        localStorage.setItem('userEmail', email);
-                    }
-                    if (name) {
-                        localStorage.setItem('userDisplayName', name);
+                    if (isAuthenticated) {
+                        if (authenticatedIdentity.email) {
+                            localStorage.setItem('userEmail', authenticatedIdentity.email);
+                        }
+                        if (name) {
+                            localStorage.setItem('userDisplayName', name);
+                        }
+                    } else if (name) {
+                        localStorage.setItem(GUEST_REPLY_NAME_KEY, name);
                     }
 
                     renderHeader(thread, nextMetrics, nextTotalReplies);
                     renderPosts(thread, apiComments, currentReplies);
                     renderThreadKpis(thread, nextMetrics, 1 + nextTotalReplies, nextTotalReplies);
 
-                    replyForm.reset();
-                    pendingReplyTarget = '';
-                    syncReplyIdentityUi();
-                    replyCharCountEl.textContent = '0/2000 ký tự';
-                    clearReplyImageInput({ clearStatus: true });
+                    resetReplyComposer({ preserveGuestName: true, clearFeedback: false });
                     setReplyFeedback('Đã đăng phản hồi thành công.', 'success');
                 } catch (error) {
                     console.error('Cannot submit reply:', error);
@@ -1775,12 +1832,20 @@
                     }
                     const messageText = String(error?.message || '').trim();
                     setReplyFeedback(messageText || 'Không thể đăng phản hồi. Vui lòng thử lại.', 'error');
+                    if (!isAuthenticated) {
+                        generateReplyCaptcha();
+                    }
                 } finally {
                     replySubmitBtn.disabled = false;
                     replySubmitBtn.innerHTML = oldSubmitLabel;
                     replyClearBtn.disabled = false;
-                    replyImageEl.disabled = false;
-                    replyImageClearBtn.disabled = false;
+                    if (peekAuthenticatedReplyIdentity().isAuthenticated) {
+                        replyImageEl.disabled = false;
+                        replyImageClearBtn.disabled = false;
+                    } else {
+                        replyImageEl.disabled = true;
+                        replyImageClearBtn.disabled = true;
+                    }
                 }
             });
         };

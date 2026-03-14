@@ -28,6 +28,20 @@
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: .75rem;
         }
+        .sv-inline-action {
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: #0d6efd;
+            font: inherit;
+            font-weight: 600;
+            text-align: left;
+        }
+        .sv-inline-action:hover,
+        .sv-inline-action:focus-visible {
+            color: #0a58ca;
+            text-decoration: underline;
+        }
         @media (max-width: 575px) {
             .sv-grid-2 {
                 grid-template-columns: 1fr;
@@ -93,15 +107,24 @@
                         <input id="event-title" class="form-control" type="text" required>
                     </div>
 
-                    <div class="sv-grid-2 mb-3">
-                        <div>
-                            <label for="event-date" class="form-label">Ngày diễn ra</label>
-                            <input id="event-date" class="form-control" type="date" required>
-                        </div>
-                        <div>
-                            <label for="event-time" class="form-label">Giờ bắt đầu</label>
-                            <input id="event-time" class="form-control" type="time" required>
-                        </div>
+                    <div class="mb-3">
+                        <label for="event-start-datetime" class="form-label">Ngày giờ bắt đầu sự kiện</label>
+                        <input id="event-start-datetime" class="form-control" type="datetime-local" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <button
+                            id="event-end-toggle"
+                            class="sv-inline-action"
+                            type="button"
+                            aria-controls="event-end-wrap"
+                            aria-expanded="false"
+                        >+ Ngày và giờ kết thúc</button>
+                    </div>
+
+                    <div id="event-end-wrap" class="mb-3 d-none">
+                        <label for="event-end-datetime" class="form-label">Ngày giờ kết thúc sự kiện <span class="sv-meta">(không bắt buộc)</span></label>
+                        <input id="event-end-datetime" class="form-control" type="datetime-local">
                     </div>
 
                     <div class="sv-grid-2 mb-3">
@@ -204,8 +227,10 @@
         const emailWrap = document.getElementById('event-email-wrap');
         const emailInput = document.getElementById('event-email');
         const titleInput = document.getElementById('event-title');
-        const dateInput = document.getElementById('event-date');
-        const timeInput = document.getElementById('event-time');
+        const startDatetimeInput = document.getElementById('event-start-datetime');
+        const endDatetimeToggle = document.getElementById('event-end-toggle');
+        const endDatetimeWrap = document.getElementById('event-end-wrap');
+        const endDatetimeInput = document.getElementById('event-end-datetime');
         const locationInput = document.getElementById('event-location');
         const priceInput = document.getElementById('event-price');
         const onlineInput = document.getElementById('event-online');
@@ -222,13 +247,14 @@
         const previewDescription = document.getElementById('event-preview-description');
         const feedback = document.getElementById('event-submit-feedback');
 
-        if (!form || !emailWrap || !emailInput || !titleInput || !dateInput || !timeInput || !locationInput || !priceInput || !onlineInput || !imageUrlInput || !imageFileInput || !imageUploadStatus || !descriptionInput || !typeInput || !tagsInput || !previewCover || !previewTitle || !previewDatetime || !previewLocation || !previewDescription || !feedback) {
+        if (!form || !emailWrap || !emailInput || !titleInput || !startDatetimeInput || !endDatetimeToggle || !endDatetimeWrap || !endDatetimeInput || !locationInput || !priceInput || !onlineInput || !imageUrlInput || !imageFileInput || !imageUploadStatus || !descriptionInput || !typeInput || !tagsInput || !previewCover || !previewTitle || !previewDatetime || !previewLocation || !previewDescription || !feedback) {
             return;
         }
 
         const normalizeEmail = (value) => (value || '').trim().toLowerCase();
         const isValidEmail = (value) => /^[^\s@]+@[^\s@]+$/.test(value);
         const editEventId = new URLSearchParams(window.location.search).get('editEventId');
+        const pad2 = (value) => String(value).padStart(2, '0');
         const sanitizeUrl = (value) => {
             const raw = String(value || '').trim();
             if (!/^https?:\/\//i.test(raw)) return '';
@@ -276,6 +302,58 @@
             }
         };
 
+        const parseDatetimeValue = (value) => {
+            const raw = String(value || '').trim();
+            if (!raw) return null;
+            const normalized = raw.length === 16 ? `${raw}:00` : raw;
+            const dt = new Date(normalized);
+            return Number.isNaN(dt.getTime()) ? null : dt;
+        };
+
+        const toIsoDatetime = (input) => {
+            const dt = parseDatetimeValue(input && input.value);
+            return dt ? dt.toISOString() : '';
+        };
+
+        const formatPreviewDateTime = (value) => {
+            const dt = parseDatetimeValue(value);
+            if (!dt) return '';
+            return new Intl.DateTimeFormat('vi-VN', {
+                dateStyle: 'short',
+                timeStyle: 'short'
+            }).format(dt);
+        };
+
+        const toDatetimeLocalValue = (value) => {
+            const dt = parseDatetimeValue(value);
+            if (!dt) return '';
+            return `${dt.getFullYear()}-${pad2(dt.getMonth() + 1)}-${pad2(dt.getDate())}T${pad2(dt.getHours())}:${pad2(dt.getMinutes())}`;
+        };
+
+        const toTimestamp = (value) => {
+            const dt = parseDatetimeValue(value);
+            return dt ? dt.getTime() : NaN;
+        };
+
+        const hasVisibleEndDatetime = () => !endDatetimeWrap.classList.contains('d-none');
+
+        const setEndDatetimeVisibility = (visible, options) => {
+            const shouldFocus = Boolean(options && options.focus);
+            const preserveValue = options && Object.prototype.hasOwnProperty.call(options, 'preserveValue')
+                ? Boolean(options.preserveValue)
+                : true;
+            endDatetimeWrap.classList.toggle('d-none', !visible);
+            endDatetimeInput.disabled = !visible;
+            endDatetimeToggle.setAttribute('aria-expanded', String(visible));
+            endDatetimeToggle.textContent = visible ? '- Ẩn ngày và giờ kết thúc' : '+ Ngày và giờ kết thúc';
+            if (!visible && !preserveValue) {
+                endDatetimeInput.value = '';
+            }
+            if (visible && shouldFocus) {
+                endDatetimeInput.focus();
+            }
+        };
+
         const getSessionEmail = async () => {
             if (window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function') {
                 const token = await window.SVPAuth.getValidAccessToken();
@@ -287,13 +365,15 @@
 
         const preview = () => {
             const title = titleInput.value.trim();
-            const date = dateInput.value;
-            const time = timeInput.value;
+            const startText = formatPreviewDateTime(startDatetimeInput.value);
+            const endText = hasVisibleEndDatetime() ? formatPreviewDateTime(endDatetimeInput.value) : '';
             const location = locationInput.value.trim();
             const description = descriptionInput.value.trim();
             const imageUrl = sanitizeUrl(imageUrlInput.value);
             previewTitle.textContent = title || 'Tên sự kiện sẽ hiển thị tại đây';
-            previewDatetime.textContent = `Ngày giờ: ${date || 'Chưa cập nhật'} ${time || ''}`.trim();
+            previewDatetime.textContent = startText
+                ? `Ngày giờ: ${startText}${endText ? ` - ${endText}` : ''}`
+                : 'Ngày giờ: Chưa cập nhật';
             previewLocation.textContent = `Địa điểm: ${location || (onlineInput.checked ? 'Online' : 'Chưa cập nhật')}`;
             previewDescription.textContent = description || 'Mô tả sự kiện sẽ xuất hiện ở đây sau khi bạn nhập.';
             previewCover.style.backgroundImage = imageUrl
@@ -371,17 +451,13 @@
             return lines.join('\n\n').trim();
         };
 
-        const toIsoDatetime = () => {
-            const rawDate = dateInput.value;
-            const rawTime = timeInput.value;
-            if (!rawDate || !rawTime) return '';
-            const dt = new Date(`${rawDate}T${rawTime.length === 5 ? `${rawTime}:00` : rawTime}`);
-            return Number.isNaN(dt.getTime()) ? '' : dt.toISOString();
-        };
-
-        [titleInput, dateInput, timeInput, locationInput, onlineInput, imageUrlInput, descriptionInput].forEach((el) => {
+        [titleInput, startDatetimeInput, endDatetimeInput, locationInput, onlineInput, imageUrlInput, descriptionInput].forEach((el) => {
             el.addEventListener('input', preview);
             el.addEventListener('change', preview);
+        });
+        endDatetimeToggle.addEventListener('click', () => {
+            setEndDatetimeVisibility(!hasVisibleEndDatetime(), { focus: !hasVisibleEndDatetime() });
+            preview();
         });
         imageFileInput.addEventListener('change', () => {
             const file = imageFileInput.files && imageFileInput.files[0] ? imageFileInput.files[0] : null;
@@ -408,7 +484,8 @@
 
             const title = titleInput.value.trim();
             const content = buildEventContent();
-            const eventTime = toIsoDatetime();
+            const startTime = toIsoDatetime(startDatetimeInput);
+            const endTime = hasVisibleEndDatetime() ? toIsoDatetime(endDatetimeInput) : '';
             const rawLocation = locationInput.value.trim();
             const online = onlineInput.checked || /(^|\s)(online|zoom|gmeet|meet|teams)(\s|$)/i.test(rawLocation);
             const address = online ? (rawLocation || 'Online') : rawLocation;
@@ -417,7 +494,11 @@
             const safeImageUrl = sanitizeUrl(rawImageUrl);
 
             if (title.length < 5) return setFeedback('Tên sự kiện cần tối thiểu 5 ký tự.', 'error');
-            if (!eventTime) return setFeedback('Ngày giờ sự kiện không hợp lệ.', 'error');
+            if (!startTime) return setFeedback('Ngày giờ bắt đầu sự kiện không hợp lệ.', 'error');
+            if (hasVisibleEndDatetime() && !endTime) return setFeedback('Ngày giờ kết thúc sự kiện không hợp lệ.', 'error');
+            if (endTime && toTimestamp(endTime) < toTimestamp(startTime)) {
+                return setFeedback('Ngày giờ kết thúc phải sau hoặc bằng ngày giờ bắt đầu.', 'error');
+            }
             if (content.length < 10) return setFeedback('Mô tả sự kiện cần tối thiểu 10 ký tự.', 'error');
             if (!address) return setFeedback('Địa điểm không được để trống.', 'error');
             if (!Number.isFinite(price) || price < 0) return setFeedback('Giá vé không hợp lệ.', 'error');
@@ -456,7 +537,17 @@
                             Accept: 'application/json',
                             ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
                         },
-                        body: JSON.stringify({ title, content, eventTime, online, address, imageUrl, price: price > 0 ? price : 0 })
+                        body: JSON.stringify({
+                            title,
+                            content,
+                            startTime,
+                            endTime: endTime || startTime,
+                            eventTime: startTime,
+                            online,
+                            address,
+                            imageUrl,
+                            price: price > 0 ? price : 0
+                        })
                     });
                     const payload = await res.json().catch(() => ({}));
                     if (!res.ok) { setFeedback(payload.error || 'Không thể cập nhật sự kiện.', 'error'); return; }
@@ -472,7 +563,18 @@
                             Accept: 'application/json',
                             ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
                         },
-                        body: JSON.stringify({ email, title, content, eventTime, online, address, imageUrl, price: price > 0 ? price : 0 })
+                        body: JSON.stringify({
+                            email,
+                            title,
+                            content,
+                            startTime,
+                            endTime: endTime || startTime,
+                            eventTime: startTime,
+                            online,
+                            address,
+                            imageUrl,
+                            price: price > 0 ? price : 0
+                        })
                     });
                     const payload = await response.json().catch(() => ({}));
                     if (!response.ok) { setFeedback(payload.error || 'Không thể tạo sự kiện.', 'error'); return; }
@@ -481,6 +583,7 @@
                     localStorage.setItem('userEmail', email);
                     form.reset();
                     emailInput.value = email;
+                    setEndDatetimeVisibility(false, { preserveValue: false });
                     clearImageFilePreview();
                     setUploadStatus('', 'info');
                     preview();
@@ -505,6 +608,7 @@
             emailInput.value = initialEmail;
             emailWrap.classList.add('d-none');
         }
+        setEndDatetimeVisibility(false, { preserveValue: false });
         preview();
 
         /* ── Edit mode: load existing data ── */
@@ -528,12 +632,14 @@
                     if (!res.ok) { setFeedback(data.error || 'Không thể tải sự kiện.', 'error'); return; }
                     const ev = data.event && typeof data.event === 'object' ? data.event : data;
                     titleInput.value = ev.title || '';
-                    if (ev.eventTime || ev.event_time) {
-                        const dt = new Date(ev.eventTime || ev.event_time);
-                        if (!isNaN(dt.getTime())) {
-                            dateInput.value = dt.toISOString().slice(0, 10);
-                            timeInput.value = dt.toISOString().slice(11, 16);
-                        }
+                    const startSource = ev.startTime || ev.start_time || ev.eventTime || ev.event_time || '';
+                    const endSource = ev.endTime || ev.end_time || '';
+                    startDatetimeInput.value = toDatetimeLocalValue(startSource);
+                    if (endSource && Number.isFinite(toTimestamp(endSource)) && toTimestamp(endSource) !== toTimestamp(startSource)) {
+                        endDatetimeInput.value = toDatetimeLocalValue(endSource);
+                        setEndDatetimeVisibility(true);
+                    } else {
+                        setEndDatetimeVisibility(false, { preserveValue: false });
                     }
                     locationInput.value = ev.address || '';
                     priceInput.value = ev.price || '';

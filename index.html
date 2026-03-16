@@ -589,46 +589,6 @@
             const isActive = Number.isFinite(activeCategoryId) ? categoryId === activeCategoryId : index === 0;
             link.classList.toggle('active', isActive);
         });
-        const FALLBACK_HOME_PAYLOAD = {
-            latestPosts: [
-                {
-                    postId: 900001,
-                    categoryId: 1,
-                    title: 'Checklist chuẩn bị học kỳ mới tại Pháp',
-                    contentHtml: '<p>Tổng hợp các việc cần làm trước khi vào kỳ mới: gia hạn giấy tờ, đăng ký môn học, bảo hiểm và kế hoạch tài chính.</p><p>Bài viết giúp bạn tránh thiếu sót trong những tuần đầu.</p>',
-                    createdAt: '2026-02-10T09:00:00Z',
-                    author: { userId: 1001, nickname: 'svp_admin', displayName: 'Ban Quản Trị SVP' },
-                    viewCount: 1260,
-                    likeCount: 78
-                },
-                {
-                    postId: 900002,
-                    categoryId: 4,
-                    title: 'Mẹo viết CV tiếng Pháp cho thực tập sinh',
-                    contentHtml: '<p>Cách trình bày CV ngắn gọn, tập trung kỹ năng và kinh nghiệm phù hợp với nhà tuyển dụng tại Pháp.</p><p>Có kèm mẫu bố cục tham khảo cho sinh viên mới ra trường.</p>',
-                    createdAt: '2026-02-08T12:30:00Z',
-                    author: { userId: 1002, nickname: 'mentor_lyon', displayName: 'Mentor Lyon' },
-                    viewCount: 845,
-                    likeCount: 53
-                },
-                {
-                    postId: 900003,
-                    categoryId: 3,
-                    title: 'Kinh nghiệm thuê nhà mùa cao điểm nhập học',
-                    contentHtml: '<p>Nên bắt đầu tìm phòng sớm từ 6-8 tuần, chuẩn bị dossier đầy đủ và kiểm tra kỹ hợp đồng trước khi đặt cọc.</p>',
-                    createdAt: '2026-02-05T18:15:00Z',
-                    author: { userId: 1003, nickname: 'thu_ha', displayName: 'Thu Hà' },
-                    viewCount: 932,
-                    likeCount: 61
-                }
-            ],
-            upcomingEvents: [
-                { eventId: 201, title: 'Hội Thảo Du Học Pháp 2026', eventTime: '2026-03-15T08:00:00Z', address: 'Paris', price: 0, online: false },
-                { eventId: 202, title: 'Gặp Gỡ Doanh Nghiệp', eventTime: '2026-03-28T08:00:00Z', address: 'Lyon', price: 0, online: false },
-                { eventId: 203, title: 'Kết Nối Tân Sinh Viên', eventTime: '2026-04-07T08:00:00Z', address: 'Toulouse', price: 0, online: false }
-            ]
-        };
-
         const escapeHtml = (value) => String(value ?? '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
@@ -957,6 +917,18 @@
             loadMoreBtn.disabled = !hasMorePosts;
         };
 
+        const renderHomeLoadError = () => {
+            loadedPosts = [];
+            hasMorePosts = false;
+            beforeCreatedAt = null;
+            beforePostId = null;
+            feedEl.innerHTML = `<div class="sv-meta">Không thể tải bài viết từ backend. Vui lòng thử lại sau.</div>`;
+            eventsEl.innerHTML = `<li><div class="sv-meta">Không thể tải sự kiện từ backend.</div></li>`;
+            membersEl.innerHTML = `<div class="p-3 sv-meta">Không thể tải danh sách thành viên nổi bật.</div>`;
+            loadMoreBtn.style.display = 'none';
+            loadMoreBtn.disabled = true;
+        };
+
 
         const injectLocalArticle = () => {
             const raw = localStorage.getItem('svp.latestSubmittedArticle');
@@ -1056,7 +1028,7 @@
                 renderHomeData(payload);
             } catch (error) {
                 console.error('Cannot load home data:', error);
-                renderHomeData(FALLBACK_HOME_PAYLOAD);
+                renderHomeLoadError();
             }
         };
 

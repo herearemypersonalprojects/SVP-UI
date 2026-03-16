@@ -290,36 +290,6 @@
             [17, 'Góp ý xây dựng SVP']
         ]);
 
-        const FALLBACK_THREADS = [
-            {
-                threadId: 9001,
-                title: 'Checklist hồ sơ CAF cho tân du học sinh',
-                categoryId: 3,
-                categoryName: 'Cuộc sống tại Pháp',
-                authorName: 'SVP Admin',
-                createdAt: '2026-02-14T08:30:00Z',
-                excerpt: 'Tổng hợp giấy tờ và mốc thời gian quan trọng khi làm CAF, bao gồm lưu ý scan hồ sơ và cách theo dõi phản hồi.'
-            },
-            {
-                threadId: 9002,
-                title: 'Mẫu CV tiếng Pháp cho internship ngành IT',
-                categoryId: 4,
-                categoryName: 'Cơ hội việc làm và thực tập',
-                authorName: 'SVP Career Team',
-                createdAt: '2026-02-10T11:45:00Z',
-                excerpt: 'Bài chia sẻ cấu trúc CV, các mục bắt buộc và lỗi thường gặp khiến hồ sơ bị loại sớm.'
-            },
-            {
-                threadId: 9003,
-                title: 'Kinh nghiệm tìm nhà khu vực ngoại ô Paris',
-                categoryId: 8,
-                categoryName: 'Nhà cửa',
-                authorName: 'Ngọc Hà',
-                createdAt: '2026-02-08T16:20:00Z',
-                excerpt: 'So sánh ưu nhược điểm từng khu vực, kinh nghiệm đi xem nhà và cách tránh lừa đảo khi đặt cọc.'
-            }
-        ];
-
         const listEl = document.getElementById('forum-thread-list');
         const paginationEl = document.getElementById('forum-pagination');
         const countEl = document.getElementById('forum-count');
@@ -339,6 +309,7 @@
         const state = {
             threads: [],
             sourceLabel: 'API',
+            loadError: '',
             query: params.get('q') || '',
             category: params.get('category') || 'all',
             sort: params.get('sort') || 'newest',
@@ -459,12 +430,12 @@
             categoryEl.innerHTML = options.join('');
         };
 
-        const mergeLocalDraft = (threads) => threads;
-
         const FORUM_FETCH_LIMIT = 50;
         let hasMoreFromApi = true;
         let lastFetchedCreatedAt = null;
         let lastFetchedPostId = null;
+
+        const hasActiveFilters = () => Boolean(state.query.trim()) || state.category !== 'all';
 
         const fetchThreads = async (append) => {
             const params = new URLSearchParams({ limit: String(FORUM_FETCH_LIMIT) });
@@ -541,7 +512,13 @@
 
         const renderList = (items) => {
             if (!items.length) {
-                listEl.innerHTML = '<div class="sv-forum-empty">Không tìm thấy chủ đề phù hợp với bộ lọc hiện tại.</div>';
+                if (state.loadError && state.threads.length === 0) {
+                    listEl.innerHTML = `<div class="sv-forum-empty">${escapeHtml(state.loadError)}</div>`;
+                    return;
+                }
+                listEl.innerHTML = hasActiveFilters()
+                    ? '<div class="sv-forum-empty">Không tìm thấy chủ đề phù hợp với bộ lọc hiện tại.</div>'
+                    : '<div class="sv-forum-empty">Chưa có chủ đề nào.</div>';
                 return;
             }
 
@@ -607,6 +584,12 @@
                 <div class="sv-kpi" style="grid-column:1 / -1;"><div class="sv-kpi__label">Hoạt động gần nhất</div><div class="sv-kpi__value" style="font-size:.95rem;">${escapeHtml(latestTime ? formatDateTime(latestTime) : 'Chưa có dữ liệu')}</div></div>
             `;
 
+            if (state.loadError && threads.length === 0) {
+                trendingEl.innerHTML = `<li><div class="sv-meta">${escapeHtml(state.loadError)}</div></li>`;
+                categoryStatsEl.innerHTML = '<li><div class="sv-meta">Chưa có dữ liệu chuyên mục vì không tải được backend.</div></li>';
+                return;
+            }
+
             const trending = [...threads]
                 .sort((a, b) => popularScore(b) - popularScore(a))
                 .slice(0, 5);
@@ -659,7 +642,7 @@
             const start = (state.page - 1) * PAGE_SIZE;
             const pageItems = filtered.slice(start, start + PAGE_SIZE);
 
-            countEl.textContent = `${totalItems} chủ đề`;
+            countEl.textContent = state.loadError && totalItems === 0 ? 'Không tải được dữ liệu' : `${totalItems} chủ đề`;
             renderList(pageItems);
             renderPagination(totalItems);
             renderRightPanels(filtered);
@@ -754,16 +737,17 @@
             listEl.innerHTML = '<div class="sv-forum-empty">Đang tải dữ liệu forum...</div>';
             try {
                 const apiThreads = await fetchThreads(false);
-                state.threads = mergeLocalDraft(apiThreads);
+                state.threads = apiThreads;
                 state.sourceLabel = 'API';
-                if (!state.threads.length) {
-                    state.threads = FALLBACK_THREADS;
-                    state.sourceLabel = 'Fallback';
-                }
+                state.loadError = '';
             } catch (error) {
                 console.error('Cannot load forum threads:', error);
-                state.threads = mergeLocalDraft(FALLBACK_THREADS);
-                state.sourceLabel = 'Fallback';
+                state.threads = [];
+                state.sourceLabel = 'Lỗi kết nối';
+                state.loadError = 'Không thể kết nối backend để tải danh sách chủ đề.';
+                hasMoreFromApi = false;
+                lastFetchedCreatedAt = null;
+                lastFetchedPostId = null;
             }
             bindEvents();
             render();

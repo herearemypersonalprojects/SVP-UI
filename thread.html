@@ -429,36 +429,6 @@
             [17, 'Góp ý xây dựng SVP']
         ]);
 
-        const FALLBACK_TOPICS = {
-            1: {
-                title: 'Kinh nghiệm gia hạn titre de sejour tại Paris',
-                categoryId: 5,
-                authorName: 'Ngọc Hà',
-                createdAt: '2026-02-10T09:30:00Z',
-                contentLines: [
-                    'Mình tổng hợp lại quy trình gia hạn thẻ cư trú cho sinh viên tại Paris, kèm mốc thời gian chuẩn bị hồ sơ.',
-                    'Bạn nên đặt lịch hẹn sớm tối thiểu 6-8 tuần trước ngày hết hạn để tránh thiếu giấy hẹn.',
-                    'Nên scan hồ sơ theo tên file rõ ràng và giữ bản in đầy đủ để bổ sung nhanh khi được yêu cầu.'
-                ],
-                comments: [
-                    { id: 1, authorName: 'Linh Chi', createdAt: '2026-02-10T10:20:00Z', contentLines: ['Cảm ơn chia sẻ, phần đặt lịch thực sự rất quan trọng.'] }
-                ]
-            },
-            2: {
-                title: 'Làm sao cân bằng học Master và việc part-time?',
-                categoryId: 3,
-                authorName: 'Hoàng Nam',
-                createdAt: '2026-02-12T14:00:00Z',
-                contentLines: [
-                    'Mình đang học M1 và làm part-time 20h/tuần, cảm giác khá quá tải ở giai đoạn giữa kỳ.',
-                    'Không biết mọi người thường chia thời khóa biểu như thế nào để giữ hiệu quả học tập?'
-                ],
-                comments: [
-                    { id: 1, authorName: 'Thùy Dương', createdAt: '2026-02-12T15:05:00Z', contentLines: ['Bạn nên chia block học theo tuần và cố định lịch làm để giảm xung đột.'] }
-                ]
-            }
-        };
-
         const breadcrumbEl = document.getElementById('thread-breadcrumb');
         const categoryEl = document.getElementById('thread-category');
         const createdEl = document.getElementById('thread-created');
@@ -918,15 +888,8 @@
 
         const getRequestedThread = () => {
             const params = new URLSearchParams(window.location.search);
-            const postId = Number(params.get('postId') || 0);
-            if (Number.isInteger(postId) && postId > 0) {
-                return { postId, topicFallback: null };
-            }
-            const topic = Number(params.get('topic') || 0);
-            if (Number.isInteger(topic) && topic > 0) {
-                return { postId: topic, topicFallback: topic };
-            }
-            return { postId: 0, topicFallback: null };
+            const postId = Number(params.get('postId') || params.get('topic') || 0);
+            return Number.isInteger(postId) && postId > 0 ? postId : 0;
         };
 
         const loadMetricStore = () => {
@@ -1042,26 +1005,6 @@
                 contentHtml: postContentHtml,
                 imageUrls: collectImageUrls(post?.imageUrl || post?.image_url || '', postContentHtml),
                 comments: comments.map((comment) => normalizeApiComment(comment))
-            };
-        };
-
-        const buildFallbackThread = (topicId) => {
-            const fallback = FALLBACK_TOPICS[topicId];
-            if (!fallback) return null;
-            return {
-                threadId: topicId,
-                title: fallback.title,
-                categoryId: fallback.categoryId,
-                authorName: fallback.authorName,
-                authorSeed: fallback.authorName,
-                authorNickname: '',
-                authorUserId: '',
-                authorAvatarUrl: '',
-                createdAt: fallback.createdAt,
-                updatedAt: fallback.createdAt,
-                contentHtml: linesToParagraphsHtml(fallback.contentLines),
-                contentLines: fallback.contentLines,
-                comments: fallback.comments
             };
         };
 
@@ -1647,10 +1590,27 @@
             if (displayName) replyNameEl.value = displayName;
         };
 
+        const renderThreadLoadError = (message) => {
+            breadcrumbEl.textContent = 'Không tải được chủ đề';
+            categoryEl.textContent = '';
+            createdEl.textContent = '';
+            viewsEl.textContent = '0 lượt xem';
+            repliesEl.textContent = '0 phản hồi';
+            titleEl.textContent = 'Không thể tải chủ đề';
+            authorEl.textContent = '';
+            tagsEl.innerHTML = '';
+            postsCountEl.textContent = '0 bài';
+            statusEl.textContent = message;
+            statusEl.style.display = '';
+            postsEl.innerHTML = '';
+            kpisEl.innerHTML = '<li><div><strong>Trạng thái</strong><div class="sv-meta">Không tải được dữ liệu thread từ backend.</div></div></li>';
+            relatedEl.innerHTML = '<li><div class="sv-meta">Không tải được chủ đề liên quan.</div></li>';
+        };
+
         const loadThread = async () => {
-            const { postId, topicFallback } = getRequestedThread();
+            const postId = getRequestedThread();
             if (!postId) {
-                statusEl.textContent = 'Thiếu postId. Hãy quay lại danh sách forum và chọn một chủ đề.';
+                renderThreadLoadError('Thiếu postId. Hãy quay lại trang forum để chọn một chủ đề.');
                 return null;
             }
             const shouldTrackView = shouldTrackThreadView(postId);
@@ -1668,15 +1628,7 @@
                 normalized.didTrackView = shouldTrackView;
                 return normalized;
             } catch (error) {
-                console.warn('Cannot load thread from API, trying fallback:', error);
-                if (topicFallback && FALLBACK_TOPICS[topicFallback]) {
-                    const fallbackThread = buildFallbackThread(topicFallback);
-                    if (fallbackThread) {
-                        fallbackThread.didTrackView = shouldTrackView;
-                    }
-                    return fallbackThread;
-                }
-
+                console.warn('Cannot load thread from API, trying local draft recovery:', error);
                 let localDiscussion = null;
                 try {
                     localDiscussion = JSON.parse(localStorage.getItem('svp.latestSubmittedDiscussion') || 'null');
@@ -1734,7 +1686,7 @@
             try {
                 thread = await loadThread();
             } catch (_) {
-                statusEl.textContent = 'Không thể tải chủ đề này. Hãy quay lại trang forum để chọn chủ đề khác.';
+                renderThreadLoadError('Không thể tải chủ đề này từ backend. Hãy quay lại trang forum và thử lại sau.');
                 return;
             }
             if (!thread) {

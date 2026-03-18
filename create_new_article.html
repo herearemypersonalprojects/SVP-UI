@@ -268,6 +268,7 @@
             ? (contentEditor.getAttribute('placeholder') || 'Viết nội dung dài kiểu tạp chí ở đây...')
             : 'Viết nội dung dài kiểu tạp chí ở đây...';
         let articleEditor = null;
+        let articleEditorReady = false;
         let pendingEditorContent = '';
         let editorReady = Promise.resolve();
         let isUploadingCover = false;
@@ -275,6 +276,7 @@
         let coverUrlResolveTimer = null;
         let coverUrlResolveSeq = 0;
         let lastResolvedCoverUrl = '';
+        let persistedCoverUrl = '';
         let pendingCoverFile = null;
         let pendingCoverPreviewUrl = '';
         const MAX_IMAGE_UPLOAD_BYTES = 100 * 1024;
@@ -307,9 +309,65 @@
             }
         };
 
+        const extractFirstImageSrc = (html) => {
+            const match = String(html || '').match(/<img[^>]*src\s*=\s*['"]([^'"]+)['"][^>]*>/i);
+            return match && match[1] ? sanitizeUrl(match[1]) : '';
+        };
+
+        const splitArticleContentHtml = (html) => {
+            const rawHtml = String(html || '').trim();
+            if (!rawHtml) {
+                return { coverUrl: '', bodyHtml: '' };
+            }
+
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(`<div data-root>${rawHtml}</div>`, 'text/html');
+            const root = doc.body.querySelector('[data-root]');
+            if (!root) {
+                return { coverUrl: extractFirstImageSrc(rawHtml), bodyHtml: rawHtml };
+            }
+
+            const firstMeaningfulNode = Array.from(root.childNodes).find((node) => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    return String(node.textContent || '').trim().length > 0;
+                }
+                return node.nodeType === Node.ELEMENT_NODE;
+            });
+
+            let coverUrl = '';
+            if (firstMeaningfulNode && firstMeaningfulNode.nodeType === Node.ELEMENT_NODE) {
+                const firstElement = firstMeaningfulNode;
+                const coverImage = firstElement.matches('img[src]')
+                    ? firstElement
+                    : firstElement.querySelector('img[src]');
+                const safeCoverUrl = sanitizeUrl(coverImage?.getAttribute('src') || '');
+                const altText = String(coverImage?.getAttribute('alt') || '').trim().toLowerCase();
+                const blockText = String(firstElement.textContent || '').replace(/\u00a0/g, ' ').trim();
+                const isImageOnlyBlock = Boolean(coverImage) && !blockText;
+                if (safeCoverUrl && (altText === 'cover image' || isImageOnlyBlock)) {
+                    coverUrl = safeCoverUrl;
+                    firstElement.remove();
+                }
+            }
+
+            if (!coverUrl) {
+                coverUrl = extractFirstImageSrc(rawHtml);
+            }
+
+            return {
+                coverUrl,
+                bodyHtml: root.innerHTML.trim()
+            };
+        };
+
         const hideCoverPreview = () => {
             coverPreview.style.display = 'none';
             coverPreview.style.backgroundImage = 'none';
+        };
+
+        const showCoverPreview = (url) => {
+            coverPreview.style.display = 'block';
+            coverPreview.style.backgroundImage = `url("${encodeURI(url)}")`;
         };
 
         const clearPendingCoverPreview = () => {
@@ -337,8 +395,12 @@
 
         const refreshCoverPreview = () => {
             if (pendingCoverPreviewUrl) {
-                coverPreview.style.display = 'block';
-                coverPreview.style.backgroundImage = `url('${pendingCoverPreviewUrl}')`;
+                showCoverPreview(pendingCoverPreviewUrl);
+                return;
+            }
+            const remoteCoverUrl = sanitizeUrl(coverUrlInput.value);
+            if (remoteCoverUrl) {
+                showCoverPreview(remoteCoverUrl);
                 return;
             }
             hideCoverPreview();
@@ -409,7 +471,7 @@
             }
         };
 
-        const getEditorInstance = () => articleEditor || (window.tinymce ? window.tinymce.get('article-content-editor') : null);
+        const getEditorInstance = () => (articleEditorReady ? articleEditor : null);
 
         const getEditorContent = () => {
             const editor = getEditorInstance();
@@ -422,13 +484,13 @@
         const setEditorContent = (html) => {
             const nextContent = String(html || '').trim();
             pendingEditorContent = nextContent;
+            contentEditor.value = nextContent;
             const editor = getEditorInstance();
             if (editor) {
                 editor.setContent(nextContent);
                 pendingEditorContent = '';
                 return;
             }
-            contentEditor.value = nextContent;
         };
 
         const focusEditor = () => {
@@ -586,16 +648,20 @@
                 `
             });
 
-            articleEditor = Array.isArray(editors) && editors.length ? editors[0] : getEditorInstance();
+            articleEditor = Array.isArray(editors) && editors.length
+                ? editors[0]
+                : (window.tinymce ? window.tinymce.get('article-content-editor') : null);
             if (!articleEditor) {
                 return;
             }
+            articleEditorReady = true;
 
             articleEditor.on('change input undo redo keyup setcontent', updateDraft);
-            if (pendingEditorContent) {
-                articleEditor.setContent(pendingEditorContent);
-                pendingEditorContent = '';
+            const initialEditorContent = String(pendingEditorContent || contentEditor.value || '').trim();
+            if (initialEditorContent) {
+                articleEditor.setContent(initialEditorContent);
             }
+            pendingEditorContent = '';
             updateDraft();
         };
 
@@ -788,6 +854,7 @@
             }
 
             coverUrlInput.value = publicUrl;
+            persistedCoverUrl = sanitizeUrl(publicUrl);
             updateDraft();
             clearPendingCoverFile();
             refreshCoverPreview();
@@ -930,7 +997,10 @@
                     : (localStorage.getItem('accessToken') || '');
 
                 const inputCoverUrl = sanitizeUrl(coverUrlInput.value);
-                if (inputCoverUrl && !pendingCoverFile) {
+                const shouldPrepareRemoteCover = inputCoverUrl
+                    && !pendingCoverFile
+                    && (!editPostId || inputCoverUrl !== persistedCoverUrl);
+                if (shouldPrepareRemoteCover) {
                     try {
                         await loadCoverFromUrlToPendingFile(inputCoverUrl, 'Đang tải ảnh URL trước khi upload...');
                     } catch (_) {
@@ -1082,9 +1152,15 @@
                     const data = await res.json().catch(() => ({}));
                     if (!res.ok) { setFeedback(data.error || 'Không thể tải bài viết.', 'error'); return; }
                     const post = data.post && typeof data.post === 'object' ? data.post : data;
+                    const rawContentHtml = post.contentHtml || post.content_html || post.content || '';
+                    const parsedArticle = splitArticleContentHtml(rawContentHtml);
+                    const coverUrl = sanitizeUrl(post.coverImageUrl || post.cover_image_url || parsedArticle.coverUrl);
                     titleInput.value = post.title || '';
-                    categoryInput.value = String(post.categoryId || 1);
-                    setEditorContent(post.contentHtml || post.content_html || '');
+                    categoryInput.value = String(post.categoryId || post.category_id || 1);
+                    coverUrlInput.value = coverUrl;
+                    persistedCoverUrl = coverUrl;
+                    refreshCoverPreview();
+                    setEditorContent(parsedArticle.bodyHtml || rawContentHtml);
                     updateDraft();
                 } catch { setFeedback('Không thể tải bài viết.', 'error'); }
             })();

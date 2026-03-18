@@ -14,19 +14,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js" referrerpolicy="origin"></script>
     <link rel="stylesheet" href="svp.css">
     <link rel="stylesheet" href="dropdown-hover.css">
     <style>
-        .sv-editor-toolbar {
-            display: flex;
-            flex-wrap: wrap;
-            gap: .45rem;
-            margin-bottom: .6rem;
-        }
-        .sv-editor-toolbar .btn {
-            border-radius: 8px;
-            min-width: 38px;
-        }
         .sv-upload-box {
             margin-top: .6rem;
             border: 1px dashed #cbd5e1;
@@ -52,29 +43,43 @@
             flex-wrap: wrap;
             gap: .5rem;
         }
-        .sv-editor {
+        .sv-editor-textarea {
             min-height: 320px;
             border: 1px solid var(--sv-border);
-            border-radius: 10px;
+            border-radius: 16px;
             padding: .85rem 1rem;
             background: #fff;
             line-height: 1.65;
-            outline: none;
+            resize: vertical;
         }
-        .sv-editor:focus {
+        .sv-editor-textarea:focus {
             border-color: #93c5fd;
             box-shadow: 0 0 0 .2rem rgba(59,130,246,.15);
         }
-        .sv-editor:empty::before {
-            content: attr(data-placeholder);
-            color: #94a3b8;
+        .tox-tinymce {
+            border: 1px solid var(--sv-border) !important;
+            border-radius: 16px !important;
+            overflow: hidden !important;
+            box-shadow: 0 18px 38px rgba(15, 23, 42, .06);
         }
-        .sv-editor img {
-            max-width: 100%;
-            height: auto;
-            display: block;
-            margin: 1rem auto;
-            border-radius: 8px;
+        .tox .tox-toolbar-overlord,
+        .tox .tox-toolbar,
+        .tox .tox-toolbar__primary,
+        .tox .tox-menubar {
+            background: #fff !important;
+        }
+        .tox .tox-toolbar__group {
+            border: 0 !important;
+            padding: 0 .2rem !important;
+        }
+        .tox .tox-edit-area::before {
+            border: 0 !important;
+        }
+        .tox .tox-statusbar {
+            border-top: 1px solid #eef2f7 !important;
+        }
+        .tox .tox-dialog-wrap__backdrop {
+            background: rgba(15, 23, 42, .3) !important;
         }
         .sv-embed-video {
             position: relative;
@@ -202,17 +207,13 @@
 
                     <div class="mb-3">
                         <label for="article-content-editor" class="form-label">Nội dung bài viết</label>
-                        <div class="sv-editor-toolbar">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-command="bold" title="In đậm"><i class="fa-solid fa-bold"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-command="italic" title="In nghiêng"><i class="fa-solid fa-italic"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-command="insertUnorderedList" title="Danh sách"><i class="fa-solid fa-list-ul"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-command="formatBlock" data-value="blockquote" title="Trích dẫn"><i class="fa-solid fa-quote-left"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="insert-image-url" title="Chèn ảnh từ URL"><i class="fa-regular fa-image"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="insert-youtube" title="Chèn video YouTube"><i class="fa-brands fa-youtube"></i></button>
-                            <button type="button" class="btn btn-sm btn-outline-secondary" data-action="create-link" title="Chèn liên kết"><i class="fa-solid fa-link"></i></button>
-                        </div>
-                        <div id="article-content-editor" class="sv-editor" contenteditable="true" data-placeholder="Viết nội dung dài kiểu tạp chí ở đây..."></div>
+                        <textarea
+                            id="article-content-editor"
+                            class="form-control sv-editor-textarea"
+                            placeholder="Viết nội dung dài kiểu tạp chí ở đây..."
+                        ></textarea>
                         <input id="article-content" type="hidden" name="article-content">
+                        <div class="sv-meta mt-2">Bạn có thể định dạng chữ, chèn liên kết, ảnh, emoji và bảng trực tiếp trong trình soạn thảo.</div>
                     </div>
 
 
@@ -263,8 +264,12 @@
         const emailWrap = document.getElementById('article-email-wrap');
         const emailInput = document.getElementById('article-email');
         const feedback = document.getElementById('article-submit-feedback');
-        const toolbarButtons = Array.from(document.querySelectorAll('.sv-editor-toolbar button'));
-        let savedRange = null;
+        const editorPlaceholder = contentEditor
+            ? (contentEditor.getAttribute('placeholder') || 'Viết nội dung dài kiểu tạp chí ở đây...')
+            : 'Viết nội dung dài kiểu tạp chí ở đây...';
+        let articleEditor = null;
+        let pendingEditorContent = '';
+        let editorReady = Promise.resolve();
         let isUploadingCover = false;
         let isPreparingCoverFromUrl = false;
         let coverUrlResolveTimer = null;
@@ -404,126 +409,39 @@
             }
         };
 
-        const saveSelection = () => {
-            const selection = window.getSelection();
-            if (!selection || selection.rangeCount === 0) return;
-            const range = selection.getRangeAt(0);
-            if (!contentEditor.contains(range.commonAncestorContainer)) return;
-            savedRange = range.cloneRange();
-        };
+        const getEditorInstance = () => articleEditor || (window.tinymce ? window.tinymce.get('article-content-editor') : null);
 
-        const restoreSelection = () => {
-            const selection = window.getSelection();
-            if (!selection) return;
-            if (savedRange) {
-                selection.removeAllRanges();
-                selection.addRange(savedRange);
-            } else {
-                const range = document.createRange();
-                range.selectNodeContents(contentEditor);
-                range.collapse(false);
-                selection.removeAllRanges();
-                selection.addRange(range);
+        const getEditorContent = () => {
+            const editor = getEditorInstance();
+            if (editor) {
+                return editor.getContent();
             }
+            return String(contentEditor.value || '').trim();
         };
 
-        const insertImageAtCursor = (url) => {
-            const safeUrl = sanitizeUrl(url);
-            if (!safeUrl) return;
-            contentEditor.focus();
-            restoreSelection();
-            const selection = window.getSelection();
-            if (!selection || selection.rangeCount === 0) return;
-            const range = selection.getRangeAt(0);
-            const image = document.createElement('img');
-            image.src = safeUrl;
-            image.alt = 'Article illustration';
-            range.insertNode(image);
-            range.setStartAfter(image);
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
-            saveSelection();
-        };
-
-        const parseYoutubeTimeToSeconds = (value) => {
-            const raw = (value || '').trim().toLowerCase();
-            if (!raw) return '';
-            if (/^\d+$/.test(raw)) return raw;
-            const match = raw.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/);
-            if (!match) return '';
-            const hours = Number(match[1] || 0);
-            const minutes = Number(match[2] || 0);
-            const seconds = Number(match[3] || 0);
-            const total = (hours * 3600) + (minutes * 60) + seconds;
-            return total > 0 ? String(total) : '';
-        };
-
-        const getYoutubeEmbedUrl = (url) => {
-            const safeUrl = sanitizeUrl(url);
-            if (!safeUrl) return '';
-            let videoId = '';
-            const embedParams = new URLSearchParams();
-
-            try {
-                const parsed = new URL(safeUrl);
-                const host = parsed.hostname.replace(/^www\./i, '').toLowerCase();
-                if (host === 'youtube.com' || host === 'm.youtube.com') {
-                    if (parsed.pathname === '/watch') {
-                        videoId = parsed.searchParams.get('v') || '';
-                    } else if (parsed.pathname.startsWith('/shorts/')) {
-                        videoId = parsed.pathname.split('/')[2] || '';
-                    } else if (parsed.pathname.startsWith('/embed/')) {
-                        videoId = parsed.pathname.split('/')[2] || '';
-                    }
-                } else if (host === 'youtu.be') {
-                    videoId = parsed.pathname.replace('/', '').trim();
-                }
-
-                const si = parsed.searchParams.get('si');
-                if (si) embedParams.set('si', si);
-
-                const start = parsed.searchParams.get('start') || parsed.searchParams.get('t');
-                const startSeconds = parseYoutubeTimeToSeconds(start || '');
-                if (startSeconds) embedParams.set('start', startSeconds);
-            } catch (error) {
-                return '';
+        const setEditorContent = (html) => {
+            const nextContent = String(html || '').trim();
+            pendingEditorContent = nextContent;
+            const editor = getEditorInstance();
+            if (editor) {
+                editor.setContent(nextContent);
+                pendingEditorContent = '';
+                return;
             }
-
-            videoId = videoId.replace(/[^a-zA-Z0-9_-]/g, '');
-            if (!videoId) return '';
-            const query = embedParams.toString();
-            return `https://www.youtube.com/embed/${videoId}${query ? `?${query}` : ''}`;
+            contentEditor.value = nextContent;
         };
 
-        const insertYoutubeAtCursor = (url) => {
-            const embedUrl = getYoutubeEmbedUrl(url);
-            if (!embedUrl) return false;
+        const focusEditor = () => {
+            const editor = getEditorInstance();
+            if (editor) {
+                editor.focus();
+                return;
+            }
             contentEditor.focus();
-            restoreSelection();
-            const selection = window.getSelection();
-            if (!selection || selection.rangeCount === 0) return false;
-            const range = selection.getRangeAt(0);
-            const wrapper = document.createElement('div');
-            wrapper.className = 'sv-embed-video';
-            const iframe = document.createElement('iframe');
-            iframe.src = embedUrl;
-            iframe.title = 'YouTube video player';
-            iframe.allow = 'accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share';
-            iframe.allowFullscreen = true;
-            iframe.referrerPolicy = 'strict-origin-when-cross-origin';
-            wrapper.appendChild(iframe);
-            range.insertNode(wrapper);
-            range.setStartAfter(wrapper);
-            range.collapse(true);
-            selection.removeAllRanges();
-            selection.addRange(range);
-            saveSelection();
-            return true;
         };
 
         const updateDraft = () => {
-            contentHiddenInput.value = contentEditor.innerHTML;
+            contentHiddenInput.value = getEditorContent();
         };
 
         const normalizeEmail = (value) => (value || '').trim().toLowerCase();
@@ -570,7 +488,7 @@
         };
 
         const composeContentHtml = () => {
-            const editorHtml = contentEditor.innerHTML.trim();
+            const editorHtml = getEditorContent().trim();
             const coverUrl = sanitizeUrl(coverUrlInput.value);
             const coverHtml = coverUrl ? `<p><img src="${coverUrl}" alt="cover image"></p>` : '';
             if (!editorHtml) {
@@ -594,6 +512,91 @@
                 return;
             }
             feedback.style.color = '#475569';
+        };
+
+        const initArticleEditor = async () => {
+            if (!window.tinymce || !contentEditor) {
+                return;
+            }
+
+            const editors = await window.tinymce.init({
+                selector: '#article-content-editor',
+                license_key: 'gpl',
+                menubar: false,
+                branding: false,
+                promotion: false,
+                browser_spellcheck: true,
+                statusbar: false,
+                toolbar_sticky: true,
+                toolbar_mode: 'wrap',
+                min_height: 420,
+                autoresize_bottom_margin: 20,
+                plugins: 'autolink advlist lists link image table emoticons charmap code fullscreen autoresize',
+                toolbar: 'undo redo | blocks fontsize | bold italic underline forecolor backcolor | alignleft aligncenter alignright alignjustify | bullist numlist outdent indent | blockquote | link image emoticons table | removeformat code fullscreen',
+                placeholder: editorPlaceholder,
+                convert_urls: false,
+                relative_urls: false,
+                remove_script_host: false,
+                paste_data_images: false,
+                image_uploadtab: false,
+                image_title: true,
+                link_default_target: '_blank',
+                link_assume_external_targets: 'https',
+                content_style: `
+                    body {
+                        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                        font-size: 16px;
+                        line-height: 1.75;
+                        color: #0f172a;
+                        padding: 1rem 1.1rem;
+                    }
+                    p { margin: 0 0 1rem; }
+                    h1, h2, h3, h4 {
+                        color: #0f172a;
+                        font-family: "Roboto Condensed", "Segoe UI", sans-serif;
+                        margin: 1.35rem 0 .8rem;
+                    }
+                    img {
+                        max-width: 100%;
+                        height: auto;
+                        display: block;
+                        margin: 1rem auto;
+                        border-radius: 12px;
+                    }
+                    blockquote {
+                        margin: 1.2rem 0;
+                        padding: .85rem 1rem;
+                        border-left: 4px solid #2563eb;
+                        background: #f8fbff;
+                        color: #334155;
+                    }
+                    table {
+                        width: 100%;
+                        border-collapse: collapse;
+                        margin: 1rem 0;
+                    }
+                    th, td {
+                        border: 1px solid #dbe7ff;
+                        padding: .65rem .75rem;
+                        vertical-align: top;
+                    }
+                    th {
+                        background: #eff6ff;
+                    }
+                `
+            });
+
+            articleEditor = Array.isArray(editors) && editors.length ? editors[0] : getEditorInstance();
+            if (!articleEditor) {
+                return;
+            }
+
+            articleEditor.on('change input undo redo keyup setcontent', updateDraft);
+            if (pendingEditorContent) {
+                articleEditor.setContent(pendingEditorContent);
+                pendingEditorContent = '';
+            }
+            updateDraft();
         };
 
         const setCoverUploadStatus = (text, type) => {
@@ -807,10 +810,11 @@
             element.addEventListener('input', updateDraft);
             element.addEventListener('change', updateDraft);
         });
-        ['keyup', 'mouseup', 'blur'].forEach((eventName) => {
-            contentEditor.addEventListener(eventName, saveSelection);
-        });
         contentEditor.addEventListener('input', updateDraft);
+        editorReady = initArticleEditor().catch((error) => {
+            console.error('TinyMCE init failed:', error);
+            setFeedback('Không thể tải trình soạn thảo nâng cao. Hệ thống chuyển sang chế độ nhập HTML cơ bản.', 'error');
+        });
         coverUrlInput.addEventListener('input', () => {
             const safeUrl = sanitizeUrl(coverUrlInput.value);
             cancelCoverUrlResolve();
@@ -864,57 +868,9 @@
             setCoverUploadStatus('Ảnh đã được chọn cục bộ. Ảnh sẽ được upload khi bấm "Đăng bài viết".', 'info');
         });
 
-        toolbarButtons.forEach((button) => {
-            button.addEventListener('click', () => {
-                const action = button.getAttribute('data-action');
-                const command = button.getAttribute('data-command');
-                const value = button.getAttribute('data-value') || null;
-
-                if (action === 'insert-image-url') {
-                    const imageUrl = prompt('Nhập URL ảnh (http/https):');
-                    if (imageUrl) insertImageAtCursor(imageUrl);
-                    updateDraft();
-                    return;
-                }
-
-                if (action === 'insert-youtube') {
-                    const videoUrl = prompt('Nhập URL YouTube (watch, shorts hoặc youtu.be):');
-                    if (videoUrl) {
-                        const inserted = insertYoutubeAtCursor(videoUrl);
-                        if (!inserted) {
-                            alert('URL YouTube không hợp lệ.');
-                        }
-                    }
-                    updateDraft();
-                    return;
-                }
-
-                if (action === 'create-link') {
-                    const linkUrl = sanitizeUrl(prompt('Nhập URL liên kết (http/https):'));
-                    if (!linkUrl) return;
-                    contentEditor.focus();
-                    restoreSelection();
-                    document.execCommand('createLink', false, linkUrl);
-                    saveSelection();
-                    updateDraft();
-                    return;
-                }
-
-                if (!command) return;
-                contentEditor.focus();
-                restoreSelection();
-                if (command === 'formatBlock' && value) {
-                    document.execCommand(command, false, value);
-                } else {
-                    document.execCommand(command, false, null);
-                }
-                saveSelection();
-                updateDraft();
-            });
-        });
-
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
+            await editorReady;
             updateDraft();
 
             if (isUploadingCover) {
@@ -1003,7 +959,7 @@
                 const contentHtml = composeContentHtml();
                 if (!contentHtml || contentHtml.replace(/<[^>]+>/g, ' ').trim().length < 20) {
                     setFeedback('Nội dung bài viết cần chi tiết hơn (ít nhất 20 ký tự).', 'error');
-                    contentEditor.focus();
+                    focusEditor();
                     return;
                 }
 
@@ -1078,8 +1034,8 @@
                     try { localStorage.setItem('svp.latestSubmittedArticle', JSON.stringify(localPost)); } catch (_) {}
                     localStorage.setItem('userEmail', email);
                     form.reset();
-                    contentEditor.innerHTML = '';
-                    contentHiddenInput.value = '';
+                    setEditorContent('');
+                    updateDraft();
                     cancelCoverUrlResolve();
                     clearPendingCoverFile();
                     refreshCoverPreview();
@@ -1103,6 +1059,7 @@
             emailWrap.classList.add('d-none');
         }
         refreshCoverPreview();
+        setEditorContent(contentEditor.value || '');
         updateDraft();
 
         /* ── Edit mode: load existing data ── */
@@ -1127,7 +1084,7 @@
                     const post = data.post && typeof data.post === 'object' ? data.post : data;
                     titleInput.value = post.title || '';
                     categoryInput.value = String(post.categoryId || 1);
-                    contentEditor.innerHTML = post.contentHtml || post.content_html || '';
+                    setEditorContent(post.contentHtml || post.content_html || '');
                     updateDraft();
                 } catch { setFeedback('Không thể tải bài viết.', 'error'); }
             })();

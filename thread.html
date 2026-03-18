@@ -59,6 +59,9 @@
             padding: .9rem .8rem;
             text-align: center;
         }
+        .sv-thread-post__author-meta {
+            min-width: 0;
+        }
         .sv-thread-post__avatar {
             width: 58px;
             height: 58px;
@@ -75,8 +78,11 @@
             font-weight: 800;
             color: #0f172a;
             line-height: 1.25;
+            overflow-wrap: anywhere;
+            word-break: break-word;
         }
         .sv-thread-post__author-link {
+            display: block;
             text-decoration: none;
             color: inherit;
         }
@@ -231,6 +237,9 @@
                 display: flex;
                 align-items: center;
                 gap: .75rem;
+            }
+            .sv-thread-post__author-meta {
+                flex: 1 1 auto;
             }
             .sv-thread-post__avatar {
                 margin: 0;
@@ -1064,10 +1073,12 @@
                 <article class="sv-thread-post">
                     <aside class="sv-thread-post__author">
                         ${renderInitialAvatar(item.authorName, item.authorSeed, item.authorAvatarUrl, buildProfileHref(item.authorNickname, item.authorUserId))}
-                        ${buildProfileHref(item.authorNickname, item.authorUserId)
-                            ? `<a class="sv-thread-post__author-link" href="${buildProfileHref(item.authorNickname, item.authorUserId)}"><div class="sv-thread-post__name">${escapeHtml(item.authorName)}</div></a>`
-                            : `<div class="sv-thread-post__name">${escapeHtml(item.authorName)}</div>`}
-                        <div class="sv-thread-post__role">${escapeHtml(item.role)}</div>
+                        <div class="sv-thread-post__author-meta">
+                            ${buildProfileHref(item.authorNickname, item.authorUserId)
+                                ? `<a class="sv-thread-post__author-link" href="${buildProfileHref(item.authorNickname, item.authorUserId)}"><div class="sv-thread-post__name">${escapeHtml(item.authorName)}</div></a>`
+                                : `<div class="sv-thread-post__name">${escapeHtml(item.authorName)}</div>`}
+                            <div class="sv-thread-post__role">${escapeHtml(item.role)}</div>
+                        </div>
                     </aside>
                     <div class="sv-thread-post__body">
                         <div class="sv-thread-post__meta">

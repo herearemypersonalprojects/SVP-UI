@@ -42,8 +42,26 @@
             color: #0a58ca;
             text-decoration: underline;
         }
+        .sv-event-type-admin {
+            border: 1px solid #dbeafe;
+            border-radius: 12px;
+            background: #f8fbff;
+        }
+        .sv-event-type-admin-list {
+            display: grid;
+            gap: .75rem;
+        }
+        .sv-event-type-admin-item {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) auto auto;
+            gap: .5rem;
+            align-items: center;
+        }
         @media (max-width: 575px) {
             .sv-grid-2 {
+                grid-template-columns: 1fr;
+            }
+            .sv-event-type-admin-item {
                 grid-template-columns: 1fr;
             }
         }
@@ -163,16 +181,21 @@
                         <label for="event-type" class="form-label">Loại sự kiện</label>
                         <select id="event-type" class="form-select">
                             <option value="">-- Chọn loại sự kiện --</option>
-                            <option value="Hội thảo">Hội thảo</option>
-                            <option value="Workshop">Workshop</option>
-                            <option value="Giao lưu">Giao lưu</option>
-                            <option value="Lễ hội">Lễ hội</option>
-                            <option value="Văn hóa">Văn hóa</option>
-                            <option value="Thể thao">Thể thao</option>
-                            <option value="Âm nhạc">Âm nhạc</option>
-                            <option value="Khác">Khác</option>
                         </select>
                     </div>
+
+                    <section id="event-type-admin-panel" class="sv-event-type-admin p-3 mb-3 d-none" aria-live="polite">
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                            <strong>Quản lý loại sự kiện</strong>
+                            <span class="sv-meta">Chỉ SUPERADMIN mới thấy khu vực này.</span>
+                        </div>
+                        <div class="input-group mb-2">
+                            <input id="event-type-new-name" class="form-control" type="text" placeholder="Thêm loại sự kiện mới">
+                            <button id="event-type-add-btn" class="btn btn-outline-primary" type="button">Thêm</button>
+                        </div>
+                        <div id="event-type-admin-feedback" class="sv-meta mb-2"></div>
+                        <div id="event-type-admin-list" class="sv-event-type-admin-list"></div>
+                    </section>
 
                     <div class="mb-3">
                         <label for="event-tags" class="form-label">Tags (phân cách bằng dấu phẩy)</label>
@@ -239,6 +262,11 @@
         const imageUploadStatus = document.getElementById('event-image-upload-status');
         const descriptionInput = document.getElementById('event-description');
         const typeInput = document.getElementById('event-type');
+        const typeAdminPanel = document.getElementById('event-type-admin-panel');
+        const typeAdminNewNameInput = document.getElementById('event-type-new-name');
+        const typeAdminAddBtn = document.getElementById('event-type-add-btn');
+        const typeAdminFeedback = document.getElementById('event-type-admin-feedback');
+        const typeAdminList = document.getElementById('event-type-admin-list');
         const tagsInput = document.getElementById('event-tags');
         const previewCover = document.getElementById('event-preview-cover');
         const previewTitle = document.getElementById('event-preview-title');
@@ -247,7 +275,7 @@
         const previewDescription = document.getElementById('event-preview-description');
         const feedback = document.getElementById('event-submit-feedback');
 
-        if (!form || !emailWrap || !emailInput || !titleInput || !startDatetimeInput || !endDatetimeToggle || !endDatetimeWrap || !endDatetimeInput || !locationInput || !priceInput || !onlineInput || !imageUrlInput || !imageFileInput || !imageUploadStatus || !descriptionInput || !typeInput || !tagsInput || !previewCover || !previewTitle || !previewDatetime || !previewLocation || !previewDescription || !feedback) {
+        if (!form || !emailWrap || !emailInput || !titleInput || !startDatetimeInput || !endDatetimeToggle || !endDatetimeWrap || !endDatetimeInput || !locationInput || !priceInput || !onlineInput || !imageUrlInput || !imageFileInput || !imageUploadStatus || !descriptionInput || !typeInput || !typeAdminPanel || !typeAdminNewNameInput || !typeAdminAddBtn || !typeAdminFeedback || !typeAdminList || !tagsInput || !previewCover || !previewTitle || !previewDatetime || !previewLocation || !previewDescription || !feedback) {
             return;
         }
 
@@ -255,6 +283,27 @@
         const isValidEmail = (value) => /^[^\s@]+@[^\s@]+$/.test(value);
         const editEventId = new URLSearchParams(window.location.search).get('editEventId');
         const pad2 = (value) => String(value).padStart(2, '0');
+        const escapeHtml = (value) => String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+        const decodeBase64Url = (value) => {
+            if (!value) return '';
+            let normalized = value.replace(/-/g, '+').replace(/_/g, '/');
+            const pad = normalized.length % 4;
+            if (pad) normalized += '='.repeat(4 - pad);
+            return normalized;
+        };
+        const parseJwtPayload = (token) => {
+            if (!token || token.split('.').length !== 3) return null;
+            try {
+                return JSON.parse(atob(decodeBase64Url(token.split('.')[1])));
+            } catch (_) {
+                return null;
+            }
+        };
         const sanitizeUrl = (value) => {
             const raw = String(value || '').trim();
             if (!/^https?:\/\//i.test(raw)) return '';
@@ -276,12 +325,27 @@
             imageUploadStatus.style.color = type === 'error' ? '#b91c1c' : (type === 'success' ? '#15803d' : '#475569');
         };
 
+        const setTypeAdminFeedback = (text, type) => {
+            typeAdminFeedback.textContent = text || '';
+            typeAdminFeedback.style.color = type === 'error' ? '#b91c1c' : (type === 'success' ? '#15803d' : '#475569');
+        };
+
         let imageFilePreviewUrl = '';
+        let eventTypes = [];
+        let currentEventTypeSelection = { eventTypeId: null, eventTypeName: '' };
+        let isSuperadmin = false;
         const clearImageFilePreview = () => {
             if (imageFilePreviewUrl) {
                 URL.revokeObjectURL(imageFilePreviewUrl);
                 imageFilePreviewUrl = '';
             }
+        };
+
+        const getAccessToken = async () => {
+            if (window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function') {
+                return await window.SVPAuth.getValidAccessToken();
+            }
+            return localStorage.getItem('accessToken') || '';
         };
 
         const pickEmailFromStorage = () => {
@@ -355,12 +419,199 @@
         };
 
         const getSessionEmail = async () => {
-            if (window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function') {
-                const token = await window.SVPAuth.getValidAccessToken();
-                if (!token) return '';
-            }
+            const token = await getAccessToken();
+            if (!token && !pickEmailFromStorage()) return '';
             const email = pickEmailFromStorage();
             return isValidEmail(email) ? email : '';
+        };
+
+        const getSessionRole = async () => {
+            const token = await getAccessToken();
+            const payload = (window.SVPAuth && typeof window.SVPAuth.parseJwtPayload === 'function')
+                ? window.SVPAuth.parseJwtPayload(token)
+                : parseJwtPayload(token);
+            return String(payload?.role || '').trim().toUpperCase();
+        };
+
+        const normalizeEventTypeName = (value) => String(value || '').trim();
+        const toPositiveInteger = (value) => {
+            const parsed = Number(value);
+            return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
+        };
+        const encodeLegacyTypeValue = (name) => `legacy:${encodeURIComponent(name)}`;
+        const decodeLegacyTypeValue = (value) => {
+            const raw = String(value || '');
+            if (!raw.startsWith('legacy:')) return '';
+            try {
+                return decodeURIComponent(raw.slice('legacy:'.length));
+            } catch (_) {
+                return raw.slice('legacy:'.length);
+            }
+        };
+        const findEventTypeById = (eventTypeId) => eventTypes.find((item) => Number(item.eventTypeId) === Number(eventTypeId)) || null;
+        const findEventTypeByName = (name) => {
+            const normalized = normalizeEventTypeName(name).toLowerCase();
+            if (!normalized) return null;
+            return eventTypes.find((item) => normalizeEventTypeName(item.name).toLowerCase() === normalized) || null;
+        };
+        const setCurrentEventTypeSelection = (eventTypeId, eventTypeName) => {
+            currentEventTypeSelection = {
+                eventTypeId: toPositiveInteger(eventTypeId),
+                eventTypeName: normalizeEventTypeName(eventTypeName)
+            };
+        };
+        const getSelectedEventType = () => {
+            const rawValue = String(typeInput.value || '').trim();
+            if (!rawValue) {
+                return { eventTypeId: null, eventTypeName: '' };
+            }
+            if (rawValue.startsWith('legacy:')) {
+                return {
+                    eventTypeId: null,
+                    eventTypeName: normalizeEventTypeName(decodeLegacyTypeValue(rawValue))
+                };
+            }
+            const eventTypeId = toPositiveInteger(rawValue);
+            if (!eventTypeId) {
+                return { eventTypeId: null, eventTypeName: '' };
+            }
+            const selectedType = findEventTypeById(eventTypeId);
+            return selectedType
+                ? { eventTypeId: selectedType.eventTypeId, eventTypeName: normalizeEventTypeName(selectedType.name) }
+                : { eventTypeId: null, eventTypeName: '' };
+        };
+        const renderEventTypeOptions = () => {
+            const options = ['<option value="">-- Chọn loại sự kiện --</option>'];
+            eventTypes.forEach((item) => {
+                options.push(`<option value="${item.eventTypeId}">${escapeHtml(item.name)}</option>`);
+            });
+
+            let selectedValue = '';
+            const selectedId = toPositiveInteger(currentEventTypeSelection.eventTypeId);
+            const selectedName = normalizeEventTypeName(currentEventTypeSelection.eventTypeName);
+
+            if (selectedId) {
+                const matchedType = findEventTypeById(selectedId);
+                if (matchedType) {
+                    selectedValue = String(matchedType.eventTypeId);
+                    setCurrentEventTypeSelection(matchedType.eventTypeId, matchedType.name);
+                } else if (selectedName) {
+                    const legacyValue = encodeLegacyTypeValue(selectedName);
+                    options.push(`<option value="${legacyValue}">${escapeHtml(`${selectedName} (đã lưu cũ)`)}</option>`);
+                    selectedValue = legacyValue;
+                }
+            } else if (selectedName) {
+                const matchedType = findEventTypeByName(selectedName);
+                if (matchedType) {
+                    selectedValue = String(matchedType.eventTypeId);
+                    setCurrentEventTypeSelection(matchedType.eventTypeId, matchedType.name);
+                } else {
+                    const legacyValue = encodeLegacyTypeValue(selectedName);
+                    options.push(`<option value="${legacyValue}">${escapeHtml(`${selectedName} (đã lưu cũ)`)}</option>`);
+                    selectedValue = legacyValue;
+                }
+            }
+
+            typeInput.innerHTML = options.join('');
+            typeInput.value = selectedValue;
+        };
+        const renderEventTypeAdminList = () => {
+            typeAdminPanel.classList.toggle('d-none', !isSuperadmin);
+            if (!isSuperadmin) {
+                typeAdminList.innerHTML = '';
+                setTypeAdminFeedback('', 'info');
+                return;
+            }
+            if (eventTypes.length === 0) {
+                typeAdminList.innerHTML = '<div class="sv-meta">Chưa có loại sự kiện nào.</div>';
+                return;
+            }
+            typeAdminList.innerHTML = eventTypes.map((item) => `
+                <div class="sv-event-type-admin-item" data-event-type-id="${item.eventTypeId}">
+                    <input class="form-control form-control-sm" type="text" data-field="name" value="${escapeHtml(item.name)}" />
+                    <button class="btn btn-sm btn-outline-primary" type="button" data-action="save">Lưu</button>
+                    <button class="btn btn-sm btn-outline-danger" type="button" data-action="delete">Xóa</button>
+                </div>
+            `).join('');
+        };
+        const loadEventTypes = async () => {
+            const response = await fetch(`${API_BASE_URL}/event-types`, {
+                method: 'GET',
+                headers: { Accept: 'application/json' }
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload.error || 'Không thể tải loại sự kiện.');
+            }
+            eventTypes = (Array.isArray(payload.items) ? payload.items : [])
+                .map((item) => ({
+                    eventTypeId: toPositiveInteger(item?.eventTypeId),
+                    name: normalizeEventTypeName(item?.name)
+                }))
+                .filter((item) => item.eventTypeId && item.name);
+            renderEventTypeOptions();
+            renderEventTypeAdminList();
+        };
+        const parseLegacyEventContent = (content) => {
+            const blocks = String(content || '')
+                .replace(/\r\n/g, '\n')
+                .split(/\n{2,}/)
+                .map((item) => item.trim())
+                .filter(Boolean);
+            const descriptionBlocks = [];
+            let eventTypeName = '';
+            let tags = '';
+            blocks.forEach((block) => {
+                if (!eventTypeName && /^Loại sự kiện:\s*/i.test(block)) {
+                    eventTypeName = block.replace(/^Loại sự kiện:\s*/i, '').trim();
+                    return;
+                }
+                if (!tags && /^Tags:\s*/i.test(block)) {
+                    tags = block.replace(/^Tags:\s*/i, '').trim();
+                    return;
+                }
+                descriptionBlocks.push(block);
+            });
+            return {
+                description: descriptionBlocks.join('\n\n').trim(),
+                eventTypeName,
+                tags
+            };
+        };
+        const loadExistingEvent = async () => {
+            const headers = { Accept: 'application/json' };
+            const token = await getAccessToken();
+            if (token) headers.Authorization = `Bearer ${token}`;
+            const res = await fetch(`${API_BASE_URL}/events/${editEventId}`, { headers });
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                throw new Error(data.error || 'Không thể tải sự kiện.');
+            }
+            const ev = data.event && typeof data.event === 'object' ? data.event : data;
+            titleInput.value = ev.title || '';
+            const startSource = ev.startTime || ev.start_time || ev.eventTime || ev.event_time || '';
+            const endSource = ev.endTime || ev.end_time || '';
+            startDatetimeInput.value = toDatetimeLocalValue(startSource);
+            if (endSource && Number.isFinite(toTimestamp(endSource)) && toTimestamp(endSource) !== toTimestamp(startSource)) {
+                endDatetimeInput.value = toDatetimeLocalValue(endSource);
+                setEndDatetimeVisibility(true);
+            } else {
+                setEndDatetimeVisibility(false, { preserveValue: false });
+            }
+            locationInput.value = ev.address || '';
+            priceInput.value = Number(ev.price || 0) > 0 ? String(ev.price) : '0';
+            onlineInput.checked = Boolean(ev.online);
+            imageUrlInput.value = ev.imageUrl || ev.image_url || '';
+            const content = ev.content || '';
+            const parsedContent = parseLegacyEventContent(content);
+            descriptionInput.value = parsedContent.description || '';
+            tagsInput.value = parsedContent.tags || '';
+            setCurrentEventTypeSelection(
+                ev.eventTypeId || ev.event_type_id,
+                ev.eventTypeName || ev.event_type_name || parsedContent.eventTypeName
+            );
+            renderEventTypeOptions();
+            preview();
         };
 
         const preview = () => {
@@ -443,10 +694,8 @@
 
         const buildEventContent = () => {
             const description = descriptionInput.value.trim();
-            const type = typeInput.value.trim();
             const tags = String(tagsInput.value || '').split(',').map((item) => item.trim()).filter(Boolean);
             const lines = [description];
-            if (type) lines.push(`Loại sự kiện: ${type}`);
             if (tags.length > 0) lines.push(`Tags: ${tags.join(', ')}`);
             return lines.join('\n\n').trim();
         };
@@ -454,6 +703,9 @@
         [titleInput, startDatetimeInput, endDatetimeInput, locationInput, onlineInput, imageUrlInput, descriptionInput].forEach((el) => {
             el.addEventListener('input', preview);
             el.addEventListener('change', preview);
+        });
+        typeInput.addEventListener('change', () => {
+            currentEventTypeSelection = getSelectedEventType();
         });
         endDatetimeToggle.addEventListener('click', () => {
             setEndDatetimeVisibility(!hasVisibleEndDatetime(), { focus: !hasVisibleEndDatetime() });
@@ -478,12 +730,117 @@
             setUploadStatus('Ảnh sẽ được upload khi bấm "Tạo sự kiện".', 'info');
             preview();
         });
+        typeAdminAddBtn.addEventListener('click', async () => {
+            const name = normalizeEventTypeName(typeAdminNewNameInput.value);
+            if (!name) {
+                setTypeAdminFeedback('Tên loại sự kiện không được để trống.', 'error');
+                typeAdminNewNameInput.focus();
+                return;
+            }
+            const accessToken = await getAccessToken();
+            if (!accessToken) {
+                setTypeAdminFeedback('Bạn cần đăng nhập lại để quản lý loại sự kiện.', 'error');
+                return;
+            }
+            typeAdminAddBtn.disabled = true;
+            setTypeAdminFeedback('Đang thêm loại sự kiện...', 'info');
+            try {
+                const response = await fetch(`${API_BASE_URL}/admin/event-types`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        Authorization: `Bearer ${accessToken}`
+                    },
+                    body: JSON.stringify({ name })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Không thể thêm loại sự kiện.');
+                }
+                typeAdminNewNameInput.value = '';
+                await loadEventTypes();
+                setTypeAdminFeedback('Đã thêm loại sự kiện mới.', 'success');
+            } catch (error) {
+                setTypeAdminFeedback(error?.message || 'Không thể thêm loại sự kiện.', 'error');
+            } finally {
+                typeAdminAddBtn.disabled = false;
+            }
+        });
+        typeAdminList.addEventListener('click', async (event) => {
+            const button = event.target.closest('button[data-action]');
+            if (!button) return;
+            const row = button.closest('[data-event-type-id]');
+            if (!row) return;
+            const accessToken = await getAccessToken();
+            if (!accessToken) {
+                setTypeAdminFeedback('Bạn cần đăng nhập lại để quản lý loại sự kiện.', 'error');
+                return;
+            }
+            const eventTypeId = toPositiveInteger(row.getAttribute('data-event-type-id'));
+            if (!eventTypeId) {
+                setTypeAdminFeedback('ID loại sự kiện không hợp lệ.', 'error');
+                return;
+            }
+            const nameInput = row.querySelector('input[data-field="name"]');
+            const action = button.getAttribute('data-action');
+            row.querySelectorAll('input, button').forEach((item) => {
+                item.disabled = true;
+            });
+            try {
+                if (action === 'save') {
+                    const name = normalizeEventTypeName(nameInput && nameInput.value);
+                    if (!name) {
+                        throw new Error('Tên loại sự kiện không được để trống.');
+                    }
+                    const response = await fetch(`${API_BASE_URL}/admin/event-types/${eventTypeId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            Authorization: `Bearer ${accessToken}`
+                        },
+                        body: JSON.stringify({ name })
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(payload.error || 'Không thể cập nhật loại sự kiện.');
+                    }
+                    await loadEventTypes();
+                    setTypeAdminFeedback('Đã cập nhật loại sự kiện.', 'success');
+                } else if (action === 'delete') {
+                    if (!window.confirm('Xóa loại sự kiện này khỏi danh mục? Các event cũ vẫn giữ snapshot tên loại hiện tại.')) {
+                        return;
+                    }
+                    const response = await fetch(`${API_BASE_URL}/admin/event-types/${eventTypeId}`, {
+                        method: 'DELETE',
+                        headers: {
+                            Accept: 'application/json',
+                            Authorization: `Bearer ${accessToken}`
+                        }
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(payload.error || 'Không thể xóa loại sự kiện.');
+                    }
+                    await loadEventTypes();
+                    setTypeAdminFeedback('Đã xóa loại sự kiện khỏi danh mục.', 'success');
+                }
+            } catch (error) {
+                setTypeAdminFeedback(error?.message || 'Không thể cập nhật loại sự kiện.', 'error');
+            } finally {
+                row.querySelectorAll('input, button').forEach((item) => {
+                    item.disabled = false;
+                });
+            }
+        });
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
 
             const title = titleInput.value.trim();
             const content = buildEventContent();
+            const selectedEventType = getSelectedEventType();
             const startTime = toIsoDatetime(startDatetimeInput);
             const endTime = hasVisibleEndDatetime() ? toIsoDatetime(endDatetimeInput) : '';
             const rawLocation = locationInput.value.trim();
@@ -523,13 +880,10 @@
             setFeedback(editEventId ? 'Đang cập nhật sự kiện...' : 'Đang gửi sự kiện, vui lòng đợi...', 'info');
 
             try {
-                const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
-                    ? await window.SVPAuth.getValidAccessToken()
-                    : (localStorage.getItem('accessToken') || '');
+                const accessToken = await getAccessToken();
                 const imageUrl = await uploadSelectedImageIfNeeded(accessToken);
 
                 if (editEventId) {
-                    // ── Edit mode: PATCH ──
                     const res = await fetch(`${API_BASE_URL}/events/${editEventId}`, {
                         method: 'PATCH',
                         headers: {
@@ -546,7 +900,9 @@
                             online,
                             address,
                             imageUrl,
-                            price: price > 0 ? price : 0
+                            price: price > 0 ? price : 0,
+                            eventTypeId: selectedEventType.eventTypeId,
+                            eventTypeName: selectedEventType.eventTypeId ? '' : selectedEventType.eventTypeName
                         })
                     });
                     const payload = await res.json().catch(() => ({}));
@@ -554,7 +910,6 @@
                     setFeedback('Sự kiện đã được cập nhật thành công!', 'success');
                     setTimeout(() => { window.location.href = `event_detail.html?eventId=${editEventId}`; }, 600);
                 } else {
-                    // ── Create mode: POST ──
                     const email = normalizeEmail(emailInput.value);
                     const response = await fetch(`${API_BASE_URL}/events`, {
                         method: 'POST',
@@ -573,7 +928,9 @@
                             online,
                             address,
                             imageUrl,
-                            price: price > 0 ? price : 0
+                            price: price > 0 ? price : 0,
+                            eventTypeId: selectedEventType.eventTypeId,
+                            eventTypeName: selectedEventType.eventTypeId ? '' : selectedEventType.eventTypeName
                         })
                     });
                     const payload = await response.json().catch(() => ({}));
@@ -586,6 +943,8 @@
                     setEndDatetimeVisibility(false, { preserveValue: false });
                     clearImageFilePreview();
                     setUploadStatus('', 'info');
+                    setCurrentEventTypeSelection(null, '');
+                    renderEventTypeOptions();
                     preview();
                     setTimeout(() => {
                         window.location.href = eventId > 0
@@ -603,16 +962,7 @@
             }
         });
 
-        const initialEmail = pickEmailFromStorage();
-        if (initialEmail) {
-            emailInput.value = initialEmail;
-            emailWrap.classList.add('d-none');
-        }
-        setEndDatetimeVisibility(false, { preserveValue: false });
-        preview();
-
-        /* ── Edit mode: load existing data ── */
-        if (editEventId) {
+        const applyEditModeUi = () => {
             const heroTitle = document.querySelector('.sv-page-hero__title');
             if (heroTitle) heroTitle.textContent = 'Chỉnh sửa sự kiện';
             const heroSub = document.querySelector('.sv-page-hero__subtitle');
@@ -621,41 +971,45 @@
             const submitBtn = form.querySelector('button[type="submit"]');
             if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-save me-2"></i>Lưu thay đổi';
             emailWrap.classList.add('d-none');
+        };
 
-            (async () => {
+        const init = async () => {
+            const initialEmail = pickEmailFromStorage();
+            if (initialEmail) {
+                emailInput.value = initialEmail;
+                emailWrap.classList.add('d-none');
+            }
+            setEndDatetimeVisibility(false, { preserveValue: false });
+            renderEventTypeOptions();
+            preview();
+
+            if (editEventId) {
+                applyEditModeUi();
                 try {
-                    const headers = { Accept: 'application/json' };
-                    const token = localStorage.getItem('accessToken') || '';
-                    if (token) headers.Authorization = `Bearer ${token}`;
-                    const res = await fetch(`${API_BASE_URL}/events/${editEventId}`, { headers });
-                    const data = await res.json().catch(() => ({}));
-                    if (!res.ok) { setFeedback(data.error || 'Không thể tải sự kiện.', 'error'); return; }
-                    const ev = data.event && typeof data.event === 'object' ? data.event : data;
-                    titleInput.value = ev.title || '';
-                    const startSource = ev.startTime || ev.start_time || ev.eventTime || ev.event_time || '';
-                    const endSource = ev.endTime || ev.end_time || '';
-                    startDatetimeInput.value = toDatetimeLocalValue(startSource);
-                    if (endSource && Number.isFinite(toTimestamp(endSource)) && toTimestamp(endSource) !== toTimestamp(startSource)) {
-                        endDatetimeInput.value = toDatetimeLocalValue(endSource);
-                        setEndDatetimeVisibility(true);
-                    } else {
-                        setEndDatetimeVisibility(false, { preserveValue: false });
-                    }
-                    locationInput.value = ev.address || '';
-                    priceInput.value = ev.price || '';
-                    onlineInput.checked = Boolean(ev.online);
-                    imageUrlInput.value = ev.imageUrl || ev.image_url || '';
-                    const content = ev.content || '';
-                    const lines = content.split('\n\n');
-                    descriptionInput.value = lines[0] || '';
-                    lines.forEach(line => {
-                        if (line.startsWith('Loại sự kiện: ')) typeInput.value = line.replace('Loại sự kiện: ', '');
-                        if (line.startsWith('Tags: ')) tagsInput.value = line.replace('Tags: ', '');
-                    });
-                    preview();
-                } catch { setFeedback('Không thể kết nối API.', 'error'); }
-            })();
-        }
+                    await loadExistingEvent();
+                } catch (error) {
+                    setFeedback(error?.message || 'Không thể tải sự kiện.', 'error');
+                    return;
+                }
+            }
+
+            try {
+                isSuperadmin = (await getSessionRole()) === 'SUPERADMIN';
+            } catch (_) {
+                isSuperadmin = false;
+            }
+            renderEventTypeAdminList();
+
+            try {
+                await loadEventTypes();
+            } catch (error) {
+                renderEventTypeOptions();
+                renderEventTypeAdminList();
+                setTypeAdminFeedback(error?.message || 'Không thể tải loại sự kiện.', 'error');
+            }
+        };
+
+        void init();
     })();
 </script>
 <script src="avatar-utils.js"></script>

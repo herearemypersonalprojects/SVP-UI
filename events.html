@@ -150,13 +150,17 @@
             const href = `event_detail.html?eventId=${eventId}`;
             const date = escapeHtml(formatDate(event.eventTime));
             const address = escapeHtml(event.address || (event.online ? 'Online' : 'Địa điểm cập nhật sau'));
+            const eventTypeName = String(event.eventTypeName || '').trim();
             const badge = escapeHtml(toBadge(event, isPast));
             const iconClass = isPast ? 'fa-regular fa-calendar-check' : 'fa fa-calendar-day';
+            const metaParts = [date];
+            if (eventTypeName) metaParts.push(`Loại: ${escapeHtml(eventTypeName)}`);
+            metaParts.push(address);
             return `
                 <li>
                     <div>
                         <a href="${href}"><i class="${iconClass} me-2 text-primary"></i>${title}</a>
-                        <div class="sv-meta">${date} • ${address}</div>
+                        <div class="sv-meta">${metaParts.join(' • ')}</div>
                     </div>
                     <span class="sv-badge">${badge}</span>
                 </li>

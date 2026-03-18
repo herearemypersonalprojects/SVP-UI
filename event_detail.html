@@ -101,6 +101,7 @@
                 <h2 id="event-detail-title" class="mb-3">Sự kiện</h2>
                 <div class="sv-event-meta-list mb-3">
                     <div class="sv-event-meta-item"><i class="fa-regular fa-clock text-primary"></i><span id="event-detail-time"></span></div>
+                    <div class="sv-event-meta-item"><i class="fa-solid fa-shapes text-primary"></i><span id="event-detail-type"></span></div>
                     <div class="sv-event-meta-item"><i class="fa-solid fa-location-dot text-primary"></i><span id="event-detail-address"></span></div>
                     <div class="sv-event-meta-item"><i class="fa-solid fa-ticket text-primary"></i><span id="event-detail-price"></span></div>
                     <div class="sv-event-meta-item"><i class="fa-regular fa-user text-primary"></i><span id="event-detail-host"></span></div>
@@ -141,12 +142,13 @@
         const heroContainer = document.getElementById('event-detail-hero-container');
         const titleEl = document.getElementById('event-detail-title');
         const timeEl = document.getElementById('event-detail-time');
+        const typeEl = document.getElementById('event-detail-type');
         const addressEl = document.getElementById('event-detail-address');
         const priceEl = document.getElementById('event-detail-price');
         const hostEl = document.getElementById('event-detail-host');
         const contentEl = document.getElementById('event-detail-content');
 
-        if (!loadingEl || !errorEl || !bodyEl || !heroContainer || !titleEl || !timeEl || !addressEl || !priceEl || !hostEl || !contentEl) {
+        if (!loadingEl || !errorEl || !bodyEl || !heroContainer || !titleEl || !timeEl || !typeEl || !addressEl || !priceEl || !hostEl || !contentEl) {
             return;
         }
 
@@ -189,8 +191,17 @@
             return safeAddress || 'Địa điểm sẽ cập nhật';
         };
 
+        const stripLegacyTypeLine = (content) => String(content || '')
+            .replace(/\r\n/g, '\n')
+            .split(/\n{2,}/)
+            .map((item) => item.trim())
+            .filter((item) => item && !/^Loại sự kiện:\s*/i.test(item))
+            .join('\n\n')
+            .trim();
+
         const toContentHtml = (content) => {
-            const safeText = escapeHtml(content || 'Nội dung sự kiện đang được cập nhật.');
+            const normalized = stripLegacyTypeLine(content) || 'Nội dung sự kiện đang được cập nhật.';
+            const safeText = escapeHtml(normalized);
             return safeText.replace(/\n/g, '<br>');
         };
 
@@ -265,6 +276,7 @@
 
             titleEl.textContent = title;
             timeEl.textContent = formatDateTime(event.eventTime);
+            typeEl.textContent = String(event.eventTypeName || '').trim() || 'Chưa phân loại';
             addressEl.textContent = toAddressLabel(Boolean(event.online), event.address);
             priceEl.textContent = toPriceLabel(event.price, Boolean(event.online));
             hostEl.textContent = hostName;

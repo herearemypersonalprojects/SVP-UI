@@ -595,6 +595,22 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+        const htmlEntityDecoder = document.createElement('textarea');
+        const decodeHtmlEntities = (value) => {
+            let text = String(value ?? '');
+            if (!text) {
+                return '';
+            }
+            for (let index = 0; index < 3; index += 1) {
+                htmlEntityDecoder.innerHTML = text;
+                const decoded = htmlEntityDecoder.value;
+                if (decoded === text) {
+                    break;
+                }
+                text = decoded;
+            }
+            return text;
+        };
 
         const formatDate = (isoDate) => {
             const parsed = new Date(isoDate);
@@ -650,15 +666,20 @@
             return `${base}/${value}`;
         };
 
-        const toPlainText = (html) => String(html ?? '')
-            .replace(/<[^>]+>/g, ' ')
-            .replace(/<[^>]*$/g, '')
-            .replace(/&nbsp;/g, ' ')
-            .replace(/&amp;/g, '&')
-            .replace(/&lt;/g, '<')
-            .replace(/&gt;/g, '>')
-            .replace(/\s+/g, ' ')
-            .trim();
+        const toPlainText = (html) => {
+            const decodedHtml = decodeHtmlEntities(html);
+            if (!decodedHtml) {
+                return '';
+            }
+
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(`<div data-root>${decodedHtml}</div>`, 'text/html');
+            const root = doc.body.querySelector('[data-root]');
+            return String(root?.textContent || decodedHtml)
+                .replace(/\u00a0/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        };
 
 
         const estimateReadTime = (contentHtml) => {
@@ -715,23 +736,35 @@
             return firstImage || DEFAULT_ARTICLE_COVER;
         };
 
-        const normalizePost = (post) => ({
-            postId: Number(post?.postId ?? post?.id ?? 0),
-            categoryId: Number(post?.categoryId ?? post?.category_id ?? 0),
-            isArticle: Boolean(post?.isArticle ?? post?.is_article ?? true),
-            status: post?.status ?? post?.postStatus ?? null,
-            title: post?.title || '',
-            contentHtml: post?.contentHtml || post?.content_html || post?.content || '',
-            coverImageUrl: post?.coverImageUrl || post?.cover_image_url || '',
-            createdAt: post?.createdAt || post?.created_at || new Date().toISOString(),
-            author: post?.author || {
-                userId: post?.userId ?? post?.user_id ?? null,
-                nickname: post?.nickname || post?.authorName || 'anonymous',
-                displayName: post?.authorDisplayName || post?.authorName || post?.nickname || 'Ẩn danh'
-            },
-            viewCount: Number(post?.viewCount ?? post?.views ?? post?.totalViews ?? 0),
-            likeCount: Number(post?.likeCount ?? post?.likes ?? post?.totalLikes ?? 0)
-        });
+        const normalizePost = (post) => {
+            const rawAuthor = post?.author || {};
+            return {
+                postId: Number(post?.postId ?? post?.id ?? 0),
+                categoryId: Number(post?.categoryId ?? post?.category_id ?? 0),
+                isArticle: Boolean(post?.isArticle ?? post?.is_article ?? true),
+                status: post?.status ?? post?.postStatus ?? null,
+                title: decodeHtmlEntities(post?.title || ''),
+                contentHtml: decodeHtmlEntities(post?.contentHtml || post?.content_html || post?.content || ''),
+                coverImageUrl: decodeHtmlEntities(post?.coverImageUrl || post?.cover_image_url || ''),
+                createdAt: post?.createdAt || post?.created_at || new Date().toISOString(),
+                author: {
+                    userId: rawAuthor.userId ?? rawAuthor.user_id ?? post?.userId ?? post?.user_id ?? null,
+                    nickname: decodeHtmlEntities(rawAuthor.nickname || post?.nickname || rawAuthor.authorName || post?.authorName || 'anonymous'),
+                    displayName: decodeHtmlEntities(
+                        rawAuthor.displayName
+                        || rawAuthor.display_name
+                        || post?.authorDisplayName
+                        || rawAuthor.authorName
+                        || post?.authorName
+                        || rawAuthor.nickname
+                        || post?.nickname
+                        || 'Ẩn danh'
+                    )
+                },
+                viewCount: Number(post?.viewCount ?? post?.views ?? post?.totalViews ?? 0),
+                likeCount: Number(post?.likeCount ?? post?.likes ?? post?.totalLikes ?? 0)
+            };
+        };
         const normalizeEvent = (event) => ({
             eventId: Number(event?.eventId ?? event?.id ?? 0),
             title: event?.title || 'Sự kiện mới',

@@ -739,6 +739,10 @@
                 setFeedback(`Đã tạo chủ đề #${postId || 'N/A'} thành công.`, 'success');
 
                 try {
+                    const responseAuthor = payload && typeof payload.author === 'object' ? payload.author : {};
+                    if (responseAuthor.displayName) {
+                        localStorage.setItem('userDisplayName', String(responseAuthor.displayName));
+                    }
                     localStorage.setItem('svp.latestSubmittedDiscussion', JSON.stringify({
                         postId,
                         categoryId,
@@ -747,8 +751,19 @@
                         createdAt: new Date().toISOString(),
                         status: String(payload.status || 'PUBLISHED'),
                         author: {
-                            displayName: localStorage.getItem('userDisplayName') || localStorage.getItem('userNickname') || email,
-                            nickname: localStorage.getItem('userNickname') || ''
+                            userId: String(responseAuthor.userId || '').trim(),
+                            displayName: String(
+                                responseAuthor.displayName
+                                || localStorage.getItem('userDisplayName')
+                                || localStorage.getItem('userNickname')
+                                || email
+                            ).trim(),
+                            nickname: String(
+                                responseAuthor.nickname
+                                || localStorage.getItem('userNickname')
+                                || ''
+                            ).trim(),
+                            avatarUrl: String(responseAuthor.avatarUrl || '').trim()
                         }
                     }));
                 } catch (_) {

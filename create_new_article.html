@@ -1049,12 +1049,31 @@
                     } else {
                         setFeedback(`Bài viết #${postId} đã được tạo với trạng thái PENDING. Hãy kiểm tra email ${email} và bấm magic link để xuất bản.${expiresAt ? ` (Hết hạn: ${expiresAt})` : ''}${debugLink}`, 'success');
                     }
-                    const authorName = (localStorage.getItem('userDisplayName') || localStorage.getItem('userNickname') || email || '').trim();
+                    const responseAuthor = payload && typeof payload.author === 'object' ? payload.author : {};
+                    if (responseAuthor.displayName) {
+                        localStorage.setItem('userDisplayName', String(responseAuthor.displayName));
+                    }
+                    const authorName = String(
+                        responseAuthor.displayName
+                        || localStorage.getItem('userDisplayName')
+                        || localStorage.getItem('userNickname')
+                        || email
+                        || ''
+                    ).trim();
                     const localPost = {
                         postId, categoryId, title, contentHtml,
                         createdAt: new Date().toISOString(),
                         status: status || 'PENDING',
-                        author: { displayName: authorName, nickname: (localStorage.getItem('userNickname') || '').trim() }
+                        author: {
+                            userId: String(responseAuthor.userId || '').trim(),
+                            displayName: authorName,
+                            nickname: String(
+                                responseAuthor.nickname
+                                || localStorage.getItem('userNickname')
+                                || ''
+                            ).trim(),
+                            avatarUrl: String(responseAuthor.avatarUrl || '').trim()
+                        }
                     };
                     try { localStorage.setItem('svp.latestSubmittedArticle', JSON.stringify(localPost)); } catch (_) {}
                     localStorage.setItem('userEmail', email);

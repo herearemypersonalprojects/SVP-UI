@@ -786,6 +786,11 @@
             return Number.isFinite(time) ? time : 0;
         };
 
+        const normalizeCount = (value) => {
+            const count = Number(value);
+            return Number.isFinite(count) && count >= 0 ? Math.floor(count) : 0;
+        };
+
         const toCommentId = (value) => {
             const id = Number(value);
             return Number.isFinite(id) ? id : 0;
@@ -1009,8 +1014,10 @@
                 authorNickname: String(author.nickname || ''),
                 authorUserId: String(author.userId || ''),
                 authorAvatarUrl: String(author.avatarUrl || author.avatar_url || post?.authorAvatarUrl || post?.author_avatar_url || post?.avatarUrl || post?.avatar_url || ''),
-                createdAt: String(post?.createdAt || ''),
-                updatedAt: String(post?.updatedAt || post?.createdAt || ''),
+                createdAt: String(post?.createdAt || post?.created_at || ''),
+                updatedAt: String(post?.updatedAt || post?.updated_at || post?.createdAt || post?.created_at || ''),
+                viewCount: normalizeCount(post?.viewCount ?? post?.view_count),
+                commentCount: normalizeCount(post?.commentCount ?? post?.comment_count),
                 contentHtml: postContentHtml,
                 imageUrls: collectImageUrls(post?.imageUrl || post?.image_url || '', postContentHtml),
                 comments: comments.map((comment) => normalizeApiComment(comment))
@@ -1712,8 +1719,8 @@
             const totalReplies = apiComments.length + localReplies.length;
 
             const metrics = updateThreadMetrics(thread.threadId, (prev) => ({
-                views: prev.views + (thread.didTrackView === false ? 0 : 1),
-                replies: Math.max(prev.replies, totalReplies),
+                views: Math.max(prev.views, thread.viewCount),
+                replies: Math.max(prev.replies, thread.commentCount, totalReplies),
                 lastCommentAt: prev.lastCommentAt || thread.updatedAt || thread.createdAt
             }));
 

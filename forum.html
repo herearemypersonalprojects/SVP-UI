@@ -350,6 +350,11 @@
             return Number.isFinite(time) ? time : 0;
         };
 
+        const normalizeCount = (value) => {
+            const count = Number(value);
+            return Number.isFinite(count) && count >= 0 ? Math.floor(count) : 0;
+        };
+
         const formatDateTime = (value) => {
             const time = toMillis(value);
             if (!time) return 'Không rõ thời gian';
@@ -382,21 +387,29 @@
 
         const metricStore = loadMetricStore();
 
-        const getMetrics = (threadId) => {
-            const key = String(threadId);
+        const getMetrics = (thread) => {
+            const key = String(thread?.threadId || thread || '');
             const raw = metricStore[key] && typeof metricStore[key] === 'object' ? metricStore[key] : {};
-            const replies = Number(raw.replies || 0);
-            const views = Number(raw.views || 0);
-            const lastCommentAt = raw.lastCommentAt ? String(raw.lastCommentAt) : '';
+            const replies = Math.max(
+                normalizeCount(thread?.replyCount ?? thread?.commentCount),
+                normalizeCount(raw.replies)
+            );
+            const views = Math.max(
+                normalizeCount(thread?.viewCount ?? thread?.views),
+                normalizeCount(raw.views)
+            );
+            const lastCommentAt = raw.lastCommentAt
+                ? String(raw.lastCommentAt)
+                : String(thread?.lastActivityAt || '');
             return {
-                replies: Number.isFinite(replies) && replies >= 0 ? Math.floor(replies) : 0,
-                views: Number.isFinite(views) && views >= 0 ? Math.floor(views) : 0,
+                replies,
+                views,
                 lastCommentAt
             };
         };
 
         const popularScore = (thread) => {
-            const metrics = getMetrics(thread.threadId);
+            const metrics = getMetrics(thread);
             const recency = toMillis(thread.createdAt) ? Math.max(0, (Date.now() - toMillis(thread.createdAt)) / 3600000) : 999;
             const freshnessBoost = recency < 72 ? (72 - recency) / 6 : 0;
             return metrics.replies * 5 + metrics.views + freshnessBoost;
@@ -415,7 +428,10 @@
                 authorName,
                 authorNickname: String(author.nickname || ''),
                 authorUserId: String(author.userId || ''),
+                viewCount: normalizeCount(post?.viewCount ?? post?.view_count),
+                replyCount: normalizeCount(post?.commentCount ?? post?.comment_count),
                 createdAt: String(post?.createdAt || ''),
+                lastActivityAt: String(post?.updatedAt || post?.updated_at || post?.createdAt || ''),
                 excerpt: excerptFromHtml(post?.contentHtml || '', 180)
             };
         };
@@ -523,8 +539,8 @@
             }
 
             listEl.innerHTML = items.map((thread) => {
-                const metrics = getMetrics(thread.threadId);
-                const lastActive = metrics.lastCommentAt || thread.createdAt;
+                const metrics = getMetrics(thread);
+                const lastActive = metrics.lastCommentAt || thread.lastActivityAt || thread.createdAt;
                 const profileHref = thread.authorNickname
                     ? `profile.html?nickname=${encodeURIComponent(thread.authorNickname)}`
                     : (thread.authorUserId ? `profile.html?userId=${encodeURIComponent(thread.authorUserId)}` : '');
@@ -572,8 +588,8 @@
 
         const renderRightPanels = (threads) => {
             const totalThreads = threads.length;
-            const totalReplies = threads.reduce((sum, thread) => sum + getMetrics(thread.threadId).replies, 0);
-            const totalViews = threads.reduce((sum, thread) => sum + getMetrics(thread.threadId).views, 0);
+            const totalReplies = threads.reduce((sum, thread) => sum + getMetrics(thread).replies, 0);
+            const totalViews = threads.reduce((sum, thread) => sum + getMetrics(thread).views, 0);
             const latestTime = threads.reduce((max, thread) => Math.max(max, toMillis(thread.createdAt)), 0);
 
             kpisEl.innerHTML = `
@@ -597,7 +613,7 @@
                 trendingEl.innerHTML = '<li><div class="sv-meta">Chưa có chủ đề nổi bật.</div></li>';
             } else {
                 trendingEl.innerHTML = trending.map((thread) => {
-                    const metrics = getMetrics(thread.threadId);
+                    const metrics = getMetrics(thread);
                     return `
                         <li>
                             <div>

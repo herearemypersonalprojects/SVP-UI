@@ -338,11 +338,56 @@
         const refreshCoverPreview = () => {
             if (pendingCoverPreviewUrl) {
                 coverPreview.style.display = 'block';
-                coverPreview.style.backgroundImage = `url('${pendingCoverPreviewUrl}')`;
+                coverPreview.style.backgroundImage = `url("${pendingCoverPreviewUrl}")`;
+                return;
+            }
+            const remoteCoverUrl = sanitizeUrl(coverUrlInput.value);
+            if (remoteCoverUrl) {
+                coverPreview.style.display = 'block';
+                coverPreview.style.backgroundImage = `url("${encodeURI(remoteCoverUrl)}")`;
                 return;
             }
             hideCoverPreview();
         };
+
+        const REMOTE_COVER_URL_DIRECT_STATUS = 'URL ảnh hợp lệ. Hệ thống sẽ lưu trực tiếp URL này.';
+
+        const verifyRemoteImageUrl = (url) => new Promise((resolve, reject) => {
+            const safeUrl = sanitizeUrl(url);
+            if (!safeUrl) {
+                reject(new Error('URL ảnh không hợp lệ.'));
+                return;
+            }
+
+            const image = new Image();
+            let settled = false;
+            const cleanup = () => {
+                image.onload = null;
+                image.onerror = null;
+            };
+            const finish = (callback) => {
+                if (settled) {
+                    return;
+                }
+                settled = true;
+                window.clearTimeout(timeoutId);
+                cleanup();
+                callback();
+            };
+            const timeoutId = window.setTimeout(() => {
+                finish(() => reject(new Error('Không thể hiển thị ảnh từ URL.')));
+            }, 10000);
+
+            image.onload = () => {
+                finish(() => resolve(true));
+            };
+            image.onerror = () => {
+                finish(() => reject(new Error('Không thể hiển thị ảnh từ URL.')));
+            };
+            image.decoding = 'async';
+            image.referrerPolicy = 'no-referrer';
+            image.src = safeUrl;
+        });
 
         const imageExtensionForMime = (mimeType) => {
             const normalized = (mimeType || '').toLowerCase();
@@ -353,43 +398,23 @@
             return 'jpg';
         };
 
-        const inferFileNameFromUrl = (rawUrl, mimeType) => {
-            let baseName = 'discussion-cover';
-            try {
-                const parsed = new URL(rawUrl);
-                const path = parsed.pathname || '';
-                const lastSegment = decodeURIComponent(path.split('/').filter(Boolean).pop() || '');
-                if (lastSegment) {
-                    baseName = lastSegment.replace(/\.[^/.]+$/, '') || baseName;
-                }
-            } catch (_) {
-            }
-            return `${baseName}.${imageExtensionForMime(mimeType)}`;
-        };
-
-        const loadCoverFromUrlToPendingFile = async (url, statusPrefix) => {
+        const verifyRemoteCoverUrl = async (url, statusPrefix, successStatus) => {
             const safeUrl = sanitizeUrl(url);
             if (!safeUrl) return false;
             const currentSeq = ++coverUrlResolveSeq;
             isPreparingCoverFromUrl = true;
-            setCoverUploadStatus(statusPrefix || 'Đang tải ảnh từ URL...', 'info');
+            setCoverUploadStatus(statusPrefix || 'Đang kiểm tra URL ảnh...', 'info');
             try {
-                const response = await fetch(safeUrl, { method: 'GET', mode: 'cors', cache: 'no-store' });
-                if (!response.ok) throw new Error(`Không thể tải ảnh từ URL (${response.status}).`);
-                const blob = await response.blob();
-                const mimeType = (blob.type || '').toLowerCase();
-                if (!mimeType.startsWith('image/')) throw new Error('URL không trả về dữ liệu ảnh hợp lệ.');
+                await verifyRemoteImageUrl(safeUrl);
                 if (currentSeq !== coverUrlResolveSeq) return false;
 
-                clearPendingCoverPreview();
-                pendingCoverPreviewUrl = URL.createObjectURL(blob);
-                pendingCoverFile = new File([blob], inferFileNameFromUrl(safeUrl, mimeType), { type: mimeType || 'application/octet-stream' });
                 lastResolvedCoverUrl = safeUrl;
                 refreshCoverPreview();
-                setCoverUploadStatus('Ảnh URL đã được tải cục bộ. Ảnh sẽ được upload khi bấm "Tạo chủ đề mới".', 'info');
+                setCoverUploadStatus(successStatus || REMOTE_COVER_URL_DIRECT_STATUS, 'info');
                 return true;
             } catch (error) {
                 if (currentSeq !== coverUrlResolveSeq) return false;
+                lastResolvedCoverUrl = '';
                 throw error;
             } finally {
                 if (currentSeq === coverUrlResolveSeq) {
@@ -580,18 +605,18 @@
                 setCoverUploadStatus('', 'info');
                 return;
             }
-            if (pendingCoverFile && safeUrl === lastResolvedCoverUrl) {
+            if (!pendingCoverFile && safeUrl === lastResolvedCoverUrl) {
                 refreshCoverPreview();
-                setCoverUploadStatus('Ảnh URL đã được tải cục bộ. Ảnh sẽ được upload khi bấm "Tạo chủ đề mới".', 'info');
+                setCoverUploadStatus(REMOTE_COVER_URL_DIRECT_STATUS, 'info');
                 return;
             }
             clearPendingCoverFile();
             refreshCoverPreview();
             coverUrlResolveTimer = window.setTimeout(async () => {
                 try {
-                    await loadCoverFromUrlToPendingFile(safeUrl, 'Đang tải ảnh từ URL về cục bộ...');
+                    await verifyRemoteCoverUrl(safeUrl, 'Đang kiểm tra URL ảnh...');
                 } catch (_) {
-                    setCoverUploadStatus('Không thể tải ảnh từ URL (có thể do CORS hoặc URL không hợp lệ). Vui lòng tải ảnh từ máy.', 'error');
+                    setCoverUploadStatus('Không thể tải ảnh từ URL. Vui lòng kiểm tra lại URL hoặc tải ảnh từ máy.', 'error');
                 }
             }, 250);
         });
@@ -630,7 +655,7 @@
                 return;
             }
             if (isPreparingCoverFromUrl) {
-                setFeedback('Ảnh từ URL đang được tải cục bộ. Vui lòng chờ xong rồi đăng.', 'error');
+                setFeedback('URL ảnh đang được kiểm tra. Vui lòng chờ xong rồi đăng.', 'error');
                 return;
             }
 
@@ -690,10 +715,14 @@
                 const inputCoverUrl = sanitizeUrl(coverUrlInput.value);
                 if (inputCoverUrl && !pendingCoverFile) {
                     try {
-                        await loadCoverFromUrlToPendingFile(inputCoverUrl, 'Đang tải ảnh URL trước khi upload...');
+                        await verifyRemoteCoverUrl(
+                            inputCoverUrl,
+                            'Đang kiểm tra URL ảnh trước khi đăng...',
+                            REMOTE_COVER_URL_DIRECT_STATUS
+                        );
                     } catch (_) {
-                        setCoverUploadStatus('Không thể tải ảnh từ URL (có thể do CORS hoặc URL không hợp lệ). Vui lòng tải ảnh từ máy.', 'error');
-                        setFeedback('Không thể chuẩn bị ảnh URL để upload.', 'error');
+                        setCoverUploadStatus('Không thể tải ảnh từ URL. Vui lòng kiểm tra lại URL hoặc tải ảnh từ máy.', 'error');
+                        setFeedback('URL ảnh không hợp lệ hoặc không thể hiển thị.', 'error');
                         return;
                     }
                 }

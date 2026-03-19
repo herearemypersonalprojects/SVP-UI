@@ -76,6 +76,10 @@
             color: #475569;
             margin-top: .55rem;
         }
+        .sv-toolbar__meta-note {
+            color: #64748b;
+            font-style: italic;
+        }
         .sv-toolbar__hint {
             margin-top: .45rem;
             font-size: .84rem;
@@ -144,20 +148,36 @@
             padding: .8rem 1rem;
         }
         .sv-marker {
-            width: 28px;
-            height: 28px;
+            width: 34px;
+            height: 34px;
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #fff;
-            border: 2px solid rgba(255, 255, 255, .92);
-            box-shadow: 0 6px 12px rgba(15, 23, 42, .3);
-            font-size: 12px;
+            position: relative;
+            background: linear-gradient(180deg, #5ba1f8 0%, #347fdb 56%, #2c69c5 100%);
+            border: 2px solid rgba(255, 255, 255, .96);
+            box-shadow: 0 10px 22px rgba(30, 64, 175, .32), inset 0 -2px 4px rgba(15, 23, 42, .16);
+            transition: transform .18s ease, box-shadow .18s ease;
+        }
+        .sv-marker::before {
+            content: '';
+            position: absolute;
+            inset: 3px;
+            border-radius: 50%;
+            background: linear-gradient(180deg, rgba(255, 255, 255, .24), rgba(255, 255, 255, 0));
+        }
+        .sv-marker__emblem {
+            width: 18px;
+            height: 18px;
+            display: block;
+            position: relative;
+            z-index: 1;
+            filter: drop-shadow(0 1px 0 rgba(120, 53, 15, .35));
         }
         .sv-marker--active {
-            transform: scale(1.2);
-            box-shadow: 0 0 0 4px rgba(13, 110, 253, .24);
+            transform: scale(1.16);
+            box-shadow: 0 0 0 5px rgba(59, 130, 246, .24), 0 14px 28px rgba(30, 64, 175, .38), inset 0 -2px 4px rgba(15, 23, 42, .12);
         }
         .leaflet-popup-content {
             margin: 10px 12px;
@@ -351,6 +371,138 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script>
     (() => {
+        const DEFAULT_PARIS_POI = Object.freeze({
+            reference: 'PA00086250',
+            name: 'Nhà thờ Đức Bà',
+            lat: 48.85293687448671,
+            lon: 2.3500514067889,
+            zoom: 15
+        });
+        const INITIAL_PARIS_POIS = Object.freeze([
+            {
+                reference: 'PA00086250',
+                name_vn: 'Nhà thờ Đức Bà',
+                address_vn: 'Quận 4 Paris',
+                category_vn: 'nhà thờ lớn',
+                domaine_vn: 'kiến trúc tôn giáo',
+                commune_forme_index: 'Paris 4e Arrondissement',
+                lat: 48.85293687448671,
+                lon: 2.3500514067889,
+                score: 0.875,
+                story_vn: 'Biểu tượng Gothic nổi tiếng nhất của Paris trên đảo Ile de la Cite.'
+            },
+            {
+                reference: 'PA75040011',
+                name_vn: 'Nhà xứ của nhà thờ chính tòa Đức Bà Paris',
+                address_vn: '6 quảng trường nhà thờ Đức Bà, Quận 4 Paris',
+                category_vn: 'nhà xứ',
+                commune_forme_index: 'Paris 4e Arrondissement',
+                lat: 48.85293687448671,
+                lon: 2.3500514067889,
+                score: 0.515
+            },
+            {
+                reference: 'PA00086255',
+                name_vn: 'Quán rượu (cũ)',
+                address_vn: '24 rue Chanoinesse, Quận 4 Paris',
+                category_vn: 'quán rượu',
+                commune_forme_index: 'Paris 4e Arrondissement',
+                lat: 48.8542052419249,
+                lon: 2.35027163211386,
+                score: 0.365
+            },
+            {
+                reference: 'PA00088459',
+                name_vn: 'Tòa nhà',
+                address_vn: '9 quai de Montebello, Quận 5 Paris',
+                category_vn: 'tòa nhà',
+                commune_forme_index: 'Paris 5e Arrondissement',
+                lat: 48.8515867036297,
+                lon: 2.34972369834571,
+                score: 0.385
+            },
+            {
+                reference: 'PA75040001',
+                name_vn: 'Immeuble (nhà của Chantres, sau đó là khách sạn de la Motte-Montgoubert)',
+                address_vn: '12 rue Chanoinesse ; 2, 4, 6 rue des Chantres ; 1, 3 rue des Ursins, Quận 4 Paris',
+                category_vn: 'tòa nhà',
+                commune_forme_index: 'Paris 4e Arrondissement',
+                lat: 48.8538019282703,
+                lon: 2.3513474639419205,
+                score: 0.485
+            },
+            {
+                reference: 'PA00088449',
+                name_vn: 'Tòa nhà',
+                address_vn: '1, 3 rue des Grands-Degrés ; 2 rue Maître-Albert, Quận 5 Paris',
+                category_vn: 'tòa nhà',
+                commune_forme_index: 'Paris 5e Arrondissement',
+                lat: 48.8512240753574,
+                lon: 2.35007727681872,
+                score: 0.435
+            },
+            {
+                reference: 'PA00086251',
+                name_vn: 'Nhà nguyện cũ Saint-Aignan',
+                address_vn: '24 rue Chanoinesse ; 19 rue des Ursins, Quận 4 Paris',
+                category_vn: 'nhà nguyện',
+                commune_forme_index: 'Paris 4e Arrondissement',
+                lat: 48.8546046063607,
+                lon: 2.35061320565479,
+                score: 0.425
+            },
+            {
+                reference: 'PA00088441',
+                name_vn: 'Tòa nhà',
+                address_vn: "11 rue de la Bûcherie ; 5, 7 rue de l'Hôtel-Colbert, Quận 5, Paris",
+                category_vn: 'tòa nhà',
+                commune_forme_index: 'Paris 5e Arrondissement',
+                lat: 48.8515844593241,
+                lon: 2.34876861400491,
+                score: 0.365
+            },
+            {
+                reference: 'PA75040010',
+                name_vn: 'L’Hôtel-Dieu',
+                address_vn: '1 quảng trường nhà thờ Đức Bà, Quận 4 Paris',
+                category_vn: 'bệnh viện',
+                commune_forme_index: 'Paris 4e Arrondissement',
+                lat: 48.85465420883746,
+                lon: 2.348824845593567,
+                score: 0.6475
+            },
+            {
+                reference: 'PA00088426',
+                name_vn: 'Cựu khoa y, hiện nay là Nhà sinh viên',
+                address_vn: '13, 15 rue de la Bûcherie, Quận 5 Paris',
+                category_vn: 'đại học',
+                commune_forme_index: 'Paris 5e Arrondissement',
+                lat: 48.8517424471389,
+                lon: 2.34831026859953,
+                score: 0.435
+            },
+            {
+                reference: 'PA00088399',
+                name_vn: 'Cửa hàng nhỏ',
+                address_vn: '6 rue Frédéric-Sauton, Quận 5 Paris',
+                category_vn: 'cửa hàng thương mại',
+                commune_forme_index: 'Paris 5e Arrondissement',
+                lat: 48.8510615828358,
+                lon: 2.34908023803541,
+                score: 0.455
+            },
+            {
+                reference: 'PA00088435',
+                name_vn: 'Khách sạn de Nesmond (cũ)',
+                address_vn: '55, 57 quai de la Tournelle, Quận 5 Paris',
+                category_vn: 'khách sạn',
+                commune_forme_index: 'Paris 5e Arrondissement',
+                lat: 48.8508016739002,
+                lon: 2.35157981005839,
+                score: 0.365
+            }
+        ]);
+
         const map = L.map('parisMap', {
             preferCanvas: true,
             zoomControl: true,
@@ -359,7 +511,7 @@
             markerZoomAnimation: false,
             minZoom: 10,
             maxZoom: 19
-        }).setView([48.8566, 2.3522], 12);
+        }).setView([DEFAULT_PARIS_POI.lat, DEFAULT_PARIS_POI.lon], DEFAULT_PARIS_POI.zoom);
 
         // ========= NEW: Robust basemap failover + diagnostics =========
         const tileWarningEl = document.getElementById('tileWarning');
@@ -499,6 +651,8 @@
         let activeQueryTerms = [];
         let filterFrameId = 0;
         let pendingFilterRequest = null;
+        let fullDatasetPhase = 'bootstrap';
+        let fullDatasetPromise = null;
         const markerCache = new Map();
         const iconCache = new Map();
 
@@ -684,6 +838,64 @@
             return parts.length ? parts[parts.length - 1] : address;
         }
 
+        function getDatasetStatusNoteHtml() {
+            if (fullDatasetPhase === 'bootstrap') {
+                return ' <span class="sv-toolbar__meta-note">Đang nạp toàn bộ dữ liệu Paris trong nền...</span>';
+            }
+            if (fullDatasetPhase === 'error') {
+                return ' <span class="sv-toolbar__meta-note">Hiện chỉ giữ bản xem nhanh quanh Nhà thờ Đức Bà Paris vì chưa nạp được dữ liệu đầy đủ.</span>';
+            }
+            return '';
+        }
+
+        function getBootstrapDetailText(item) {
+            const summary = item.description_vn || item.story_vn;
+            if (summary) return summary;
+            if (fullDatasetPhase === 'bootstrap') {
+                return 'Đang nạp nhanh dữ liệu chi tiết quanh Nhà thờ Đức Bà Paris...';
+            }
+            if (fullDatasetPhase === 'error') {
+                return 'Hiện chỉ có dữ liệu xem nhanh cho khu vực gần Nhà thờ Đức Bà Paris.';
+            }
+            return 'Chưa có mô tả.';
+        }
+
+        function prepareMonuments(rawItems) {
+            return (Array.isArray(rawItems) ? rawItems : [])
+                .map((item) => {
+                    const lat = Number(item.lat);
+                    const lon = Number(item.lon);
+                    return {
+                        ...item,
+                        __lat: lat,
+                        __lon: lon,
+                        __searchBlob: '',
+                        __stars: 1,
+                        __categoryGroup: 'Khác',
+                        __areaLabel: '',
+                        __areaKey: '',
+                        __sortName: '',
+                        __markerKey: ''
+                    };
+                })
+                .filter((item) => Number.isFinite(item.__lat) && Number.isFinite(item.__lon))
+                .map((item) => {
+                    const areaLabel = resolveAreaLabel(item);
+                    const refKey = (item.reference || '').toString().trim().toLowerCase();
+                    const fallbackKey = `${item.__lat.toFixed(6)}|${item.__lon.toFixed(6)}|${normalizeText(item.name_vn)}`;
+                    return {
+                        ...item,
+                        __searchBlob: getSearchBlob(item),
+                        __stars: getStarCount(item.score),
+                        __categoryGroup: mapCategoryToGroup(item.category_vn),
+                        __areaLabel: areaLabel,
+                        __areaKey: normalizeAreaKey(areaLabel),
+                        __sortName: normalizeText(item.name_vn),
+                        __markerKey: refKey ? `ref:${refKey}` : `geo:${fallbackKey}`
+                    };
+                });
+        }
+
         function buildFilterOptions() {
             const areaMap = new Map();
             allMonuments.forEach((item) => {
@@ -846,23 +1058,34 @@
             return { icon: 'fa-landmark', color: '#475569', label: 'Di tích' };
         }
 
-        function markerHtml(iconClass, color, isActive) {
+        function markerEmblemSvg() {
+            return `
+                <svg class="sv-marker__emblem" viewBox="0 0 64 64" aria-hidden="true">
+                    <path fill="#ffd86b" d="M32 10c4 0 7 4 7 9 0 5-3 8-7 11-4-3-7-6-7-11 0-5 3-9 7-9Z"/>
+                    <path fill="#ffc247" d="M18 23c5 0 9 3 12 9-4 3-8 5-13 5-5 0-8-3-8-7 0-4 4-7 9-7Z"/>
+                    <path fill="#ffc247" d="M46 23c5 0 9 3 9 7 0 4-3 7-8 7-5 0-9-2-13-5 3-6 7-9 12-9Z"/>
+                    <path fill="#f59e0b" d="M29 31h6c0 6 2 10 8 14l-3 6c-4-1-6-3-8-6-2 3-4 5-8 6l-3-6c6-4 8-8 8-14Z"/>
+                    <circle cx="32" cy="35" r="4" fill="#fff0a8"/>
+                </svg>
+            `;
+        }
+
+        function markerHtml(isActive) {
             const activeClass = isActive ? ' sv-marker--active' : '';
-            return `<div class="sv-marker${activeClass}" style="background:${color};"><i class="fa-solid ${iconClass}"></i></div>`;
+            return `<div class="sv-marker${activeClass}">${markerEmblemSvg()}</div>`;
         }
 
         function createIcon(category, isActive = false) {
-            const visual = getCategoryVisual(category);
-            const cacheKey = `${visual.icon}|${visual.color}|${isActive ? 1 : 0}`;
+            const cacheKey = `poi|${isActive ? 1 : 0}`;
             if (iconCache.has(cacheKey)) {
                 return iconCache.get(cacheKey);
             }
             const icon = L.divIcon({
                 className: '',
-                html: markerHtml(visual.icon, visual.color, isActive),
-                iconSize: [28, 28],
-                iconAnchor: [14, 14],
-                popupAnchor: [0, -12]
+                html: markerHtml(isActive),
+                iconSize: [34, 34],
+                iconAnchor: [17, 17],
+                popupAnchor: [0, -14]
             });
             iconCache.set(cacheKey, icon);
             return icon;
@@ -921,7 +1144,7 @@
             const addressHtml = highlightText(item.address_vn || 'Chưa có địa chỉ', terms);
             const categoryHtml = highlightText(item.category_vn || 'Danh mục chưa rõ', terms);
             const domainHtml = highlightText(item.domaine_vn || 'Chưa có lĩnh vực', terms);
-            const descriptionHtml = highlightText(item.description_vn || item.story_vn || 'Chưa có mô tả.', terms);
+            const descriptionHtml = highlightText(getBootstrapDetailText(item), terms);
 
             detailBody.innerHTML = `
             <img class="sv-detail-image" src="${imageSrc}" alt="${safeAlt}" loading="lazy" decoding="async" fetchpriority="low"
@@ -1023,10 +1246,11 @@
             cluster.addLayers(nextMarkers);
 
             countEl.textContent = `${markers.length} địa điểm`;
+            const datasetStatusNote = getDatasetStatusNoteHtml();
             if (activeQuery) {
-                resultMeta.innerHTML = `Hiển thị ${monuments.length} / ${allMonuments.length} POI. Từ khóa: <strong>${escapeHtml(activeQuery)}</strong>.`;
+                resultMeta.innerHTML = `Hiển thị ${monuments.length} / ${allMonuments.length} POI. Từ khóa: <strong>${escapeHtml(activeQuery)}</strong>.${datasetStatusNote}`;
             } else {
-                resultMeta.textContent = `Hiển thị ${monuments.length} / ${allMonuments.length} POI theo bộ lọc hiện tại.`;
+                resultMeta.innerHTML = `Hiển thị ${monuments.length} / ${allMonuments.length} POI theo bộ lọc hiện tại.${datasetStatusNote}`;
             }
 
             map.invalidateSize();
@@ -1099,9 +1323,11 @@
             const filterState = getUrlFilterState();
             const target = getUrlTarget();
             const hasTarget = Boolean(target.reference || target.name);
-            const existsInAll = hasTarget && allMonuments.some((m) =>
-                (target.reference && (m.reference || '') === target.reference) ||
-                (target.name && normalizeText(m.name_vn) === normalizeText(target.name))
+            const hasActiveFilter = Boolean(filterState.query || filterState.category || filterState.area || filterState.stars);
+            const effectiveTarget = hasTarget ? target : (hasActiveFilter ? null : DEFAULT_PARIS_POI);
+            const existsInAll = Boolean(effectiveTarget) && allMonuments.some((m) =>
+                (effectiveTarget.reference && (m.reference || '') === effectiveTarget.reference) ||
+                (effectiveTarget.name && normalizeText(m.name_vn) === normalizeText(effectiveTarget.name))
             );
 
             const previousSuppress = suppressUrlSync;
@@ -1112,7 +1338,7 @@
             setAreaFilterValueSafe(filterState.area);
             setSelectValueSafe(starFilter, filterState.stars);
 
-            applyFilters(false, existsInAll ? target : null, {
+            applyFilters(false, existsInAll ? effectiveTarget : null, {
                 historyMode: 'replace',
                 moveMap: existsInAll,
                 skipFitBounds: existsInAll
@@ -1123,64 +1349,80 @@
             setTimeout(() => map.invalidateSize(), 100);
         }
 
-        async function loadMonuments() {
-            try {
-                const response = await fetch('assets/paris/monuments.json', { cache: 'force-cache' });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        function setMonumentDataset(rawItems) {
+            allMonuments = prepareMonuments(rawItems);
+            sortedMonuments = allMonuments
+                .slice()
+                .sort((a, b) => (a.__sortName || '').localeCompare((b.__sortName || ''), 'vi'));
+        }
 
-                const all = await response.json();
-
-                allMonuments = all
-                    .map((item) => {
-                        const lat = Number(item.lat);
-                        const lon = Number(item.lon);
-                        return {
-                            ...item,
-                            __lat: lat,
-                            __lon: lon,
-                            __searchBlob: '',
-                            __stars: 1,
-                            __categoryGroup: 'Khác',
-                            __areaLabel: '',
-                            __areaKey: '',
-                            __sortName: '',
-                            __markerKey: ''
-                        };
-                    })
-                    .filter((item) => Number.isFinite(item.__lat) && Number.isFinite(item.__lon))
-                    .map((item) => {
-                        const areaLabel = resolveAreaLabel(item);
-                        const refKey = (item.reference || '').toString().trim().toLowerCase();
-                        const fallbackKey = `${item.__lat.toFixed(6)}|${item.__lon.toFixed(6)}|${normalizeText(item.name_vn)}`;
-                        return {
-                            ...item,
-                            __searchBlob: getSearchBlob(item),
-                            __stars: getStarCount(item.score),
-                            __categoryGroup: mapCategoryToGroup(item.category_vn),
-                            __areaLabel: areaLabel,
-                            __areaKey: normalizeAreaKey(areaLabel),
-                            __sortName: normalizeText(item.name_vn),
-                            __markerKey: refKey ? `ref:${refKey}` : `geo:${fallbackKey}`
-                        };
-                    });
-                sortedMonuments = allMonuments
-                    .slice()
-                    .sort((a, b) => (a.__sortName || '').localeCompare((b.__sortName || ''), 'vi'));
-
-                if (!allMonuments.length) {
-                    detailBody.innerHTML = '<div class="sv-empty">Không tìm thấy tọa độ hợp lệ trong dữ liệu.</div>';
-                    resultMeta.textContent = 'Không có dữ liệu hợp lệ.';
-                    return;
-                }
-
-                buildFilterOptions();
-                syncFromUrl();
-
-                setTimeout(() => map.invalidateSize(), 220);
-            } catch (error) {
-                detailBody.innerHTML = `<div class="sv-empty">Không thể tải dữ liệu di tích: ${error.message}</div>`;
-                resultMeta.textContent = `Lỗi tải dữ liệu: ${error.message}`;
+        function bootstrapInitialMonuments() {
+            setMonumentDataset(INITIAL_PARIS_POIS);
+            if (!allMonuments.length) {
+                detailBody.innerHTML = '<div class="sv-empty">Không có dữ liệu khởi động cho khu Nhà thờ Đức Bà Paris.</div>';
+                resultMeta.textContent = 'Không có dữ liệu khởi động.';
+                return;
             }
+
+            buildFilterOptions();
+            syncFromUrl();
+            setTimeout(() => map.invalidateSize(), 80);
+        }
+
+        async function loadFullMonuments() {
+            if (fullDatasetPromise) return fullDatasetPromise;
+            fullDatasetPromise = (async () => {
+                try {
+                    const uiState = {
+                        query: String(searchInput.value || ''),
+                        category: String(categoryFilter.value || ''),
+                        area: String(areaFilter.value || ''),
+                        stars: String(starFilter.value || '')
+                    };
+                    const currentTarget = monuments[currentIndex]
+                        ? {
+                            reference: monuments[currentIndex].reference || '',
+                            name: monuments[currentIndex].name_vn || ''
+                        }
+                        : null;
+                    const response = await fetch('assets/paris/monuments.json', { cache: 'force-cache' });
+                    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+
+                    const all = await response.json();
+                    setMonumentDataset(all);
+
+                    if (!allMonuments.length) {
+                        throw new Error('Không tìm thấy tọa độ hợp lệ trong dữ liệu đầy đủ.');
+                    }
+
+                    fullDatasetPhase = 'ready';
+                    buildFilterOptions();
+                    searchInput.value = uiState.query;
+                    setSelectValueSafe(categoryFilter, uiState.category);
+                    setAreaFilterValueSafe(uiState.area);
+                    setSelectValueSafe(starFilter, uiState.stars);
+                    applyFilters(true, currentTarget, {
+                        historyMode: 'replace',
+                        moveMap: false,
+                        skipFitBounds: Boolean(currentTarget)
+                    });
+                    setTimeout(() => map.invalidateSize(), 220);
+                } catch (error) {
+                    fullDatasetPhase = 'error';
+                    console.warn('Cannot load full Paris monuments dataset:', error);
+                    applyFilters(true, null, { historyMode: 'replace', moveMap: false, skipFitBounds: true });
+                }
+            })();
+            return fullDatasetPromise;
+        }
+
+        function scheduleFullMonumentsLoad() {
+            const start = () => { void loadFullMonuments(); };
+            if (typeof window.requestIdleCallback === 'function') {
+                window.requestIdleCallback(() => start(), { timeout: 1200 });
+                return;
+            }
+            setTimeout(start, 350);
         }
 
         searchInput.addEventListener('keydown', (event) => {
@@ -1194,7 +1436,8 @@
         starFilter.addEventListener('change', () => scheduleApplyFilters(true, null, { historyMode: 'replace' }));
         window.addEventListener('popstate', () => syncFromUrl());
 
-        loadMonuments();
+        bootstrapInitialMonuments();
+        scheduleFullMonumentsLoad();
     })();
 </script>
 <script src="config.js"></script>

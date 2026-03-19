@@ -415,26 +415,38 @@
             return metrics.replies * 5 + metrics.views + freshnessBoost;
         };
 
-        const normalizeApiThread = (post) => {
-            const categoryId = Number(post?.categoryId || 0);
-            const categoryName = CATEGORY_MAP.get(categoryId) || `Chuyên mục #${categoryId || '?'}`;
-            const author = post?.author || {};
-            const authorName = String(author.displayName || author.nickname || 'Thành viên SVP');
+        const normalizeThreadShape = (thread) => {
+            const categoryId = Number(thread?.categoryId || 0);
+            const categoryName = CATEGORY_MAP.get(categoryId) || String(thread?.categoryName || `Chuyên mục #${categoryId || '?'}`);
+            const author = thread?.author || {};
+            const authorName = String(thread?.authorName || author.displayName || author.nickname || 'Thành viên SVP');
             return {
-                threadId: Number(post?.postId || 0),
-                title: String(post?.title || 'Chủ đề mới'),
+                threadId: Number(thread?.threadId || thread?.postId || 0),
+                title: String(thread?.title || 'Chủ đề mới'),
                 categoryId,
                 categoryName,
                 authorName,
-                authorNickname: String(author.nickname || ''),
-                authorUserId: String(author.userId || ''),
-                viewCount: normalizeCount(post?.viewCount ?? post?.view_count),
-                replyCount: normalizeCount(post?.commentCount ?? post?.comment_count),
-                createdAt: String(post?.createdAt || ''),
-                lastActivityAt: String(post?.updatedAt || post?.updated_at || post?.createdAt || ''),
-                excerpt: excerptFromHtml(post?.contentHtml || '', 180)
+                authorNickname: String(thread?.authorNickname || author.nickname || ''),
+                authorUserId: String(thread?.authorUserId || author.userId || ''),
+                viewCount: normalizeCount(thread?.viewCount ?? thread?.view_count ?? thread?.views),
+                replyCount: normalizeCount(thread?.replyCount ?? thread?.commentCount ?? thread?.comment_count),
+                createdAt: String(thread?.createdAt || ''),
+                lastActivityAt: String(thread?.lastActivityAt || thread?.updatedAt || thread?.updated_at || thread?.createdAt || ''),
+                excerpt: String(thread?.excerpt || excerptFromHtml(thread?.contentHtml || '', 180))
             };
         };
+
+        const normalizeApiThread = (post) => normalizeThreadShape({
+            threadId: post?.postId,
+            title: post?.title,
+            categoryId: post?.categoryId,
+            author: post?.author,
+            viewCount: post?.viewCount ?? post?.view_count,
+            replyCount: post?.commentCount ?? post?.comment_count,
+            createdAt: post?.createdAt,
+            lastActivityAt: post?.updatedAt || post?.updated_at || post?.createdAt,
+            contentHtml: post?.contentHtml
+        });
 
         const buildCategorySelect = () => {
             const options = ['<option value="all">Tất cả chuyên mục</option>'];
@@ -446,7 +458,9 @@
             categoryEl.innerHTML = options.join('');
         };
 
-        const FORUM_FETCH_LIMIT = 50;
+        const FORUM_FETCH_LIMIT = 20;
+        const FORUM_CACHE_KEY = 'svp.forum.latest-discussions.cache.v2';
+        const FORUM_CACHE_TTL_MS = 2 * 60 * 1000;
         let hasMoreFromApi = true;
         let lastFetchedCreatedAt = null;
         let lastFetchedPostId = null;
@@ -476,6 +490,61 @@
             }
             const normalized = items.map(normalizeApiThread).filter((item) => item.threadId > 0);
             return normalized;
+        };
+
+        const readForumCache = () => {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(FORUM_CACHE_KEY) || 'null');
+                if (!parsed || typeof parsed !== 'object') {
+                    return null;
+                }
+                const ts = Number(parsed.ts || 0);
+                if (!Number.isFinite(ts) || (Date.now() - ts) > FORUM_CACHE_TTL_MS) {
+                    return null;
+                }
+                return parsed.payload && typeof parsed.payload === 'object' ? parsed.payload : null;
+            } catch (_) {
+                return null;
+            }
+        };
+
+        const saveForumCache = () => {
+            try {
+                localStorage.setItem(FORUM_CACHE_KEY, JSON.stringify({
+                    ts: Date.now(),
+                    payload: {
+                        threads: state.threads,
+                        hasMoreFromApi,
+                        lastFetchedCreatedAt,
+                        lastFetchedPostId
+                    }
+                }));
+            } catch (_) {
+            }
+        };
+
+        const restoreForumCache = (payload) => {
+            const cachedThreads = Array.isArray(payload?.threads)
+                ? payload.threads.map(normalizeThreadShape).filter((item) => item.threadId > 0)
+                : [];
+            if (!cachedThreads.length) {
+                return false;
+            }
+            const lastCachedThread = cachedThreads[cachedThreads.length - 1] || null;
+            state.threads = cachedThreads;
+            state.sourceLabel = 'Cache local';
+            state.loadError = '';
+            hasMoreFromApi = typeof payload?.hasMoreFromApi === 'boolean'
+                ? payload.hasMoreFromApi
+                : cachedThreads.length >= FORUM_FETCH_LIMIT;
+            lastFetchedCreatedAt = payload?.lastFetchedCreatedAt
+                ? String(payload.lastFetchedCreatedAt)
+                : (lastCachedThread?.createdAt || null);
+            const cachedPostId = Number(payload?.lastFetchedPostId);
+            lastFetchedPostId = Number.isFinite(cachedPostId) && cachedPostId > 0
+                ? cachedPostId
+                : (Number.isFinite(lastCachedThread?.threadId) ? lastCachedThread.threadId : null);
+            return true;
         };
 
         const syncUrlState = () => {
@@ -740,8 +809,9 @@
                     const existingIds = new Set(state.threads.map((t) => t.threadId));
                     const newItems = moreThreads.filter((t) => !existingIds.has(t.threadId));
                     state.threads = state.threads.concat(newItems);
-                    render();
                 }
+                saveForumCache();
+                render();
             } catch (error) {
                 console.error('Cannot load more threads:', error);
             }
@@ -750,22 +820,34 @@
         const load = async () => {
             buildCategorySelect();
             syncControls();
-            listEl.innerHTML = '<div class="sv-forum-empty">Đang tải dữ liệu forum...</div>';
+            bindEvents();
+            const cachedPayload = readForumCache();
+            const hasCachedThreads = restoreForumCache(cachedPayload);
+            if (hasCachedThreads) {
+                render();
+            } else {
+                listEl.innerHTML = '<div class="sv-forum-empty">Đang tải dữ liệu forum...</div>';
+            }
             try {
                 const apiThreads = await fetchThreads(false);
                 state.threads = apiThreads;
                 state.sourceLabel = 'API';
                 state.loadError = '';
+                saveForumCache();
             } catch (error) {
                 console.error('Cannot load forum threads:', error);
-                state.threads = [];
-                state.sourceLabel = 'Lỗi kết nối';
-                state.loadError = 'Không thể kết nối backend để tải danh sách chủ đề.';
-                hasMoreFromApi = false;
-                lastFetchedCreatedAt = null;
-                lastFetchedPostId = null;
+                if (hasCachedThreads) {
+                    state.sourceLabel = 'Cache local';
+                    state.loadError = '';
+                } else {
+                    state.threads = [];
+                    state.sourceLabel = 'Lỗi kết nối';
+                    state.loadError = 'Không thể kết nối backend để tải danh sách chủ đề.';
+                    hasMoreFromApi = false;
+                    lastFetchedCreatedAt = null;
+                    lastFetchedPostId = null;
+                }
             }
-            bindEvents();
             render();
         };
 

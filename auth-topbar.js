@@ -16,10 +16,24 @@
     const RETRY_REFRESH_DELAY_MS = 30 * 1000;
     const PROFILE_CACHE_KEY = "svp.auth.profileCache.v1";
     const PROFILE_CACHE_TTL_MS = 15 * 60 * 1000;
+    const NON_CRITICAL_IDLE_TIMEOUT_MS = 1500;
     const authBox = document.querySelector(".sv-auth");
     const guestAuthMarkup = authBox ? authBox.innerHTML : "";
     let refreshTimer = null;
     let refreshInFlight = null;
+
+    const scheduleNonCritical = (task, timeoutMs = NON_CRITICAL_IDLE_TIMEOUT_MS) => {
+        if (typeof task !== "function") {
+            return;
+        }
+        if (typeof window.requestIdleCallback === "function") {
+            window.requestIdleCallback(() => {
+                task();
+            }, { timeout: timeoutMs });
+            return;
+        }
+        window.setTimeout(task, Math.max(0, timeoutMs));
+    };
 
     const decodeBase64Url = (value) => {
         if (!value) {
@@ -330,7 +344,7 @@
         getValidAccessToken
     };
 
-    const refreshProfileAvatar = async () => {
+    const refreshProfileAvatar = async (accessTokenOverride) => {
         const cachedProfile = readFreshProfileCache();
         if (cachedProfile) {
             renderTopbar(cachedProfile);
@@ -340,7 +354,7 @@
         if (existingAvatar) {
             return;
         }
-        const accessToken = await getValidAccessToken();
+        const accessToken = accessTokenOverride || await getValidAccessToken();
         if (!accessToken) {
             return;
         }
@@ -412,10 +426,20 @@
         }
     };
 
-    (async () => {
-        await getValidAccessToken();
-        renderTopbar();
-        void refreshProfileAvatar();
+    const bootstrapProfile = readFreshProfileCache();
+    renderTopbar(bootstrapProfile);
+
+    scheduleNonCritical(() => {
+        void (async () => {
+            const accessToken = await getValidAccessToken();
+            renderTopbar(readFreshProfileCache() || bootstrapProfile);
+            if (accessToken) {
+                void refreshProfileAvatar(accessToken);
+            }
+        })();
+    }, 1200);
+
+    scheduleNonCritical(() => {
         trackVisit();
-    })();
+    }, 2500);
 })();

@@ -554,7 +554,12 @@
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
         const WORDS_PER_MINUTE = 220;
         const PREVIEW_LEAD_MAX_CHARS = 220;
-        const DEFAULT_ARTICLE_COVER = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1400&auto=format&fit=crop';
+        const DEFAULT_ARTICLE_COVER =
+            "data:image/svg+xml;utf8," +
+            encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 520'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='#dbeafe'/><stop offset='100%' stop-color='#e2e8f0'/></linearGradient></defs><rect width='1200' height='520' fill='url(#g)'/><circle cx='260' cy='180' r='90' fill='rgba(37,99,235,.12)'/><circle cx='920' cy='140' r='120' fill='rgba(59,130,246,.10)'/><rect x='192' y='210' width='816' height='170' rx='26' fill='rgba(255,255,255,.72)' stroke='rgba(148,163,184,.34)'/><text x='600' y='285' text-anchor='middle' font-size='44' fill='#1e3a8a' font-family='Arial,sans-serif' font-weight='700'>SVP Forum</text><text x='600' y='336' text-anchor='middle' font-size='28' fill='#475569' font-family='Arial,sans-serif'>Anh xem truoc bai viet</text></svg>");
+        const HOME_CACHE_KEY_PREFIX = 'svp.home.payload.cache.v2.';
+        const HOME_CACHE_TTL_MS = 2 * 60 * 1000;
+        const LOCAL_ARTICLE_KEY = 'svp.latestSubmittedArticle';
         const CATEGORY_NAMES = {
             1: 'Học tập và nghiên cứu tại Pháp',
             2: 'Kinh nghiệm xin học bổng và du học',
@@ -682,8 +687,7 @@
         };
 
 
-        const estimateReadTime = (contentHtml) => {
-            const plainText = toPlainText(contentHtml);
+        const estimateReadTimeFromPlainText = (plainText) => {
             if (!plainText) {
                 return '1 phút đọc';
             }
@@ -692,8 +696,7 @@
             return `${minutes} phút đọc`;
         };
 
-        const getLeadPreviewText = (contentHtml) => {
-            const plainText = toPlainText(contentHtml);
+        const getLeadPreviewText = (plainText) => {
             if (!plainText) {
                 return '';
             }
@@ -703,12 +706,11 @@
             return text;
         };
 
-        const buildLead = (contentHtml) => {
-            const previewText = getLeadPreviewText(contentHtml);
+        const buildLeadFromPlainText = (plainText) => {
+            const previewText = getLeadPreviewText(plainText);
             if (!previewText) {
                 return 'Bài viết đang được cập nhật nội dung.';
             }
-            const plainText = toPlainText(contentHtml);
             return plainText.length <= PREVIEW_LEAD_MAX_CHARS
                 ? previewText
                 : `${previewText}...`;
@@ -727,25 +729,33 @@
             return '';
         };
 
-        const extractCover = (post) => {
-            const explicitCover = String(post?.coverImageUrl || post?.cover_image_url || '').trim();
-            if (explicitCover) {
-                return explicitCover;
+        const extractCoverFromContent = (explicitCover, contentHtml) => {
+            const safeExplicitCover = String(explicitCover || '').trim();
+            if (safeExplicitCover) {
+                return safeExplicitCover;
             }
-            const firstImage = extractFirstImageSrc(post?.contentHtml || post?.content_html || post?.content || '');
+            const firstImage = extractFirstImageSrc(contentHtml);
             return firstImage || DEFAULT_ARTICLE_COVER;
         };
 
         const normalizePost = (post) => {
             const rawAuthor = post?.author || {};
+            const title = decodeHtmlEntities(post?.title || '');
+            const contentHtml = decodeHtmlEntities(post?.contentHtml || post?.content_html || post?.content || '');
+            const coverImageUrl = decodeHtmlEntities(post?.coverImageUrl || post?.cover_image_url || '');
+            const plainText = toPlainText(contentHtml);
             return {
                 postId: Number(post?.postId ?? post?.id ?? 0),
                 categoryId: Number(post?.categoryId ?? post?.category_id ?? 0),
                 isArticle: Boolean(post?.isArticle ?? post?.is_article ?? true),
                 status: post?.status ?? post?.postStatus ?? null,
-                title: decodeHtmlEntities(post?.title || ''),
-                contentHtml: decodeHtmlEntities(post?.contentHtml || post?.content_html || post?.content || ''),
-                coverImageUrl: decodeHtmlEntities(post?.coverImageUrl || post?.cover_image_url || ''),
+                title,
+                contentHtml,
+                coverImageUrl,
+                plainText,
+                leadText: buildLeadFromPlainText(plainText),
+                readTimeLabel: estimateReadTimeFromPlainText(plainText),
+                resolvedCoverImageUrl: extractCoverFromContent(coverImageUrl, contentHtml),
                 createdAt: post?.createdAt || post?.created_at || new Date().toISOString(),
                 author: {
                     userId: rawAuthor.userId ?? rawAuthor.user_id ?? post?.userId ?? post?.user_id ?? null,
@@ -780,23 +790,94 @@
             const matchesCategory = !Number.isFinite(activeCategoryId) || Number(post?.categoryId) === activeCategoryId;
             return isArticle && matchesCategory;
         });
-        const HOME_POSTS_LIMIT = 10;
+        const HOME_POSTS_LIMIT = 6;
         const MORE_POSTS_LIMIT = 5;
+        const homeCacheKey = `${HOME_CACHE_KEY_PREFIX}${Number.isFinite(activeCategoryId) ? activeCategoryId : 'all'}`;
         let loadedPosts = [];
         let hasMorePosts = true;
         let beforeCreatedAt = null;
         let beforePostId = null;
         let isLoadingMore = false;
 
+        const readHomeCache = () => {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(homeCacheKey) || 'null');
+                if (!parsed || typeof parsed !== 'object') {
+                    return null;
+                }
+                const ts = Number(parsed.ts || 0);
+                if (!Number.isFinite(ts) || (Date.now() - ts) > HOME_CACHE_TTL_MS) {
+                    return null;
+                }
+                return parsed.payload && typeof parsed.payload === 'object' ? parsed.payload : null;
+            } catch (_) {
+                return null;
+            }
+        };
+
+        const saveHomeCache = (payload) => {
+            try {
+                localStorage.setItem(homeCacheKey, JSON.stringify({
+                    ts: Date.now(),
+                    payload
+                }));
+            } catch (_) {
+            }
+        };
+
+        const readPendingLocalArticle = () => {
+            const raw = localStorage.getItem(LOCAL_ARTICLE_KEY);
+            if (!raw) {
+                return null;
+            }
+            try {
+                const localPost = JSON.parse(raw);
+                const normalized = normalizePost({
+                    ...localPost,
+                    postId: Number(localPost.postId) || Date.now()
+                });
+                normalized.status = localPost.status || normalized.status;
+                return normalized;
+            } catch (_) {
+                localStorage.removeItem(LOCAL_ARTICLE_KEY);
+                return null;
+            }
+        };
+
+        const mergePendingLocalArticle = (posts) => {
+            const pendingArticle = readPendingLocalArticle();
+            if (!pendingArticle) {
+                return posts;
+            }
+            if (posts.some((post) => post.postId === pendingArticle.postId)) {
+                localStorage.removeItem(LOCAL_ARTICLE_KEY);
+                return posts;
+            }
+            return [pendingArticle, ...posts.filter((post) => post.postId !== pendingArticle.postId)];
+        };
+
+        const renderFeedAndMembers = () => {
+            const displayPosts = mergePendingLocalArticle(loadedPosts);
+            const visiblePosts = getVisiblePosts(displayPosts);
+            feedEl.innerHTML = visiblePosts.length === 0
+                ? `<div class="sv-meta">Chưa có bài viết phù hợp để hiển thị.</div>`
+                : visiblePosts.map((post) => renderArticleCard(post)).join('');
+
+            const topMembers = collectTopMembers(displayPosts);
+            membersEl.innerHTML = topMembers.length === 0
+                ? `<div class="p-3 sv-meta">Chưa có thành viên nổi bật.</div>`
+                : topMembers.map((member) => renderMember(member)).join('');
+        };
+
         const renderArticleCard = (post) => {
             const author = post.author || {};
             const safeCategory = escapeHtml(getCategoryName(post.categoryId));
-            const safeReadTime = escapeHtml(estimateReadTime(post.contentHtml));
+            const safeReadTime = escapeHtml(post.readTimeLabel || '1 phút đọc');
             const safeTitle = escapeHtml(post.title || 'Chưa có tiêu đề');
             const safeAuthor = escapeHtml(author.displayName || author.nickname || 'Ẩn danh');
             const safeDate = escapeHtml(formatDate(post.createdAt));
-            const safeLead = escapeHtml(buildLead(post.contentHtml));
-            const safeCover = escapeHtml(extractCover(post));
+            const safeLead = escapeHtml(post.leadText || 'Bài viết đang được cập nhật nội dung.');
+            const safeCover = escapeHtml(post.resolvedCoverImageUrl || DEFAULT_ARTICLE_COVER);
             const authorProfileHref = author.nickname
                 ? `profile.html?nickname=${encodeURIComponent(author.nickname)}`
                 : (author.userId ? `profile.html?userId=${encodeURIComponent(author.userId)}` : '');
@@ -920,26 +1001,12 @@
             const upcomingEvents = Array.isArray(payload.upcomingEvents) ? payload.upcomingEvents.map(normalizeEvent) : [];
 
             loadedPosts = latestPosts.slice();
-            const visiblePosts = getVisiblePosts(loadedPosts);
-            if (visiblePosts.length === 0) {
-                feedEl.innerHTML = `<div class="sv-meta">Chưa có bài viết phù hợp để hiển thị.</div>`;
-            } else {
-                feedEl.innerHTML = visiblePosts.map((post) => renderArticleCard(post)).join('');
-            }
-
-            injectLocalArticle();
+            renderFeedAndMembers();
 
             if (upcomingEvents.length === 0) {
                 eventsEl.innerHTML = `<li><div class="sv-meta">Chưa có sự kiện sắp tới.</div></li>`;
             } else {
                 eventsEl.innerHTML = upcomingEvents.map((event) => renderEventItem(event)).join('');
-            }
-
-            const topMembers = collectTopMembers(loadedPosts);
-            if (topMembers.length === 0) {
-                membersEl.innerHTML = `<div class="p-3 sv-meta">Chưa có thành viên nổi bật.</div>`;
-            } else {
-                membersEl.innerHTML = topMembers.map((member) => renderMember(member)).join('');
             }
 
             const lastPost = loadedPosts[loadedPosts.length - 1];
@@ -961,40 +1028,6 @@
             loadMoreBtn.style.display = 'none';
             loadMoreBtn.disabled = true;
         };
-
-
-        const injectLocalArticle = () => {
-            const raw = localStorage.getItem('svp.latestSubmittedArticle');
-            if (!raw) {
-                return;
-            }
-            let localPost;
-            try {
-                localPost = JSON.parse(raw);
-            } catch (_) {
-                localStorage.removeItem('svp.latestSubmittedArticle');
-                return;
-            }
-            const normalized = normalizePost({
-                ...localPost,
-                postId: Number(localPost.postId) || Date.now()
-            });
-            normalized.status = localPost.status || normalized.status;
-
-            loadedPosts = [normalized, ...loadedPosts.filter((post) => post.postId !== normalized.postId)];
-            const visiblePosts = getVisiblePosts(loadedPosts);
-            feedEl.innerHTML = visiblePosts.length === 0
-                ? `<div class="sv-meta">Chưa có bài viết phù hợp để hiển thị.</div>`
-                : visiblePosts.map((post) => renderArticleCard(post)).join('');
-
-            const topMembers = collectTopMembers(loadedPosts);
-            membersEl.innerHTML = topMembers.length === 0
-                ? `<div class="p-3 sv-meta">Chưa có thành viên nổi bật.</div>`
-                : topMembers.map((member) => renderMember(member)).join('');
-
-            localStorage.removeItem('svp.latestSubmittedArticle');
-        };
-
         const loadMorePosts = async () => {
             if (isLoadingMore || !hasMorePosts || !beforeCreatedAt || !beforePostId) {
                 return;
@@ -1022,14 +1055,7 @@
                     hasMorePosts = false;
                 } else {
                     loadedPosts = loadedPosts.concat(newItems);
-                    const visibleNewItems = getVisiblePosts(newItems);
-                    if (visibleNewItems.length > 0) {
-                        feedEl.insertAdjacentHTML('beforeend', visibleNewItems.map((post) => renderArticleCard(post)).join(''));
-                    }
-                    const topMembers = collectTopMembers(loadedPosts);
-                    membersEl.innerHTML = topMembers.length === 0
-                        ? `<div class="p-3 sv-meta">Chưa có thành viên nổi bật.</div>`
-                        : topMembers.map((member) => renderMember(member)).join('');
+                    renderFeedAndMembers();
                     const lastPost = loadedPosts[loadedPosts.length - 1];
                     beforeCreatedAt = lastPost?.createdAt || null;
                     beforePostId = Number.isFinite(lastPost?.postId) ? lastPost.postId : null;
@@ -1047,10 +1073,15 @@
         };
 
         const loadHome = async () => {
-            feedEl.innerHTML = `<div class="sv-meta">Đang tải bài viết mới nhất...</div>`;
-            eventsEl.innerHTML = `<li><div class="sv-meta">Đang tải sự kiện...</div></li>`;
-            membersEl.innerHTML = `<div class="p-3 sv-meta">Đang tải thành viên...</div>`;
-            loadMoreBtn.style.display = 'none';
+            const cachedPayload = readHomeCache();
+            if (cachedPayload) {
+                renderHomeData(cachedPayload);
+            } else {
+                feedEl.innerHTML = `<div class="sv-meta">Đang tải bài viết mới nhất...</div>`;
+                eventsEl.innerHTML = `<li><div class="sv-meta">Đang tải sự kiện...</div></li>`;
+                membersEl.innerHTML = `<div class="p-3 sv-meta">Đang tải thành viên...</div>`;
+                loadMoreBtn.style.display = 'none';
+            }
             try {
                 const params = new URLSearchParams();
                 if (Number.isFinite(activeCategoryId)) {
@@ -1058,10 +1089,13 @@
                 }
                 const query = params.toString();
                 const payload = await fetchJson(`${API_BASE_URL}/api/home${query ? `?${query}` : ''}`);
+                saveHomeCache(payload);
                 renderHomeData(payload);
             } catch (error) {
                 console.error('Cannot load home data:', error);
-                renderHomeLoadError();
+                if (!cachedPayload) {
+                    renderHomeLoadError();
+                }
             }
         };
 

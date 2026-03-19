@@ -122,6 +122,22 @@
             return Number.isFinite(time) ? time : 0;
         };
 
+        const getEventEndTime = (event) => {
+            const endTime = toTimeValue(event?.endTime);
+            if (endTime > 0) {
+                return endTime;
+            }
+            return toTimeValue(event?.eventTime || event?.startTime);
+        };
+
+        const getEventStartTime = (event) => {
+            const startTime = toTimeValue(event?.startTime || event?.eventTime);
+            if (startTime > 0) {
+                return startTime;
+            }
+            return getEventEndTime(event);
+        };
+
         const formatDate = (value) => {
             const time = toTimeValue(value);
             if (!time) {
@@ -195,16 +211,15 @@
                 const now = Date.now();
                 const upcoming = events
                     .filter((event) => {
-                        const time = toTimeValue(event.eventTime);
-                        return time >= now;
+                        return getEventEndTime(event) >= now;
                     })
-                    .sort((left, right) => toTimeValue(left.eventTime) - toTimeValue(right.eventTime));
+                    .sort((left, right) => getEventStartTime(left) - getEventStartTime(right));
                 const past = events
                     .filter((event) => {
-                        const time = toTimeValue(event.eventTime);
+                        const time = getEventEndTime(event);
                         return time > 0 && time < now;
                     })
-                    .sort((left, right) => toTimeValue(right.eventTime) - toTimeValue(left.eventTime));
+                    .sort((left, right) => getEventEndTime(right) - getEventEndTime(left));
 
                 renderList(upcomingList, upcoming, false, 'Chưa có sự kiện sắp diễn ra.');
                 renderList(pastList, past, true, 'Chưa có sự kiện đã qua.');

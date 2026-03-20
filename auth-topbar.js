@@ -392,20 +392,14 @@
 
     const trackVisit = () => {
         try {
-            const today = new Date().toISOString().slice(0, 10);
             const path = window.location.pathname + window.location.search;
-            const key = "svp.visit.v2." + today + "." + encodeURIComponent(path);
-            let storageOk = true;
-            try {
-                if (localStorage.getItem(key)) {
-                    return;
-                }
-            } catch (_) {
-                storageOk = false;
-            }
+            const clientVisitId = (window.crypto && typeof window.crypto.randomUUID === "function")
+                ? window.crypto.randomUUID()
+                : ("visit-" + Date.now() + "-" + Math.random().toString(36).slice(2));
             const payload = {
                 path,
-                referrer: document.referrer || ""
+                referrer: document.referrer || "",
+                clientVisitId
             };
             const url = API_BASE_URL + "/stats/visit";
             fetch(url, {
@@ -413,14 +407,6 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(payload),
                 keepalive: true
-            }).then((res) => {
-                if ((!res.ok && res.status !== 204) || !storageOk) {
-                    return;
-                }
-                try {
-                    localStorage.setItem(key, "1");
-                } catch (_) {
-                }
             }).catch(() => {});
         } catch (_) {
         }
@@ -439,7 +425,5 @@
         })();
     }, 1200);
 
-    scheduleNonCritical(() => {
-        trackVisit();
-    }, 2500);
+    trackVisit();
 })();

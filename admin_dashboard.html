@@ -270,7 +270,7 @@
                     <div class="sv-kpi__value" id="kpi-unique">--</div>
                 </div>
                 <div class="sv-kpi sv-kpi--clickable" data-detail="visits_city" tabindex="0" role="button">
-                    <div class="sv-kpi__label">Thành phố nổi bật</div>
+                    <div class="sv-kpi__label">Vị trí nổi bật</div>
                     <div class="sv-kpi__value" id="kpi-city">--</div>
                 </div>
             </div>
@@ -278,7 +278,7 @@
             <div class="row g-3">
                 <div class="col-lg-5">
                     <div class="sv-soft-card">
-                        <div class="fw-bold mb-2">Top thành phố</div>
+                        <div class="fw-bold mb-2">Top vị trí</div>
                         <div id="city-list" class="sv-list-rows"></div>
                     </div>
                 </div>
@@ -301,7 +301,7 @@
                 </div>
                 <div class="col-12">
                     <div class="sv-soft-card">
-                        <div class="fw-bold mb-2">Bản đồ truy cập theo thành phố</div>
+                        <div class="fw-bold mb-2">Bản đồ truy cập theo vị trí</div>
                         <div id="city-map" class="sv-map"></div>
                         <div id="city-map-note" class="sv-admin-muted mt-2"></div>
                     </div>
@@ -313,7 +313,7 @@
                             <thead>
                                 <tr>
                                     <th>IP</th>
-                                    <th>City</th>
+                                    <th>Vị trí</th>
                                     <th>Visits</th>
                                 </tr>
                             </thead>
@@ -430,6 +430,9 @@
         const normalizeIpForLookup = (ip) => String(ip || '').trim().replace(/^\[(.+)]$/, '$1').replace(/\/(\d+)$/, '');
         const normalizeIpForDisplay = (ip) => normalizeIpForLookup(ip).replace(/%\w+$/, '');
         const pad2 = (value) => String(value).padStart(2, '0');
+        const regionNames = typeof Intl !== 'undefined' && typeof Intl.DisplayNames === 'function'
+            ? new Intl.DisplayNames(['vi', 'en'], { type: 'region' })
+            : null;
         const formatVisitDateTime = (value) => {
             if (!value) return '--';
             const date = new Date(value);
@@ -437,6 +440,55 @@
                 return String(value);
             }
             return `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${date.getFullYear()} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+        };
+
+        const formatCountryName = (value) => {
+            const code = String(value || '').trim().toUpperCase();
+            if (!code) return '';
+            if (regionNames) {
+                try {
+                    const localized = regionNames.of(code);
+                    if (localized) {
+                        return localized;
+                    }
+                } catch (_) {
+                }
+            }
+            return code;
+        };
+
+        const normalizeLocationItem = (item) => {
+            const city = String(item?.city || '').trim();
+            const region = String(item?.region || '').trim();
+            const countryCode = String(item?.countryCode || item?.country || '').trim().toUpperCase();
+            const countryName = String(item?.countryName || '').trim() || formatCountryName(countryCode);
+            const latRaw = Number(item?.lat);
+            const lonRaw = Number(item?.lon);
+            return {
+                city,
+                region,
+                country: countryCode,
+                countryCode,
+                countryName,
+                lat: Number.isFinite(latRaw) ? latRaw : null,
+                lon: Number.isFinite(lonRaw) ? lonRaw : null,
+                visits: Number(item?.visits || 0),
+                name: city || region || countryName || countryCode || '--'
+            };
+        };
+
+        const formatLocationLabel = (item) => {
+            const normalized = normalizeLocationItem(item);
+            if (normalized.city && normalized.region && normalized.countryName) {
+                return `${normalized.city}, ${normalized.region}, ${normalized.countryName}`;
+            }
+            if (normalized.city && normalized.region) {
+                return `${normalized.city}, ${normalized.region}`;
+            }
+            if (normalized.city && normalized.countryName) {
+                return `${normalized.city}, ${normalized.countryName}`;
+            }
+            return normalized.name;
         };
 
         const ensureCityMap = () => {
@@ -465,6 +517,7 @@
                 }
                 const result = {
                     city: data.city || '',
+                    region: data.region || data.region_code || '',
                     country: data.country_name || data.country || '',
                     countryCode: data.country_code || data.country_code_iso3 || '',
                     lat: Number(data.latitude),
@@ -485,10 +538,12 @@
                 if (!geo || !geo.city || !Number.isFinite(geo.lat) || !Number.isFinite(geo.lon)) {
                     continue;
                 }
-                const key = `${geo.city}|${geo.countryCode}`;
+                const key = `${geo.city}|${geo.region || ''}|${geo.countryCode}`;
                 const current = cities.get(key) || {
                     city: geo.city,
-                    country: geo.country,
+                    region: geo.region || '',
+                    country: geo.countryCode,
+                    countryName: geo.country || formatCountryName(geo.countryCode),
                     countryCode: geo.countryCode,
                     lat: geo.lat,
                     lon: geo.lon,
@@ -497,11 +552,27 @@
                 current.visits += Number(item.visits || 0);
                 cities.set(key, current);
             }
-            return Array.from(cities.values()).sort((a, b) => b.visits - a.visits);
+            return Array.from(cities.values())
+                .map((item) => normalizeLocationItem(item))
+                .sort((a, b) => b.visits - a.visits);
         };
 
-        const resolveCityCoordinates = async (cityName, country) => {
-            const query = [cityName, country].filter(Boolean).join(', ');
+        const buildLocationsFromCountries = (countries) => {
+            return (Array.isArray(countries) ? countries : [])
+                .map((item) => normalizeLocationItem({
+                    country: item?.country,
+                    countryCode: item?.country,
+                    visits: item?.visits
+                }))
+                .filter((item) => item.name && item.name !== '--')
+                .sort((a, b) => b.visits - a.visits);
+        };
+
+        const resolveLocationCoordinates = async (item) => {
+            const normalized = normalizeLocationItem(item);
+            const query = normalized.city
+                ? [normalized.city, normalized.region, normalized.countryName || normalized.countryCode].filter(Boolean).join(', ')
+                : (normalized.countryName || normalized.countryCode || normalized.name || '');
             if (!query) return null;
             const url = `https://nominatim.openstreetmap.org/search?format=json&limit=1&q=${encodeURIComponent(query)}`;
             const response = await fetch(url, { headers: { Accept: 'application/json' } });
@@ -517,27 +588,27 @@
             cityLayer.clearLayers();
 
             if (!Array.isArray(cities) || !cities.length) {
-                if (cityMapNote) cityMapNote.textContent = 'Chưa có dữ liệu thành phố.';
+                if (cityMapNote) cityMapNote.textContent = 'Chưa có dữ liệu vị trí.';
                 return;
             }
 
             if (cityMapNote) cityMapNote.textContent = '';
             const bounds = [];
             for (const item of cities) {
-                const cityName = item.city || item.name || '';
-                const lat = Number(item.lat);
-                const lon = Number(item.lon);
+                const location = normalizeLocationItem(item);
+                const lat = Number(location.lat);
+                const lon = Number(location.lon);
                 let coords = null;
                 if (Number.isFinite(lat) && Number.isFinite(lon)) {
                     coords = { lat, lon };
                 } else {
-                    coords = await resolveCityCoordinates(cityName, item.country || item.countryCode);
+                    coords = await resolveLocationCoordinates(location);
                 }
                 if (!coords || !Number.isFinite(coords.lat) || !Number.isFinite(coords.lon)) {
                     continue;
                 }
-                const visits = Number(item.visits || 0);
-                const label = cityName ? `${cityName} (${visits.toLocaleString('vi-VN')})` : visits.toLocaleString('vi-VN');
+                const visits = Number(location.visits || 0);
+                const label = `${formatLocationLabel(location)} (${visits.toLocaleString('vi-VN')})`;
                 L.circleMarker([coords.lat, coords.lon], {
                     radius: Math.max(4, Math.min(16, Math.round(Math.log10(visits + 1) * 6))),
                     color: '#2563eb',
@@ -585,12 +656,52 @@
             setOverviewValue(newslettersEl, payload.activeNewsletters);
         };
 
+        const resolveTrackedPathHref = (rawPath) => {
+            const path = String(rawPath || '').trim();
+            if (!path) return '';
+            try {
+                const url = new URL(path, window.location.origin);
+                const sameOrigin = url.origin === window.location.origin;
+                const safeProtocol = url.protocol === 'http:' || url.protocol === 'https:';
+                if (!sameOrigin || !safeProtocol) {
+                    return '';
+                }
+                return `${url.pathname}${url.search}${url.hash}`;
+            } catch (_) {
+                return '';
+            }
+        };
+
+        const renderTrackedPathLink = (rawPath) => {
+            const label = escapeHtml(rawPath || '--');
+            const href = resolveTrackedPathHref(rawPath);
+            if (!href) {
+                return label;
+            }
+            return `<a href="${escapeHtml(href)}">${label}</a>`;
+        };
+
         const renderBarRow = (label, value, max) => {
             const pct = max > 0 ? Math.round((value / max) * 100) : 0;
             return `
                 <div class="sv-list-row">
                     <div>
-                        <div class="fw-semibold">${label}</div>
+                        <div class="fw-semibold">${escapeHtml(label)}</div>
+                        <div class="sv-admin-muted">${value.toLocaleString('vi-VN')} lượt</div>
+                    </div>
+                    <div style="width:45%;">
+                        <div class="sv-bar"><div class="sv-bar__fill" style="width:${pct}%;"></div></div>
+                    </div>
+                </div>
+            `;
+        };
+
+        const renderPathBarRow = (path, value, max) => {
+            const pct = max > 0 ? Math.round((value / max) * 100) : 0;
+            return `
+                <div class="sv-list-row">
+                    <div>
+                        <div class="fw-semibold">${renderTrackedPathLink(path)}</div>
                         <div class="sv-admin-muted">${value.toLocaleString('vi-VN')} lượt</div>
                     </div>
                     <div style="width:45%;">
@@ -602,29 +713,35 @@
 
         const render = async (payload) => {
             lastVisitPayload = payload;
-            setOverviewValue(visitsOverviewEl, payload.totalVisits);
-            totalEl.textContent = payload.totalVisits.toLocaleString('vi-VN');
-            uniqueEl.textContent = payload.uniqueIps.toLocaleString('vi-VN');
+            const totalVisits = Number(payload?.totalVisits || 0);
+            const uniqueIps = Number(payload?.uniqueIps || 0);
+            const pathItems = Array.isArray(payload?.paths) ? payload.paths : [];
+            setOverviewValue(visitsOverviewEl, totalVisits);
+            totalEl.textContent = totalVisits.toLocaleString('vi-VN');
+            uniqueEl.textContent = uniqueIps.toLocaleString('vi-VN');
 
-            let cities = Array.isArray(payload.cities) ? payload.cities : [];
+            let cities = Array.isArray(payload?.cities) ? payload.cities.map((item) => normalizeLocationItem(item)) : [];
             if (!cities.length && canViewIpDetails() && Array.isArray(payload.ips) && payload.ips.length) {
                 cities = await buildCitiesFromIps(payload.ips);
+            }
+            if (!cities.length) {
+                cities = buildLocationsFromCountries(payload?.countries);
             }
             lastCityItems = cities;
 
             const topCity = cities[0];
-            cityEl.textContent = topCity ? `${topCity.city || topCity.name || '--'} (${Number(topCity.visits || 0).toLocaleString('vi-VN')})` : '--';
+            cityEl.textContent = topCity ? `${formatLocationLabel(topCity)} (${Number(topCity.visits || 0).toLocaleString('vi-VN')})` : '--';
 
             const maxCity = cities.reduce((max, item) => Math.max(max, Number(item.visits || 0)), 0);
             cityList.innerHTML = cities.length
-                ? cities.map((item) => renderBarRow(item.city || item.name || '--', Number(item.visits || 0), maxCity)).join('')
-                : '<div class="sv-admin-muted">Chưa có dữ liệu thành phố.</div>';
+                ? cities.map((item) => renderBarRow(formatLocationLabel(item), Number(item.visits || 0), maxCity)).join('')
+                : '<div class="sv-admin-muted">Chưa có dữ liệu vị trí.</div>';
 
             renderCityMap(cities);
 
-            const maxPath = payload.paths.reduce((max, item) => Math.max(max, item.visits), 0);
-            pathList.innerHTML = payload.paths.length
-                ? payload.paths.map((item) => renderBarRow(item.path, item.visits, maxPath)).join('')
+            const maxPath = pathItems.reduce((max, item) => Math.max(max, Number(item?.visits || 0)), 0);
+            pathList.innerHTML = pathItems.length
+                ? pathItems.map((item) => renderPathBarRow(item.path, Number(item.visits || 0), maxPath)).join('')
                 : '<div class="sv-admin-muted">Chưa có dữ liệu.</div>';
 
             renderRecentVisitsTable(Array.isArray(payload.recentVisits) ? payload.recentVisits : []);
@@ -661,7 +778,7 @@
             const rows = items.map((item) => `
                 <tr>
                     <td>${escapeHtml(formatVisitDateTime(item.visitedAt))}</td>
-                    <td>${escapeHtml(item.path || '--')}</td>
+                    <td>${renderTrackedPathLink(item.path)}</td>
                     ${includeIp ? `<td>${escapeHtml(normalizeIpForDisplay(item.ip) || '--')}</td>` : ''}
                 </tr>
             `).join('');
@@ -837,7 +954,7 @@
                     renderDetailTable(headers, rows);
                 }
             } else if (kind === 'visits_unique') {
-                const headers = ['IP', 'City', 'Visits'];
+                const headers = ['IP', 'Vị trí', 'Lượt truy cập'];
                 const rows = await Promise.all(payload.ips.map(async (item) => {
                     const geo = await fetchIpGeo(item.ip);
                     const cityLabel = geo?.city || geo?.country || '--';
@@ -852,11 +969,11 @@
                 }));
                 renderDetailTable(headers, rows.join(''));
             } else {
-                const headers = ['Thành phố', 'Lượt truy cập'];
+                const headers = ['Vị trí', 'Lượt truy cập'];
                 const cities = lastCityItems;
                 const rows = cities.map((item) => `
                     <tr>
-                        <td>${escapeHtml(item.city || item.name || '--')}</td>
+                        <td>${escapeHtml(formatLocationLabel(item))}</td>
                         <td>${Number(item.visits || 0).toLocaleString('vi-VN')}</td>
                     </tr>
                 `).join('');
@@ -918,7 +1035,7 @@
                     newsletters: 'Danh sách newsletter',
                     visits_total: 'Chi tiết lượt truy cập gần đây',
                     visits_unique: 'Chi tiết IP truy cập',
-                    visits_city: 'Chi tiết thành phố'
+                    visits_city: 'Chi tiết vị trí'
                 };
                 detailTitleEl.textContent = titleMap[type] || 'Chi tiết';
             }

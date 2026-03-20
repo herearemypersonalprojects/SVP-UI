@@ -329,13 +329,22 @@
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
 
-        const stripHtml = (html) => String(html || '')
-            .replace(/<\s*br\s*\/?\s*>/gi, '\n')
-            .replace(/<\s*\/\s*(p|div|h[1-6]|li|blockquote)\s*>/gi, '\n')
-            .replace(/<[^>]+>/g, ' ')
-            .replace(/&nbsp;/gi, ' ')
-            .replace(/\s+/g, ' ')
-            .trim();
+        const decodeHtmlEntities = (value) => {
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = String(value || '');
+            return textarea.value;
+        };
+
+        const stripHtml = (html) => {
+            const template = document.createElement('template');
+            template.innerHTML = String(html || '')
+                .replace(/<\s*br\s*\/?\s*>/gi, '\n')
+                .replace(/<\s*\/\s*(p|div|h[1-6]|li|blockquote)\s*>/gi, '\n');
+            return String(template.content.textContent || '')
+                .replace(/\u00a0/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        };
 
         const excerptFromHtml = (html, maxLen) => {
             const plain = stripHtml(html);
@@ -419,10 +428,10 @@
             const categoryId = Number(thread?.categoryId || 0);
             const categoryName = CATEGORY_MAP.get(categoryId) || String(thread?.categoryName || `Chuyên mục #${categoryId || '?'}`);
             const author = thread?.author || {};
-            const authorName = String(thread?.authorName || author.displayName || author.nickname || 'Thành viên SVP');
+            const authorName = decodeHtmlEntities(thread?.authorName || author.displayName || author.nickname || 'Thành viên SVP');
             return {
                 threadId: Number(thread?.threadId || thread?.postId || 0),
-                title: String(thread?.title || 'Chủ đề mới'),
+                title: decodeHtmlEntities(thread?.title || 'Chủ đề mới'),
                 categoryId,
                 categoryName,
                 authorName,
@@ -432,7 +441,7 @@
                 replyCount: normalizeCount(thread?.replyCount ?? thread?.commentCount ?? thread?.comment_count),
                 createdAt: String(thread?.createdAt || ''),
                 lastActivityAt: String(thread?.lastActivityAt || thread?.updatedAt || thread?.updated_at || thread?.createdAt || ''),
-                excerpt: String(thread?.excerpt || excerptFromHtml(thread?.contentHtml || '', 180))
+                excerpt: decodeHtmlEntities(thread?.excerpt || excerptFromHtml(thread?.contentHtml || '', 180))
             };
         };
 
@@ -459,7 +468,7 @@
         };
 
         const FORUM_FETCH_LIMIT = 20;
-        const FORUM_CACHE_KEY = 'svp.forum.latest-discussions.cache.v2';
+        const FORUM_CACHE_KEY = 'svp.forum.latest-discussions.cache.v3';
         const FORUM_CACHE_TTL_MS = 2 * 60 * 1000;
         let hasMoreFromApi = true;
         let lastFetchedCreatedAt = null;

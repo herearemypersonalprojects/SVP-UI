@@ -863,13 +863,13 @@
             .replace(/'/g, '&#039;');
 
         const buildRecentVisitTable = (items) => {
-            const includeIp = canViewIpDetails();
-            const headers = includeIp ? ['Thời gian', 'Đường dẫn', 'IP'] : ['Thời gian', 'Đường dẫn'];
+            const headers = ['Thời gian', 'Đường dẫn', 'IP', 'Thành phố'];
             const rows = items.map((item) => `
                 <tr>
                     <td>${escapeHtml(formatVisitDateTime(item.visitedAt))}</td>
                     <td>${renderTrackedPathLink(item.path)}</td>
-                    ${includeIp ? `<td>${escapeHtml(normalizeIpForDisplay(item.ip) || '--')}</td>` : ''}
+                    <td>${escapeHtml(normalizeIpForDisplay(item.ip) || '--')}</td>
+                    <td>${escapeHtml(String(item.city || '').trim() || '--')}</td>
                 </tr>
             `).join('');
             return { headers, rows };

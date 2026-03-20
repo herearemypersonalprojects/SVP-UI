@@ -1401,7 +1401,7 @@
         const isOwner = caller.nickname && authorNickname && caller.nickname === authorNickname;
         const isSuperadmin = caller.role === 'SUPERADMIN';
         const isAdmin = caller.role === 'ADMIN' || isSuperadmin;
-        const canEdit = isOwner || isSuperadmin;
+        const canEdit = isOwner || isAdmin;
         const canHide = isAdmin;
         if (!canEdit && !canHide) return;
 

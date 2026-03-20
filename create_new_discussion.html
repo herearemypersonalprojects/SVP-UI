@@ -679,6 +679,57 @@
             }
         };
 
+        const sanitizeDiscussionBodyHtml = (html) => {
+            const raw = String(html || '').trim();
+            if (!raw) return '';
+
+            const template = document.createElement('template');
+            template.innerHTML = raw;
+
+            const allowedTags = new Set([
+                'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
+                'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+                'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'div', 'span'
+            ]);
+            const blockedTags = new Set([
+                'script', 'style', 'iframe', 'object', 'embed', 'form',
+                'input', 'button', 'textarea', 'select', 'option', 'link', 'meta',
+                'img', 'figure', 'figcaption', 'picture', 'source', 'svg', 'canvas'
+            ]);
+
+            const sanitizeNode = (node) => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    return escapeHtml(node.textContent || '');
+                }
+                if (node.nodeType !== Node.ELEMENT_NODE) {
+                    return '';
+                }
+
+                const tag = String(node.nodeName || '').toLowerCase();
+                if (blockedTags.has(tag)) {
+                    return '';
+                }
+
+                const childrenHtml = Array.from(node.childNodes).map((child) => sanitizeNode(child)).join('');
+                if (!allowedTags.has(tag)) {
+                    return childrenHtml;
+                }
+                if (tag === 'br') {
+                    return '<br>';
+                }
+                if (tag === 'a') {
+                    const href = normalizeSafeHref(node.getAttribute('href'));
+                    const attrs = href
+                        ? ` href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"`
+                        : '';
+                    return `<a${attrs}>${childrenHtml}</a>`;
+                }
+                return `<${tag}>${childrenHtml}</${tag}>`;
+            };
+
+            return Array.from(template.content.childNodes).map((node) => sanitizeNode(node)).join('').trim();
+        };
+
         const sanitizePreviewHtml = (html) => {
             const raw = String(html || '').trim();
             if (!raw) return '';
@@ -748,6 +799,8 @@
             return textToParagraphsHtml(subjectInput.value.trim());
         };
 
+        const getSanitizedSubjectBodyHtml = () => sanitizeDiscussionBodyHtml(getSubjectBodyHtml());
+
         const setSubjectBodyHtml = (html) => {
             const nextContent = String(html || '').trim();
             pendingEditorContent = nextContent;
@@ -785,18 +838,14 @@
                 toolbar_mode: 'wrap',
                 min_height: 360,
                 autoresize_bottom_margin: 16,
-                plugins: 'autolink advlist lists link image emoticons charmap code fullscreen autoresize',
-                toolbar: 'undo redo | blocks | bold italic underline strikethrough | bullist numlist blockquote | link image emoticons | removeformat code fullscreen',
+                plugins: 'autolink advlist lists link emoticons charmap code fullscreen autoresize',
+                toolbar: 'undo redo | blocks | bold italic underline strikethrough | bullist numlist blockquote | link emoticons | removeformat code fullscreen',
                 placeholder: editorPlaceholder,
                 convert_urls: false,
                 relative_urls: false,
                 remove_script_host: false,
-                invalid_elements: 'script,style,iframe,object,embed,form,input,button,textarea,select,option,link,meta,table,thead,tbody,tfoot,tr,td,th',
+                invalid_elements: 'script,style,iframe,object,embed,form,input,button,textarea,select,option,link,meta,table,thead,tbody,tfoot,tr,td,th,img,figure,figcaption,picture,source,svg,canvas',
                 forced_root_block: 'p',
-                image_title: true,
-                image_dimensions: true,
-                image_caption: true,
-                image_description: false,
                 formats: {
                     bold: { inline: 'strong' },
                     italic: { inline: 'em' },
@@ -873,9 +922,11 @@
         };
 
         const composeContentHtml = () => {
-            const bodyHtml = getSubjectBodyHtml().trim();
+            const bodyHtml = getSanitizedSubjectBodyHtml().trim();
             const coverUrl = sanitizeUrl(coverUrlInput.value);
-            const coverHtml = coverUrl ? `<p><img src="${coverUrl}" alt="discussion cover"></p>` : '';
+            const coverHtml = coverUrl
+                ? `<p><img src="${coverUrl}" alt="discussion cover" data-svp-attachment="discussion-cover"></p>`
+                : '';
             if (!bodyHtml) {
                 return coverHtml;
             }
@@ -891,7 +942,7 @@
             const categoryText = categoryInput.options[categoryInput.selectedIndex]
                 ? categoryInput.options[categoryInput.selectedIndex].text
                 : '';
-            const subjectHtml = sanitizePreviewHtml(getSubjectBodyHtml());
+            const subjectHtml = sanitizePreviewHtml(getSanitizedSubjectBodyHtml());
             previewTitle.textContent = title || 'Tiêu đề chủ đề sẽ hiển thị tại đây';
             previewCategory.textContent = categoryText || 'Chưa chọn';
             previewSubject.innerHTML = subjectHtml || 'Nội dung Subject sẽ xuất hiện ở đây sau khi bạn nhập.';
@@ -988,7 +1039,7 @@
 
             const title = titleInput.value.trim();
             const categoryId = Number(categoryInput.value);
-            const subjectText = htmlToPlainText(getSubjectBodyHtml());
+            const subjectText = htmlToPlainText(getSanitizedSubjectBodyHtml());
 
             if (!title || title.length < 5) {
                 setFeedback('Tiêu đề cần tối thiểu 5 ký tự.', 'error');

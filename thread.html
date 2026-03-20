@@ -771,6 +771,12 @@
                 if (urls.length >= maxItems) {
                     break;
                 }
+                const attachmentType = String(image.getAttribute('data-svp-attachment') || '').trim().toLowerCase();
+                const alt = String(image.getAttribute('alt') || '').trim().toLowerCase();
+                const isDiscussionCover = attachmentType === 'discussion-cover' || alt === 'discussion cover';
+                if (!isDiscussionCover) {
+                    continue;
+                }
                 const candidate = normalizeSafeImageUrl(image.getAttribute('src') || '');
                 if (candidate && !urls.includes(candidate)) {
                     urls.push(candidate);

@@ -449,6 +449,7 @@
         };
 
         const canViewIpDetails = () => currentRole === 'SUPERADMIN';
+        const getVisitsCacheKey = (days) => `visits_${currentRole || 'ANON'}_${Number(days || 30)}`;
 
         const normalizeIpForLookup = (ip) => String(ip || '').trim().replace(/^\[(.+)]$/, '$1').replace(/\/(\d+)$/, '');
         const normalizeIpForDisplay = (ip) => normalizeIpForLookup(ip).replace(/%\w+$/, '');
@@ -1129,7 +1130,7 @@
             setStatus('Đang tải...', false);
             try {
                 const days = Number(daysSelect.value || 30);
-                const cacheKey = `visits_${days}`;
+                const cacheKey = getVisitsCacheKey(days);
                 if (!forceRefresh) {
                     const cached = dashboardCache.get(cacheKey);
                     if (cached) {

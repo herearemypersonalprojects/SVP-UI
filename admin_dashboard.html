@@ -113,6 +113,10 @@
             border-radius: 12px;
             border: 1px solid var(--sv-border);
         }
+        .sv-table-scroll {
+            max-height: 320px;
+            overflow: auto;
+        }
     </style>
 </head>
 <body>
@@ -290,7 +294,24 @@
                 </div>
                 <div class="col-12">
                     <div class="sv-soft-card">
-                        <div class="fw-bold mb-2">Truy cập gần đây</div>
+                        <div class="fw-bold mb-2">Thống kê theo ngày</div>
+                        <div class="sv-table-scroll">
+                            <table class="sv-admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Ngày</th>
+                                        <th>Lượt truy cập</th>
+                                        <th>Unique IP</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="daily-visits-list"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-12">
+                    <div class="sv-soft-card">
+                        <div class="fw-bold mb-2" id="recent-visits-title">Truy cập gần đây</div>
                         <div class="table-responsive">
                             <table class="sv-admin-table">
                                 <thead id="recent-visits-head"></thead>
@@ -373,6 +394,8 @@
         const cityMapEl = document.getElementById('city-map');
         const cityMapNote = document.getElementById('city-map-note');
         const pathList = document.getElementById('path-list');
+        const dailyVisitsList = document.getElementById('daily-visits-list');
+        const recentVisitsTitle = document.getElementById('recent-visits-title');
         const recentVisitsHead = document.getElementById('recent-visits-head');
         const recentVisitsList = document.getElementById('recent-visits-list');
         const ipList = document.getElementById('ip-list');
@@ -441,6 +464,17 @@
             }
             return `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${date.getFullYear()} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
         };
+        const parseVisitDay = (value) => {
+            const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || '').trim());
+            if (!match) return null;
+            return new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+        };
+        const formatVisitDay = (value) => {
+            const date = parseVisitDay(value);
+            if (!date) return String(value || '--');
+            return `${pad2(date.getUTCDate())}/${pad2(date.getUTCMonth() + 1)}/${date.getUTCFullYear()}`;
+        };
+        const toVisitDayKey = (date) => `${date.getUTCFullYear()}-${pad2(date.getUTCMonth() + 1)}-${pad2(date.getUTCDate())}`;
 
         const formatCountryName = (value) => {
             const code = String(value || '').trim().toUpperCase();
@@ -711,6 +745,51 @@
             `;
         };
 
+        const buildDailyVisitTable = (items, days) => {
+            const headers = ['Ngày', 'Lượt truy cập', 'Unique IP'];
+            const byDay = new Map();
+            (Array.isArray(items) ? items : []).forEach((item) => {
+                const key = String(item?.day || '').trim();
+                if (!parseVisitDay(key)) return;
+                byDay.set(key, {
+                    day: key,
+                    visits: Number(item?.visits || 0),
+                    uniqueIps: Number(item?.uniqueIps || 0)
+                });
+            });
+            if (!byDay.size) {
+                return { headers, rows: '' };
+            }
+
+            const sortedDays = Array.from(byDay.keys()).sort();
+            const now = new Date();
+            const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+            const earliestAllowed = new Date(todayUtc);
+            earliestAllowed.setUTCDate(earliestAllowed.getUTCDate() - Math.max(1, Math.min(Number(days || 30), 180)) + 1);
+
+            let cursor = parseVisitDay(sortedDays[sortedDays.length - 1]);
+            const firstDay = parseVisitDay(sortedDays[0]);
+            if (!cursor || !firstDay) {
+                return { headers, rows: '' };
+            }
+
+            const start = firstDay < earliestAllowed ? earliestAllowed : firstDay;
+            const rows = [];
+            while (cursor >= start) {
+                const key = toVisitDayKey(cursor);
+                const item = byDay.get(key);
+                rows.push(`
+                    <tr>
+                        <td>${escapeHtml(formatVisitDay(key))}</td>
+                        <td>${Number(item?.visits || 0).toLocaleString('vi-VN')}</td>
+                        <td>${Number(item?.uniqueIps || 0).toLocaleString('vi-VN')}</td>
+                    </tr>
+                `);
+                cursor.setUTCDate(cursor.getUTCDate() - 1);
+            }
+            return { headers, rows: rows.join('') };
+        };
+
         const render = async (payload) => {
             lastVisitPayload = payload;
             const totalVisits = Number(payload?.totalVisits || 0);
@@ -744,7 +823,18 @@
                 ? pathItems.map((item) => renderPathBarRow(item.path, Number(item.visits || 0), maxPath)).join('')
                 : '<div class="sv-admin-muted">Chưa có dữ liệu.</div>';
 
-            renderRecentVisitsTable(Array.isArray(payload.recentVisits) ? payload.recentVisits : []);
+            const dailyDetail = buildDailyVisitTable(Array.isArray(payload?.daily) ? payload.daily : [], payload?.days);
+            if (dailyVisitsList) {
+                dailyVisitsList.innerHTML = dailyDetail.rows || '<tr><td colspan="3" class="sv-admin-muted">Chưa có dữ liệu.</td></tr>';
+            }
+
+            const recentVisits = Array.isArray(payload.recentVisits) ? payload.recentVisits : [];
+            if (recentVisitsTitle) {
+                recentVisitsTitle.textContent = recentVisits.length
+                    ? `${recentVisits.length} lượt truy cập mới nhất`
+                    : 'Truy cập gần đây';
+            }
+            renderRecentVisitsTable(recentVisits);
 
             if (Array.isArray(payload.ips) && payload.ips.length) {
                 const rows = await Promise.all(payload.ips.map(async (item) => {
@@ -938,21 +1028,9 @@
                 return;
             }
             if (kind === 'visits_total') {
-                const recentVisits = Array.isArray(payload.recentVisits) ? payload.recentVisits : [];
-                if (recentVisits.length) {
-                    const detail = buildRecentVisitTable(recentVisits);
-                    renderDetailTable(detail.headers, detail.rows);
-                } else {
-                    const headers = ['Ngày', 'Lượt truy cập', 'Unique IP'];
-                    const rows = payload.daily.map((item) => `
-                        <tr>
-                            <td>${escapeHtml(item.day)}</td>
-                            <td>${Number(item.visits || 0).toLocaleString('vi-VN')}</td>
-                            <td>${Number(item.uniqueIps || 0).toLocaleString('vi-VN')}</td>
-                        </tr>
-                    `).join('');
-                    renderDetailTable(headers, rows);
-                }
+                const detail = buildDailyVisitTable(Array.isArray(payload.daily) ? payload.daily : [], payload.days);
+                renderDetailTable(detail.headers, detail.rows);
+                setDetailStatus(`Tổng hợp theo ngày trong ${Number(payload.days || 0)} ngày gần nhất.`, false);
             } else if (kind === 'visits_unique') {
                 const headers = ['IP', 'Vị trí', 'Lượt truy cập'];
                 const rows = await Promise.all(payload.ips.map(async (item) => {
@@ -978,8 +1056,8 @@
                     </tr>
                 `).join('');
                 renderDetailTable(headers, rows);
+                setDetailStatus('', false);
             }
-            setDetailStatus('', false);
             setDetailPagination(false, false);
         };
 
@@ -1033,7 +1111,7 @@
                     comments: 'Danh sách bình luận',
                     events: 'Danh sách sự kiện',
                     newsletters: 'Danh sách newsletter',
-                    visits_total: 'Chi tiết lượt truy cập gần đây',
+                    visits_total: 'Chi tiết lượt truy cập theo ngày',
                     visits_unique: 'Chi tiết IP truy cập',
                     visits_city: 'Chi tiết vị trí'
                 };

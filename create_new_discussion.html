@@ -8,6 +8,7 @@
     <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
     <link rel="shortcut icon" href="assets/icons/favicon.svg">
     <script src="seo.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js" referrerpolicy="origin"></script>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
@@ -46,6 +47,88 @@
             border-radius: 10px;
             background: #f8fafc;
             padding: .8rem;
+        }
+        .sv-preview-box > :last-child {
+            margin-bottom: 0;
+        }
+        .sv-preview-box p {
+            margin-bottom: .8rem;
+        }
+        .sv-preview-box ul,
+        .sv-preview-box ol {
+            padding-left: 1.25rem;
+            margin-bottom: .8rem;
+        }
+        .sv-preview-box blockquote {
+            margin: .9rem 0;
+            padding: .75rem .9rem;
+            border-left: 4px solid #2563eb;
+            background: #eff6ff;
+            color: #1e3a8a;
+            border-radius: 0 10px 10px 0;
+        }
+        .sv-preview-box pre {
+            padding: .85rem;
+            border-radius: 10px;
+            background: #0f172a;
+            color: #e2e8f0;
+            overflow-x: auto;
+        }
+        .sv-preview-box a {
+            color: #1d4ed8;
+        }
+        .sv-preview-box img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: .9rem auto;
+            border-radius: 12px;
+            border: 1px solid #dbe7ff;
+            background: #fff;
+        }
+        .sv-preview-box figure {
+            margin: .9rem 0;
+        }
+        .sv-preview-box figcaption {
+            margin-top: .45rem;
+            color: #64748b;
+            font-size: .88rem;
+            text-align: center;
+        }
+        .sv-editor-textarea {
+            min-height: 320px;
+            border: 1px solid var(--sv-border);
+            border-radius: 16px;
+            padding: .85rem 1rem;
+            background: #fff;
+            line-height: 1.65;
+            resize: vertical;
+        }
+        .sv-editor-textarea:focus {
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 .2rem rgba(59,130,246,.15);
+        }
+        .tox-tinymce {
+            border: 1px solid var(--sv-border) !important;
+            border-radius: 16px !important;
+            overflow: hidden !important;
+            box-shadow: 0 18px 38px rgba(15, 23, 42, .06);
+        }
+        .tox .tox-toolbar-overlord,
+        .tox .tox-toolbar,
+        .tox .tox-toolbar__primary,
+        .tox .tox-menubar {
+            background: #fff !important;
+        }
+        .tox .tox-toolbar__group {
+            border: 0 !important;
+            padding: 0 .2rem !important;
+        }
+        .tox .tox-edit-area::before {
+            border: 0 !important;
+        }
+        .tox .tox-statusbar {
+            border-top: 1px solid #eef2f7 !important;
         }
     </style>
 </head>
@@ -152,10 +235,10 @@
 
                     <div class="mb-3">
                         <label for="discussion-subject" class="form-label">Subject (nội dung mở đầu)</label>
-                        <textarea id="discussion-subject" class="form-control" rows="8" placeholder="Viết nội dung bạn muốn mở đầu cuộc thảo luận..." required></textarea>
+                        <textarea id="discussion-subject" class="form-control sv-editor-textarea" rows="8" placeholder="Viết nội dung bạn muốn mở đầu cuộc thảo luận..." required></textarea>
                         <div class="sv-discussion-tip mt-2">
                             <i class="fa-solid fa-circle-info me-1"></i>
-                            Nội dung Subject sẽ tạo post đầu tiên của thread.
+                            Nội dung Subject sẽ tạo post đầu tiên của thread. Bạn có thể định dạng đậm, danh sách, trích dẫn và chèn link.
                         </div>
                     </div>
 
@@ -223,6 +306,7 @@
             return;
         }
 
+        const editorPlaceholder = subjectInput.getAttribute('placeholder') || 'Viết nội dung bạn muốn mở đầu cuộc thảo luận...';
         let pendingCoverFile = null;
         let pendingCoverPreviewUrl = '';
         let isUploadingCover = false;
@@ -230,6 +314,10 @@
         let coverUrlResolveTimer = null;
         let coverUrlResolveSeq = 0;
         let lastResolvedCoverUrl = '';
+        let discussionEditor = null;
+        let discussionEditorReady = false;
+        let pendingEditorContent = '';
+        let editorReady = Promise.resolve();
 
         const sanitizeUrl = (url) => {
             const raw = String(url || '').trim();
@@ -569,15 +657,233 @@
 
         const textToParagraphsHtml = (text) => {
             const lines = String(text || '').split(/\r?\n+/).map((line) => line.trim()).filter(Boolean);
-            if (!lines.length) return '<p></p>';
+            if (!lines.length) return '';
             return lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('');
         };
 
+        const htmlToPlainText = (html) => {
+            const template = document.createElement('template');
+            template.innerHTML = String(html || '').trim();
+            return (template.content.textContent || '').replace(/\s+/g, ' ').trim();
+        };
+
+        const normalizeSafeHref = (href) => {
+            const raw = String(href || '').trim();
+            if (!raw) return '';
+            try {
+                const parsed = new URL(raw, window.location.href);
+                if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+                return parsed.toString();
+            } catch (_) {
+                return '';
+            }
+        };
+
+        const sanitizePreviewHtml = (html) => {
+            const raw = String(html || '').trim();
+            if (!raw) return '';
+
+            const template = document.createElement('template');
+            template.innerHTML = raw;
+
+            const allowedTags = new Set([
+                'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
+                'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+                'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'div', 'span',
+                'img', 'figure', 'figcaption'
+            ]);
+            const blockedTags = new Set([
+                'script', 'style', 'iframe', 'object', 'embed', 'form',
+                'input', 'button', 'textarea', 'select', 'option', 'link', 'meta'
+            ]);
+
+            const sanitizeNode = (node) => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    return escapeHtml(node.textContent || '');
+                }
+                if (node.nodeType !== Node.ELEMENT_NODE) {
+                    return '';
+                }
+
+                const tag = String(node.nodeName || '').toLowerCase();
+                if (blockedTags.has(tag)) {
+                    return '';
+                }
+
+                const childrenHtml = Array.from(node.childNodes).map((child) => sanitizeNode(child)).join('');
+                if (!allowedTags.has(tag)) {
+                    return childrenHtml;
+                }
+                if (tag === 'br') {
+                    return '<br>';
+                }
+                if (tag === 'a') {
+                    const href = normalizeSafeHref(node.getAttribute('href'));
+                    const attrs = href
+                        ? ` href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"`
+                        : '';
+                    return `<a${attrs}>${childrenHtml}</a>`;
+                }
+                if (tag === 'img') {
+                    const src = normalizeSafeHref(node.getAttribute('src'));
+                    if (!src) {
+                        return '';
+                    }
+                    const alt = escapeHtml(node.getAttribute('alt') || '');
+                    return `<img src="${escapeHtml(src)}" alt="${alt}">`;
+                }
+                return `<${tag}>${childrenHtml}</${tag}>`;
+            };
+
+            return Array.from(template.content.childNodes).map((node) => sanitizeNode(node)).join('').trim();
+        };
+
+        const getEditorInstance = () => (discussionEditorReady ? discussionEditor : null);
+
+        const getSubjectBodyHtml = () => {
+            const editor = getEditorInstance();
+            if (editor) {
+                return String(editor.getContent() || '').trim();
+            }
+            return textToParagraphsHtml(subjectInput.value.trim());
+        };
+
+        const setSubjectBodyHtml = (html) => {
+            const nextContent = String(html || '').trim();
+            pendingEditorContent = nextContent;
+            subjectInput.value = nextContent;
+            const editor = getEditorInstance();
+            if (editor) {
+                editor.setContent(nextContent);
+                pendingEditorContent = '';
+            }
+        };
+
+        const focusEditor = () => {
+            const editor = getEditorInstance();
+            if (editor) {
+                editor.focus();
+                return;
+            }
+            subjectInput.focus();
+        };
+
+        const initDiscussionEditor = async () => {
+            if (!window.tinymce || !subjectInput) {
+                return;
+            }
+
+            const editors = await window.tinymce.init({
+                selector: '#discussion-subject',
+                license_key: 'gpl',
+                menubar: 'insert format tools view',
+                branding: false,
+                promotion: false,
+                browser_spellcheck: true,
+                statusbar: false,
+                toolbar_sticky: true,
+                toolbar_mode: 'wrap',
+                min_height: 360,
+                autoresize_bottom_margin: 16,
+                plugins: 'autolink advlist lists link image emoticons charmap code fullscreen autoresize',
+                toolbar: 'undo redo | blocks | bold italic underline strikethrough | bullist numlist blockquote | link image emoticons | removeformat code fullscreen',
+                placeholder: editorPlaceholder,
+                convert_urls: false,
+                relative_urls: false,
+                remove_script_host: false,
+                invalid_elements: 'script,style,iframe,object,embed,form,input,button,textarea,select,option,link,meta,table,thead,tbody,tfoot,tr,td,th',
+                forced_root_block: 'p',
+                image_title: true,
+                image_dimensions: true,
+                image_caption: true,
+                image_description: false,
+                formats: {
+                    bold: { inline: 'strong' },
+                    italic: { inline: 'em' },
+                    underline: { inline: 'u' },
+                    strikethrough: { inline: 's' }
+                },
+                block_formats: 'Paragraph=p;Heading 2=h2;Heading 3=h3;Quote=blockquote;Code=pre',
+                link_default_target: '_blank',
+                link_assume_external_targets: 'https',
+                content_style: `
+                    body {
+                        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                        font-size: 16px;
+                        line-height: 1.75;
+                        color: #0f172a;
+                        padding: 1rem 1.1rem;
+                    }
+                    p { margin: 0 0 1rem; }
+                    h2, h3 {
+                        color: #0f172a;
+                        font-family: "Roboto Condensed", "Segoe UI", sans-serif;
+                        margin: 1.35rem 0 .8rem;
+                    }
+                    blockquote {
+                        margin: 1.2rem 0;
+                        padding: .85rem 1rem;
+                        border-left: 4px solid #2563eb;
+                        background: #f8fbff;
+                        color: #334155;
+                    }
+                    figure {
+                        margin: 1rem 0;
+                    }
+                    figure.image img {
+                        display: block;
+                        max-width: 100%;
+                        height: auto;
+                        margin: 0 auto;
+                        border-radius: 12px;
+                    }
+                    figcaption {
+                        margin-top: .45rem;
+                        color: #64748b;
+                        font-size: .9rem;
+                        text-align: center;
+                    }
+                    pre {
+                        margin: 1rem 0;
+                        padding: .9rem 1rem;
+                        border-radius: 12px;
+                        background: #0f172a;
+                        color: #e2e8f0;
+                        white-space: pre-wrap;
+                    }
+                    a { color: #1d4ed8; }
+                `
+            });
+
+            discussionEditor = Array.isArray(editors) && editors.length
+                ? editors[0]
+                : (window.tinymce ? window.tinymce.get('discussion-subject') : null);
+            if (!discussionEditor) {
+                return;
+            }
+            discussionEditorReady = true;
+
+            discussionEditor.on('change input undo redo keyup setcontent', updatePreview);
+            const initialEditorContent = String(pendingEditorContent || '').trim();
+            if (initialEditorContent) {
+                discussionEditor.setContent(initialEditorContent);
+            }
+            pendingEditorContent = '';
+            updatePreview();
+        };
+
         const composeContentHtml = () => {
-            const bodyHtml = textToParagraphsHtml(subjectInput.value.trim());
+            const bodyHtml = getSubjectBodyHtml().trim();
             const coverUrl = sanitizeUrl(coverUrlInput.value);
             const coverHtml = coverUrl ? `<p><img src="${coverUrl}" alt="discussion cover"></p>` : '';
-            return `${coverHtml}${bodyHtml}`;
+            if (!bodyHtml) {
+                return coverHtml;
+            }
+            if (!coverHtml) {
+                return bodyHtml;
+            }
+            const containsCover = bodyHtml.includes(`src="${coverUrl}"`) || bodyHtml.includes(`src='${coverUrl}'`);
+            return containsCover ? bodyHtml : `${coverHtml}\n${bodyHtml}`;
         };
 
         const updatePreview = () => {
@@ -585,13 +891,13 @@
             const categoryText = categoryInput.options[categoryInput.selectedIndex]
                 ? categoryInput.options[categoryInput.selectedIndex].text
                 : '';
-            const subject = subjectInput.value.trim();
+            const subjectHtml = sanitizePreviewHtml(getSubjectBodyHtml());
             previewTitle.textContent = title || 'Tiêu đề chủ đề sẽ hiển thị tại đây';
             previewCategory.textContent = categoryText || 'Chưa chọn';
-            previewSubject.textContent = subject || 'Nội dung Subject sẽ xuất hiện ở đây sau khi bạn nhập.';
+            previewSubject.innerHTML = subjectHtml || 'Nội dung Subject sẽ xuất hiện ở đây sau khi bạn nhập.';
         };
 
-        [titleInput, categoryInput, subjectInput].forEach((element) => {
+        [titleInput, categoryInput].forEach((element) => {
             element.addEventListener('input', updatePreview);
             element.addEventListener('change', updatePreview);
         });
@@ -649,6 +955,7 @@
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
+            await editorReady;
 
             if (isUploadingCover) {
                 setFeedback('Ảnh đang tải lên máy chủ. Vui lòng chờ xong rồi đăng.', 'error');
@@ -681,7 +988,7 @@
 
             const title = titleInput.value.trim();
             const categoryId = Number(categoryInput.value);
-            const subject = subjectInput.value.trim();
+            const subjectText = htmlToPlainText(getSubjectBodyHtml());
 
             if (!title || title.length < 5) {
                 setFeedback('Tiêu đề cần tối thiểu 5 ký tự.', 'error');
@@ -693,9 +1000,9 @@
                 categoryInput.focus();
                 return;
             }
-            if (!subject || subject.length < 20) {
+            if (!subjectText || subjectText.length < 20) {
                 setFeedback('Nội dung Subject cần tối thiểu 20 ký tự.', 'error');
-                subjectInput.focus();
+                focusEditor();
                 return;
             }
 
@@ -801,6 +1108,7 @@
 
                 form.reset();
                 emailInput.value = email;
+                setSubjectBodyHtml('');
                 cancelCoverUrlResolve();
                 clearPendingCoverFile();
                 refreshCoverPreview();
@@ -828,6 +1136,12 @@
             emailWrap.classList.add('d-none');
         }
 
+        subjectInput.addEventListener('input', updatePreview);
+        subjectInput.addEventListener('change', updatePreview);
+        editorReady = initDiscussionEditor().catch((error) => {
+            console.error('TinyMCE init failed:', error);
+            updatePreview();
+        });
         hideCoverPreview();
         updatePreview();
     })();

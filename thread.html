@@ -549,8 +549,14 @@
             return items.map((line) => `<p>${escapeHtml(line)}</p>`).join('');
         };
 
+        const decodeHtmlEntities = (value) => {
+            const textarea = document.createElement('textarea');
+            textarea.innerHTML = String(value || '');
+            return textarea.value;
+        };
+
         const normalizeSafeImageUrl = (value) => {
-            const raw = String(value || '').trim();
+            const raw = decodeHtmlEntities(value).trim();
             if (!raw) return '';
             try {
                 const parsed = new URL(raw, window.location.href);
@@ -562,7 +568,7 @@
         };
 
         const normalizeSafeHref = (value) => {
-            const raw = String(value || '').trim();
+            const raw = decodeHtmlEntities(value).trim();
             if (!raw) return '';
             if (raw.startsWith('mailto:')) return raw;
             try {
@@ -758,10 +764,14 @@
             const source = String(html || '');
             if (!source) return [];
             const urls = [];
-            const matcher = /<img\b[^>]*\bsrc\s*=\s*(?:"([^"]+)"|'([^']+)'|([^>\s]+))/gi;
-            let match;
-            while ((match = matcher.exec(source)) && urls.length < maxItems) {
-                const candidate = normalizeSafeImageUrl(match[1] || match[2] || match[3] || '');
+            const template = document.createElement('template');
+            template.innerHTML = source;
+            const images = Array.from(template.content.querySelectorAll('img'));
+            for (const image of images) {
+                if (urls.length >= maxItems) {
+                    break;
+                }
+                const candidate = normalizeSafeImageUrl(image.getAttribute('src') || '');
                 if (candidate && !urls.includes(candidate)) {
                     urls.push(candidate);
                 }

@@ -632,6 +632,12 @@
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
 
+    const decodeHtmlEntities = (value) => {
+        const textarea = document.createElement('textarea');
+        textarea.innerHTML = String(value || '');
+        return textarea.value;
+    };
+
     const toPlainText = (html) => String(html ?? '')
         .replace(/<[^>]+>/g,' ').replace(/&nbsp;/g,' ').replace(/&amp;/g,'&')
         .replace(/&lt;/g,'<').replace(/&gt;/g,'>').replace(/\s+/g,' ').trim();
@@ -716,7 +722,7 @@
     const getCategoryName = (id) => CATEGORY_NAMES[id] || `Chuyên mục #${id||'?'}`;
 
     const toSafeHttpUrl = (value) => {
-        const raw = String(value||'').trim();
+        const raw = decodeHtmlEntities(value).trim();
         if (!raw) return '';
         try {
             const u = new URL(raw, window.location.href);
@@ -725,8 +731,10 @@
     };
 
     const extractFirstImageSrc = (html) => {
-        const m = String(html||'').match(/<img[^>]*src\s*=\s*['"]([^'"]+)['"]/i);
-        return m && m[1] ? String(m[1]).trim() : '';
+        const template = document.createElement('template');
+        template.innerHTML = String(html || '');
+        const image = template.content.querySelector('img[src]');
+        return image ? String(image.getAttribute('src') || '').trim() : '';
     };
 
     const estimateReadTime = (html) => {

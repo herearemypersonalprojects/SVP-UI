@@ -7,6 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
     <link rel="shortcut icon" href="assets/icons/favicon.svg">
     <script src="seo.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js" referrerpolicy="origin"></script>
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
@@ -148,6 +149,25 @@
         .sv-thread-post__content a {
             color: #2563eb;
             text-decoration: underline;
+        }
+        .sv-thread-post__content figure {
+            margin: 0 0 .85rem;
+        }
+        .sv-thread-post__content img {
+            display: block;
+            max-width: 100%;
+            max-height: 420px;
+            height: auto;
+            margin: 0 auto;
+            border-radius: 12px;
+            border: 1px solid #dbeafe;
+            background: #f8fafc;
+        }
+        .sv-thread-post__content figcaption {
+            margin-top: .45rem;
+            color: #64748b;
+            font-size: .88rem;
+            text-align: center;
         }
         .sv-thread-post__media {
             display: grid;
@@ -407,6 +427,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="config.js"></script>
 <script src="avatar-utils.js"></script>
+<script src="comment-editor.js"></script>
 <script>
     (function () {
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
@@ -471,9 +492,11 @@
         const replyClearBtn = document.getElementById('reply-clear');
         const scrollReplyBtn = document.getElementById('btn-scroll-reply');
         const replySubmitBtn = replyForm.querySelector('button[type="submit"]');
+        const commentEditorApi = window.SVPCommentEditor || null;
         let replyImagePreviewObjectUrl = '';
         let replyCaptchaAnswer = null;
         let pendingReplyTarget = '';
+        let replyComposer = null;
 
         if (!breadcrumbEl || !categoryEl || !createdEl || !viewsEl || !repliesEl || !titleEl || !authorEl || !tagsEl || !postsCountEl || !statusEl || !postsEl || !kpisEl || !relatedEl || !replyForm || !replyGuestFieldsEl || !replyIdentityFieldsEl || !replySessionHintEl || !replyNameEl || !replyCaptchaFieldsEl || !replyCaptchaQuestionEl || !replyCaptchaAnswerEl || !replyMessageEl || !replyCharCountEl || !replyImageFieldsEl || !replyImageEl || !replyImageStatusEl || !replyImagePreviewEl || !replyImageClearBtn || !replyFeedbackEl || !replyClearBtn || !scrollReplyBtn || !replySubmitBtn) {
             return;
@@ -498,7 +521,44 @@
             return !suffix || /^\s/.test(suffix);
         };
 
+        const hasRichReplyEditor = () => Boolean(replyComposer && replyComposer.isReady());
+
+        const getReplyPlainText = () => {
+            if (hasRichReplyEditor()) {
+                return replyComposer.getText();
+            }
+            return String(replyMessageEl.value || '').trim();
+        };
+
+        const updateReplyCharCount = () => {
+            const count = hasRichReplyEditor()
+                ? replyComposer.getTextLength()
+                : String(replyMessageEl.value || '').length;
+            replyCharCountEl.textContent = `${count}/2000 ký tự`;
+        };
+
+        const focusReplyComposer = () => {
+            if (replyComposer) {
+                replyComposer.focus();
+                return;
+            }
+            replyMessageEl.focus();
+        };
+
+        const clearReplyComposerContent = () => {
+            if (replyComposer) {
+                replyComposer.clear();
+            } else {
+                replyMessageEl.value = '';
+            }
+            updateReplyCharCount();
+        };
+
         const syncPendingReplyTarget = () => {
+            if (hasRichReplyEditor()) {
+                pendingReplyTarget = '';
+                return;
+            }
             if (!startsWithReplyMention(replyMessageEl.value, pendingReplyTarget)) {
                 pendingReplyTarget = '';
             }
@@ -522,6 +582,30 @@
             return author
                 ? `[quote="${author}"]\n${body}\n[/quote]`
                 : `[quote]\n${body}\n[/quote]`;
+        };
+
+        const buildReplyMentionHtml = (authorName) => {
+            const author = normalizeReplyTarget(authorName);
+            if (!author) {
+                return '';
+            }
+            return `<p><strong>@${escapeHtml(author)}</strong> </p>`;
+        };
+
+        const buildReplyQuoteHtml = (authorName, quoteText) => {
+            const lines = String(quoteText || '')
+                .split(/\r?\n/)
+                .map((line) => line.trim())
+                .filter(Boolean);
+            if (!lines.length) {
+                return '';
+            }
+            const author = normalizeReplyTarget(authorName);
+            const headerHtml = author
+                ? `<p><strong>${escapeHtml(quoteHeaderText(author))}</strong></p>`
+                : '';
+            const bodyHtml = lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('');
+            return `<blockquote>${headerHtml}${bodyHtml}</blockquote><p></p>`;
         };
 
         const paragraphsHtmlFromText = (text, replyTarget, highlightFirstParagraph) => {
@@ -719,7 +803,8 @@
             const allowedTags = new Set([
                 'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
                 'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
-                'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'div', 'span'
+                'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'div', 'span',
+                'img', 'figure', 'figcaption'
             ]);
             const blockedTags = new Set([
                 'script', 'style', 'iframe', 'object', 'embed', 'form',
@@ -735,7 +820,7 @@
                 }
 
                 const tag = String(node.nodeName || '').toLowerCase();
-                if (blockedTags.has(tag) || tag === 'img') {
+                if (blockedTags.has(tag)) {
                     return '';
                 }
 
@@ -753,11 +838,52 @@
                         : '';
                     return `<a${attrs}>${childrenHtml}</a>`;
                 }
+                if (tag === 'img') {
+                    const src = normalizeSafeImageUrl(node.getAttribute('src') || '');
+                    if (!src) {
+                        return '';
+                    }
+                    const alt = escapeHtml(node.getAttribute('alt') || '');
+                    return `<img src="${escapeHtml(src)}" alt="${alt}">`;
+                }
                 return `<${tag}>${childrenHtml}</${tag}>`;
             };
 
             const sanitized = Array.from(template.content.childNodes).map((node) => sanitizeNode(node)).join('').trim();
             return sanitized || '<p>Nội dung đang được cập nhật.</p>';
+        };
+
+        const getReplyContentHtml = () => {
+            if (hasRichReplyEditor()) {
+                return commentEditorApi
+                    ? commentEditorApi.sanitizeHtml(replyComposer.getSubmissionHtml())
+                    : String(replyComposer.getSubmissionHtml() || '').trim();
+            }
+            return contentHtmlFromReplyText(replyMessageEl.value, pendingReplyTarget);
+        };
+
+        const hasReplyRenderableContent = (html) => {
+            if (commentEditorApi && typeof commentEditorApi.hasRenderableContent === 'function') {
+                return commentEditorApi.hasRenderableContent(html);
+            }
+            return Boolean(String(html || '').trim());
+        };
+
+        const initReplyComposer = () => {
+            if (!commentEditorApi || !replyMessageEl) {
+                updateReplyCharCount();
+                return Promise.resolve(null);
+            }
+            replyComposer = commentEditorApi.create({
+                target: replyMessageEl,
+                minHeight: 280,
+                placeholder: replyMessageEl.getAttribute('placeholder') || 'Chia sẻ câu trả lời, kinh nghiệm hoặc câu hỏi bổ sung...',
+                onChange: () => {
+                    syncPendingReplyTarget();
+                    updateReplyCharCount();
+                }
+            });
+            return replyComposer ? replyComposer.whenReady : Promise.resolve(null);
         };
 
         const extractImageUrlsFromHtml = (html, maxItems = 4) => {
@@ -1391,8 +1517,8 @@
 
             replyForm.reset();
             pendingReplyTarget = '';
+            clearReplyComposerContent();
             clearReplyImageInput({ clearStatus: true });
-            replyCharCountEl.textContent = '0/2000 ký tự';
             syncReplyIdentityUi();
 
             if (!peekAuthenticatedReplyIdentity().isAuthenticated) {
@@ -1545,7 +1671,7 @@
         const attachInteractionHandlers = () => {
             replyMessageEl.addEventListener('input', () => {
                 syncPendingReplyTarget();
-                replyCharCountEl.textContent = `${replyMessageEl.value.length}/2000 ký tự`;
+                updateReplyCharCount();
             });
 
             replyImageEl.addEventListener('change', () => {
@@ -1584,7 +1710,7 @@
 
             scrollReplyBtn.addEventListener('click', () => {
                 document.getElementById('reply-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
-                replyMessageEl.focus();
+                focusReplyComposer();
             });
 
             postsEl.addEventListener('click', (event) => {
@@ -1592,25 +1718,34 @@
                 if (!(target instanceof HTMLButtonElement)) return;
                 const replyTo = String(target.dataset.reply || '').trim();
                 if (replyTo) {
-                    const prefix = `@${replyTo} `;
-                    pendingReplyTarget = normalizeReplyTarget(replyTo);
-                    if (!replyMessageEl.value.startsWith(prefix)) {
-                        replyMessageEl.value = `${prefix}${replyMessageEl.value}`;
+                    if (hasRichReplyEditor()) {
+                        pendingReplyTarget = '';
+                        replyComposer.insertHtml(buildReplyMentionHtml(replyTo), `@${replyTo} `);
+                    } else {
+                        const prefix = `@${replyTo} `;
+                        pendingReplyTarget = normalizeReplyTarget(replyTo);
+                        if (!replyMessageEl.value.startsWith(prefix)) {
+                            replyMessageEl.value = `${prefix}${replyMessageEl.value}`;
+                        }
+                        updateReplyCharCount();
                     }
-                    replyCharCountEl.textContent = `${replyMessageEl.value.length}/2000 ký tự`;
                     document.getElementById('reply-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    replyMessageEl.focus();
+                    focusReplyComposer();
                     return;
                 }
                 const quote = String(target.dataset.quote || '').trim();
                 if (quote) {
                     const quoteAuthor = String(target.dataset.quoteAuthor || '').trim();
-                    const quoted = buildForumQuoteMarkup(quoteAuthor, quote);
                     pendingReplyTarget = '';
-                    replyMessageEl.value = `${quoted}${replyMessageEl.value ? `\n\n${replyMessageEl.value.trimStart()}` : ''}`.trim();
-                    replyCharCountEl.textContent = `${replyMessageEl.value.length}/2000 ký tự`;
+                    if (hasRichReplyEditor()) {
+                        replyComposer.insertHtml(buildReplyQuoteHtml(quoteAuthor, quote), buildForumQuoteMarkup(quoteAuthor, quote));
+                    } else {
+                        const quoted = buildForumQuoteMarkup(quoteAuthor, quote);
+                        replyMessageEl.value = `${quoted}${replyMessageEl.value ? `\n\n${replyMessageEl.value.trimStart()}` : ''}`.trim();
+                        updateReplyCharCount();
+                    }
                     document.getElementById('reply-box').scrollIntoView({ behavior: 'smooth', block: 'start' });
-                    replyMessageEl.focus();
+                    focusReplyComposer();
                 }
             });
         };
@@ -1713,8 +1848,10 @@
         };
 
         const init = async () => {
+            initReplyComposer();
             attachInteractionHandlers();
             loadUserPrefill();
+            updateReplyCharCount();
 
             let thread;
             try {
@@ -1754,7 +1891,9 @@
                     ? String(authenticatedIdentity.displayName || '').trim()
                     : String(replyNameEl.value || '').trim();
                 const captchaInput = Number(String(replyCaptchaAnswerEl.value || '').trim());
-                const message = String(replyMessageEl.value || '').trim();
+                const message = getReplyPlainText();
+                const contentHtml = getReplyContentHtml();
+                const hasReplyContent = hasReplyRenderableContent(contentHtml);
                 const selectedImageFile = replyImageEl.files && replyImageEl.files[0] ? replyImageEl.files[0] : null;
 
                 if (!isAuthenticated && name.length < 2) {
@@ -1768,14 +1907,19 @@
                     replyCaptchaAnswerEl.focus();
                     return;
                 }
-                if (!message && !selectedImageFile) {
+                if (!hasReplyContent && !selectedImageFile) {
                     setReplyFeedback('Vui lòng nhập phản hồi hoặc chọn ảnh đính kèm.', 'error');
-                    replyMessageEl.focus();
+                    focusReplyComposer();
                     return;
                 }
-                if (message && message.length < 5 && !selectedImageFile) {
+                if (!hasReplyContent && message && message.length < 5 && !selectedImageFile) {
                     setReplyFeedback('Nội dung phản hồi cần tối thiểu 5 ký tự (hoặc thêm ảnh đính kèm).', 'error');
-                    replyMessageEl.focus();
+                    focusReplyComposer();
+                    return;
+                }
+                if (hasReplyContent && message && message.length < 5 && !selectedImageFile && !contentHtml.includes('<img')) {
+                    setReplyFeedback('Nội dung phản hồi cần tối thiểu 5 ký tự (hoặc thêm ảnh đính kèm).', 'error');
+                    focusReplyComposer();
                     return;
                 }
                 if (!isAuthenticated && selectedImageFile) {
@@ -1810,7 +1954,6 @@
                         uploadedImageUrl = await uploadReplyImageToCloudflare(selectedImageFile);
                         setReplyImageStatus('Upload ảnh thành công.', 'success');
                     }
-                    const contentHtml = contentHtmlFromReplyText(message, pendingReplyTarget);
                     const createdComment = await createCommentViaApi(
                         thread.threadId,
                         name,

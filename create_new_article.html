@@ -173,7 +173,7 @@
                             <select id="article-category" class="form-select">
                                 <option value="1">1 - Học tập và nghiên cứu tại Pháp</option>
                                 <option value="2">2 - Kinh nghiệm xin học bổng và du học</option>
-                                <option value="3">3 - Cuộc sống tại Pháp</option>
+                                <option value="3" selected>3 - Cuộc sống tại Pháp</option>
                                 <option value="4">4 - Cơ hội việc làm và thực tập</option>
                                 <option value="5">5 - Các vấn đề pháp lý, quốc tịch và thuế khóa</option>
                                 <option value="6">6 - Văn hóa và ngôn ngữ Pháp</option>
@@ -1166,7 +1166,7 @@
                     const parsedArticle = splitArticleContentHtml(rawContentHtml);
                     const coverUrl = sanitizeUrl(post.coverImageUrl || post.cover_image_url || parsedArticle.coverUrl);
                     titleInput.value = post.title || '';
-                    categoryInput.value = String(post.categoryId || post.category_id || 1);
+                    categoryInput.value = String(post.categoryId || post.category_id || 3);
                     coverUrlInput.value = coverUrl;
                     persistedCoverUrl = coverUrl;
                     refreshCoverPreview();

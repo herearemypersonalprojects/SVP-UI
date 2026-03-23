@@ -689,12 +689,13 @@
             const allowedTags = new Set([
                 'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
                 'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
-                'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'div', 'span'
+                'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'div', 'span',
+                'img', 'figure', 'figcaption'
             ]);
             const blockedTags = new Set([
                 'script', 'style', 'iframe', 'object', 'embed', 'form',
                 'input', 'button', 'textarea', 'select', 'option', 'link', 'meta',
-                'img', 'figure', 'figcaption', 'picture', 'source', 'svg', 'canvas'
+                'picture', 'source', 'svg', 'canvas'
             ]);
 
             const sanitizeNode = (node) => {
@@ -723,6 +724,14 @@
                         ? ` href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"`
                         : '';
                     return `<a${attrs}>${childrenHtml}</a>`;
+                }
+                if (tag === 'img') {
+                    const src = normalizeSafeHref(node.getAttribute('src'));
+                    if (!src) {
+                        return '';
+                    }
+                    const alt = escapeHtml(node.getAttribute('alt') || '');
+                    return `<img src="${escapeHtml(src)}" alt="${alt}">`;
                 }
                 return `<${tag}>${childrenHtml}</${tag}>`;
             };
@@ -838,13 +847,16 @@
                 toolbar_mode: 'wrap',
                 min_height: 360,
                 autoresize_bottom_margin: 16,
-                plugins: 'autolink advlist lists link emoticons charmap code fullscreen autoresize',
-                toolbar: 'undo redo | blocks | bold italic underline strikethrough | bullist numlist blockquote | link emoticons | removeformat code fullscreen',
+                plugins: 'autolink advlist lists link image emoticons charmap code fullscreen autoresize',
+                toolbar: 'undo redo | blocks | bold italic underline strikethrough | bullist numlist blockquote | link image emoticons | removeformat code fullscreen',
                 placeholder: editorPlaceholder,
                 convert_urls: false,
                 relative_urls: false,
                 remove_script_host: false,
-                invalid_elements: 'script,style,iframe,object,embed,form,input,button,textarea,select,option,link,meta,table,thead,tbody,tfoot,tr,td,th,img,figure,figcaption,picture,source,svg,canvas',
+                paste_data_images: false,
+                image_uploadtab: false,
+                image_title: true,
+                invalid_elements: 'script,style,iframe,object,embed,form,input,button,textarea,select,option,link,meta,table,thead,tbody,tfoot,tr,td,th,picture,source,svg,canvas',
                 forced_root_block: 'p',
                 formats: {
                     bold: { inline: 'strong' },

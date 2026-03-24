@@ -472,7 +472,7 @@
             ? urlHelpers.buildCanonicalUrl('thread', threadId, title)
             : window.location.href.split('#')[0];
         const buildThreadShareUrl = (threadId, title) => urlHelpers
-            ? urlHelpers.buildCanonicalUrl('thread', threadId, title)
+            ? urlHelpers.buildShareUrl('thread', threadId, title)
             : buildThreadCanonicalUrl(threadId, title);
 
         const CATEGORY_MAP = new Map([

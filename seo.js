@@ -203,7 +203,6 @@
 
         const params = new URLSearchParams();
         params.set(route.queryKey, String(numericId));
-        params.set('slug', slugify(title, route.fallbackSlug));
 
         if (options.preserveApiMode !== false) {
             const apiMode = currentApiMode();
@@ -213,7 +212,7 @@
         return `${route.file}?${params.toString()}`;
     };
 
-    const buildCanonicalUrl = (kind, id, title) => buildUrl(buildPrettyPath(kind, id, title, { preserveApiMode: false }));
+    const buildCanonicalUrl = (kind, id, title) => buildUrl(buildDetailPath(kind, id, title, { preserveApiMode: false }));
 
     const resolveShareBaseUrl = () => {
         const apiBase = trimTrailingSlash(window.SVP_API_BASE_URL || DEFAULT_API_BASE_URL);
@@ -230,7 +229,7 @@
 
     const replaceDetailHistory = (kind, id, title) => {
         if (!window.history || typeof window.history.replaceState !== 'function') return;
-        const nextRelativeUrl = buildPrettyPath(kind, id, title);
+        const nextRelativeUrl = buildDetailPath(kind, id, title);
         const nextAbsoluteUrl = new URL(nextRelativeUrl, window.location.href);
         const currentAbsoluteUrl = new URL(window.location.href);
         if (nextAbsoluteUrl.pathname === currentAbsoluteUrl.pathname && nextAbsoluteUrl.search === currentAbsoluteUrl.search) {

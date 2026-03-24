@@ -179,7 +179,14 @@
         }
 
         const params = new URLSearchParams(window.location.search);
-        const rawEventId = (params.get('eventId') || '').trim();
+        const prettyRoute = urlHelpers && typeof urlHelpers.parsePrettyRoute === 'function'
+            ? urlHelpers.parsePrettyRoute(window.location.pathname)
+            : null;
+        const rawEventId = String(
+            params.get('eventId')
+            || (prettyRoute && prettyRoute.kind === 'event' ? prettyRoute.id : '')
+            || ''
+        ).trim();
         const eventId = Number(rawEventId);
 
         const escapeHtml = (value) => String(value || '')

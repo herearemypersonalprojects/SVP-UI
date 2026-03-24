@@ -581,9 +581,15 @@
         };
         const REQUEST_TIMEOUT_MS = 8000;
         const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
-        const buildArticleHref = (postId, title) => urlHelpers
-            ? urlHelpers.buildDetailPath('article', postId, title)
-            : `post_detail.html?postId=${encodeURIComponent(postId)}`;
+        const buildArticleHref = (postId, title) => {
+            if (urlHelpers && typeof urlHelpers.buildPrettyPath === 'function') {
+                return urlHelpers.buildPrettyPath('article', postId, title);
+            }
+            if (urlHelpers && typeof urlHelpers.buildDetailPath === 'function') {
+                return urlHelpers.buildDetailPath('article', postId, title);
+            }
+            return `post_detail.html?postId=${encodeURIComponent(postId)}`;
+        };
         const buildEventHref = (eventId, title) => urlHelpers
             ? urlHelpers.buildDetailPath('event', eventId, title)
             : `event_detail.html?eventId=${encodeURIComponent(eventId)}`;

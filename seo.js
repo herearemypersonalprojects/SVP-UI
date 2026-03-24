@@ -8,9 +8,9 @@
     const PRIVATE_ROBOTS = 'noindex,nofollow,noarchive';
     const DEFAULT_THEME_COLOR = '#1d4ed8';
     const DETAIL_ROUTE_MAP = {
-        article: { file: 'post_detail.html', queryKey: 'postId', shareKind: 'article', fallbackSlug: 'bai-viet' },
-        thread: { file: 'thread.html', queryKey: 'postId', shareKind: 'thread', fallbackSlug: 'chu-de' },
-        event: { file: 'event_detail.html', queryKey: 'eventId', shareKind: 'event', fallbackSlug: 'su-kien' }
+        article: { file: 'post_detail.html', queryKey: 'postId', shareKind: 'article', prettyPrefix: 'bai-viet', fallbackSlug: 'bai-viet' },
+        thread: { file: 'thread.html', queryKey: 'postId', shareKind: 'thread', prettyPrefix: 'chu-de', fallbackSlug: 'chu-de' },
+        event: { file: 'event_detail.html', queryKey: 'eventId', shareKind: 'event', prettyPrefix: 'su-kien', fallbackSlug: 'su-kien' }
     };
     const head = document.head;
 
@@ -30,6 +30,10 @@
         const path = String(window.location.pathname || '/').trim() || '/';
         if (path === '/' || path.endsWith('/')) return 'index.html';
         const parts = path.split('/').filter(Boolean);
+        if (parts.length >= 2) {
+            const matchedRoute = Object.values(DETAIL_ROUTE_MAP).find((route) => route.prettyPrefix === parts[0]);
+            if (matchedRoute) return matchedRoute.file;
+        }
         return parts.length ? parts[parts.length - 1] : 'index.html';
     };
 
@@ -111,6 +115,7 @@
     };
 
     const trimTrailingSlash = (value) => String(value || '').replace(/\/+$/g, '');
+    const isFileUiContext = () => String(window.location.protocol || '').toLowerCase() === 'file:';
 
     const currentApiMode = () => {
         try {
@@ -137,11 +142,58 @@
     };
 
     const resolveDetailRoute = (kind) => DETAIL_ROUTE_MAP[String(kind || '').trim().toLowerCase()] || null;
+    const parsePrettyRoute = (pathname) => {
+        const path = String(pathname || window.location.pathname || '/').trim();
+        const parts = path.split('/').filter(Boolean);
+        if (parts.length < 2) return null;
+        const route = Object.entries(DETAIL_ROUTE_MAP)
+            .find(([, candidate]) => candidate.prettyPrefix === parts[0]);
+        if (!route) return null;
+        const numericId = normalizeId(parts[1]);
+        if (numericId <= 0) return null;
+        return {
+            kind: route[0],
+            id: numericId,
+            slug: parts[2] || '',
+            file: route[1].file,
+            queryKey: route[1].queryKey,
+            prettyPrefix: route[1].prettyPrefix
+        };
+    };
 
     const normalizeId = (value) => {
         const parsed = Number(value);
         if (!Number.isFinite(parsed) || parsed <= 0) return 0;
         return Math.trunc(parsed);
+    };
+
+    const buildPrettyPath = (kind, id, title, options = {}) => {
+        const route = resolveDetailRoute(kind);
+        const numericId = normalizeId(id);
+        if (!route || numericId <= 0) return 'index.html';
+
+        if (!isFileUiContext()) {
+            const slug = slugify(title, route.fallbackSlug);
+            const prettyPath = `/${route.prettyPrefix}/${numericId}/${slug}`;
+            if (options.preserveApiMode !== false) {
+                const apiMode = currentApiMode();
+                if (apiMode) {
+                    return `${prettyPath}?api=${encodeURIComponent(apiMode)}`;
+                }
+            }
+            return prettyPath;
+        }
+
+        const params = new URLSearchParams();
+        params.set(route.queryKey, String(numericId));
+        params.set('slug', slugify(title, route.fallbackSlug));
+
+        if (options.preserveApiMode !== false) {
+            const apiMode = currentApiMode();
+            if (apiMode) params.set('api', apiMode);
+        }
+
+        return `${route.file}?${params.toString()}`;
     };
 
     const buildDetailPath = (kind, id, title, options = {}) => {
@@ -161,7 +213,7 @@
         return `${route.file}?${params.toString()}`;
     };
 
-    const buildCanonicalUrl = (kind, id, title) => buildUrl(buildDetailPath(kind, id, title, { preserveApiMode: false }));
+    const buildCanonicalUrl = (kind, id, title) => buildUrl(buildPrettyPath(kind, id, title, { preserveApiMode: false }));
 
     const resolveShareBaseUrl = () => {
         const apiBase = trimTrailingSlash(window.SVP_API_BASE_URL || DEFAULT_API_BASE_URL);
@@ -178,7 +230,7 @@
 
     const replaceDetailHistory = (kind, id, title) => {
         if (!window.history || typeof window.history.replaceState !== 'function') return;
-        const nextRelativeUrl = buildDetailPath(kind, id, title);
+        const nextRelativeUrl = buildPrettyPath(kind, id, title);
         const nextAbsoluteUrl = new URL(nextRelativeUrl, window.location.href);
         const currentAbsoluteUrl = new URL(window.location.href);
         if (nextAbsoluteUrl.pathname === currentAbsoluteUrl.pathname && nextAbsoluteUrl.search === currentAbsoluteUrl.search) {
@@ -466,9 +518,11 @@
         setStructuredData,
         urls: {
             slugify,
+            buildPrettyPath,
             buildDetailPath,
             buildCanonicalUrl,
             buildShareUrl,
+            parsePrettyRoute,
             replaceDetailHistory
         },
         setPage

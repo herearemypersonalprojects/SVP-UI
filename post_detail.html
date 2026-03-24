@@ -1891,7 +1891,10 @@
 
     const init = async () => {
         const params = new URLSearchParams(window.location.search);
-        const postId = Number(params.get('postId')||0);
+        const prettyRoute = urlHelpers && typeof urlHelpers.parsePrettyRoute === 'function'
+            ? urlHelpers.parsePrettyRoute(window.location.pathname)
+            : null;
+        const postId = Number(params.get('postId') || (prettyRoute && prettyRoute.kind === 'article' ? prettyRoute.id : 0));
         initReplyComposer();
         updateReplyCharCount();
 

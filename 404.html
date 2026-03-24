@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Đang chuyển hướng... | SVP</title>
+    <meta name="robots" content="noindex,nofollow,noarchive">
+    <style>
+        body {
+            margin: 0;
+            font-family: system-ui, sans-serif;
+            background: #f8fafc;
+            color: #0f172a;
+            display: grid;
+            min-height: 100vh;
+            place-items: center;
+            padding: 24px;
+        }
+        .svp-404 {
+            max-width: 680px;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 24px;
+            box-shadow: 0 16px 40px rgba(15, 23, 42, 0.08);
+        }
+        a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+<main class="svp-404">
+    <h1>Đang chuyển hướng...</h1>
+    <p id="svp-404-message">Nếu trang không tự động mở, hãy quay lại <a href="/index.html">trang chủ</a>.</p>
+</main>
+<script>
+    (function () {
+        var path = String(window.location.pathname || '/');
+        var search = new URLSearchParams(window.location.search || '');
+        var routes = [
+            { prefix: 'bai-viet', file: 'post_detail.html', queryKey: 'postId' },
+            { prefix: 'chu-de', file: 'thread.html', queryKey: 'postId' },
+            { prefix: 'su-kien', file: 'event_detail.html', queryKey: 'eventId' }
+        ];
+
+        var parts = path.split('/').filter(Boolean);
+        if (parts.length < 2) {
+            return;
+        }
+
+        var matchedRoute = null;
+        for (var index = 0; index < routes.length; index += 1) {
+            if (routes[index].prefix === parts[0]) {
+                matchedRoute = routes[index];
+                break;
+            }
+        }
+        if (!matchedRoute) {
+            return;
+        }
+
+        var id = Number(parts[1] || 0);
+        if (!Number.isInteger(id) || id <= 0) {
+            return;
+        }
+
+        var nextSearch = new URLSearchParams();
+        nextSearch.set(matchedRoute.queryKey, String(id));
+        if (parts[2]) nextSearch.set('slug', parts[2]);
+        if (search.has('api')) nextSearch.set('api', search.get('api'));
+        var nextUrl = '/' + matchedRoute.file + '?' + nextSearch.toString();
+        window.location.replace(nextUrl);
+    })();
+</script>
+</body>
+</html>

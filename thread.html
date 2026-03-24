@@ -1070,7 +1070,14 @@
 
         const getRequestedThread = () => {
             const params = new URLSearchParams(window.location.search);
-            const postId = Number(params.get('postId') || params.get('topic') || 0);
+            const prettyRoute = urlHelpers && typeof urlHelpers.parsePrettyRoute === 'function'
+                ? urlHelpers.parsePrettyRoute(window.location.pathname)
+                : null;
+            const postId = Number(
+                params.get('postId')
+                || params.get('topic')
+                || (prettyRoute && prettyRoute.kind === 'thread' ? prettyRoute.id : 0)
+            );
             return Number.isInteger(postId) && postId > 0 ? postId : 0;
         };
 

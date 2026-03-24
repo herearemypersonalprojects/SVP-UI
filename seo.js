@@ -1,7 +1,7 @@
 (function () {
-    const SITE_URL = 'https://www.svpforum.fr';
+    const SITE_URL = String(window.SVP_PUBLIC_SITE_URL || 'https://svpforum.fr').replace(/\/+$/g, '');
+    const SHARE_SITE_URL = String(window.SVP_SHARE_BASE_URL || 'https://share.svpforum.fr').replace(/\/+$/g, '');
     const SITE_NAME = 'SVP Forum';
-    const DEFAULT_API_BASE_URL = 'https://svp-api-5nxhggmy2a-od.a.run.app';
     const DEFAULT_IMAGE = `${SITE_URL}/assets/icons/logo_svp.png`;
     const DEFAULT_DESCRIPTION = 'Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP) - nơi kết nối, chia sẻ kiến thức, sự kiện và cộng đồng người Việt tại Pháp.';
     const PUBLIC_ROBOTS = 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
@@ -114,7 +114,6 @@
         script.textContent = JSON.stringify(normalized.length === 1 ? normalized[0] : normalized);
     };
 
-    const trimTrailingSlash = (value) => String(value || '').replace(/\/+$/g, '');
     const isFileUiContext = () => String(window.location.protocol || '').toLowerCase() === 'file:';
 
     const currentApiMode = () => {
@@ -196,35 +195,16 @@
         return `${route.file}?${params.toString()}`;
     };
 
-    const buildDetailPath = (kind, id, title, options = {}) => {
-        const route = resolveDetailRoute(kind);
-        const numericId = normalizeId(id);
-        if (!route || numericId <= 0) return 'index.html';
+    const buildDetailPath = (kind, id, title, options = {}) => buildPrettyPath(kind, id, title, options);
 
-        const params = new URLSearchParams();
-        params.set(route.queryKey, String(numericId));
-
-        if (options.preserveApiMode !== false) {
-            const apiMode = currentApiMode();
-            if (apiMode) params.set('api', apiMode);
-        }
-
-        return `${route.file}?${params.toString()}`;
-    };
-
-    const buildCanonicalUrl = (kind, id, title) => buildUrl(buildDetailPath(kind, id, title, { preserveApiMode: false }));
-
-    const resolveShareBaseUrl = () => {
-        const apiBase = trimTrailingSlash(window.SVP_API_BASE_URL || DEFAULT_API_BASE_URL);
-        return apiBase || DEFAULT_API_BASE_URL;
-    };
+    const buildCanonicalUrl = (kind, id, title) => buildUrl(buildPrettyPath(kind, id, title, { preserveApiMode: false }));
 
     const buildShareUrl = (kind, id, title) => {
         const route = resolveDetailRoute(kind);
         const numericId = normalizeId(id);
         if (!route || numericId <= 0) return buildCanonicalUrl(kind, id, title);
-        const slug = encodeURIComponent(slugify(title, route.fallbackSlug));
-        return `${resolveShareBaseUrl()}/share/${route.shareKind}/${numericId}/${slug}`;
+        const slug = slugify(title, route.fallbackSlug);
+        return `${SHARE_SITE_URL}/${route.shareKind}/${numericId}/${slug}`;
     };
 
     const replaceDetailHistory = (kind, id, title) => {

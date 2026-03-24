@@ -580,6 +580,13 @@
             17: 'Góp ý xây dựng SVP'
         };
         const REQUEST_TIMEOUT_MS = 8000;
+        const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
+        const buildArticleHref = (postId, title) => urlHelpers
+            ? urlHelpers.buildDetailPath('article', postId, title)
+            : `post_detail.html?postId=${encodeURIComponent(postId)}`;
+        const buildEventHref = (eventId, title) => urlHelpers
+            ? urlHelpers.buildDetailPath('event', eventId, title)
+            : `event_detail.html?eventId=${encodeURIComponent(eventId)}`;
         const activeCategoryId = (() => {
             const raw = new URLSearchParams(window.location.search).get('categoryId');
             if (!raw || raw.trim().length === 0) {
@@ -888,10 +895,10 @@
             const pendingNote = status === 'PENDING'
                 ? `<div class="sv-meta text-danger mt-2">Hãy kiểm tra hòm thư và xác nhận đăng bài này.</div>`
                 : '';
-            const detailHref = `post_detail.html?postId=${encodeURIComponent(post.postId)}`;
+            const detailHref = buildArticleHref(post.postId, post.title);
 
             return `
-                <article class="sv-article sv-article--clickable" data-post-id="${post.postId}" role="button" tabindex="0" aria-label="Xem chi tiết bài viết ${safeTitle}">
+                <article class="sv-article sv-article--clickable" data-post-id="${post.postId}" data-post-title="${safeTitle}" role="button" tabindex="0" aria-label="Xem chi tiết bài viết ${safeTitle}">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
                         <span class="sv-pill"><i class="fa-regular fa-folder-open"></i>${safeCategory}</span>
                         <span class="sv-meta">${safeReadTime}</span>
@@ -918,7 +925,7 @@
                 : (event.online ? 'Online' : 'Gratuit');
             const safeDate = escapeHtml(formatDate(event.eventTime));
             const safeBadge = escapeHtml(badge);
-            const safeHref = `event_detail.html?eventId=${encodeURIComponent(event.eventId ?? '')}`;
+            const safeHref = buildEventHref(event.eventId, event.title);
             return `
                 <li>
                     <div>
@@ -1110,8 +1117,9 @@
                 return;
             }
             const postId = Number(clickable.getAttribute('data-post-id'));
+            const postTitle = clickable.getAttribute('data-post-title') || '';
             if (Number.isFinite(postId) && postId > 0) {
-                window.location.href = `post_detail.html?postId=${encodeURIComponent(postId)}`;
+                window.location.href = buildArticleHref(postId, postTitle);
             }
         });
         feedEl.addEventListener('keydown', (event) => {
@@ -1124,8 +1132,9 @@
             }
             event.preventDefault();
             const postId = Number(clickable.getAttribute('data-post-id'));
+            const postTitle = clickable.getAttribute('data-post-title') || '';
             if (Number.isFinite(postId) && postId > 0) {
-                window.location.href = `post_detail.html?postId=${encodeURIComponent(postId)}`;
+                window.location.href = buildArticleHref(postId, postTitle);
             }
         });
         loadHome();

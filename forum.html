@@ -470,6 +470,10 @@
         const FORUM_FETCH_LIMIT = 20;
         const FORUM_CACHE_KEY = 'svp.forum.latest-discussions.cache.v3';
         const FORUM_CACHE_TTL_MS = 2 * 60 * 1000;
+        const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
+        const buildThreadHref = (threadId, title) => urlHelpers
+            ? urlHelpers.buildDetailPath('thread', threadId, title)
+            : `thread.html?postId=${encodeURIComponent(threadId)}`;
         let hasMoreFromApi = true;
         let lastFetchedCreatedAt = null;
         let lastFetchedPostId = null;
@@ -625,8 +629,9 @@
                 const authorNode = profileHref
                     ? `<strong class="sv-forum-author" data-profile="${escapeHtml(profileHref)}" role="link" tabindex="0">${escapeHtml(thread.authorName)}</strong>`
                     : `<strong>${escapeHtml(thread.authorName)}</strong>`;
+                const threadHref = buildThreadHref(thread.threadId, thread.title);
                 return `
-                    <a class="sv-forum-row" href="thread.html?postId=${encodeURIComponent(thread.threadId)}">
+                    <a class="sv-forum-row" href="${threadHref}">
                         <div class="sv-forum-topic">
                             <div class="sv-forum-topic__title">${escapeHtml(thread.title)}</div>
                             <div class="sv-forum-topic__meta">Tạo bởi ${authorNode} • ${escapeHtml(formatDateTime(thread.createdAt))}</div>
@@ -692,10 +697,11 @@
             } else {
                 trendingEl.innerHTML = trending.map((thread) => {
                     const metrics = getMetrics(thread);
+                    const threadHref = buildThreadHref(thread.threadId, thread.title);
                     return `
                         <li>
                             <div>
-                                <a href="thread.html?postId=${encodeURIComponent(thread.threadId)}">${escapeHtml(thread.title)}</a>
+                                <a href="${threadHref}">${escapeHtml(thread.title)}</a>
                                 <div class="sv-meta">${metrics.replies} phản hồi • ${metrics.views} lượt xem</div>
                             </div>
                             <span class="sv-badge">Hot</span>

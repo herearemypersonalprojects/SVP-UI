@@ -246,6 +246,10 @@
 <script>
     (function () {
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+        const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
+        const buildEventHref = (eventId, title) => urlHelpers
+            ? urlHelpers.buildDetailPath('event', eventId, title)
+            : `event_detail.html?eventId=${encodeURIComponent(eventId)}`;
         const form = document.getElementById('event-form');
         const emailWrap = document.getElementById('event-email-wrap');
         const emailInput = document.getElementById('event-email');
@@ -908,7 +912,7 @@
                     const payload = await res.json().catch(() => ({}));
                     if (!res.ok) { setFeedback(payload.error || 'Không thể cập nhật sự kiện.', 'error'); return; }
                     setFeedback('Sự kiện đã được cập nhật thành công!', 'success');
-                    setTimeout(() => { window.location.href = `event_detail.html?eventId=${editEventId}`; }, 600);
+                    setTimeout(() => { window.location.href = buildEventHref(editEventId, title); }, 600);
                 } else {
                     const email = normalizeEmail(emailInput.value);
                     const response = await fetch(`${API_BASE_URL}/events`, {
@@ -948,7 +952,7 @@
                     preview();
                     setTimeout(() => {
                         window.location.href = eventId > 0
-                            ? `event_detail.html?eventId=${encodeURIComponent(eventId)}`
+                            ? buildEventHref(eventId, title)
                             : 'events.html';
                     }, 700);
                 }

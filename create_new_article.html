@@ -252,6 +252,10 @@
 <script>
     (function () {
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+        const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
+        const buildArticleHref = (postId, title) => urlHelpers
+            ? urlHelpers.buildDetailPath('article', postId, title)
+            : `post_detail.html?postId=${encodeURIComponent(postId)}`;
         const form = document.getElementById('article-form');
         const titleInput = document.getElementById('article-title');
         const contentEditor = document.getElementById('article-content-editor');
@@ -1057,7 +1061,7 @@
                     const payload = await res.json().catch(() => ({}));
                     if (!res.ok) { setFeedback(payload.error || 'Không thể cập nhật bài viết.', 'error'); return; }
                     setFeedback('Bài viết đã được cập nhật thành công!', 'success');
-                    setTimeout(() => { window.location.href = `post_detail.html?postId=${editPostId}`; }, 600);
+                    setTimeout(() => { window.location.href = buildArticleHref(editPostId, title); }, 600);
                 } else {
                     // ── Create mode: POST ──
                     const email = normalizeEmail(emailInput.value);

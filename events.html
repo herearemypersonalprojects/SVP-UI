@@ -148,6 +148,10 @@
                 timeStyle: 'short'
             }).format(new Date(time));
         };
+        const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
+        const buildEventHref = (eventId, title) => urlHelpers
+            ? urlHelpers.buildDetailPath('event', eventId, title)
+            : `event_detail.html?eventId=${encodeURIComponent(eventId)}`;
 
         const toBadge = (event, isPast) => {
             if (isPast) {
@@ -162,8 +166,8 @@
 
         const renderEventItem = (event, isPast) => {
             const title = escapeHtml(event.title || 'Sự kiện mới');
-            const eventId = encodeURIComponent(event.eventId || '');
-            const href = `event_detail.html?eventId=${eventId}`;
+            const eventId = Number(event.eventId || 0);
+            const href = buildEventHref(eventId, event.title);
             const date = escapeHtml(formatDate(event.eventTime));
             const address = escapeHtml(event.address || (event.online ? 'Online' : 'Địa điểm cập nhật sau'));
             const eventTypeName = String(event.eventTypeName || '').trim();

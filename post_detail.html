@@ -635,6 +635,16 @@
     const LIKE_KEY_PREFIX = 'svp.postDetail.like.v1.';
     const VIEW_TRACK_KEY_PREFIX = 'svp.postDetail.viewTrack.v1.';
     const VIEW_TRACK_WINDOW_MS = 6 * 60 * 60 * 1000;
+    const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
+    const buildArticleHref = (postId, title) => urlHelpers
+        ? urlHelpers.buildDetailPath('article', postId, title)
+        : `post_detail.html?postId=${encodeURIComponent(postId)}`;
+    const buildArticleCanonicalUrl = (postId, title) => urlHelpers
+        ? urlHelpers.buildCanonicalUrl('article', postId, title)
+        : window.location.href.split('#')[0];
+    const buildArticleShareUrl = (postId, title) => urlHelpers
+        ? urlHelpers.buildShareUrl('article', postId, title)
+        : buildArticleCanonicalUrl(postId, title);
 
     const CATEGORY_NAMES = {
         1: 'Học tập và nghiên cứu tại Pháp',
@@ -682,6 +692,7 @@
     const kpisEl         = document.getElementById('pd-kpis');
     const relatedEl      = document.getElementById('pd-related');
     const pageTitleEl    = document.getElementById('pd-page-title');
+    let currentShareUrl = window.location.href.split('#')[0];
 
     const replyForm          = document.getElementById('reply-form');
     const replyNameEl        = document.getElementById('reply-name');
@@ -1408,7 +1419,8 @@
 
     const renderShare = (post) => {
         if (!shareSection) return;
-        const url = encodeURIComponent(window.location.href);
+        currentShareUrl = buildArticleShareUrl(post.postId, post.title);
+        const url = encodeURIComponent(currentShareUrl);
         const text = encodeURIComponent(post.title||'Bài viết hay từ SVP');
         if (shareFbEl) shareFbEl.href = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
         if (shareTwEl) shareTwEl.href = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
@@ -1426,7 +1438,7 @@
         const description = seo.excerpt(articleText || post.title || '', 170)
             || 'Đọc bài viết và chia sẻ từ cộng đồng SVP Forum.';
         const coverImage = extractFirstImageSrc(post.contentHtml || '') || seo.defaultImage;
-        const canonicalUrl = window.location.href.split('#')[0];
+        const canonicalUrl = buildArticleCanonicalUrl(post.postId, post.title);
         const wordCount = articleText ? articleText.split(/\s+/).filter(Boolean).length : 0;
         const noindex = String(post.status || '').toUpperCase() !== 'PUBLISHED';
 
@@ -1563,7 +1575,7 @@
             relatedEl.innerHTML = items.map(i=>`
                 <li>
                     <div>
-                        <a href="post_detail.html?postId=${encodeURIComponent(i.postId)}">${escapeHtml(i.title)}</a>
+                        <a href="${buildArticleHref(i.postId, i.title)}">${escapeHtml(i.title)}</a>
                         <div class="sv-meta">${escapeHtml(timeAgo(i.createdAt))}</div>
                     </div>
                 </li>`).join('');
@@ -1633,10 +1645,10 @@
         if (shareCopyBtn) {
             shareCopyBtn.addEventListener('click', async () => {
                 try {
-                    await navigator.clipboard.writeText(window.location.href);
+                    await navigator.clipboard.writeText(currentShareUrl);
                     shareCopyBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Đã sao chép!';
                     setTimeout(() => { shareCopyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>Sao chép link'; }, 2000);
-                } catch { alert(window.location.href); }
+                } catch { alert(currentShareUrl); }
             });
         }
 
@@ -1939,6 +1951,9 @@
         // Render everything
         currentPost = post;
         currentCommentCount = comments.length;
+        if (urlHelpers) {
+            urlHelpers.replaceDetailHistory('article', post.postId, post.title);
+        }
         renderHero(post.contentHtml);
         renderPostHeader(post, comments.length);
         renderBody(post);

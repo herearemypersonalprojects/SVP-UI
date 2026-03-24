@@ -1,11 +1,17 @@
 (function () {
     const SITE_URL = 'https://www.svpforum.fr';
     const SITE_NAME = 'SVP Forum';
+    const DEFAULT_API_BASE_URL = 'https://svp-api-5nxhggmy2a-od.a.run.app';
     const DEFAULT_IMAGE = `${SITE_URL}/assets/icons/logo_svp.png`;
     const DEFAULT_DESCRIPTION = 'Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP) - nơi kết nối, chia sẻ kiến thức, sự kiện và cộng đồng người Việt tại Pháp.';
     const PUBLIC_ROBOTS = 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
     const PRIVATE_ROBOTS = 'noindex,nofollow,noarchive';
     const DEFAULT_THEME_COLOR = '#1d4ed8';
+    const DETAIL_ROUTE_MAP = {
+        article: { file: 'post_detail.html', queryKey: 'postId', shareKind: 'article', fallbackSlug: 'bai-viet' },
+        thread: { file: 'thread.html', queryKey: 'postId', shareKind: 'thread', fallbackSlug: 'chu-de' },
+        event: { file: 'event_detail.html', queryKey: 'eventId', shareKind: 'event', fallbackSlug: 'su-kien' }
+    };
     const head = document.head;
 
     if (!head) return;
@@ -102,6 +108,83 @@
             head.appendChild(script);
         }
         script.textContent = JSON.stringify(normalized.length === 1 ? normalized[0] : normalized);
+    };
+
+    const trimTrailingSlash = (value) => String(value || '').replace(/\/+$/g, '');
+
+    const currentApiMode = () => {
+        try {
+            const params = new URLSearchParams(window.location.search);
+            const mode = cleanText(params.get('api')).toLowerCase();
+            return mode === 'local' || mode === 'cloud' ? mode : '';
+        } catch (_) {
+            return '';
+        }
+    };
+
+    const slugify = (value, fallback = 'item') => {
+        const base = String(value || '')
+            .trim()
+            .replace(/[đĐ]/g, (char) => (char === 'Đ' ? 'D' : 'd'))
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, ' ')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        return base || String(fallback || 'item').trim().toLowerCase() || 'item';
+    };
+
+    const resolveDetailRoute = (kind) => DETAIL_ROUTE_MAP[String(kind || '').trim().toLowerCase()] || null;
+
+    const normalizeId = (value) => {
+        const parsed = Number(value);
+        if (!Number.isFinite(parsed) || parsed <= 0) return 0;
+        return Math.trunc(parsed);
+    };
+
+    const buildDetailPath = (kind, id, title, options = {}) => {
+        const route = resolveDetailRoute(kind);
+        const numericId = normalizeId(id);
+        if (!route || numericId <= 0) return 'index.html';
+
+        const params = new URLSearchParams();
+        params.set(route.queryKey, String(numericId));
+        params.set('slug', slugify(title, route.fallbackSlug));
+
+        if (options.preserveApiMode !== false) {
+            const apiMode = currentApiMode();
+            if (apiMode) params.set('api', apiMode);
+        }
+
+        return `${route.file}?${params.toString()}`;
+    };
+
+    const buildCanonicalUrl = (kind, id, title) => buildUrl(buildDetailPath(kind, id, title, { preserveApiMode: false }));
+
+    const resolveShareBaseUrl = () => {
+        const apiBase = trimTrailingSlash(window.SVP_API_BASE_URL || DEFAULT_API_BASE_URL);
+        return apiBase || DEFAULT_API_BASE_URL;
+    };
+
+    const buildShareUrl = (kind, id, title) => {
+        const route = resolveDetailRoute(kind);
+        const numericId = normalizeId(id);
+        if (!route || numericId <= 0) return buildCanonicalUrl(kind, id, title);
+        const slug = encodeURIComponent(slugify(title, route.fallbackSlug));
+        return `${resolveShareBaseUrl()}/share/${route.shareKind}/${numericId}/${slug}`;
+    };
+
+    const replaceDetailHistory = (kind, id, title) => {
+        if (!window.history || typeof window.history.replaceState !== 'function') return;
+        const nextRelativeUrl = buildDetailPath(kind, id, title);
+        const nextAbsoluteUrl = new URL(nextRelativeUrl, window.location.href);
+        const currentAbsoluteUrl = new URL(window.location.href);
+        if (nextAbsoluteUrl.pathname === currentAbsoluteUrl.pathname && nextAbsoluteUrl.search === currentAbsoluteUrl.search) {
+            return;
+        }
+        window.history.replaceState({}, '', `${nextRelativeUrl}${window.location.hash || ''}`);
     };
 
     const buildWebPageSchema = (config) => compactObject({
@@ -381,6 +464,13 @@
         excerpt,
         compactObject,
         setStructuredData,
+        urls: {
+            slugify,
+            buildDetailPath,
+            buildCanonicalUrl,
+            buildShareUrl,
+            replaceDetailHistory
+        },
         setPage
     };
 

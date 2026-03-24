@@ -374,6 +374,13 @@
 <script>
     (function () {
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+        const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
+        const buildArticleHref = (postId, title) => urlHelpers
+            ? urlHelpers.buildDetailPath('article', postId, title)
+            : `post_detail.html?postId=${encodeURIComponent(postId)}`;
+        const buildThreadHref = (postId, title) => urlHelpers
+            ? urlHelpers.buildDetailPath('thread', postId, title)
+            : `thread.html?postId=${encodeURIComponent(postId)}`;
         const daysSelect = document.getElementById('admin-days');
         const refreshBtn = document.getElementById('admin-refresh');
         const statusEl = document.getElementById('admin-status');
@@ -947,8 +954,8 @@
                     const rows = items.map((item) => {
                         const isArticle = Boolean(item.isArticle);
                         const href = isArticle
-                            ? `post_detail.html?postId=${encodeURIComponent(item.postId)}`
-                            : `thread.html?postId=${encodeURIComponent(item.postId)}`;
+                            ? buildArticleHref(item.postId, item.title)
+                            : buildThreadHref(item.postId, item.title);
                         const authorName = item.authorDisplayName || item.authorNickname || '';
                         return `
                             <tr>
@@ -968,8 +975,8 @@
                     const rows = items.map((item) => {
                         const isArticle = Boolean(item.isArticle);
                         const href = isArticle
-                            ? `post_detail.html?postId=${encodeURIComponent(item.postId)}`
-                            : `thread.html?postId=${encodeURIComponent(item.postId)}`;
+                            ? buildArticleHref(item.postId, item.postTitle)
+                            : buildThreadHref(item.postId, item.postTitle);
                         const authorName = item.authorDisplayName || item.authorNickname || '';
                         return `
                             <tr>

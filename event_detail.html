@@ -170,7 +170,7 @@
             ? urlHelpers.buildCanonicalUrl('event', eventId, title)
             : window.location.href.split('#')[0];
         const buildEventShareUrl = (eventId, title) => urlHelpers
-            ? urlHelpers.buildShareUrl('event', eventId, title)
+            ? urlHelpers.buildCanonicalUrl('event', eventId, title)
             : buildEventCanonicalUrl(eventId, title);
         const loadingEl = document.getElementById('event-detail-loading');
         const errorEl = document.getElementById('event-detail-error');

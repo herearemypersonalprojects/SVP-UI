@@ -658,7 +658,7 @@
         ? urlHelpers.buildCanonicalUrl('article', postId, title)
         : window.location.href.split('#')[0];
     const buildArticleShareUrl = (postId, title) => urlHelpers
-        ? urlHelpers.buildShareUrl('article', postId, title)
+        ? urlHelpers.buildCanonicalUrl('article', postId, title)
         : buildArticleCanonicalUrl(postId, title);
 
     const CATEGORY_NAMES = {

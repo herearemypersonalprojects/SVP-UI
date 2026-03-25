@@ -1,0 +1,150 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Chi tiết thuê nhà | SVP</title>
+    <meta name="description" content="Chi tiết tin thuê nhà trên SVP: ảnh, giá, khu vực gần đúng, ga/trạm gần nhà, CAF và thông tin liên hệ.">
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+    <link rel="shortcut icon" href="assets/icons/favicon.svg">
+    <script src="seo.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <link rel="stylesheet" href="svp.css">
+    <link rel="stylesheet" href="dropdown-hover.css">
+    <link rel="stylesheet" href="housing.css">
+</head>
+<body class="sv-housing-page">
+<div class="sv-topbar pt-2 pb-1">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="sv-brand">
+            <img class="sv-brand__logo-img" src="assets/icons/logo_svp.png" alt="SVP" width="102" height="112" />
+            <div class="sv-brand__title">
+                <h1>DIỄN ĐÀN SINH VIÊN & TRI THỨC VIỆT TẠI PHÁP <span class="sv-brand__accent">(SVP)</span></h1>
+                <div class="sv-brand__divider"></div>
+                <small class="sv-brand__tagline">Kết Nối – Chia Sẻ – Thành Công</small>
+            </div>
+        </div>
+        <div id="sv-auth-box" class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <a class="btn btn-outline-secondary" href="signup.html">Đăng Ký</a>
+            <a class="btn btn-primary" href="login.html">Đăng Nhập</a>
+        </div>
+    </div>
+</div>
+
+<div class="sv-nav">
+    <div class="container d-flex align-items-center justify-content-between">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link" href="index.html">Trang Chủ</a></li>
+            <li class="nav-item"><a class="nav-link" href="forum.html">Diễn Đàn</a></li>
+            <li class="nav-item"><a class="nav-link active" href="ban-do-thue-nha.html">Bản đồ thuê nhà</a></li>
+            <li class="nav-item"><a class="nav-link" href="events.html">Sự Kiện & Lễ Hội</a></li>
+            <li class="nav-item"><a class="nav-link" href="ban-do-paris.html">Bản Đồ Paris</a></li>
+            <li class="nav-item"><a class="nav-link" href="contact.html">Liên hệ</a></li>
+        </ul>
+    </div>
+</div>
+
+<main class="container my-3 my-md-4">
+    <div class="sv-breadcrumb">
+        <a href="index.html">Trang chủ</a> / <a href="ban-do-thue-nha.html">Bản đồ thuê nhà</a> / <span id="housing-detail-breadcrumb">Chi tiết</span>
+    </div>
+
+    <div id="housing-detail-feedback" class="sv-housing-note mb-3">Đang tải chi tiết tin thuê nhà...</div>
+
+    <div class="sv-housing-form-grid">
+        <section class="sv-housing-stack">
+            <section class="sv-housing-section">
+                <div class="sv-housing-section__body">
+                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
+                        <div>
+                            <div id="housing-detail-status-wrap" class="mb-2"></div>
+                            <h2 id="housing-detail-title" class="mb-2">Tin thuê nhà</h2>
+                            <div id="housing-detail-meta" class="sv-housing-meta"></div>
+                        </div>
+                        <div class="text-md-end">
+                            <div id="housing-detail-price" class="sv-housing-price mb-2"></div>
+                            <div id="housing-detail-actions" class="d-flex flex-wrap gap-2 justify-content-md-end"></div>
+                        </div>
+                    </div>
+                    <div id="housing-detail-tags" class="sv-housing-tags mt-3"></div>
+                </div>
+            </section>
+
+            <section class="sv-housing-section">
+                <div class="sv-housing-section__head"><i class="fa-regular fa-images me-2 text-primary"></i>Ảnh</div>
+                <div class="sv-housing-section__body">
+                    <div id="housing-detail-gallery"></div>
+                </div>
+            </section>
+
+            <section class="sv-housing-section">
+                <div class="sv-housing-section__head"><i class="fa-solid fa-file-lines me-2 text-primary"></i>Mô tả</div>
+                <div class="sv-housing-section__body">
+                    <div id="housing-detail-description" class="sv-housing-richtext"></div>
+                </div>
+            </section>
+
+            <section class="sv-housing-section">
+                <div class="sv-housing-section__head"><i class="fa-solid fa-train-subway me-2 text-primary"></i>Ga / trạm gần nhà</div>
+                <div class="sv-housing-section__body">
+                    <div id="housing-detail-transit" class="sv-housing-transit-list"></div>
+                </div>
+            </section>
+        </section>
+
+        <aside class="sv-housing-stack">
+            <section class="sv-housing-section">
+                <div class="sv-housing-section__head"><i class="fa-solid fa-location-dot me-2 text-primary"></i>Vị trí gần đúng</div>
+                <div class="sv-housing-section__body">
+                    <div class="sv-housing-note mb-3">Pin trên bản đồ biểu diễn khu vực gần đúng, không phải địa chỉ chính xác.</div>
+                    <div id="housing-detail-map" class="sv-housing-inline-map"></div>
+                </div>
+            </section>
+
+            <section class="sv-housing-section">
+                <div class="sv-housing-section__head"><i class="fa-solid fa-address-card me-2 text-primary"></i>Liên hệ</div>
+                <div class="sv-housing-section__body">
+                    <div id="housing-detail-contact" class="sv-housing-meta"></div>
+                </div>
+            </section>
+
+            <section class="sv-housing-section">
+                <div class="sv-housing-section__head"><i class="fa-solid fa-user-group me-2 text-primary"></i>Người đăng</div>
+                <div class="sv-housing-section__body">
+                    <div id="housing-detail-owner" class="sv-housing-meta"></div>
+                </div>
+            </section>
+        </aside>
+    </div>
+</main>
+
+<footer class="container py-4">
+    <div class="row">
+        <div class="col-md">
+            <div class="sv-brand d-flex align-items-center mb-2">
+                <div class="sv-brand__logo" style="width:36px; height:36px; font-size:14px;">SVP</div>
+                <strong class="ms-2">SVP - Kết Nối • Chia Sẻ • Thành Công</strong>
+            </div>
+            <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
+        </div>
+        <div class="col-md text-md-end mt-2 mt-md-0">
+            <a class="me-3" href="/terms.html">Điều khoản</a>
+            <a class="me-3" href="/security.html">Bảo mật</a>
+            <a href="/contact.html">Liên hệ</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="config.js"></script>
+<script src="housing-shared.js"></script>
+<script src="comment-editor.js"></script>
+<script src="housing-detail.js"></script>
+<script src="avatar-utils.js"></script>
+<script src="auth-topbar.js"></script>
+</body>
+</html>

@@ -1,0 +1,184 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bản đồ thuê nhà | SVP</title>
+    <meta name="description" content="Bản đồ thuê nhà cho sinh viên Việt tại Pháp: xem giá ngay trên map, lọc theo CAF, colocation, ga gần nhà và thời gian đi bộ.">
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+    <link rel="shortcut icon" href="assets/icons/favicon.svg">
+    <script src="seo.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.css">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet.markercluster@1.5.3/dist/MarkerCluster.Default.css">
+    <link rel="stylesheet" href="svp.css">
+    <link rel="stylesheet" href="dropdown-hover.css">
+    <link rel="stylesheet" href="housing.css">
+</head>
+<body class="sv-housing-page">
+<div class="sv-topbar pt-2 pb-1">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="sv-brand">
+            <img class="sv-brand__logo-img" src="assets/icons/logo_svp.png" alt="SVP" width="102" height="112" />
+            <div class="sv-brand__title">
+                <h1>DIỄN ĐÀN SINH VIÊN & TRI THỨC VIỆT TẠI PHÁP <span class="sv-brand__accent">(SVP)</span></h1>
+                <div class="sv-brand__divider"></div>
+                <small class="sv-brand__tagline">Kết Nối – Chia Sẻ – Thành Công</small>
+            </div>
+        </div>
+        <div id="sv-auth-box" class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <a class="btn btn-outline-secondary" href="signup.html">Đăng Ký</a>
+            <a class="btn btn-primary" href="login.html">Đăng Nhập</a>
+        </div>
+    </div>
+</div>
+
+<div class="sv-nav">
+    <div class="container d-flex align-items-center justify-content-between">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link" href="index.html">Trang Chủ</a></li>
+            <li class="nav-item"><a class="nav-link" href="forum.html">Diễn Đàn</a></li>
+            <li class="nav-item"><a class="nav-link active" href="ban-do-thue-nha.html">Bản đồ thuê nhà</a></li>
+            <li class="nav-item"><a class="nav-link" href="events.html">Sự Kiện & Lễ Hội</a></li>
+            <li class="nav-item"><a class="nav-link" href="ban-do-paris.html">Bản Đồ Paris</a></li>
+            <li class="nav-item"><a class="nav-link" href="contact.html">Liên hệ</a></li>
+        </ul>
+    </div>
+</div>
+
+<main class="container my-3 my-md-4">
+    <section class="sv-housing-hero mb-3">
+        <span class="sv-housing-hero__eyebrow">Map-First Housing</span>
+        <h2 class="sv-housing-hero__title">Bản đồ thuê nhà cho sinh viên Việt tại Pháp</h2>
+        <p class="sv-housing-hero__subtitle">
+            Xem giá ngay trên bản đồ, lọc theo CAF, colocation và ga/trạm do chính người đăng khai báo.
+            Vị trí trên map là gần đúng để bảo vệ riêng tư, phù hợp thực tế thuê nhà tại Pháp.
+        </p>
+    </section>
+
+    <div class="sv-housing-shell">
+        <aside class="sv-housing-panel">
+            <div class="sv-housing-panel__head">
+                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+                    <div>
+                        <strong><i class="fa-solid fa-sliders me-2 text-primary"></i>Bộ lọc</strong>
+                        <div class="sv-housing-note mt-1">Transit lọc theo khai báo thủ công của chủ tin, không suy ra từ khoảng cách GPS.</div>
+                    </div>
+                    <a class="btn btn-primary btn-sm" href="housing_form.html">
+                        <i class="fa-solid fa-plus me-1"></i>Đăng tin
+                    </a>
+                </div>
+            </div>
+            <div class="sv-housing-panel__body">
+                <form id="housing-filter-form" class="sv-housing-filters">
+                    <div>
+                        <label class="form-label" for="filter-city">Thành phố / khu vực</label>
+                        <input id="filter-city" name="city" class="form-control" type="text" placeholder="Paris, Lyon, Villejuif...">
+                    </div>
+                    <div>
+                        <label class="form-label" for="filter-arrondissement">Arrondissement</label>
+                        <input id="filter-arrondissement" name="arrondissement" class="form-control" type="text" placeholder="13, 5e, 92...">
+                    </div>
+                    <div>
+                        <label class="form-label" for="filter-min-price">Giá từ (€)</label>
+                        <input id="filter-min-price" name="minPrice" class="form-control" type="number" min="0" step="10" placeholder="400">
+                    </div>
+                    <div>
+                        <label class="form-label" for="filter-max-price">Giá đến (€)</label>
+                        <input id="filter-max-price" name="maxPrice" class="form-control" type="number" min="0" step="10" placeholder="900">
+                    </div>
+                    <div>
+                        <label class="form-label" for="filter-type">Loại nhà</label>
+                        <select id="filter-type" name="type" class="form-select">
+                            <option value="">Tất cả</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="filter-status">Tình trạng</label>
+                        <select id="filter-status" name="status" class="form-select">
+                            <option value="AVAILABLE" selected>Còn trống</option>
+                            <option value="AVAILABLE,RENTED">Còn trống + Đã thuê</option>
+                            <option value="RENTED">Đã thuê</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="filter-station">Tên ga / trạm</label>
+                        <input id="filter-station" name="stationName" class="form-control" type="text" placeholder="Tolbiac, RER B...">
+                    </div>
+                    <div>
+                        <label class="form-label" for="filter-transport-type">Loại phương tiện</label>
+                        <select id="filter-transport-type" name="transportType" class="form-select">
+                            <option value="">Tất cả</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="form-label" for="filter-line-label">Line</label>
+                        <input id="filter-line-label" name="lineLabel" class="form-control" type="text" placeholder="M7, RER B, T3a">
+                    </div>
+                    <div>
+                        <label class="form-label" for="filter-max-walking">Đi bộ tối đa (phút)</label>
+                        <input id="filter-max-walking" name="maxWalkingMinutes" class="form-control" type="number" min="0" max="120" step="1" placeholder="10">
+                    </div>
+                    <div class="form-check pt-4">
+                        <input id="filter-caf" name="caf" class="form-check-input" type="checkbox">
+                        <label class="form-check-label" for="filter-caf">Chỉ hiện nhà có CAF</label>
+                    </div>
+                </form>
+                <div class="sv-housing-filters__actions mt-3">
+                    <button id="filter-apply-btn" class="btn btn-primary" type="button">
+                        <i class="fa-solid fa-filter me-1"></i>Áp dụng
+                    </button>
+                    <button id="filter-reset-btn" class="btn btn-outline-secondary" type="button">Reset</button>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center mt-4 mb-2 gap-2">
+                    <strong><i class="fa-solid fa-list-ul me-2 text-primary"></i>Danh sách trong khung bản đồ</strong>
+                    <span id="housing-results-meta" class="sv-housing-note">Đang tải...</span>
+                </div>
+                <div id="housing-list" class="sv-housing-list" aria-live="polite"></div>
+            </div>
+        </aside>
+
+        <section class="sv-housing-panel overflow-hidden">
+            <div class="sv-housing-panel__head d-flex flex-wrap justify-content-between align-items-center gap-2">
+                <div>
+                    <strong><i class="fa-solid fa-map-location-dot me-2 text-primary"></i>Bản đồ</strong>
+                    <div class="sv-housing-note mt-1">Pin hiển thị giá thuê và gom cluster khi zoom out. Click pin hoặc item để mở ngay trang chi tiết.</div>
+                </div>
+                <span id="housing-map-status" class="sv-housing-note">Kéo hoặc zoom bản đồ để tải khu vực mới.</span>
+            </div>
+            <div id="housing-map" class="sv-housing-map" aria-label="Bản đồ thuê nhà SVP"></div>
+        </section>
+    </div>
+</main>
+
+<footer class="container py-4">
+    <div class="row">
+        <div class="col-md">
+            <div class="sv-brand d-flex align-items-center mb-2">
+                <div class="sv-brand__logo" style="width:36px; height:36px; font-size:14px;">SVP</div>
+                <strong class="ms-2">SVP - Kết Nối • Chia Sẻ • Thành Công</strong>
+            </div>
+            <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
+        </div>
+        <div class="col-md text-md-end mt-2 mt-md-0">
+            <a class="me-3" href="/terms.html">Điều khoản</a>
+            <a class="me-3" href="/security.html">Bảo mật</a>
+            <a href="/contact.html">Liên hệ</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
+<script src="config.js"></script>
+<script src="housing-shared.js"></script>
+<script src="housing-map.js"></script>
+<script src="avatar-utils.js"></script>
+<script src="auth-topbar.js"></script>
+</body>
+</html>

@@ -255,6 +255,24 @@
             path: '/categories.html',
             schemaType: 'CollectionPage'
         },
+        'ban-do-thue-nha.html': {
+            title: 'Bản đồ thuê nhà cho sinh viên Việt tại Pháp - SVP',
+            description: 'Tìm nhà theo bản đồ, xem giá trực tiếp trên pin và lọc theo CAF, colocation, ga gần nhà tại Pháp.',
+            path: '/ban-do-thue-nha.html',
+            schemaType: 'CollectionPage'
+        },
+        'housing_form.html': {
+            title: 'Đăng tin thuê nhà gần đúng trên bản đồ - SVP',
+            description: 'Đăng tin thuê nhà với vị trí gần đúng, transit khai báo thủ công và thông tin hữu ích cho người thuê tại Pháp.',
+            path: '/housing_form.html',
+            schemaType: 'WebPage'
+        },
+        'housing_detail.html': {
+            title: 'Chi tiết tin thuê nhà - SVP',
+            description: 'Xem chi tiết tin thuê nhà trên SVP: giá, ảnh, khu vực gần đúng, ga gần nhà và thông tin liên hệ.',
+            path: '/housing_detail.html',
+            schemaType: 'WebPage'
+        },
         'events.html': {
             title: 'Sự kiện cộng đồng, giao lưu và hội thảo người Việt tại Pháp - SVP',
             description: 'Theo dõi lịch sự kiện, giao lưu, hội thảo và hoạt động cộng đồng dành cho người Việt tại Pháp.',
@@ -274,8 +292,8 @@
             schemaType: 'ContactPage'
         },
         'ban-do-paris.html': {
-            title: 'Bản đồ Paris và di tích lịch sử - SVP',
-            description: 'Khám phá bản đồ Paris, các điểm đến lịch sử và thông tin hữu ích dành cho người Việt tại Pháp.',
+            title: 'Khám Phá Paris và di tích lịch sử - SVP',
+            description: 'Khám phá Khám Phá Paris, các điểm đến lịch sử và thông tin hữu ích dành cho người Việt tại Pháp.',
             path: '/ban-do-paris.html'
         },
         'ban-do-viet.html': {

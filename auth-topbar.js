@@ -17,10 +17,17 @@
     const PROFILE_CACHE_KEY = "svp.auth.profileCache.v1";
     const PROFILE_CACHE_TTL_MS = 15 * 60 * 1000;
     const NON_CRITICAL_IDLE_TIMEOUT_MS = 1500;
+    const INBOX_POLL_INTERVAL_MS = 30 * 1000;
+    const INBOX_REFRESH_DEBOUNCE_MS = 250;
     const authBox = document.querySelector(".sv-auth");
     const guestAuthMarkup = authBox ? authBox.innerHTML : "";
     let refreshTimer = null;
     let refreshInFlight = null;
+    let inboxPollTimer = null;
+    let inboxRefreshTimer = null;
+    let unreadRefreshInFlight = null;
+    let unreadCount = 0;
+    let inboxLifecycleBound = false;
 
     const scheduleNonCritical = (task, timeoutMs = NON_CRITICAL_IDLE_TIMEOUT_MS) => {
         if (typeof task !== "function") {
@@ -207,6 +214,7 @@
 
                 if (response.status === 400 || response.status === 401 || response.status === 403) {
                     clearRefreshTimer();
+                    resetInboxState();
                     removeSession();
                     renderTopbar();
                     return false;
@@ -253,6 +261,144 @@
         return accessToken;
     };
 
+    const normalizeUnreadCount = (value) => {
+        const count = Number(value);
+        if (!Number.isFinite(count) || count <= 0) {
+            return 0;
+        }
+        return Math.max(0, Math.floor(count));
+    };
+
+    const clearInboxTimers = () => {
+        if (inboxPollTimer !== null) {
+            clearTimeout(inboxPollTimer);
+            inboxPollTimer = null;
+        }
+        if (inboxRefreshTimer !== null) {
+            clearTimeout(inboxRefreshTimer);
+            inboxRefreshTimer = null;
+        }
+    };
+
+    const updateInboxBadge = () => {
+        const badgeEl = authBox ? authBox.querySelector("[data-sv-inbox-badge]") : null;
+        if (!badgeEl) {
+            return;
+        }
+        const count = normalizeUnreadCount(unreadCount);
+        if (count <= 0) {
+            badgeEl.hidden = true;
+            badgeEl.textContent = "0";
+            return;
+        }
+        badgeEl.hidden = false;
+        badgeEl.textContent = count > 99 ? "99+" : String(count);
+    };
+
+    const scheduleUnreadPoll = (delayMs = INBOX_POLL_INTERVAL_MS) => {
+        clearInboxTimers();
+        if (document.hidden || !localStorage.getItem("accessToken")) {
+            return;
+        }
+        inboxPollTimer = window.setTimeout(() => {
+            void refreshUnreadCount({ immediate: true });
+        }, Math.max(1_000, delayMs));
+    };
+
+    const resetInboxState = () => {
+        unreadCount = 0;
+        unreadRefreshInFlight = null;
+        clearInboxTimers();
+        updateInboxBadge();
+    };
+
+    const fetchUnreadCountNow = async () => {
+        if (unreadRefreshInFlight) {
+            return unreadRefreshInFlight;
+        }
+        unreadRefreshInFlight = (async () => {
+            const accessToken = await getValidAccessToken();
+            if (!accessToken) {
+                resetInboxState();
+                return 0;
+            }
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/messages/unread-count`, {
+                    headers: {
+                        Authorization: `Bearer ${accessToken}`,
+                        Accept: "application/json"
+                    }
+                });
+                if (!response.ok) {
+                    if (response.status === 401 || response.status === 403) {
+                        resetInboxState();
+                        return unreadCount;
+                    }
+                    scheduleUnreadPoll(INBOX_POLL_INTERVAL_MS);
+                    return unreadCount;
+                }
+                const payload = await response.json().catch(() => ({}));
+                unreadCount = normalizeUnreadCount(payload.count);
+                updateInboxBadge();
+                scheduleUnreadPoll();
+                return unreadCount;
+            } catch (_) {
+                scheduleUnreadPoll(INBOX_POLL_INTERVAL_MS);
+                return unreadCount;
+            } finally {
+                unreadRefreshInFlight = null;
+            }
+        })();
+        return unreadRefreshInFlight;
+    };
+
+    const refreshUnreadCount = ({ immediate = false } = {}) => {
+        if (immediate) {
+            return fetchUnreadCountNow();
+        }
+        if (inboxRefreshTimer !== null) {
+            clearTimeout(inboxRefreshTimer);
+        }
+        return new Promise((resolve) => {
+            inboxRefreshTimer = window.setTimeout(async () => {
+                inboxRefreshTimer = null;
+                resolve(await fetchUnreadCountNow());
+            }, INBOX_REFRESH_DEBOUNCE_MS);
+        });
+    };
+
+    const bindInboxLifecycle = () => {
+        if (inboxLifecycleBound) {
+            return;
+        }
+        inboxLifecycleBound = true;
+        document.addEventListener("visibilitychange", () => {
+            if (document.hidden) {
+                clearInboxTimers();
+                return;
+            }
+            void refreshUnreadCount({ immediate: true });
+        });
+        window.addEventListener("focus", () => {
+            void refreshUnreadCount({ immediate: true });
+        });
+        window.addEventListener("storage", (event) => {
+            if (!event || !event.key) {
+                return;
+            }
+            if (!["accessToken", "refreshToken", "userId"].includes(event.key)) {
+                return;
+            }
+            if (!localStorage.getItem("accessToken")) {
+                resetInboxState();
+                renderTopbar();
+                return;
+            }
+            renderTopbar(readFreshProfileCache());
+            void refreshUnreadCount({ immediate: true });
+        });
+    };
+
     const escapeHtml = (value) => String(value ?? "")
         .replace(/&/g, "&amp;")
         .replace(/</g, "&lt;")
@@ -283,6 +429,7 @@
 
         const token = localStorage.getItem("accessToken") || "";
         if (!token) {
+            resetInboxState();
             if (guestAuthMarkup) {
                 authBox.innerHTML = guestAuthMarkup;
             }
@@ -314,9 +461,15 @@
             : (palette
                 ? ' style="background:' + escapeHtml(palette.bg) + ';color:' + escapeHtml(palette.fg) + ';"'
                 : "");
+        const inboxBadgeText = unreadCount > 99 ? "99+" : String(Math.max(0, unreadCount));
+        const inboxBadgeHidden = unreadCount > 0 ? "" : " hidden";
 
         authBox.innerHTML = (
             '<div class="sv-auth-user" title="' + escapeHtml(email || displayName) + '">' +
+            '<a class="sv-auth-inbox" href="inbox.html" aria-label="Hộp thư riêng">' +
+            '<span class="sv-auth-inbox__icon" aria-hidden="true">✉</span>' +
+            '<span class="sv-auth-inbox__badge" data-sv-inbox-badge' + inboxBadgeHidden + '>' + escapeHtml(inboxBadgeText) + '</span>' +
+            '</a>' +
             '<a class="sv-auth-link" href="' + profileHref + '">' +
             '<span class="sv-auth-avatar"' + avatarStyle + ">" + escapeHtml(initial) + "</span>" +
             '<span class="sv-auth-name">' + escapeHtml(displayName) + "</span>" +
@@ -332,9 +485,11 @@
         }
         logoutBtn.addEventListener("click", () => {
             clearRefreshTimer();
+            resetInboxState();
             removeSession();
             window.location.reload();
         });
+        updateInboxBadge();
     };
 
     window.SVPAuth = {
@@ -342,6 +497,12 @@
         removeSession,
         refreshAccessToken,
         getValidAccessToken
+    };
+
+    window.SVPInbox = {
+        refreshUnreadCount,
+        getUnreadCount: () => unreadCount,
+        clear: resetInboxState
     };
 
     const refreshProfileAvatar = async (accessTokenOverride) => {
@@ -412,6 +573,8 @@
         }
     };
 
+    bindInboxLifecycle();
+
     const bootstrapProfile = readFreshProfileCache();
     renderTopbar(bootstrapProfile);
 
@@ -421,6 +584,7 @@
             renderTopbar(readFreshProfileCache() || bootstrapProfile);
             if (accessToken) {
                 void refreshProfileAvatar(accessToken);
+                void refreshUnreadCount({ immediate: true });
             }
         })();
     }, 1200);

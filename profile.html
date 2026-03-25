@@ -52,6 +52,14 @@
             color: var(--sv-muted);
             font-size: .9rem;
         }
+        .sv-profile-card__actions {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: .6rem;
+            width: 100%;
+            margin-top: .35rem;
+        }
         .sv-profile-form .form-label {
             font-weight: 700;
             color: #0f172a;
@@ -137,6 +145,9 @@
                     <div class="sv-profile-nickname" id="profile-nickname"></div>
                     <div class="sv-profile-meta" id="profile-role"></div>
                     <div class="sv-profile-meta" id="profile-email"></div>
+                    <div id="profile-message-actions" class="sv-profile-card__actions d-none">
+                        <a id="profile-message-link" class="btn btn-primary" href="chat.html">Gửi tin nhắn</a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -213,6 +224,8 @@
         const nicknameEl = document.getElementById('profile-nickname');
         const roleEl = document.getElementById('profile-role');
         const emailEl = document.getElementById('profile-email');
+        const messageActionsEl = document.getElementById('profile-message-actions');
+        const messageLinkEl = document.getElementById('profile-message-link');
         const formEl = document.getElementById('profile-form');
         const readonlyEl = document.getElementById('profile-readonly');
         const displayInput = document.getElementById('profile-display-input');
@@ -246,6 +259,12 @@
             if (nickname) return `profile.html?nickname=${encodeURIComponent(nickname)}`;
             if (userId) return `profile.html?userId=${encodeURIComponent(userId)}`;
             return 'profile.html';
+        };
+
+        const buildChatHref = (nickname, userId) => {
+            if (nickname) return `chat.html?nickname=${encodeURIComponent(nickname)}`;
+            if (userId) return `chat.html?userId=${encodeURIComponent(userId)}`;
+            return 'chat.html';
         };
 
         const renderAvatar = (targetEl, displayName, avatarUrl, seed) => {
@@ -353,13 +372,21 @@
             if (!profile) return;
             const displayName = profile.displayName || profile.nickname || 'Thành viên';
             if (nameEl) nameEl.textContent = displayName;
-            if (nicknameEl) nicknameEl.textContent = '';
+            if (nicknameEl) nicknameEl.textContent = profile.nickname ? `@${profile.nickname}` : '';
             if (roleEl) roleEl.textContent = profile.role ? `Vai trò: ${profile.role}` : '';
             if (emailEl) {
                 if (isSelf && me?.email) {
                     emailEl.textContent = me.email;
                 } else {
                     emailEl.textContent = '';
+                }
+            }
+            if (messageActionsEl && messageLinkEl) {
+                const showMessageAction = !isSelf && Boolean(accessToken) && Boolean(profile.nickname || profile.userId);
+                messageActionsEl.classList.toggle('d-none', !showMessageAction);
+                if (showMessageAction) {
+                    messageLinkEl.href = buildChatHref(profile.nickname, profile.userId);
+                    messageLinkEl.setAttribute('aria-label', `Gửi tin nhắn cho ${displayName}`);
                 }
             }
             renderAvatar(avatarEl, displayName, profile.avatarUrl, profile.nickname || profile.userId);

@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Khung chat riêng - SVP</title>
+    <meta name="robots" content="noindex,nofollow,noarchive">
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+    <link rel="shortcut icon" href="assets/icons/favicon.svg">
+    <script src="seo.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="svp.css">
+    <link rel="stylesheet" href="dropdown-hover.css">
+    <style>
+        .sv-chat-shell {
+            display: grid;
+            gap: 1rem;
+        }
+        .sv-chat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            padding: 1rem;
+            border-bottom: 1px solid var(--sv-border);
+        }
+        .sv-chat-header__user {
+            display: flex;
+            align-items: center;
+            gap: .85rem;
+        }
+        .sv-chat-header__name {
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .sv-chat-avatar {
+            width: 54px;
+            height: 54px;
+            border-radius: 50%;
+            background: #e2e8f0 center/cover no-repeat;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 800;
+            box-shadow: 0 10px 24px rgba(15, 23, 42, .08);
+            flex: 0 0 auto;
+        }
+        .sv-chat-body {
+            display: grid;
+            gap: .75rem;
+            padding: 1rem;
+        }
+        .sv-chat-controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .6rem;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .sv-chat-list {
+            display: flex;
+            flex-direction: column;
+            gap: .8rem;
+            max-height: 62vh;
+            overflow-y: auto;
+            padding-right: .25rem;
+        }
+        .sv-chat-empty {
+            padding: 1rem;
+            border: 1px dashed #cbd5e1;
+            border-radius: 12px;
+            text-align: center;
+            color: var(--sv-muted);
+            background: #f8fafc;
+        }
+        .sv-chat-bubble {
+            max-width: min(680px, 88%);
+            padding: .8rem .95rem;
+            border-radius: 16px;
+            white-space: pre-wrap;
+            box-shadow: 0 10px 20px rgba(15, 23, 42, .04);
+        }
+        .sv-chat-bubble--own {
+            align-self: flex-end;
+            background: linear-gradient(135deg, #1a73e8, #2563eb);
+            color: #fff;
+            border-bottom-right-radius: 6px;
+        }
+        .sv-chat-bubble--other {
+            align-self: flex-start;
+            background: #f8fafc;
+            border: 1px solid #dbeafe;
+            color: #0f172a;
+            border-bottom-left-radius: 6px;
+        }
+        .sv-chat-bubble--pending {
+            opacity: .75;
+        }
+        .sv-chat-bubble--failed {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+        .sv-chat-bubble__meta {
+            margin-top: .45rem;
+            font-size: .78rem;
+            opacity: .82;
+        }
+        .sv-chat-compose {
+            border-top: 1px solid var(--sv-border);
+            padding: 1rem;
+            background: #fff;
+        }
+        .sv-chat-compose textarea {
+            min-height: 110px;
+            resize: vertical;
+        }
+        @media (max-width: 576px) {
+            .sv-chat-header {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .sv-chat-controls {
+                align-items: stretch;
+            }
+            .sv-chat-bubble {
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+
+<div class="sv-topbar pt-2 pb-1">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="sv-brand">
+            <img class="sv-brand__logo-img" src="assets/icons/logo_svp.png" alt="SVP" width="102" height="112" />
+            <div class="sv-brand__title">
+                <h1>DIỄN ĐÀN SINH VIÊN & TRI THỨC VIỆT TẠI PHÁP <span class="sv-brand__accent">(SVP)</span></h1>
+                <div class="sv-brand__divider"></div>
+                <small class="sv-brand__tagline">Kết Nối - Chia Sẻ - Thành Công</small>
+            </div>
+        </div>
+
+        <div id="sv-auth-box" class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <a class="btn btn-outline-secondary" href="signup.html">Đăng Ký</a>
+            <a class="btn btn-primary" href="login.html">Đăng Nhập</a>
+        </div>
+    </div>
+</div>
+
+<div class="sv-nav">
+    <div class="container d-flex align-items-center justify-content-between">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link" href="index.html">Trang Chủ</a></li>
+            <li class="nav-item"><a class="nav-link" href="forum.html">Diễn Đàn</a></li>
+            <li class="nav-item"><a class="nav-link active" href="inbox.html">Hộp Thư</a></li>
+            <li class="nav-item"><a class="nav-link" href="events.html">Sự Kiện</a></li>
+            <li class="nav-item"><a class="nav-link" href="about.html">Giới Thiệu</a></li>
+        </ul>
+    </div>
+</div>
+
+<main class="container my-3 my-md-4">
+    <div class="sv-breadcrumb">
+        <a href="index.html">Trang chủ</a> / <a href="inbox.html">Hộp thư</a> / <span>Khung chat</span>
+    </div>
+
+    <section class="sv-page-hero mb-3">
+        <div class="sv-page-hero__eyebrow">Khung chat 1-1</div>
+        <h2 class="sv-page-hero__title">Chat Riêng</h2>
+        <p class="sv-page-hero__subtitle">
+            Tiếp tục cuộc trò chuyện riêng tư của bạn và trao đổi trực tiếp với thành viên khác trong cộng đồng SVP.
+        </p>
+        <div class="sv-page-hero__actions">
+            <a class="btn btn-outline-secondary" href="inbox.html">Quay lại hộp thư</a>
+        </div>
+    </section>
+
+    <div id="chat-login-gate" class="alert alert-warning d-none mb-3">
+        Bạn cần đăng nhập để mở hội thoại. <a href="login.html">Đăng nhập ngay</a>.
+    </div>
+
+    <section class="sv-card sv-chat-shell">
+        <div class="sv-chat-header">
+            <div id="chat-header"></div>
+            <div class="sv-chat-controls">
+                <button id="chat-load-older" class="btn btn-outline-secondary" type="button" hidden>Tải tin cũ hơn</button>
+                <button id="chat-refresh" class="btn btn-outline-primary" type="button">Làm mới</button>
+            </div>
+        </div>
+
+        <div class="sv-chat-body">
+            <div id="chat-empty" class="sv-chat-empty">Chưa có tin nhắn nào. Hãy gửi lời nhắn đầu tiên.</div>
+            <div id="chat-message-list" class="sv-chat-list"></div>
+            <div id="chat-status" class="small"></div>
+        </div>
+
+        <div class="sv-chat-compose">
+            <form id="chat-form" class="sv-form">
+                <label class="form-label" for="chat-input">Nội dung tin nhắn</label>
+                <textarea id="chat-input" class="form-control" placeholder="Nhập nội dung và bấm Gửi..."></textarea>
+                <div class="d-flex flex-wrap gap-2 justify-content-between align-items-center mt-3">
+                    <div class="sv-meta">Bấm Làm mới để xem các tin nhắn mới nhất trong cuộc trò chuyện.</div>
+                    <button class="btn btn-primary" type="submit">Gửi tin nhắn</button>
+                </div>
+            </form>
+        </div>
+    </section>
+</main>
+
+<footer class="container py-4">
+    <div class="row">
+        <div class="col-md">
+            <div class="sv-brand d-flex align-items-center mb-2">
+                <div class="sv-brand__logo" style="width:36px; height:36px; font-size:14px;">SVP</div>
+                <strong class="ms-2">SVP - Kết Nối • Chia Sẻ • Thành Công</strong>
+            </div>
+            <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
+        </div>
+        <div class="col-md text-md-end mt-2 mt-md-0">
+            <a class="me-3" href="terms.html">Điều khoản</a>
+            <a class="me-3" href="security.html">Bảo mật</a>
+            <a href="contact.html">Liên hệ</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="config.js"></script>
+<script src="avatar-utils.js"></script>
+<script src="auth-topbar.js"></script>
+<script src="chat.js"></script>
+</body>
+</html>

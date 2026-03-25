@@ -311,7 +311,7 @@
                 </div>
                 <div class="col-12">
                     <div class="sv-soft-card">
-                        <div class="fw-bold mb-2" id="recent-visits-title">Truy cập gần đây</div>
+                        <div class="fw-bold mb-2" id="recent-visits-title">IP truy cập gần đây</div>
                         <div class="table-responsive">
                             <table class="sv-admin-table">
                                 <thead id="recent-visits-head"></thead>
@@ -839,8 +839,8 @@
             const recentVisits = Array.isArray(payload.recentVisits) ? payload.recentVisits : [];
             if (recentVisitsTitle) {
                 recentVisitsTitle.textContent = recentVisits.length
-                    ? `${recentVisits.length} lượt truy cập mới nhất`
-                    : 'Truy cập gần đây';
+                    ? `${recentVisits.length} IP truy cập mới nhất`
+                    : 'IP truy cập gần đây';
             }
             renderRecentVisitsTable(recentVisits);
 

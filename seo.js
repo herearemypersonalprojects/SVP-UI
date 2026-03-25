@@ -259,7 +259,11 @@
             title: 'Bản đồ thuê nhà cho sinh viên Việt tại Pháp - SVP',
             description: 'Tìm nhà theo bản đồ, xem giá trực tiếp trên pin và lọc theo CAF, colocation, ga gần nhà tại Pháp.',
             path: '/ban-do-thue-nha.html',
-            schemaType: 'CollectionPage'
+            schemaType: 'CollectionPage',
+            image: '/assets/icons/og_housing_map.png',
+            imageType: 'image/png',
+            imageWidth: '1200',
+            imageHeight: '630'
         },
         'housing_form.html': {
             title: 'Đăng tin thuê nhà gần đúng trên bản đồ - SVP',
@@ -271,7 +275,11 @@
             title: 'Chi tiết tin thuê nhà - SVP',
             description: 'Xem chi tiết tin thuê nhà trên SVP: giá, ảnh, khu vực gần đúng, ga gần nhà và thông tin liên hệ.',
             path: '/housing_detail.html',
-            schemaType: 'WebPage'
+            schemaType: 'WebPage',
+            image: '/assets/icons/og_housing_map.png',
+            imageType: 'image/png',
+            imageWidth: '1200',
+            imageHeight: '630'
         },
         'events.html': {
             title: 'Sự kiện cộng đồng, giao lưu và hội thảo người Việt tại Pháp - SVP',
@@ -439,6 +447,9 @@
         const finalTitle = cleanText(merged.title || SITE_NAME) || SITE_NAME;
         const finalDescription = excerpt(merged.description || DEFAULT_DESCRIPTION, 180) || DEFAULT_DESCRIPTION;
         const finalImage = buildUrl(merged.image || DEFAULT_IMAGE);
+        const finalImageType = cleanText(merged.imageType || (finalImage === DEFAULT_IMAGE ? 'image/png' : ''));
+        const finalImageWidth = cleanText(merged.imageWidth || (finalImage === DEFAULT_IMAGE ? '1536' : ''));
+        const finalImageHeight = cleanText(merged.imageHeight || (finalImage === DEFAULT_IMAGE ? '1024' : ''));
         const finalRobots = merged.noindex ? PRIVATE_ROBOTS : cleanText(merged.robots || PUBLIC_ROBOTS);
         const ogType = cleanText(merged.type || 'website');
 
@@ -463,13 +474,19 @@
         setMeta('name', 'twitter:image', finalImage);
         setLink('canonical', finalUrl);
 
-        if (finalImage === DEFAULT_IMAGE) {
-            setMeta('property', 'og:image:type', 'image/png');
-            setMeta('property', 'og:image:width', '1536');
-            setMeta('property', 'og:image:height', '1024');
+        if (finalImageType) {
+            setMeta('property', 'og:image:type', finalImageType);
         } else {
             removeMeta('property', 'og:image:type');
+        }
+        if (finalImageWidth) {
+            setMeta('property', 'og:image:width', finalImageWidth);
+        } else {
             removeMeta('property', 'og:image:width');
+        }
+        if (finalImageHeight) {
+            setMeta('property', 'og:image:height', finalImageHeight);
+        } else {
             removeMeta('property', 'og:image:height');
         }
 

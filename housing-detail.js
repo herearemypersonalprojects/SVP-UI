@@ -21,6 +21,7 @@
     const contactEl = document.getElementById('housing-detail-contact');
     const ownerEl = document.getElementById('housing-detail-owner');
     const mapEl = document.getElementById('housing-detail-map');
+    const seo = window.SVPSeo || null;
 
     if (!listingId || !feedbackEl || !breadcrumbEl || !titleEl || !statusWrapEl || !metaEl || !priceEl || !actionsEl || !tagsEl || !galleryEl || !descriptionEl || !transitEl || !contactEl || !ownerEl || !mapEl) {
         return;
@@ -134,6 +135,43 @@
         }
     };
 
+    const buildSeoDescription = (payload) => {
+        const parts = [
+            payload.priceLabel || shared.formatPrice(payload.price),
+            payload.city || '',
+            payload.arrondissement || '',
+            payload.areaM2 ? `${payload.areaM2}m²` : '',
+            payload.propertyTypeLabel || shared.propertyTypeLabel(payload.propertyType)
+        ].filter(Boolean);
+        const summary = parts.join(' • ');
+        if (summary) {
+            return `Chi tiết tin thuê nhà trên SVP: ${summary}.`;
+        }
+        return 'Xem chi tiết tin thuê nhà trên SVP: giá, ảnh, khu vực gần đúng, ga gần nhà và thông tin liên hệ.';
+    };
+
+    const applySeo = (payload) => {
+        if (!seo || typeof seo.setPage !== 'function') {
+            return;
+        }
+        const finalListingId = String(payload.id || listingId || '').trim();
+        const title = payload.title ? `${payload.title} | SVP` : 'Chi tiết thuê nhà | SVP';
+        const detailPath = finalListingId
+            ? `/housing_detail.html?listingId=${encodeURIComponent(finalListingId)}`
+            : '/housing_detail.html';
+        seo.setPage({
+            title,
+            description: buildSeoDescription(payload),
+            url: detailPath,
+            path: detailPath,
+            image: '/assets/icons/og_housing_map.png',
+            imageType: 'image/png',
+            imageWidth: '1200',
+            imageHeight: '630',
+            schemaType: 'WebPage'
+        });
+    };
+
     const loadDetail = async () => {
         try {
             const token = await shared.getAccessToken();
@@ -145,6 +183,7 @@
             breadcrumbEl.textContent = payload.title || 'Chi tiết';
             titleEl.textContent = payload.title || 'Tin thuê nhà';
             document.title = `${payload.title || 'Chi tiết thuê nhà'} | SVP`;
+            applySeo(payload);
             const statusMeta = shared.statusMeta(payload.status);
             statusWrapEl.innerHTML = `<span class="sv-housing-badge ${statusMeta.className}">${shared.escapeHtml(payload.statusLabel || statusMeta.label)}</span>`;
             priceEl.textContent = payload.priceLabel || shared.formatPrice(payload.price);

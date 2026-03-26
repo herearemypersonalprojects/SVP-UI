@@ -127,6 +127,10 @@
             font-size: .85rem;
             font-weight: 600;
         }
+        .pd-stat--button {
+            appearance: none;
+            font: inherit;
+        }
         .pd-stat--action {
             cursor: pointer;
             transition: transform .12s ease, background .12s ease, box-shadow .12s ease;
@@ -373,7 +377,8 @@
             gap: .5rem;
             margin-top: 1.5rem;
         }
-        .pd-share a {
+        .pd-share a,
+        .pd-share button {
             display: inline-flex;
             align-items: center;
             gap: .4rem;
@@ -383,8 +388,11 @@
             font-weight: 600;
             text-decoration: none;
             transition: opacity .15s;
+            appearance: none;
+            font: inherit;
         }
-        .pd-share a:hover { opacity: .85; }
+        .pd-share a:hover,
+        .pd-share button:hover { opacity: .85; }
         .pd-share__fb { background: #1877f2; color: #fff; }
         .pd-share__tw { background: #000; color: #fff; }
         .pd-share__copy { background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; cursor:pointer; }
@@ -482,6 +490,9 @@
                 </div>
                 <div class="ms-auto d-flex gap-2 flex-wrap">
                     <span class="pd-stat pd-stat--action" id="pd-likes" role="button" tabindex="0" aria-label="Thích bài viết"><i class="fa-regular fa-thumbs-up"></i>--</span>
+                    <button class="pd-stat pd-stat--button pd-stat--action" id="pd-share-copy-inline" type="button" data-copy-share-link aria-label="Sao chép link bài viết">
+                        <i class="fa-regular fa-copy"></i>Sao chép link
+                    </button>
                     <span class="pd-stat" id="pd-comment-count"><i class="fa-regular fa-comments"></i>--</span>
                 </div>
             </div>
@@ -503,7 +514,7 @@
                 <a id="pd-share-tw" class="pd-share__tw" href="#" target="_blank" rel="noopener noreferrer">
                     <i class="fa-brands fa-x-twitter"></i>Tweet
                 </a>
-                <button class="pd-share__copy" id="pd-share-copy" type="button">
+                <button class="pd-share__copy" id="pd-share-copy" type="button" data-copy-share-link>
                     <i class="fa-regular fa-copy"></i>Sao chép link
                 </button>
             </div>
@@ -701,7 +712,7 @@
     const shareSection   = document.getElementById('pd-share');
     const shareFbEl      = document.getElementById('pd-share-fb');
     const shareTwEl      = document.getElementById('pd-share-tw');
-    const shareCopyBtn   = document.getElementById('pd-share-copy');
+    const shareCopyButtons = Array.from(document.querySelectorAll('[data-copy-share-link]'));
     const commentListEl  = document.getElementById('pd-comment-list');
     const commentBadgeEl = document.getElementById('pd-comment-badge');
     const kpisEl         = document.getElementById('pd-kpis');
@@ -1432,6 +1443,19 @@
         bodyEl.innerHTML = sanitizePostContentHtml(post.contentHtml);
     };
 
+    const copyShareLink = async (button) => {
+        if (!(button instanceof HTMLElement)) return;
+        try {
+            await navigator.clipboard.writeText(currentShareUrl);
+            button.innerHTML = '<i class="fa-solid fa-check"></i>Đã sao chép!';
+            window.setTimeout(() => {
+                button.innerHTML = '<i class="fa-regular fa-copy"></i>Sao chép link';
+            }, 2000);
+        } catch {
+            alert(currentShareUrl);
+        }
+    };
+
     const renderShare = (post) => {
         if (!shareSection) return;
         currentShareUrl = buildArticleShareUrl(post.postId, post.title);
@@ -1657,15 +1681,11 @@
         }
 
         // Copy link
-        if (shareCopyBtn) {
-            shareCopyBtn.addEventListener('click', async () => {
-                try {
-                    await navigator.clipboard.writeText(currentShareUrl);
-                    shareCopyBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Đã sao chép!';
-                    setTimeout(() => { shareCopyBtn.innerHTML = '<i class="fa-regular fa-copy"></i>Sao chép link'; }, 2000);
-                } catch { alert(currentShareUrl); }
+        shareCopyButtons.forEach((button) => {
+            button.addEventListener('click', () => {
+                copyShareLink(button);
             });
-        }
+        });
 
         // Submit
         replyForm.addEventListener('submit', async (ev) => {

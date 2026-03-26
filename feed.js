@@ -275,7 +275,7 @@
             createdAt: item.createdAt,
             sortTime: toTimeValue(item.createdAt),
             author: null,
-            coverImageUrl: '',
+            coverImageUrl: sanitizeUrl(item.coverImageUrl || item.cover_image_url || item.imageUrl || item.image_url),
             excerpt: `Được thêm ngày ${formatDateTime(item.createdAt)}. Sự kiện diễn ra vào ${formatDateTime(item.eventTime)}${item.address ? ` tại ${String(item.address).trim()}` : ''}.`,
             footer: [
                 item.eventTypeName ? `Loại: ${item.eventTypeName}` : 'Sự kiện cộng đồng',

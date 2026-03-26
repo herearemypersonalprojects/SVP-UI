@@ -396,6 +396,19 @@
             if (!blocks.length) return '';
             return blocks.map((block) => `<p>${escapeHtml(block).replace(/\n/g, '<br>')}</p>`).join('');
         };
+        const extractFirstImageUrl = (html) => {
+            const template = document.createElement('template');
+            template.innerHTML = String(html || '').trim();
+            const image = template.content.querySelector('img[src]');
+            if (image) {
+                const safeSrc = sanitizeUrl(image.getAttribute('src'));
+                if (safeSrc) {
+                    return safeSrc;
+                }
+            }
+            const directUrlMatch = String(html || '').match(/https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?[^\s<>"']*)?/i);
+            return directUrlMatch ? sanitizeUrl(directUrlMatch[0]) : '';
+        };
         const htmlToPlainText = (html) => {
             const template = document.createElement('template');
             template.innerHTML = String(html || '').trim();
@@ -968,6 +981,7 @@
             const location = locationInput.value.trim();
             const descriptionHtml = sanitizePreviewHtml(buildEventContent());
             const imageUrl = sanitizeUrl(imageUrlInput.value);
+            const contentCoverUrl = extractFirstImageUrl(descriptionHtml);
             previewTitle.textContent = title || 'Tên sự kiện sẽ hiển thị tại đây';
             previewDatetime.textContent = startText
                 ? `Ngày giờ: ${startText}${endText ? ` - ${endText}` : ''}`
@@ -978,7 +992,9 @@
                 ? `url("${encodeURI(imageUrl)}")`
                 : (imageFilePreviewUrl
                     ? `url("${imageFilePreviewUrl}")`
-                    : 'linear-gradient(120deg, #dbeafe, #bfdbfe)');
+                    : (contentCoverUrl
+                        ? `url("${encodeURI(contentCoverUrl)}")`
+                        : 'linear-gradient(120deg, #dbeafe, #bfdbfe)'));
         };
 
         const uploadSelectedImageIfNeeded = async (accessToken) => {

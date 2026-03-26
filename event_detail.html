@@ -303,7 +303,14 @@
             const template = document.createElement('template');
             template.innerHTML = String(html || '').trim();
             const image = template.content.querySelector('img[src]');
-            return image ? normalizeSafeHref(image.getAttribute('src')) : '';
+            if (image) {
+                const safeSrc = normalizeSafeHref(image.getAttribute('src'));
+                if (safeSrc) {
+                    return safeSrc;
+                }
+            }
+            const directUrlMatch = String(html || '').match(/https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?[^\s<>"']*)?/i);
+            return directUrlMatch ? normalizeSafeHref(directUrlMatch[0]) : '';
         };
         const sanitizeEventContentHtml = (html) => {
             const raw = String(html || '').trim();
@@ -425,7 +432,7 @@
             const description = seo.excerpt(seo.htmlToText(String(contentHtml || '')), 170)
                 || 'Thông tin chi tiết về sự kiện và cách tham gia cùng cộng đồng SVP.';
             const canonicalUrl = buildEventCanonicalUrl(event.eventId, title);
-            const imageUrl = String(event.imageUrl || '').trim()
+            const imageUrl = normalizeSafeHref(event.imageUrl || event.image_url)
                 || extractFirstImageUrl(contentHtml)
                 || seo.defaultImage;
             const organizer = event.organizer || {};
@@ -486,8 +493,9 @@
             const title = String(event.title || 'Sự kiện');
             const organizer = event.organizer || {};
             const hostName = String(organizer.displayName || organizer.nickname || 'Ban tổ chức SVP');
-            const imageUrl = String(event.imageUrl || '').trim();
             const contentHtml = toContentHtml(event.content);
+            const imageUrl = normalizeSafeHref(event.imageUrl || event.image_url)
+                || extractFirstImageUrl(contentHtml);
 
             titleEl.textContent = title;
             timeEl.textContent = formatDateTime(event.eventTime);

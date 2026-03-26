@@ -265,6 +265,19 @@
             border: 1px solid #dbeafe;
             background: #fff;
         }
+        .pd-comment-reply-target {
+            margin: 0 0 .55rem;
+            color: #64748b;
+            font-size: .86rem;
+            line-height: 1.45;
+        }
+        .pd-comment-reply-target a {
+            color: #2563eb;
+            text-decoration: none;
+        }
+        .pd-comment-reply-target a:hover {
+            text-decoration: underline;
+        }
         .pd-comment-text {
             color: #1f2937;
             font-size: .92rem;
@@ -742,6 +755,7 @@
     let commentEditComposer = null;
     let commentEditModal = null;
     let editingCommentContext = null;
+    let currentComments = [];
     let currentPostId = 0;
     let currentLikeCount = 0;
     let currentPost = null;
@@ -753,6 +767,8 @@
     const escapeHtml = (v) => String(v ?? '')
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
         .replace(/"/g,'&quot;').replace(/'/g,'&#039;');
+    const normalizeReplyTarget = (value) => String(value || '').trim().replace(/\s+/g, ' ');
+    const normalizeReplyLookupKey = (value) => normalizeReplyTarget(value).toLowerCase();
 
     const decodeHtmlEntities = (value) => {
         const textarea = document.createElement('textarea');
@@ -852,6 +868,22 @@
         } catch { return ''; }
     };
 
+    const buildProfileHref = (nickname, userId) => {
+        if (nickname) return `profile.html?nickname=${encodeURIComponent(nickname)}`;
+        if (userId) return `profile.html?userId=${encodeURIComponent(userId)}`;
+        return '';
+    };
+
+    const startsWithReplyMention = (message, replyTarget) => {
+        const target = normalizeReplyTarget(replyTarget);
+        const text = String(message || '').trimStart();
+        if (!target || !text.startsWith(`@${target}`)) {
+            return false;
+        }
+        const suffix = text.slice(target.length + 1);
+        return !suffix || /^\s/.test(suffix);
+    };
+
     const textToCommentHtml = (value) => {
         if (commentEditorApi && typeof commentEditorApi.textToParagraphsHtml === 'function') {
             return commentEditorApi.textToParagraphsHtml(value);
@@ -927,11 +959,11 @@
     };
 
     const buildCommentMentionHtml = (authorName) => {
-        const author = String(authorName || '').trim();
+        const author = normalizeReplyTarget(authorName);
         if (!author) {
             return '';
         }
-        return `<p><strong>@${escapeHtml(author)}</strong> </p>`;
+        return `<p>@${escapeHtml(author)}</p><p></p>`;
     };
 
     const buildCommentQuoteHtml = (authorName, quoteText) => {
@@ -968,6 +1000,221 @@
         return window.SVPAvatar && typeof window.SVPAvatar.palette === 'function'
             ? window.SVPAvatar.palette(seed)
             : null;
+    };
+
+    const hasRenderableNodeContent = (node) => {
+        if (!node) {
+            return false;
+        }
+        if (node.nodeType === Node.TEXT_NODE) {
+            return Boolean(String(node.textContent || '').trim());
+        }
+        if (node.nodeType !== Node.ELEMENT_NODE) {
+            return false;
+        }
+        const tag = String(node.nodeName || '').toLowerCase();
+        if (tag === 'img' || tag === 'br') {
+            return true;
+        }
+        return Boolean(String(node.textContent || '').trim()) || Boolean(node.querySelector('img, br'));
+    };
+
+    const getTextNodesInOrder = (root) => {
+        if (!root) {
+            return [];
+        }
+        if (root.nodeType === Node.TEXT_NODE) {
+            return [root];
+        }
+        const textNodes = [];
+        const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+        let current = walker.nextNode();
+        while (current) {
+            textNodes.push(current);
+            current = walker.nextNode();
+        }
+        return textNodes;
+    };
+
+    const trimLeadingWhitespaceFromNode = (root) => {
+        for (const textNode of getTextNodesInOrder(root)) {
+            const value = String(textNode.textContent || '');
+            if (!value) {
+                continue;
+            }
+            const trimmed = value.replace(/^[\s\u00a0]+/, '');
+            if (trimmed !== value) {
+                textNode.textContent = trimmed;
+                if (trimmed) {
+                    break;
+                }
+                continue;
+            }
+            break;
+        }
+    };
+
+    const consumeLeadingTextFromNode = (root, expectedText) => {
+        let remaining = String(expectedText || '');
+        if (!remaining) {
+            return false;
+        }
+        for (const textNode of getTextNodesInOrder(root)) {
+            if (!remaining) {
+                return true;
+            }
+            const value = String(textNode.textContent || '');
+            if (!value) {
+                continue;
+            }
+            const consumeLength = Math.min(value.length, remaining.length);
+            const actualChunk = value.slice(0, consumeLength).replace(/\u00a0/g, ' ');
+            const expectedChunk = remaining.slice(0, consumeLength);
+            if (actualChunk !== expectedChunk) {
+                return false;
+            }
+            textNode.textContent = value.slice(consumeLength);
+            remaining = remaining.slice(consumeLength);
+        }
+        return !remaining;
+    };
+
+    const pruneEmptyInlineNodes = (root) => {
+        if (!root || root.nodeType !== Node.ELEMENT_NODE) {
+            return;
+        }
+        Array.from(root.children).forEach((child) => {
+            pruneEmptyInlineNodes(child);
+            const tag = String(child.nodeName || '').toLowerCase();
+            if (tag === 'img' || tag === 'br') {
+                return;
+            }
+            if (!String(child.textContent || '').trim() && !child.querySelector('img, br')) {
+                child.remove();
+            }
+        });
+    };
+
+    const serializeFragmentHtml = (fragment) => {
+        const wrapper = document.createElement('div');
+        wrapper.appendChild(fragment.cloneNode(true));
+        return wrapper.innerHTML;
+    };
+
+    const findFirstRenderableNode = (fragment) => {
+        return Array.from(fragment.childNodes).find((node) => hasRenderableNodeContent(node)) || null;
+    };
+
+    const buildKnownCommentUsers = (post, comments) => {
+        const lookup = new Map();
+        const rememberUser = (displayName, nickname, userId) => {
+            const normalizedName = normalizeReplyTarget(displayName);
+            if (!normalizedName) {
+                return;
+            }
+            const key = normalizeReplyLookupKey(normalizedName);
+            const profileHref = buildProfileHref(String(nickname || ''), String(userId || ''));
+            const current = lookup.get(key);
+            if (!current || (!current.profileHref && profileHref)) {
+                lookup.set(key, { displayName: normalizedName, profileHref });
+            }
+        };
+
+        rememberUser(post?.author?.displayName || post?.author?.nickname || '', post?.author?.nickname || '', post?.author?.userId || '');
+        (Array.isArray(comments) ? comments : []).forEach((comment) => {
+            rememberUser(comment?.authorName || '', comment?.authorNickname || '', comment?.authorUserId || '');
+        });
+
+        return Array.from(lookup.values()).sort((left, right) => right.displayName.length - left.displayName.length);
+    };
+
+    const matchReplyTargetByKnownUsers = (text, knownUsers) => {
+        const normalizedText = String(text || '').replace(/\u00a0/g, ' ').trimStart();
+        if (!normalizedText.startsWith('@')) {
+            return null;
+        }
+        return (Array.isArray(knownUsers) ? knownUsers : []).find((user) => startsWithReplyMention(normalizedText, user.displayName)) || null;
+    };
+
+    const extractSeparatedReplyContext = (html, knownUsers) => {
+        const sanitizedHtml = sanitizeCommentHtml(html);
+        const emptyResult = {
+            contentHtml: sanitizedHtml,
+            replyTargetName: '',
+            replyTargetProfileHref: ''
+        };
+        if (!sanitizedHtml) {
+            return emptyResult;
+        }
+
+        const template = document.createElement('template');
+        template.innerHTML = sanitizedHtml;
+        const firstNode = findFirstRenderableNode(template.content);
+        if (!firstNode) {
+            return emptyResult;
+        }
+
+        const firstText = String(firstNode.textContent || '').replace(/\u00a0/g, ' ').trim();
+        if (!firstText.startsWith('@')) {
+            return emptyResult;
+        }
+
+        const mentionOnlyTarget = normalizeReplyTarget(firstText.slice(1));
+        const matchedTarget = matchReplyTargetByKnownUsers(firstText, knownUsers);
+
+        if (!matchedTarget && mentionOnlyTarget && firstText === `@${mentionOnlyTarget}`) {
+            const lookupKey = normalizeReplyLookupKey(mentionOnlyTarget);
+            const matchedKnownUser = (Array.isArray(knownUsers) ? knownUsers : []).find((user) => normalizeReplyLookupKey(user.displayName) === lookupKey) || null;
+            firstNode.remove();
+            return {
+                contentHtml: sanitizeCommentHtml(serializeFragmentHtml(template.content)),
+                replyTargetName: mentionOnlyTarget,
+                replyTargetProfileHref: matchedKnownUser?.profileHref || ''
+            };
+        }
+
+        if (!matchedTarget) {
+            return emptyResult;
+        }
+
+        trimLeadingWhitespaceFromNode(firstNode);
+        if (!consumeLeadingTextFromNode(firstNode, `@${matchedTarget.displayName}`)) {
+            return emptyResult;
+        }
+        trimLeadingWhitespaceFromNode(firstNode);
+        pruneEmptyInlineNodes(firstNode);
+        if (!hasRenderableNodeContent(firstNode)) {
+            firstNode.remove();
+        }
+
+        return {
+            contentHtml: sanitizeCommentHtml(serializeFragmentHtml(template.content)),
+            replyTargetName: matchedTarget.displayName,
+            replyTargetProfileHref: matchedTarget.profileHref || ''
+        };
+    };
+
+    const toRenderableComment = (comment, knownUsers) => {
+        const separated = extractSeparatedReplyContext(comment?.contentHtml || '', knownUsers);
+        const contentHtml = separated.contentHtml || comment?.contentHtml || '';
+        return {
+            ...comment,
+            renderedContentHtml: contentHtml || '<p>Đang cập nhật nội dung.</p>',
+            renderedContentText: htmlToCommentText(contentHtml) || '',
+            replyTargetName: separated.replyTargetName,
+            replyTargetProfileHref: separated.replyTargetProfileHref
+        };
+    };
+
+    const renderCommentReplyTargetHtml = (comment) => {
+        if (!comment?.replyTargetName) {
+            return '';
+        }
+        return `<div class="pd-comment-reply-target">Trả lời ${
+            comment.replyTargetProfileHref
+                ? `<a href="${escapeHtml(comment.replyTargetProfileHref)}">@${escapeHtml(comment.replyTargetName)}</a>`
+                : `@${escapeHtml(comment.replyTargetName)}`
+        }</div>`;
     };
 
     const normalizePost = (post) => {
@@ -1401,9 +1648,7 @@
         if (titleEl) titleEl.textContent = post.title || 'Chưa có tiêu đề';
 
         // Author
-        const profileHref = author.nickname
-            ? `profile.html?nickname=${encodeURIComponent(author.nickname)}`
-            : (author.userId ? `profile.html?userId=${encodeURIComponent(author.userId)}` : 'profile.html');
+        const profileHref = buildProfileHref(author.nickname, author.userId) || 'profile.html';
         if (authorAvatarEl) {
             const avatarUrl = toSafeHttpUrl(author.avatarUrl || author.avatar_url || '');
             if (avatarUrl) {
@@ -1522,15 +1767,13 @@
         const initial = getInitial(comment.authorName);
         const palette = getAvatarPalette(comment.authorSeed || comment.authorName);
         const avatarUrl = toSafeHttpUrl(comment.authorAvatarUrl || '');
-        const renderedCommentHtml = comment.contentHtml || '<p>Đang cập nhật nội dung.</p>';
+        const renderedCommentHtml = comment.renderedContentHtml || '<p>Đang cập nhật nội dung.</p>';
         const avatarStyle = avatarUrl
             ? ` style="background-image:url('${escapeHtml(avatarUrl)}');background-size:cover;background-position:center;color:transparent;"`
             : (palette
                 ? ` style="background:${escapeHtml(palette.bg)};color:${escapeHtml(palette.fg)};"`
                 : '');
-        const profileHref = comment.authorNickname
-            ? `profile.html?nickname=${encodeURIComponent(comment.authorNickname)}`
-            : (comment.authorUserId ? `profile.html?userId=${encodeURIComponent(comment.authorUserId)}` : '');
+        const profileHref = buildProfileHref(comment.authorNickname, comment.authorUserId);
         const avatarLabel = avatarUrl ? '' : escapeHtml(initial);
         const avatarNode = profileHref
             ? `<a class="pd-comment-link" href="${profileHref}" aria-label="Hồ sơ ${escapeHtml(comment.authorName)}"><div class="pd-comment-avatar"${avatarStyle}>${avatarLabel}</div></a>`
@@ -1552,37 +1795,53 @@
                     ${nameNode}
                     <span class="pd-comment-date">${escapeHtml(timeLabel)}</span>
                 </div>
+                ${renderCommentReplyTargetHtml(comment)}
                 ${safeImage}
                 <div class="pd-comment-text">${renderedCommentHtml}</div>
                 <div class="pd-reply-actions mt-2 d-flex gap-3">
                     <button type="button" data-reply="${escapeHtml(comment.authorName)}"><i class="fa-solid fa-reply me-1"></i>Trả lời</button>
-                    <button type="button" data-quote="${escapeHtml((comment.contentText||'').slice(0,160))}" data-quote-author="${escapeHtml(comment.authorName || '')}"><i class="fa-solid fa-quote-left me-1"></i>Trích dẫn</button>
+                    <button type="button" data-quote="${escapeHtml((comment.renderedContentText||'').slice(0,160))}" data-quote-author="${escapeHtml(comment.authorName || '')}"><i class="fa-solid fa-quote-left me-1"></i>Trích dẫn</button>
                 </div>
             </article>`;
     };
 
     const updateRenderedCommentContent = (commentEl, comment) => {
         if (!commentEl || !comment) return;
+        const knownUsers = buildKnownCommentUsers(currentPost, currentComments);
+        const renderedComment = toRenderableComment(comment, knownUsers);
+        const existingReplyTargetEl = commentEl.querySelector('.pd-comment-reply-target');
         const contentEl = commentEl.querySelector('.pd-comment-text');
+        if (renderedComment.replyTargetName) {
+            if (existingReplyTargetEl) {
+                existingReplyTargetEl.outerHTML = renderCommentReplyTargetHtml(renderedComment);
+            } else if (contentEl) {
+                contentEl.insertAdjacentHTML('beforebegin', renderCommentReplyTargetHtml(renderedComment));
+            }
+        } else if (existingReplyTargetEl) {
+            existingReplyTargetEl.remove();
+        }
         if (contentEl) {
-            contentEl.innerHTML = comment.contentHtml || '<p>Đang cập nhật nội dung.</p>';
+            contentEl.innerHTML = renderedComment.renderedContentHtml || '<p>Đang cập nhật nội dung.</p>';
         }
         const quoteBtn = commentEl.querySelector('[data-quote]');
         if (quoteBtn instanceof HTMLButtonElement) {
-            quoteBtn.dataset.quote = String(comment.contentText || '').slice(0, 160);
+            quoteBtn.dataset.quote = String(renderedComment.renderedContentText || '').slice(0, 160);
             quoteBtn.dataset.quoteAuthor = String(comment.authorName || '');
         }
     };
 
     const renderComments = (comments) => {
         if (!commentListEl) return;
+        currentComments = Array.isArray(comments) ? comments.slice() : [];
+        const knownUsers = buildKnownCommentUsers(currentPost, currentComments);
+        const renderedComments = currentComments.map((comment) => toRenderableComment(comment, knownUsers));
         const total = comments.length;
         if (commentBadgeEl) commentBadgeEl.textContent = total > 0 ? total : '';
         if (total === 0) {
             commentListEl.innerHTML = `<div class="sv-meta text-center py-3"><i class="fa-regular fa-comment-dots me-2 text-muted"></i>Chưa có bình luận. Hãy là người đầu tiên!</div>`;
             return;
         }
-        commentListEl.innerHTML = `<div class="pd-comment-list">${comments.map(renderCommentItem).join('')}</div>`;
+        commentListEl.innerHTML = `<div class="pd-comment-list">${renderedComments.map(renderCommentItem).join('')}</div>`;
         comments.forEach(c => {
             const el = document.getElementById(`comment-${c.id}`);
             if (el) renderCommentActions(el, c);

@@ -11,6 +11,7 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/tinymce@7/tinymce.min.js" referrerpolicy="origin"></script>
     <link rel="stylesheet" href="svp.css">
     <link rel="stylesheet" href="dropdown-hover.css">
     <style>
@@ -56,6 +57,69 @@
             grid-template-columns: minmax(0, 1fr) auto auto;
             gap: .5rem;
             align-items: center;
+        }
+        .sv-editor-textarea {
+            min-height: 320px;
+            border: 1px solid var(--sv-border);
+            border-radius: 16px;
+            padding: .85rem 1rem;
+            background: #fff;
+            line-height: 1.65;
+            resize: vertical;
+        }
+        .sv-editor-textarea:focus {
+            border-color: #93c5fd;
+            box-shadow: 0 0 0 .2rem rgba(59,130,246,.15);
+        }
+        .tox-tinymce {
+            border: 1px solid var(--sv-border) !important;
+            border-radius: 16px !important;
+            overflow: hidden !important;
+            box-shadow: 0 18px 38px rgba(15, 23, 42, .06);
+        }
+        .tox .tox-toolbar-overlord,
+        .tox .tox-toolbar,
+        .tox .tox-toolbar__primary,
+        .tox .tox-menubar {
+            background: #fff !important;
+        }
+        .tox .tox-toolbar__group {
+            border: 0 !important;
+            padding: 0 .2rem !important;
+        }
+        .tox .tox-edit-area::before {
+            border: 0 !important;
+        }
+        .tox .tox-statusbar {
+            border-top: 1px solid #eef2f7 !important;
+        }
+        .sv-event-preview-body {
+            color: #64748b;
+            line-height: 1.7;
+        }
+        .sv-event-preview-body p:last-child,
+        .sv-event-preview-body ul:last-child,
+        .sv-event-preview-body ol:last-child,
+        .sv-event-preview-body blockquote:last-child,
+        .sv-event-preview-body figure:last-child {
+            margin-bottom: 0;
+        }
+        .sv-event-preview-body img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: .9rem auto;
+            border-radius: 12px;
+        }
+        .sv-event-preview-body blockquote {
+            margin: 1rem 0;
+            padding: .8rem 1rem;
+            border-left: 4px solid #2563eb;
+            background: #f8fbff;
+            color: #334155;
+        }
+        .sv-event-preview-body a {
+            color: #1d4ed8;
         }
         @media (max-width: 575px) {
             .sv-grid-2 {
@@ -174,7 +238,7 @@
 
                     <div class="mb-3">
                         <label for="event-description" class="form-label">Mô tả sự kiện</label>
-                        <textarea id="event-description" class="form-control" rows="6" required></textarea>
+                        <textarea id="event-description" class="form-control sv-editor-textarea" rows="6" required></textarea>
                     </div>
 
                     <div class="mb-3">
@@ -216,7 +280,7 @@
                     <h5 id="event-preview-title" class="fw-bold mb-2">Tên sự kiện sẽ hiển thị tại đây</h5>
                     <p id="event-preview-datetime" class="sv-meta mb-1"><i class="fa-regular fa-calendar me-1"></i>Ngày giờ: Chưa cập nhật</p>
                     <p id="event-preview-location" class="sv-meta mb-2"><i class="fa-solid fa-location-dot me-1"></i>Địa điểm: Chưa cập nhật</p>
-                    <p id="event-preview-description" class="small text-muted">Mô tả sự kiện sẽ xuất hiện ở đây sau khi bạn nhập.</p>
+                    <div id="event-preview-description" class="sv-event-preview-body small text-muted">Mô tả sự kiện sẽ xuất hiện ở đây sau khi bạn nhập.</div>
                 </div>
             </section>
         </div>
@@ -278,6 +342,9 @@
         const previewLocation = document.getElementById('event-preview-location');
         const previewDescription = document.getElementById('event-preview-description');
         const feedback = document.getElementById('event-submit-feedback');
+        const editorPlaceholder = descriptionInput
+            ? (descriptionInput.getAttribute('placeholder') || '')
+            : '';
 
         if (!form || !emailWrap || !emailInput || !titleInput || !startDatetimeInput || !endDatetimeToggle || !endDatetimeWrap || !endDatetimeInput || !locationInput || !priceInput || !onlineInput || !imageUrlInput || !imageFileInput || !imageUploadStatus || !descriptionInput || !typeInput || !typeAdminPanel || !typeAdminNewNameInput || !typeAdminAddBtn || !typeAdminFeedback || !typeAdminList || !tagsInput || !previewCover || !previewTitle || !previewDatetime || !previewLocation || !previewDescription || !feedback) {
             return;
@@ -319,6 +386,233 @@
             }
         };
 
+        const looksLikeHtml = (value) => /<\/?[a-z][\s\S]*>/i.test(String(value || ''));
+        const textToParagraphsHtml = (text) => {
+            const blocks = String(text || '')
+                .replace(/\r\n/g, '\n')
+                .split(/\n{2,}/)
+                .map((item) => item.trim())
+                .filter(Boolean);
+            if (!blocks.length) return '';
+            return blocks.map((block) => `<p>${escapeHtml(block).replace(/\n/g, '<br>')}</p>`).join('');
+        };
+        const htmlToPlainText = (html) => {
+            const template = document.createElement('template');
+            template.innerHTML = String(html || '').trim();
+            return String(template.content.textContent || '')
+                .replace(/\u00a0/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+        };
+        const normalizeSafeHref = (href) => {
+            const raw = String(href || '').trim();
+            if (!raw) return '';
+            try {
+                const parsed = new URL(raw, window.location.href);
+                return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+                    ? parsed.toString()
+                    : '';
+            } catch (_) {
+                return '';
+            }
+        };
+        const sanitizeEventBodyHtml = (html) => {
+            const raw = String(html || '').trim();
+            if (!raw) return '';
+
+            const template = document.createElement('template');
+            template.innerHTML = raw;
+
+            const allowedTags = new Set([
+                'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
+                'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+                'h2', 'h3', 'a', 'div', 'span', 'img', 'figure', 'figcaption'
+            ]);
+            const blockedTags = new Set([
+                'script', 'style', 'iframe', 'object', 'embed', 'form',
+                'input', 'button', 'textarea', 'select', 'option', 'link', 'meta',
+                'picture', 'source', 'svg', 'canvas'
+            ]);
+
+            const sanitizeNode = (node) => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    return escapeHtml(node.textContent || '');
+                }
+                if (node.nodeType !== Node.ELEMENT_NODE) {
+                    return '';
+                }
+
+                const tag = String(node.nodeName || '').toLowerCase();
+                if (blockedTags.has(tag)) {
+                    return '';
+                }
+
+                const childrenHtml = Array.from(node.childNodes).map((child) => sanitizeNode(child)).join('');
+                if (!allowedTags.has(tag)) {
+                    return childrenHtml;
+                }
+                if (tag === 'br') {
+                    return '<br>';
+                }
+                if (tag === 'a') {
+                    const href = normalizeSafeHref(node.getAttribute('href'));
+                    const attrs = href
+                        ? ` href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"`
+                        : '';
+                    return `<a${attrs}>${childrenHtml}</a>`;
+                }
+                if (tag === 'img') {
+                    const src = normalizeSafeHref(node.getAttribute('src'));
+                    if (!src) {
+                        return '';
+                    }
+                    const alt = escapeHtml(node.getAttribute('alt') || '');
+                    const title = escapeHtml(node.getAttribute('title') || '');
+                    const titleAttr = title ? ` title="${title}"` : '';
+                    return `<img src="${escapeHtml(src)}" alt="${alt}"${titleAttr}>`;
+                }
+                return `<${tag}>${childrenHtml}</${tag}>`;
+            };
+
+            return Array.from(template.content.childNodes).map((node) => sanitizeNode(node)).join('').trim();
+        };
+        const sanitizePreviewHtml = (html) => sanitizeEventBodyHtml(html);
+        const serializeNode = (node) => {
+            if (!node) return '';
+            const container = document.createElement('div');
+            container.appendChild(node.cloneNode(true));
+            return container.innerHTML;
+        };
+        const getEditorInstance = () => (eventEditorReady ? eventEditor : null);
+        const getDescriptionBodyHtml = () => {
+            const editor = getEditorInstance();
+            if (editor) {
+                return String(editor.getContent() || '').trim();
+            }
+            return textToParagraphsHtml(descriptionInput.value.trim());
+        };
+        const getSanitizedDescriptionBodyHtml = () => sanitizeEventBodyHtml(getDescriptionBodyHtml());
+        const setDescriptionBodyHtml = (html) => {
+            const nextContent = String(html || '').trim();
+            pendingEditorContent = nextContent;
+            descriptionInput.value = nextContent;
+            const editor = getEditorInstance();
+            if (editor) {
+                editor.setContent(nextContent);
+                pendingEditorContent = '';
+            }
+        };
+        const focusEditor = () => {
+            const editor = getEditorInstance();
+            if (editor) {
+                editor.focus();
+                return;
+            }
+            descriptionInput.focus();
+        };
+        const initEventEditor = async () => {
+            if (!window.tinymce || !descriptionInput) {
+                return;
+            }
+
+            const editors = await window.tinymce.init({
+                selector: '#event-description',
+                license_key: 'gpl',
+                menubar: 'insert format tools view',
+                branding: false,
+                promotion: false,
+                browser_spellcheck: true,
+                statusbar: false,
+                toolbar_sticky: true,
+                toolbar_mode: 'wrap',
+                min_height: 360,
+                autoresize_bottom_margin: 16,
+                plugins: 'autolink advlist lists link image emoticons charmap code fullscreen autoresize',
+                toolbar: 'undo redo | blocks | bold italic underline strikethrough | bullist numlist blockquote | link image emoticons | removeformat code fullscreen',
+                placeholder: editorPlaceholder,
+                convert_urls: false,
+                relative_urls: false,
+                remove_script_host: false,
+                paste_data_images: false,
+                image_uploadtab: false,
+                image_title: true,
+                invalid_elements: 'script,style,iframe,object,embed,form,input,button,textarea,select,option,link,meta,table,thead,tbody,tfoot,tr,td,th,picture,source,svg,canvas',
+                forced_root_block: 'p',
+                formats: {
+                    bold: { inline: 'strong' },
+                    italic: { inline: 'em' },
+                    underline: { inline: 'u' },
+                    strikethrough: { inline: 's' }
+                },
+                block_formats: 'Paragraph=p;Heading 2=h2;Heading 3=h3;Quote=blockquote;Code=pre',
+                link_default_target: '_blank',
+                link_assume_external_targets: 'https',
+                content_style: `
+                    body {
+                        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                        font-size: 16px;
+                        line-height: 1.75;
+                        color: #0f172a;
+                        padding: 1rem 1.1rem;
+                    }
+                    p { margin: 0 0 1rem; }
+                    h2, h3 {
+                        color: #0f172a;
+                        margin: 1.35rem 0 .8rem;
+                    }
+                    blockquote {
+                        margin: 1.2rem 0;
+                        padding: .85rem 1rem;
+                        border-left: 4px solid #2563eb;
+                        background: #f8fbff;
+                        color: #334155;
+                    }
+                    figure {
+                        margin: 1rem 0;
+                    }
+                    figure.image img,
+                    img {
+                        display: block;
+                        max-width: 100%;
+                        height: auto;
+                        margin: 0 auto;
+                        border-radius: 12px;
+                    }
+                    figcaption {
+                        margin-top: .45rem;
+                        color: #64748b;
+                        font-size: .9rem;
+                        text-align: center;
+                    }
+                    pre {
+                        margin: 1rem 0;
+                        padding: .9rem 1rem;
+                        border-radius: 12px;
+                        background: #0f172a;
+                        color: #e2e8f0;
+                        white-space: pre-wrap;
+                    }
+                    a { color: #1d4ed8; }
+                `
+            });
+
+            eventEditor = Array.isArray(editors) && editors.length
+                ? editors[0]
+                : (window.tinymce ? window.tinymce.get('event-description') : null);
+            if (!eventEditor) {
+                return;
+            }
+            eventEditorReady = true;
+            eventEditor.on('change input undo redo keyup setcontent', preview);
+
+            const initialEditorContent = String(pendingEditorContent || descriptionInput.value || '').trim();
+            if (initialEditorContent) {
+                eventEditor.setContent(initialEditorContent);
+            }
+            pendingEditorContent = '';
+            preview();
+        };
+
         const setFeedback = (text, type) => {
             feedback.textContent = text || '';
             feedback.style.color = type === 'error' ? '#b91c1c' : (type === 'success' ? '#15803d' : '#475569');
@@ -338,6 +632,9 @@
         let eventTypes = [];
         let currentEventTypeSelection = { eventTypeId: null, eventTypeName: '' };
         let isSuperadmin = false;
+        let eventEditor = null;
+        let eventEditorReady = false;
+        let pendingEditorContent = '';
         const clearImageFilePreview = () => {
             if (imageFilePreviewUrl) {
                 URL.revokeObjectURL(imageFilePreviewUrl);
@@ -556,8 +853,53 @@
             renderEventTypeOptions();
             renderEventTypeAdminList();
         };
-        const parseLegacyEventContent = (content) => {
-            const blocks = String(content || '')
+        const parseEventContent = (content) => {
+            const raw = String(content || '').trim();
+            if (!raw) {
+                return {
+                    descriptionHtml: '',
+                    descriptionText: '',
+                    eventTypeName: '',
+                    tags: ''
+                };
+            }
+
+            if (looksLikeHtml(raw)) {
+                const template = document.createElement('template');
+                template.innerHTML = raw;
+                const bodyParts = [];
+                let eventTypeName = '';
+                let tags = '';
+
+                Array.from(template.content.childNodes).forEach((node) => {
+                    const text = String(node.textContent || '')
+                        .replace(/\u00a0/g, ' ')
+                        .replace(/\s+/g, ' ')
+                        .trim();
+                    if (!text && node.nodeType === Node.TEXT_NODE) {
+                        return;
+                    }
+                    if (!eventTypeName && /^Loại sự kiện:\s*/i.test(text)) {
+                        eventTypeName = text.replace(/^Loại sự kiện:\s*/i, '').trim();
+                        return;
+                    }
+                    if (!tags && /^Tags:\s*/i.test(text)) {
+                        tags = text.replace(/^Tags:\s*/i, '').trim();
+                        return;
+                    }
+                    bodyParts.push(serializeNode(node));
+                });
+
+                const descriptionHtml = bodyParts.join('').trim();
+                return {
+                    descriptionHtml,
+                    descriptionText: htmlToPlainText(descriptionHtml),
+                    eventTypeName,
+                    tags
+                };
+            }
+
+            const blocks = raw
                 .replace(/\r\n/g, '\n')
                 .split(/\n{2,}/)
                 .map((item) => item.trim())
@@ -577,7 +919,8 @@
                 descriptionBlocks.push(block);
             });
             return {
-                description: descriptionBlocks.join('\n\n').trim(),
+                descriptionHtml: textToParagraphsHtml(descriptionBlocks.join('\n\n').trim()),
+                descriptionText: descriptionBlocks.join('\n\n').trim(),
                 eventTypeName,
                 tags
             };
@@ -607,8 +950,8 @@
             onlineInput.checked = Boolean(ev.online);
             imageUrlInput.value = ev.imageUrl || ev.image_url || '';
             const content = ev.content || '';
-            const parsedContent = parseLegacyEventContent(content);
-            descriptionInput.value = parsedContent.description || '';
+            const parsedContent = parseEventContent(content);
+            setDescriptionBodyHtml(parsedContent.descriptionHtml || '');
             tagsInput.value = parsedContent.tags || '';
             setCurrentEventTypeSelection(
                 ev.eventTypeId || ev.event_type_id,
@@ -623,14 +966,14 @@
             const startText = formatPreviewDateTime(startDatetimeInput.value);
             const endText = hasVisibleEndDatetime() ? formatPreviewDateTime(endDatetimeInput.value) : '';
             const location = locationInput.value.trim();
-            const description = descriptionInput.value.trim();
+            const descriptionHtml = sanitizePreviewHtml(buildEventContent());
             const imageUrl = sanitizeUrl(imageUrlInput.value);
             previewTitle.textContent = title || 'Tên sự kiện sẽ hiển thị tại đây';
             previewDatetime.textContent = startText
                 ? `Ngày giờ: ${startText}${endText ? ` - ${endText}` : ''}`
                 : 'Ngày giờ: Chưa cập nhật';
             previewLocation.textContent = `Địa điểm: ${location || (onlineInput.checked ? 'Online' : 'Chưa cập nhật')}`;
-            previewDescription.textContent = description || 'Mô tả sự kiện sẽ xuất hiện ở đây sau khi bạn nhập.';
+            previewDescription.innerHTML = descriptionHtml || 'Mô tả sự kiện sẽ xuất hiện ở đây sau khi bạn nhập.';
             previewCover.style.backgroundImage = imageUrl
                 ? `url("${encodeURI(imageUrl)}")`
                 : (imageFilePreviewUrl
@@ -697,11 +1040,15 @@
         };
 
         const buildEventContent = () => {
-            const description = descriptionInput.value.trim();
+            const descriptionHtml = getSanitizedDescriptionBodyHtml();
             const tags = String(tagsInput.value || '').split(',').map((item) => item.trim()).filter(Boolean);
-            const lines = [description];
-            if (tags.length > 0) lines.push(`Tags: ${tags.join(', ')}`);
-            return lines.join('\n\n').trim();
+            const tagsHtml = tags.length > 0
+                ? `<p>Tags: ${escapeHtml(tags.join(', '))}</p>`
+                : '';
+            if (!descriptionHtml) {
+                return tagsHtml;
+            }
+            return tagsHtml ? `${descriptionHtml}\n${tagsHtml}` : descriptionHtml;
         };
 
         [titleInput, startDatetimeInput, endDatetimeInput, locationInput, onlineInput, imageUrlInput, descriptionInput].forEach((el) => {
@@ -843,6 +1190,7 @@
             event.preventDefault();
 
             const title = titleInput.value.trim();
+            const descriptionText = htmlToPlainText(getSanitizedDescriptionBodyHtml());
             const content = buildEventContent();
             const selectedEventType = getSelectedEventType();
             const startTime = toIsoDatetime(startDatetimeInput);
@@ -860,7 +1208,11 @@
             if (endTime && toTimestamp(endTime) < toTimestamp(startTime)) {
                 return setFeedback('Ngày giờ kết thúc phải sau hoặc bằng ngày giờ bắt đầu.', 'error');
             }
-            if (content.length < 10) return setFeedback('Mô tả sự kiện cần tối thiểu 10 ký tự.', 'error');
+            if (descriptionText.length < 10) {
+                setFeedback('Mô tả sự kiện cần tối thiểu 10 ký tự.', 'error');
+                focusEditor();
+                return;
+            }
             if (!address) return setFeedback('Địa điểm không được để trống.', 'error');
             if (!Number.isFinite(price) || price < 0) return setFeedback('Giá vé không hợp lệ.', 'error');
             if (rawImageUrl && !safeImageUrl) return setFeedback('Link ảnh sự kiện không hợp lệ (cần bắt đầu bằng http:// hoặc https://).', 'error');
@@ -944,6 +1296,7 @@
                     localStorage.setItem('userEmail', email);
                     form.reset();
                     emailInput.value = email;
+                    setDescriptionBodyHtml('');
                     setEndDatetimeVisibility(false, { preserveValue: false });
                     clearImageFilePreview();
                     setUploadStatus('', 'info');
@@ -983,6 +1336,7 @@
                 emailInput.value = initialEmail;
                 emailWrap.classList.add('d-none');
             }
+            await initEventEditor();
             setEndDatetimeVisibility(false, { preserveValue: false });
             renderEventTypeOptions();
             preview();
@@ -1020,4 +1374,3 @@
 <script src="auth-topbar.js"></script>
 </body>
 </html>
-

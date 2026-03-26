@@ -62,6 +62,38 @@
             white-space: normal;
             word-break: break-word;
         }
+        .sv-event-content p:last-child,
+        .sv-event-content ul:last-child,
+        .sv-event-content ol:last-child,
+        .sv-event-content blockquote:last-child,
+        .sv-event-content figure:last-child {
+            margin-bottom: 0;
+        }
+        .sv-event-content img {
+            display: block;
+            max-width: 100%;
+            height: auto;
+            margin: 1rem auto;
+            border-radius: 12px;
+        }
+        .sv-event-content blockquote {
+            margin: 1rem 0;
+            padding: .9rem 1rem;
+            border-left: 4px solid #2563eb;
+            background: #f8fbff;
+            color: #334155;
+        }
+        .sv-event-content pre {
+            margin: 1rem 0;
+            padding: .9rem 1rem;
+            border-radius: 12px;
+            background: #0f172a;
+            color: #e2e8f0;
+            white-space: pre-wrap;
+        }
+        .sv-event-content a {
+            color: #1d4ed8;
+        }
     </style>
 </head>
 <body>
@@ -239,18 +271,139 @@
             return safeAddress || 'Địa điểm sẽ cập nhật';
         };
 
-        const stripLegacyTypeLine = (content) => String(content || '')
-            .replace(/\r\n/g, '\n')
-            .split(/\n{2,}/)
-            .map((item) => item.trim())
-            .filter((item) => item && !/^Loại sự kiện:\s*/i.test(item))
-            .join('\n\n')
-            .trim();
+        const looksLikeHtml = (value) => /<\/?[a-z][\s\S]*>/i.test(String(value || ''));
+        const normalizeSafeHref = (href) => {
+            const raw = String(href || '').trim();
+            if (!raw) return '';
+            try {
+                const parsed = new URL(raw, window.location.href);
+                return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+                    ? parsed.toString()
+                    : '';
+            } catch (_) {
+                return '';
+            }
+        };
+        const serializeNode = (node) => {
+            if (!node) return '';
+            const container = document.createElement('div');
+            container.appendChild(node.cloneNode(true));
+            return container.innerHTML;
+        };
+        const textToParagraphsHtml = (text) => {
+            const blocks = String(text || '')
+                .replace(/\r\n/g, '\n')
+                .split(/\n{2,}/)
+                .map((item) => item.trim())
+                .filter(Boolean);
+            if (!blocks.length) return '';
+            return blocks.map((block) => `<p>${escapeHtml(block).replace(/\n/g, '<br>')}</p>`).join('');
+        };
+        const extractFirstImageUrl = (html) => {
+            const template = document.createElement('template');
+            template.innerHTML = String(html || '').trim();
+            const image = template.content.querySelector('img[src]');
+            return image ? normalizeSafeHref(image.getAttribute('src')) : '';
+        };
+        const sanitizeEventContentHtml = (html) => {
+            const raw = String(html || '').trim();
+            if (!raw) return '';
 
+            const template = document.createElement('template');
+            template.innerHTML = raw;
+
+            const allowedTags = new Set([
+                'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
+                'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+                'h2', 'h3', 'a', 'div', 'span', 'img', 'figure', 'figcaption'
+            ]);
+            const blockedTags = new Set([
+                'script', 'style', 'iframe', 'object', 'embed', 'form',
+                'input', 'button', 'textarea', 'select', 'option', 'link', 'meta',
+                'picture', 'source', 'svg', 'canvas'
+            ]);
+
+            const sanitizeNode = (node) => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    return escapeHtml(node.textContent || '');
+                }
+                if (node.nodeType !== Node.ELEMENT_NODE) {
+                    return '';
+                }
+
+                const tag = String(node.nodeName || '').toLowerCase();
+                if (blockedTags.has(tag)) {
+                    return '';
+                }
+
+                const childrenHtml = Array.from(node.childNodes).map((child) => sanitizeNode(child)).join('');
+                if (!allowedTags.has(tag)) {
+                    return childrenHtml;
+                }
+                if (tag === 'br') {
+                    return '<br>';
+                }
+                if (tag === 'a') {
+                    const href = normalizeSafeHref(node.getAttribute('href'));
+                    const attrs = href
+                        ? ` href="${escapeHtml(href)}" target="_blank" rel="noopener noreferrer"`
+                        : '';
+                    return `<a${attrs}>${childrenHtml}</a>`;
+                }
+                if (tag === 'img') {
+                    const src = normalizeSafeHref(node.getAttribute('src'));
+                    if (!src) {
+                        return '';
+                    }
+                    const alt = escapeHtml(node.getAttribute('alt') || '');
+                    const title = escapeHtml(node.getAttribute('title') || '');
+                    const titleAttr = title ? ` title="${title}"` : '';
+                    return `<img src="${escapeHtml(src)}" alt="${alt}"${titleAttr}>`;
+                }
+                return `<${tag}>${childrenHtml}</${tag}>`;
+            };
+
+            return Array.from(template.content.childNodes).map((node) => sanitizeNode(node)).join('').trim();
+        };
+        const stripLegacyEventTypeFromHtml = (content) => {
+            const raw = String(content || '').trim();
+            if (!raw) return '';
+            if (!looksLikeHtml(raw)) {
+                return String(raw)
+                    .replace(/\r\n/g, '\n')
+                    .split(/\n{2,}/)
+                    .map((item) => item.trim())
+                    .filter((item) => item && !/^Loại sự kiện:\s*/i.test(item))
+                    .join('\n\n')
+                    .trim();
+            }
+
+            const template = document.createElement('template');
+            template.innerHTML = raw;
+            const keptNodes = [];
+
+            Array.from(template.content.childNodes).forEach((node) => {
+                const text = String(node.textContent || '')
+                    .replace(/\u00a0/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim();
+                if (text && /^Loại sự kiện:\s*/i.test(text)) {
+                    return;
+                }
+                keptNodes.push(serializeNode(node));
+            });
+
+            return keptNodes.join('').trim();
+        };
         const toContentHtml = (content) => {
-            const normalized = stripLegacyTypeLine(content) || 'Nội dung sự kiện đang được cập nhật.';
-            const safeText = escapeHtml(normalized);
-            return safeText.replace(/\n/g, '<br>');
+            const normalized = stripLegacyEventTypeFromHtml(content);
+            if (!normalized) {
+                return '<p>Nội dung sự kiện đang được cập nhật.</p>';
+            }
+            if (!looksLikeHtml(normalized)) {
+                return textToParagraphsHtml(normalized) || '<p>Nội dung sự kiện đang được cập nhật.</p>';
+            }
+            return sanitizeEventContentHtml(normalized) || '<p>Nội dung sự kiện đang được cập nhật.</p>';
         };
 
         const renderShare = (event) => {
@@ -268,10 +421,13 @@
             if (!seo || !event) return;
 
             const title = String(event.title || 'Sự kiện');
-            const description = seo.excerpt(seo.htmlToText(String(event.content || '')), 170)
+            const contentHtml = toContentHtml(event.content);
+            const description = seo.excerpt(seo.htmlToText(String(contentHtml || '')), 170)
                 || 'Thông tin chi tiết về sự kiện và cách tham gia cùng cộng đồng SVP.';
             const canonicalUrl = buildEventCanonicalUrl(event.eventId, title);
-            const imageUrl = String(event.imageUrl || '').trim() || seo.defaultImage;
+            const imageUrl = String(event.imageUrl || '').trim()
+                || extractFirstImageUrl(contentHtml)
+                || seo.defaultImage;
             const organizer = event.organizer || {};
             const organizerName = String(organizer.displayName || organizer.nickname || 'SVP Forum');
             const address = String(event.address || '').trim();
@@ -331,6 +487,7 @@
             const organizer = event.organizer || {};
             const hostName = String(organizer.displayName || organizer.nickname || 'Ban tổ chức SVP');
             const imageUrl = String(event.imageUrl || '').trim();
+            const contentHtml = toContentHtml(event.content);
 
             titleEl.textContent = title;
             timeEl.textContent = formatDateTime(event.eventTime);
@@ -338,7 +495,7 @@
             addressEl.textContent = toAddressLabel(Boolean(event.online), event.address);
             priceEl.textContent = toPriceLabel(event.price, Boolean(event.online));
             hostEl.textContent = hostName;
-            contentEl.innerHTML = toContentHtml(event.content);
+            contentEl.innerHTML = contentHtml;
 
             if (imageUrl) {
                 const img = document.createElement('img');

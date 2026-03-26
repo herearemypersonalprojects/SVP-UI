@@ -755,6 +755,7 @@
                 postId: Number(post?.postId ?? post?.id ?? 0),
                 categoryId: Number(post?.categoryId ?? post?.category_id ?? 0),
                 isArticle: Boolean(post?.isArticle ?? post?.is_article ?? true),
+                isBlog: Boolean(post?.isBlog ?? post?.is_blog ?? false),
                 status: post?.status ?? post?.postStatus ?? null,
                 title,
                 contentHtml,
@@ -794,8 +795,9 @@
         const getCategoryName = (categoryId) => CATEGORY_NAMES[categoryId] || `Chuyên mục #${categoryId ?? 'N/A'}`;
         const getVisiblePosts = (posts) => posts.filter((post) => {
             const isArticle = Boolean(post?.isArticle ?? true);
+            const isBlog = Boolean(post?.isBlog ?? false);
             const matchesCategory = !Number.isFinite(activeCategoryId) || Number(post?.categoryId) === activeCategoryId;
-            return isArticle && matchesCategory;
+            return isArticle && !isBlog && matchesCategory;
         });
         const HOME_POSTS_LIMIT = 6;
         const MORE_POSTS_LIMIT = 5;

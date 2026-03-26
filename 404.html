@@ -49,6 +49,13 @@
         ];
 
         var parts = path.split('/').filter(Boolean);
+        if (parts.length === 1 && parts[0] === 'feed') {
+            var feedUrl = '/feed.html';
+            if (search.has('api')) feedUrl += '?api=' + encodeURIComponent(search.get('api'));
+            window.location.replace(feedUrl);
+            return;
+        }
+
         if (parts.length < 2) {
             return;
         }

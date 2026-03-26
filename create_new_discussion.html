@@ -235,11 +235,7 @@
 
                     <div class="mb-3">
                         <label for="discussion-subject" class="form-label">Subject (nội dung mở đầu)</label>
-                        <textarea id="discussion-subject" class="form-control sv-editor-textarea" rows="8" placeholder="Viết nội dung bạn muốn mở đầu cuộc thảo luận..." required></textarea>
-                        <div class="sv-discussion-tip mt-2">
-                            <i class="fa-solid fa-circle-info me-1"></i>
-                            Nội dung Subject sẽ tạo post đầu tiên của thread. Bạn có thể định dạng đậm, danh sách, trích dẫn và chèn link.
-                        </div>
+                        <textarea id="discussion-subject" class="form-control sv-editor-textarea" rows="8" placeholder="" required></textarea>
                     </div>
 
                     <div class="d-flex flex-wrap justify-content-between gap-2">
@@ -310,7 +306,7 @@
             return;
         }
 
-        const editorPlaceholder = subjectInput.getAttribute('placeholder') || 'Viết nội dung bạn muốn mở đầu cuộc thảo luận...';
+        const editorPlaceholder = subjectInput.getAttribute('placeholder') || '';
         let pendingCoverFile = null;
         let pendingCoverPreviewUrl = '';
         let isUploadingCover = false;

@@ -37,6 +37,7 @@
 <script>
 (() => {
     const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+    const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
     const titleEl = document.getElementById('title');
     const msgEl = document.getElementById('msg');
     const metaEl = document.getElementById('meta');
@@ -44,6 +45,7 @@
     const goHomeLink = document.getElementById('go-home-link');
     const PENDING_AUTH_KEY = 'svp.pendingArticlePublishAuth';
     let pendingAuth = null;
+    let primaryDestination = 'index.html';
 
     const parseHashParams = () => new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
     const parseQueryParams = () => new URLSearchParams(window.location.search || '');
@@ -51,6 +53,25 @@
     const safeTitle = (value) => String(value || '').trim();
     const asText = (value) => String(value || '').trim();
     const isObject = (value) => value && typeof value === 'object' && !Array.isArray(value);
+    const buildArticleHref = (postId, title) => {
+        if (urlHelpers && typeof urlHelpers.buildDetailPath === 'function') {
+            return urlHelpers.buildDetailPath('article', postId, title);
+        }
+        return `post_detail.html?postId=${encodeURIComponent(postId)}`;
+    };
+    const buildProfileHref = (nickname, userId) => {
+        if (asText(nickname)) return `profile.html?nickname=${encodeURIComponent(asText(nickname))}`;
+        if (asText(userId)) return `profile.html?userId=${encodeURIComponent(asText(userId))}`;
+        return 'profile.html';
+    };
+    const updatePrimaryAction = (href, label) => {
+        primaryDestination = href || 'index.html';
+        if (!goHomeLink) {
+            return;
+        }
+        goHomeLink.href = primaryDestination;
+        goHomeLink.textContent = label || 'Về trang chủ';
+    };
 
     const statusLabel = (status) => {
         const upper = safeStatus(status);
@@ -132,19 +153,21 @@
         metaEl.textContent = '';
     };
 
-    const renderStatus = (articleTitle, status) => {
+    const renderStatus = (articleTitle, status, options = {}) => {
         spinnerEl.classList.add('hidden');
         const upperStatus = safeStatus(status);
         const published = upperStatus === 'PUBLISHED';
         const already = upperStatus === 'ALREADY_PUBLISHED';
+        const isBlog = Boolean(options.isBlog);
+        const noun = isBlog ? 'bài blog' : 'bài viết';
 
         if (published) {
             titleEl.textContent = 'Xác thực thành công';
-            msgEl.textContent = 'Bài viết PENDING đã được xuất bản.';
+            msgEl.textContent = `${noun.charAt(0).toUpperCase() + noun.slice(1)} PENDING đã được xuất bản.`;
             msgEl.className = 'ok';
         } else if (already) {
-            titleEl.textContent = 'Bài viết đã được xử lý';
-            msgEl.textContent = 'Bài viết này đã được xuất bản trước đó.';
+            titleEl.textContent = `${noun.charAt(0).toUpperCase() + noun.slice(1)} đã được xử lý`;
+            msgEl.textContent = `${noun.charAt(0).toUpperCase() + noun.slice(1)} này đã được xuất bản trước đó.`;
             msgEl.className = '';
         } else {
             titleEl.textContent = 'Đã xử lý yêu cầu';
@@ -153,10 +176,25 @@
         }
 
         const authReady = Boolean(getPendingAuth());
-        const authHint = authReady ? 'Nhấn "Về trang chủ" để tự động đăng nhập.' : '';
+        const authHint = authReady
+            ? `Nhấn "${isBlog ? 'Vào espace của bạn' : 'Về trang chủ'}" để tự động đăng nhập.`
+            : '';
         const titleText = safeTitle(articleTitle) || 'Không xác định';
-        const mainMeta = `Tiêu đề bài viết: ${titleText} - Trạng thái: ${statusLabel(upperStatus)}`;
+        const mainMeta = `${isBlog ? 'Tiêu đề blog' : 'Tiêu đề bài viết'}: ${titleText} - Trạng thái: ${statusLabel(upperStatus)}`;
         metaEl.textContent = [mainMeta, authHint].filter(Boolean).join(' - ');
+
+        if (isBlog) {
+            const auth = normalizeAuth(options.auth) || getPendingAuth();
+            const hasProfileTarget = Boolean(auth);
+            updatePrimaryAction(
+                hasProfileTarget
+                    ? buildProfileHref(auth.nickname, auth.userId)
+                    : (Number(options.postId) > 0 ? buildArticleHref(Number(options.postId), articleTitle) : 'profile.html'),
+                hasProfileTarget ? 'Vào espace của bạn' : 'Mở bài blog'
+            );
+            return;
+        }
+        updatePrimaryAction('index.html', 'Về trang chủ');
     };
 
     const verifyByToken = async (token) => {
@@ -172,9 +210,15 @@
         setPendingAuth(payload && payload.auth ? payload.auth : null);
         const status = safeStatus(payload.status);
         const articleTitle = safeTitle(payload.title);
-        const nextHash = `status=${encodeURIComponent(status)}&title=${encodeURIComponent(articleTitle)}`;
+        const isBlog = Boolean(payload && payload.isBlog);
+        const postId = Number(payload && payload.postId) || 0;
+        const nextHash = `status=${encodeURIComponent(status)}&title=${encodeURIComponent(articleTitle)}&postId=${encodeURIComponent(postId)}&isBlog=${isBlog ? 'true' : 'false'}`;
         window.history.replaceState(null, '', `${window.location.pathname}#${nextHash}`);
-        renderStatus(articleTitle, status);
+        renderStatus(articleTitle, status, {
+            isBlog,
+            postId,
+            auth: payload && payload.auth ? payload.auth : null
+        });
     };
 
     const hashParams = parseHashParams();
@@ -183,6 +227,8 @@
     const token = readParam('token');
     const status = safeStatus(readParam('status'));
     const articleTitle = safeTitle(readParam('title'));
+    const postId = Number(readParam('postId')) || 0;
+    const isBlog = readParam('isBlog') === 'true';
     const hashAuth = normalizeAuth({
         accessToken: readParam('accessToken'),
         refreshToken: readParam('refreshToken'),
@@ -205,9 +251,9 @@
             const applied = applyAuthToLocalStorage(auth);
             clearPendingAuth();
             if (applied) {
-                window.location.replace('index.html');
+                window.location.replace(primaryDestination);
             } else {
-                window.location.href = 'index.html';
+                window.location.href = primaryDestination;
             }
         });
     }
@@ -220,7 +266,7 @@
     }
 
     if (status || articleTitle) {
-        renderStatus(articleTitle, status);
+        renderStatus(articleTitle, status, { isBlog, postId });
         return;
     }
 

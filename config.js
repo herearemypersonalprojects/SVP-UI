@@ -15,7 +15,10 @@
     var params = new URLSearchParams(window.location.search);
     var apiMode = (params.get('api') || '').trim().toLowerCase();
     var hostname = (window.location.hostname || '').trim().toLowerCase();
-    var isLocalHost = hostname === 'localhost' || hostname === '127.0.0.1';
+    var isLocalHost = hostname === 'localhost'
+        || hostname === '127.0.0.1'
+        || hostname === '::1'
+        || hostname === '[::1]';
     var forceLocal = apiMode === 'local';
     var forceCloud = apiMode === 'cloud';
 

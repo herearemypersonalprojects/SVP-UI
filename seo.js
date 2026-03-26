@@ -12,9 +12,22 @@
         thread: { file: 'thread.html', queryKey: 'postId', shareKind: 'thread', prettyPrefix: 'chu-de', fallbackSlug: 'chu-de' },
         event: { file: 'event_detail.html', queryKey: 'eventId', shareKind: 'event', prettyPrefix: 'su-kien', fallbackSlug: 'su-kien' }
     };
+    const STANDALONE_ROUTE_MAP = {
+        feed: 'feed.html'
+    };
     const head = document.head;
 
     if (!head) return;
+
+    const resolveSiteBasePath = () => {
+        try {
+            const parsed = new URL(`${SITE_URL}/`);
+            const pathname = String(parsed.pathname || '/').replace(/\/+$/g, '');
+            return pathname ? `${pathname}/` : '/';
+        } catch (_) {
+            return '/';
+        }
+    };
 
     const buildUrl = (value) => {
         const raw = String(value || '').trim();
@@ -30,6 +43,9 @@
         const path = String(window.location.pathname || '/').trim() || '/';
         if (path === '/' || path.endsWith('/')) return 'index.html';
         const parts = path.split('/').filter(Boolean);
+        if (parts.length === 1 && STANDALONE_ROUTE_MAP[parts[0]]) {
+            return STANDALONE_ROUTE_MAP[parts[0]];
+        }
         if (parts.length >= 2) {
             const matchedRoute = Object.values(DETAIL_ROUTE_MAP).find((route) => route.prettyPrefix === parts[0]);
             if (matchedRoute) return matchedRoute.file;
@@ -114,7 +130,30 @@
         script.textContent = JSON.stringify(normalized.length === 1 ? normalized[0] : normalized);
     };
 
-    const isFileUiContext = () => String(window.location.protocol || '').toLowerCase() === 'file:';
+    const isLocalUiContext = () => {
+        const protocol = String(window.location.protocol || '').toLowerCase();
+        const hostname = String(window.location.hostname || '').toLowerCase();
+        return protocol === 'file:'
+            || hostname === 'localhost'
+            || hostname === '127.0.0.1'
+            || hostname === '::1'
+            || hostname === '[::1]';
+    };
+
+    const ensureDocumentBase = () => {
+        if (isLocalUiContext()) {
+            return;
+        }
+        const baseHref = resolveSiteBasePath();
+        let baseEl = head.querySelector('base');
+        if (!baseEl) {
+            baseEl = document.createElement('base');
+            head.insertBefore(baseEl, head.firstChild);
+        }
+        if (baseEl.getAttribute('href') !== baseHref) {
+            baseEl.setAttribute('href', baseHref);
+        }
+    };
 
     const currentApiMode = () => {
         try {
@@ -171,7 +210,7 @@
         const numericId = normalizeId(id);
         if (!route || numericId <= 0) return 'index.html';
 
-        if (!isFileUiContext()) {
+        if (!isLocalUiContext()) {
             const slug = slugify(title, route.fallbackSlug);
             const prettyPath = `/${route.prettyPrefix}/${numericId}/${slug}`;
             if (options.preserveApiMode !== false) {
@@ -197,6 +236,31 @@
 
     const buildDetailPath = (kind, id, title, options = {}) => buildPrettyPath(kind, id, title, options);
 
+    const buildStandalonePath = (name, options = {}) => {
+        const key = cleanText(name).toLowerCase();
+        const file = STANDALONE_ROUTE_MAP[key];
+        if (!file) return 'index.html';
+
+        if (!isLocalUiContext()) {
+            const routePath = `/${file}`;
+            if (options.preserveApiMode !== false) {
+                const apiMode = currentApiMode();
+                if (apiMode) {
+                    return `${routePath}?api=${encodeURIComponent(apiMode)}`;
+                }
+            }
+            return routePath;
+        }
+
+        const params = new URLSearchParams();
+        if (options.preserveApiMode !== false) {
+            const apiMode = currentApiMode();
+            if (apiMode) params.set('api', apiMode);
+        }
+        const query = params.toString();
+        return query ? `${file}?${query}` : file;
+    };
+
     const buildCanonicalUrl = (kind, id, title) => buildUrl(buildPrettyPath(kind, id, title, { preserveApiMode: false }));
 
     const buildShareUrl = (kind, id, title) => {
@@ -216,6 +280,127 @@
             return;
         }
         window.history.replaceState({}, '', `${nextRelativeUrl}${window.location.hash || ''}`);
+    };
+
+    const ensureGlobalFeedNavLink = () => {
+        const navLists = document.querySelectorAll('.sv-nav .nav');
+        if (!navLists.length) return;
+
+        const feedHref = buildStandalonePath('feed');
+        const onFeedPage = currentFileName() === 'feed.html';
+
+        navLists.forEach((navList) => {
+            Array.from(navList.querySelectorAll('a.nav-link')).forEach((candidate) => {
+                const label = cleanText(candidate.textContent).toLowerCase();
+                if (label === 'sự kiện & lễ hội') {
+                    candidate.textContent = 'Sự Kiện';
+                    return;
+                }
+                if (label === 'bản đồ thuê nhà') {
+                    candidate.textContent = 'Nhà Cửa';
+                    return;
+                }
+                if (label === 'khám phá paris') {
+                    candidate.textContent = 'Paris';
+                    return;
+                }
+                if (label === 'liên hệ') {
+                    const navItem = candidate.closest('.nav-item');
+                    if (navItem && navItem.parentNode === navList) {
+                        navItem.remove();
+                    }
+                }
+            });
+
+            let link = navList.querySelector('a[data-svp-nav-feed="true"]');
+            if (!link) {
+                link = Array.from(navList.querySelectorAll('a.nav-link'))
+                    .find((candidate) => cleanText(candidate.textContent).toLowerCase() === 'bảng tin');
+            }
+
+            if (!link) {
+                const listItem = document.createElement('li');
+                listItem.className = 'nav-item';
+                link = document.createElement('a');
+                link.className = 'nav-link';
+                link.textContent = 'Bảng Tin';
+                link.setAttribute('data-svp-nav-feed', 'true');
+                listItem.appendChild(link);
+                const homeLink = Array.from(navList.querySelectorAll('a.nav-link'))
+                    .find((candidate) => cleanText(candidate.textContent).toLowerCase() === 'trang chủ');
+                const homeItem = homeLink ? homeLink.closest('.nav-item') : null;
+                if (homeItem && homeItem.parentNode === navList) {
+                    navList.insertBefore(listItem, homeItem);
+                } else {
+                    navList.insertBefore(listItem, navList.firstElementChild || null);
+                }
+            } else {
+                link.setAttribute('data-svp-nav-feed', 'true');
+                link.textContent = 'Bảng Tin';
+            }
+
+            const feedItem = link.closest('.nav-item');
+            const homeLink = Array.from(navList.querySelectorAll('a.nav-link'))
+                .find((candidate) => cleanText(candidate.textContent).toLowerCase() === 'trang chủ');
+            const homeItem = homeLink ? homeLink.closest('.nav-item') : null;
+            if (feedItem && homeItem && feedItem.parentNode === navList && homeItem.parentNode === navList && feedItem !== homeItem) {
+                navList.insertBefore(feedItem, homeItem);
+            }
+
+            link.setAttribute('href', feedHref);
+            link.classList.toggle('active', onFeedPage);
+
+            let parisLink = Array.from(navList.querySelectorAll('a.nav-link'))
+                .find((candidate) => cleanText(candidate.textContent).toLowerCase() === 'paris');
+            if (!parisLink) {
+                parisLink = Array.from(navList.querySelectorAll('a.nav-link'))
+                    .find((candidate) => {
+                        const href = cleanText(candidate.getAttribute('href') || '').toLowerCase();
+                        return href === 'ban-do-paris.html' || href.endsWith('/ban-do-paris.html');
+                    });
+            }
+            if (!parisLink) {
+                const listItem = document.createElement('li');
+                listItem.className = 'nav-item';
+                parisLink = document.createElement('a');
+                parisLink.className = 'nav-link';
+                parisLink.textContent = 'Paris';
+                parisLink.setAttribute('href', 'ban-do-paris.html');
+                listItem.appendChild(parisLink);
+
+                const eventLink = Array.from(navList.querySelectorAll('a.nav-link'))
+                    .find((candidate) => cleanText(candidate.textContent).toLowerCase() === 'sự kiện');
+                const eventItem = eventLink ? eventLink.closest('.nav-item') : null;
+                if (eventItem && eventItem.nextSibling) {
+                    navList.insertBefore(listItem, eventItem.nextSibling);
+                } else if (eventItem && eventItem.parentNode === navList) {
+                    navList.appendChild(listItem);
+                } else {
+                    navList.appendChild(listItem);
+                }
+            } else {
+                parisLink.textContent = 'Paris';
+            }
+        });
+    };
+
+    const installEarlyNavNormalizer = () => {
+        if (document.querySelector('.sv-nav .nav')) {
+            ensureGlobalFeedNavLink();
+            return;
+        }
+        const root = document.documentElement;
+        if (!root || typeof MutationObserver === 'undefined') {
+            return;
+        }
+        const observer = new MutationObserver(() => {
+            if (!document.querySelector('.sv-nav .nav')) {
+                return;
+            }
+            ensureGlobalFeedNavLink();
+            observer.disconnect();
+        });
+        observer.observe(root, { childList: true, subtree: true });
     };
 
     const buildWebPageSchema = (config) => compactObject({
@@ -361,6 +546,14 @@
             title: 'Hồ sơ thành viên - SVP',
             description: 'Trang hồ sơ thành viên của SVP Forum.',
             path: '/profile.html',
+            robots: PRIVATE_ROBOTS,
+            noindex: true,
+            schema: false
+        },
+        'feed.html': {
+            title: 'Bảng tin cá nhân - SVP',
+            description: 'Bảng tin cá nhân hóa của SVP, tổng hợp các cập nhật mới nhất dành cho thành viên đã đăng nhập.',
+            path: '/feed.html',
             robots: PRIVATE_ROBOTS,
             noindex: true,
             schema: false
@@ -534,6 +727,7 @@
             slugify,
             buildPrettyPath,
             buildDetailPath,
+            buildStandalonePath,
             buildCanonicalUrl,
             buildShareUrl,
             parsePrettyRoute,
@@ -542,5 +736,12 @@
         setPage
     };
 
+    ensureDocumentBase();
     setPage();
+    if (document.readyState === 'loading') {
+        installEarlyNavNormalizer();
+        document.addEventListener('DOMContentLoaded', ensureGlobalFeedNavLink, { once: true });
+    } else {
+        ensureGlobalFeedNavLink();
+    }
 })();

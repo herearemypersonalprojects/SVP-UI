@@ -1,7 +1,9 @@
 (function () {
     const fallbackBase = (() => {
         const origin = window.location.origin || "";
-        const isLocal = origin.includes("localhost") || origin.includes("127.0.0.1");
+        const isLocal = origin.includes("localhost")
+            || origin.includes("127.0.0.1")
+            || origin.includes("::1");
         if (isLocal) {
             return "http://localhost:8080";
         }

@@ -645,7 +645,7 @@
             descriptionComposer = editorLib.create({
                 target: descriptionEl,
                 minHeight: 320,
-                placeholder: descriptionEl.getAttribute('placeholder') || '',
+                placeholder: '',
                 onChange: () => updatePreview()
             });
         }

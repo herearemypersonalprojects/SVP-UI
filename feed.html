@@ -1,0 +1,293 @@
+<!doctype html>
+<html lang="vi">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Bảng tin cá nhân - SVP</title>
+    <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
+    <link rel="shortcut icon" href="assets/icons/favicon.svg">
+    <script src="seo.js"></script>
+
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="svp.css">
+    <style>
+        body {
+            background:
+                radial-gradient(circle at top left, rgba(191, 219, 254, 0.65), transparent 30%),
+                linear-gradient(180deg, #f8fbff 0%, #eef4ff 100%);
+        }
+        .sv-feed-shell {
+            display: grid;
+            gap: 1rem;
+        }
+        .sv-feed-summary {
+            display: grid;
+            gap: .75rem;
+        }
+        .sv-feed-summary__item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .8rem;
+            padding: .85rem 1rem;
+            border-radius: 16px;
+            border: 1px solid #e2e8f0;
+            background: #fff;
+        }
+        .sv-feed-summary__item strong {
+            display: block;
+            color: #0f172a;
+        }
+        .sv-feed-summary__item span {
+            color: #64748b;
+            font-size: .92rem;
+        }
+        .sv-feed-summary__count {
+            min-width: 2.1rem;
+            padding: .25rem .65rem;
+            border-radius: 999px;
+            background: #dbeafe;
+            color: #1d4ed8;
+            font-weight: 700;
+            text-align: center;
+        }
+        .sv-feed-summary__count.is-error {
+            background: #fee2e2;
+            color: #b91c1c;
+        }
+        .sv-feed-notes {
+            display: grid;
+            gap: .55rem;
+        }
+        .sv-feed-note {
+            padding: .8rem .95rem;
+            border-radius: 14px;
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            color: #9a3412;
+            font-size: .94rem;
+        }
+        .sv-feed-stream {
+            display: grid;
+            gap: 1rem;
+        }
+        .sv-feed-card {
+            border-radius: 22px;
+            border: 1px solid #dbe4f0;
+            background: rgba(255, 255, 255, 0.94);
+            box-shadow: 0 14px 34px rgba(15, 23, 42, 0.08);
+            overflow: hidden;
+        }
+        .sv-feed-card__body {
+            padding: 1.15rem;
+        }
+        .sv-feed-card__top {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: .8rem;
+            margin-bottom: .9rem;
+        }
+        .sv-feed-tags {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .45rem;
+        }
+        .sv-feed-tag {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            padding: .28rem .7rem;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: .82rem;
+            font-weight: 700;
+        }
+        .sv-feed-tag[data-tag="followed"] {
+            background: #ecfccb;
+            color: #3f6212;
+        }
+        .sv-feed-tag[data-tag="discussion"] {
+            background: #ede9fe;
+            color: #6d28d9;
+        }
+        .sv-feed-tag[data-tag="comment"] {
+            background: #fef3c7;
+            color: #b45309;
+        }
+        .sv-feed-tag[data-tag="event"] {
+            background: #dcfce7;
+            color: #166534;
+        }
+        .sv-feed-card__time {
+            color: #64748b;
+            font-size: .92rem;
+        }
+        .sv-feed-card__title {
+            margin: 0;
+            font-size: 1.22rem;
+            line-height: 1.35;
+        }
+        .sv-feed-card__title a {
+            color: #0f172a;
+            text-decoration: none;
+        }
+        .sv-feed-card__title a:hover {
+            color: #1d4ed8;
+        }
+        .sv-feed-card__meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .7rem 1rem;
+            margin-top: .65rem;
+            color: #475569;
+            font-size: .94rem;
+        }
+        .sv-feed-card__meta a {
+            color: inherit;
+            text-decoration: none;
+            font-weight: 600;
+        }
+        .sv-feed-card__meta a:hover {
+            color: #1d4ed8;
+        }
+        .sv-feed-card__excerpt {
+            margin: .9rem 0 0;
+            color: #334155;
+            line-height: 1.68;
+        }
+        .sv-feed-card__footer {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .75rem 1rem;
+            margin-top: 1rem;
+            color: #64748b;
+            font-size: .92rem;
+        }
+        .sv-feed-card__cover {
+            display: block;
+            width: 100%;
+            min-height: 220px;
+            background: #dbeafe center/cover no-repeat;
+            border-top: 1px solid #e2e8f0;
+        }
+        .sv-feed-card__cover.is-compact {
+            min-height: 160px;
+        }
+        .sv-feed-empty {
+            padding: 1.4rem;
+            border-radius: 18px;
+            border: 1px dashed #cbd5e1;
+            background: rgba(255, 255, 255, 0.8);
+            color: #64748b;
+            text-align: center;
+        }
+        .sv-feed-status {
+            color: #64748b;
+            font-size: .94rem;
+        }
+        @media (max-width: 991.98px) {
+            .sv-feed-card__cover {
+                min-height: 180px;
+            }
+        }
+    </style>
+</head>
+<body>
+<div class="sv-topbar pt-2 pb-1">
+    <div class="container d-flex align-items-center justify-content-between">
+        <div class="sv-brand">
+            <img class="sv-brand__logo-img" src="assets/icons/logo_svp.png" alt="SVP" width="102" height="112" />
+            <div class="sv-brand__title">
+                <h1>DIỄN ĐÀN SINH VIÊN & TRI THỨC VIỆT TẠI PHÁP <span class="sv-brand__accent">(SVP)</span></h1>
+                <div class="sv-brand__divider"></div>
+                <small class="sv-brand__tagline">Kết Nối – Chia Sẻ – Thành Công</small>
+            </div>
+        </div>
+
+        <div id="sv-auth-box" class="sv-auth d-none d-md-flex align-items-center gap-2">
+            <a class="btn btn-outline-secondary" href="signup.html">Đăng Ký</a>
+            <a class="btn btn-primary" href="login.html">Đăng Nhập</a>
+        </div>
+    </div>
+</div>
+
+<div class="sv-nav">
+    <div class="container d-flex align-items-center justify-content-between">
+        <ul class="nav">
+            <li class="nav-item"><a class="nav-link active" data-svp-nav-feed="true" href="feed.html">Bảng Tin</a></li>
+            <li class="nav-item"><a class="nav-link" href="index.html">Trang Chủ</a></li>
+            <li class="nav-item"><a class="nav-link" href="forum.html">Diễn Đàn</a></li>
+            <li class="nav-item"><a class="nav-link" href="ban-do-thue-nha.html">Nhà Cửa</a></li>
+            <li class="nav-item"><a class="nav-link" href="events.html">Sự Kiện</a></li>
+            <li class="nav-item"><a class="nav-link" href="ban-do-paris.html">Paris</a></li>
+        </ul>
+
+        <div class="sv-search position-relative my-2 my-md-0" style="width:min(320px, 60vw);">
+            <i class="fa fa-magnifying-glass"></i>
+            <input class="form-control" type="search" placeholder="Tìm kiếm..." />
+        </div>
+    </div>
+</div>
+
+<main class="container my-4">
+    <div class="sv-feed-shell">
+        <div class="row g-3">
+            <div class="col-lg-8">
+                <section class="sv-card">
+                    <div class="sv-card__hd d-flex flex-wrap justify-content-between align-items-center gap-2">
+                        <span><i class="fa-solid fa-stream me-2 text-primary"></i>Bảng tin tổng hợp</span>
+                        <span id="feed-status" class="sv-feed-status">Đang tải bảng tin...</span>
+                    </div>
+                    <div id="feed-stream" class="p-3 sv-feed-stream" aria-live="polite">
+                        <div class="sv-feed-empty">Đang tải dữ liệu bảng tin...</div>
+                    </div>
+                </section>
+            </div>
+
+            <div class="col-lg-4">
+                <section class="sv-card mb-3">
+                    <div class="sv-card__hd">
+                        <span><i class="fa-solid fa-layer-group me-2 text-primary"></i>Tóm tắt nguồn</span>
+                    </div>
+                    <div id="feed-summary" class="p-3 sv-feed-summary" aria-live="polite"></div>
+                </section>
+
+                <section class="sv-card">
+                    <div class="sv-card__hd">
+                        <span><i class="fa-regular fa-bell me-2 text-primary"></i>Ghi chú hệ thống</span>
+                    </div>
+                    <div id="feed-notes" class="p-3 sv-feed-notes" aria-live="polite"></div>
+                </section>
+            </div>
+        </div>
+    </div>
+</main>
+
+<footer class="container py-4">
+    <div class="row">
+        <div class="col-md">
+            <div class="sv-brand d-flex align-items-center mb-2">
+                <div class="sv-brand__logo" style="width:36px; height:36px; font-size:14px;">SVP</div>
+                <strong class="ms-2">SVP - Kết Nối • Chia Sẻ • Thành Công</strong>
+            </div>
+            <div>© 2026 SVP. Mọi quyền được bảo lưu.</div>
+        </div>
+        <div class="col-md text-md-end mt-2 mt-md-0">
+            <a class="me-3" href="/terms.html">Điều khoản</a>
+            <a class="me-3" href="/security.html">Bảo mật</a>
+            <a href="/contact.html">Liên hệ</a>
+        </div>
+    </div>
+</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+<script src="config.js"></script>
+<script src="avatar-utils.js"></script>
+<script src="auth-topbar.js"></script>
+<script src="feed.js"></script>
+</body>
+</html>

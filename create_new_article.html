@@ -167,7 +167,7 @@
                         <input id="article-title" class="form-control" type="text" placeholder="Ví dụ: Lộ trình săn học bổng Master tại Pháp" required>
                     </div>
 
-                    <div class="row g-3 mb-3">
+                    <div id="article-category-wrap" class="row g-3 mb-3">
                         <div class="col-md-7">
                             <label for="article-category" class="form-label">Chuyên mục</label>
                             <select id="article-category" class="form-select">
@@ -210,10 +210,9 @@
                         <textarea
                             id="article-content-editor"
                             class="form-control sv-editor-textarea"
-                            placeholder="Viết nội dung dài kiểu tạp chí ở đây..."
+                            placeholder=""
                         ></textarea>
                         <input id="article-content" type="hidden" name="article-content">
-                        <div class="sv-meta mt-2">Bạn có thể định dạng chữ, chèn liên kết, ảnh, emoji và bảng trực tiếp trong trình soạn thảo.</div>
                     </div>
 
 
@@ -253,9 +252,15 @@
     (function () {
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
         const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
+        const searchParams = new URLSearchParams(window.location.search);
         const buildArticleHref = (postId, title) => urlHelpers
             ? urlHelpers.buildDetailPath('article', postId, title)
             : `post_detail.html?postId=${encodeURIComponent(postId)}`;
+        const buildProfileHref = (nickname, userId) => {
+            if (nickname) return `profile.html?nickname=${encodeURIComponent(nickname)}`;
+            if (userId) return `profile.html?userId=${encodeURIComponent(userId)}`;
+            return 'profile.html';
+        };
         const form = document.getElementById('article-form');
         const titleInput = document.getElementById('article-title');
         const contentEditor = document.getElementById('article-content-editor');
@@ -265,12 +270,16 @@
         const coverPreview = document.getElementById('article-cover-preview');
         const coverUploadStatus = document.getElementById('article-cover-upload-status');
         const categoryInput = document.getElementById('article-category');
+        const categoryWrap = document.getElementById('article-category-wrap');
         const emailWrap = document.getElementById('article-email-wrap');
         const emailInput = document.getElementById('article-email');
         const feedback = document.getElementById('article-submit-feedback');
+        const breadcrumbCurrentEl = document.querySelector('.sv-breadcrumb span');
+        const heroTitleEl = document.querySelector('.sv-page-hero__title');
+        const heroSubtitleEl = document.querySelector('.sv-page-hero__subtitle');
         const editorPlaceholder = contentEditor
-            ? (contentEditor.getAttribute('placeholder') || 'Viết nội dung dài kiểu tạp chí ở đây...')
-            : 'Viết nội dung dài kiểu tạp chí ở đây...';
+            ? (contentEditor.getAttribute('placeholder') || '')
+            : '';
         let articleEditor = null;
         let articleEditorReady = false;
         let pendingEditorContent = '';
@@ -284,11 +293,54 @@
         let pendingCoverFile = null;
         let pendingCoverPreviewUrl = '';
         const MAX_IMAGE_UPLOAD_BYTES = 100 * 1024;
-        const editPostId = new URLSearchParams(window.location.search).get('editPostId');
+        const BLOG_DEFAULT_CATEGORY_ID = 11;
+        const editPostId = searchParams.get('editPostId');
+        let editorMode = (searchParams.get('mode') || '').trim().toLowerCase() === 'blog' ? 'blog' : 'article';
 
-        if (!form || !titleInput || !contentEditor || !contentHiddenInput || !coverUrlInput || !coverFileInput || !coverPreview || !coverUploadStatus || !categoryInput || !feedback || !emailWrap || !emailInput) {
+        if (!form || !titleInput || !contentEditor || !contentHiddenInput || !coverUrlInput || !coverFileInput || !coverPreview || !coverUploadStatus || !categoryInput || !categoryWrap || !feedback || !emailWrap || !emailInput) {
             return;
         }
+
+        const getSubmitButton = () => form.querySelector('button[type="submit"]');
+        const isBlogMode = () => editorMode === 'blog';
+        const applyPageMode = () => {
+            const editing = Boolean(editPostId);
+            const isBlog = isBlogMode();
+            categoryWrap.classList.toggle('d-none', isBlog);
+            categoryInput.value = String(isBlog ? BLOG_DEFAULT_CATEGORY_ID : (Number(categoryInput.value) || 3));
+            if (breadcrumbCurrentEl) {
+                breadcrumbCurrentEl.textContent = editing
+                    ? (isBlog ? 'Chỉnh sửa blog' : 'Chỉnh sửa bài viết')
+                    : (isBlog ? 'Viết blog' : 'Đăng bài viết');
+            }
+            if (heroTitleEl) {
+                heroTitleEl.textContent = editing
+                    ? (isBlog ? 'Chỉnh sửa blog cá nhân' : 'Chỉnh sửa bài viết')
+                    : (isBlog ? 'Viết blog cá nhân' : 'Đăng bài viết dài có ảnh');
+            }
+            if (heroSubtitleEl) {
+                heroSubtitleEl.textContent = editing
+                    ? (isBlog
+                        ? 'Cập nhật blog trong espace cá nhân của bạn.'
+                        : 'Chỉnh sửa nội dung bài viết đã đăng.')
+                    : (isBlog
+                        ? 'Bài blog này sẽ hiển thị trong espace cá nhân của bạn và bảng tin của những thành viên đã theo dõi bạn.'
+                        : 'Soạn thảo dành cho bài viết đăng trên trang chủ. Bạn có thể thêm ảnh đại diện và biên tập nội dung dài nhiều phần với trình soạn thảo trực quan.');
+            }
+            const submitBtn = getSubmitButton();
+            if (submitBtn) {
+                submitBtn.innerHTML = editing
+                    ? (isBlog
+                        ? '<i class="fa-solid fa-save me-2"></i>Lưu blog'
+                        : '<i class="fa-solid fa-save me-2"></i>Lưu thay đổi')
+                    : (isBlog
+                        ? '<i class="fa-solid fa-paper-plane me-2"></i>Xuất bản blog'
+                        : '<i class="fa-solid fa-paper-plane me-2"></i>Đăng bài viết');
+            }
+            document.title = editing
+                ? (isBlog ? 'Chỉnh sửa blog - SVP' : 'Chỉnh sửa bài viết - SVP')
+                : (isBlog ? 'Viết blog cá nhân - SVP' : 'Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP)');
+        };
 
         const sanitizeUrl = (url) => {
             const raw = String(url || '').trim();
@@ -942,7 +994,7 @@
             lastResolvedCoverUrl = '';
             refreshCoverPreview();
             updateDraft();
-            setCoverUploadStatus('Ảnh đã được chọn cục bộ. Ảnh sẽ được upload khi bấm "Đăng bài viết".', 'info');
+            setCoverUploadStatus(`Ảnh đã được chọn cục bộ. Ảnh sẽ được upload khi bấm "${isBlogMode() ? 'Xuất bản blog' : 'Đăng bài viết'}".`, 'info');
         });
 
         form.addEventListener('submit', async (event) => {
@@ -951,16 +1003,16 @@
             updateDraft();
 
             if (isUploadingCover) {
-                setFeedback('Ảnh đại diện đang tải lên máy chủ. Vui lòng chờ xong rồi đăng bài.', 'error');
+                setFeedback(`Ảnh đại diện đang tải lên máy chủ. Vui lòng chờ xong rồi ${isBlogMode() ? 'xuất bản blog' : 'đăng bài'}.`, 'error');
                 return;
             }
             if (isPreparingCoverFromUrl) {
-                setFeedback('URL ảnh đang được kiểm tra. Vui lòng chờ xong rồi đăng bài.', 'error');
+                setFeedback(`URL ảnh đang được kiểm tra. Vui lòng chờ xong rồi ${isBlogMode() ? 'xuất bản blog' : 'đăng bài'}.`, 'error');
                 return;
             }
 
             const title = titleInput.value.trim();
-            const categoryId = Number(categoryInput.value);
+            const categoryId = isBlogMode() ? BLOG_DEFAULT_CATEGORY_ID : Number(categoryInput.value);
             if (!title || title.length < 5) {
                 setFeedback('Tiêu đề cần tối thiểu 5 ký tự.', 'error');
                 titleInput.focus();
@@ -977,7 +1029,7 @@
                 const email = sessionEmail || manualEmail;
                 if (!email) {
                     emailWrap.classList.remove('d-none');
-                    setFeedback('Bạn chưa đăng nhập. Vui lòng nhập email để xác thực đăng bài.', 'error');
+                    setFeedback(`Bạn chưa đăng nhập. Vui lòng nhập email để xác thực ${isBlogMode() ? 'blog' : 'bài viết'}.`, 'error');
                     emailInput.focus();
                     return;
                 }
@@ -999,7 +1051,12 @@
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang gửi...';
             }
-            setFeedback(editPostId ? 'Đang cập nhật bài viết...' : 'Đang gửi bài viết, vui lòng đợi...', 'info');
+            setFeedback(
+                editPostId
+                    ? (isBlogMode() ? 'Đang cập nhật blog...' : 'Đang cập nhật bài viết...')
+                    : (isBlogMode() ? 'Đang gửi blog, vui lòng đợi...' : 'Đang gửi bài viết, vui lòng đợi...'),
+                'info'
+            );
 
             try {
                 const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
@@ -1042,7 +1099,7 @@
 
                 const contentHtml = composeContentHtml();
                 if (!contentHtml || contentHtml.replace(/<[^>]+>/g, ' ').trim().length < 20) {
-                    setFeedback('Nội dung bài viết cần chi tiết hơn (ít nhất 20 ký tự).', 'error');
+                    setFeedback(`Nội dung ${isBlogMode() ? 'blog' : 'bài viết'} cần chi tiết hơn (ít nhất 20 ký tự).`, 'error');
                     focusEditor();
                     return;
                 }
@@ -1059,8 +1116,11 @@
                         body: JSON.stringify({ title, categoryId, contentHtml })
                     });
                     const payload = await res.json().catch(() => ({}));
-                    if (!res.ok) { setFeedback(payload.error || 'Không thể cập nhật bài viết.', 'error'); return; }
-                    setFeedback('Bài viết đã được cập nhật thành công!', 'success');
+                    if (!res.ok) {
+                        setFeedback(payload.error || `Không thể cập nhật ${isBlogMode() ? 'blog' : 'bài viết'}.`, 'error');
+                        return;
+                    }
+                    setFeedback(`${isBlogMode() ? 'Blog' : 'Bài viết'} đã được cập nhật thành công!`, 'success');
                     setTimeout(() => { window.location.href = buildArticleHref(editPostId, title); }, 600);
                 } else {
                     // ── Create mode: POST ──
@@ -1072,22 +1132,33 @@
                             Accept: 'application/json',
                             ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
                         },
-                        body: JSON.stringify({ email, categoryId, title, contentHtml })
+                        body: JSON.stringify({ email, categoryId, title, contentHtml, isBlog: isBlogMode() })
                     });
                     const payload = await response.json().catch(() => ({}));
                     if (!response.ok) {
-                        setFeedback(payload.error || 'Không thể gửi bài viết.', 'error');
+                        setFeedback(payload.error || `Không thể gửi ${isBlogMode() ? 'blog' : 'bài viết'}.`, 'error');
                         return;
                     }
 
                     const postId = payload.postId || 'N/A';
                     const status = String(payload.status || '').toUpperCase();
+                    const createdAsBlog = Boolean(payload.isBlog ?? isBlogMode());
                     const expiresAt = payload.verifyExpiresAt || '';
                     const debugLink = payload.verifyLink ? `\nLink xác thực (dev): ${payload.verifyLink}` : '';
                     if (status === 'PUBLISHED') {
-                        setFeedback(`Bài viết #${postId} đã được xuất bản ngay với trạng thái PUBLISHED.`, 'success');
+                        setFeedback(
+                            createdAsBlog
+                                ? `Blog #${postId} đã được xuất bản trong espace của bạn.`
+                                : `Bài viết #${postId} đã được xuất bản ngay với trạng thái PUBLISHED.`,
+                            'success'
+                        );
                     } else {
-                        setFeedback(`Bài viết #${postId} đã được tạo với trạng thái PENDING. Hãy kiểm tra email ${email} và bấm magic link để xuất bản.${expiresAt ? ` (Hết hạn: ${expiresAt})` : ''}${debugLink}`, 'success');
+                        setFeedback(
+                            createdAsBlog
+                                ? `Blog #${postId} đã được tạo với trạng thái PENDING. Hãy kiểm tra email ${email} và bấm magic link để xuất bản.${expiresAt ? ` (Hết hạn: ${expiresAt})` : ''}${debugLink}`
+                                : `Bài viết #${postId} đã được tạo với trạng thái PENDING. Hãy kiểm tra email ${email} và bấm magic link để xuất bản.${expiresAt ? ` (Hết hạn: ${expiresAt})` : ''}${debugLink}`,
+                            'success'
+                        );
                     }
                     const responseAuthor = payload && typeof payload.author === 'object' ? payload.author : {};
                     if (responseAuthor.displayName) {
@@ -1104,6 +1175,7 @@
                         postId, categoryId, title, contentHtml,
                         createdAt: new Date().toISOString(),
                         status: status || 'PENDING',
+                        isBlog: createdAsBlog,
                         author: {
                             userId: String(responseAuthor.userId || '').trim(),
                             displayName: authorName,
@@ -1125,7 +1197,17 @@
                     refreshCoverPreview();
                     setCoverUploadStatus('', 'info');
                     emailInput.value = email;
-                    setTimeout(() => { window.location.href = 'index.html'; }, 600);
+                    if (createdAsBlog) {
+                        if (status === 'PUBLISHED') {
+                            const profileHref = buildProfileHref(
+                                String(responseAuthor.nickname || '').trim(),
+                                String(responseAuthor.userId || '').trim()
+                            );
+                            setTimeout(() => { window.location.href = profileHref; }, 600);
+                        }
+                    } else {
+                        setTimeout(() => { window.location.href = 'index.html'; }, 600);
+                    }
                 }
             } catch (_) {
                 setFeedback('Không thể kết nối API.', 'error');
@@ -1142,19 +1224,13 @@
             emailInput.value = initialEmail;
             emailWrap.classList.add('d-none');
         }
+        applyPageMode();
         refreshCoverPreview();
         setEditorContent(contentEditor.value || '');
         updateDraft();
 
         /* ── Edit mode: load existing data ── */
         if (editPostId) {
-            const heroTitle = document.querySelector('.sv-page-hero__title');
-            if (heroTitle) heroTitle.textContent = 'Chỉnh sửa bài viết';
-            const heroSub = document.querySelector('.sv-page-hero__subtitle');
-            if (heroSub) heroSub.textContent = 'Chỉnh sửa nội dung bài viết đã đăng.';
-            document.title = 'Chỉnh sửa bài viết - SVP';
-            const submitBtn = form.querySelector('button[type="submit"]');
-            if (submitBtn) submitBtn.innerHTML = '<i class="fa-solid fa-save me-2"></i>Lưu thay đổi';
             emailWrap.classList.add('d-none');
 
             (async () => {
@@ -1166,11 +1242,17 @@
                     const data = await res.json().catch(() => ({}));
                     if (!res.ok) { setFeedback(data.error || 'Không thể tải bài viết.', 'error'); return; }
                     const post = data.post && typeof data.post === 'object' ? data.post : data;
+                    editorMode = Boolean(post.isBlog ?? post.is_blog) ? 'blog' : 'article';
+                    applyPageMode();
                     const rawContentHtml = post.contentHtml || post.content_html || post.content || '';
                     const parsedArticle = splitArticleContentHtml(rawContentHtml);
                     const coverUrl = sanitizeUrl(post.coverImageUrl || post.cover_image_url || parsedArticle.coverUrl);
                     titleInput.value = post.title || '';
-                    categoryInput.value = String(post.categoryId || post.category_id || 3);
+                    categoryInput.value = String(
+                        isBlogMode()
+                            ? BLOG_DEFAULT_CATEGORY_ID
+                            : (post.categoryId || post.category_id || 3)
+                    );
                     coverUrlInput.value = coverUrl;
                     persistedCoverUrl = coverUrl;
                     refreshCoverPreview();

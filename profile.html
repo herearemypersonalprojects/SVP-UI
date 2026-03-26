@@ -60,6 +60,30 @@
             width: 100%;
             margin-top: .35rem;
         }
+        .sv-profile-kpis {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .75rem;
+            width: 100%;
+            margin-top: .75rem;
+        }
+        .sv-profile-kpi {
+            padding: .75rem .85rem;
+            border-radius: 14px;
+            background: linear-gradient(135deg, #eff6ff, #f8fafc);
+            border: 1px solid #dbeafe;
+        }
+        .sv-profile-kpi strong {
+            display: block;
+            font-size: 1.25rem;
+            color: #0f172a;
+            font-family: var(--sv-title-font);
+        }
+        .sv-profile-kpi span {
+            color: var(--sv-muted);
+            font-size: .88rem;
+            font-weight: 600;
+        }
         .sv-profile-form .form-label {
             font-weight: 700;
             color: #0f172a;
@@ -95,6 +119,125 @@
         .sv-profile-readonly {
             color: var(--sv-muted);
             font-size: .95rem;
+        }
+        .sv-profile-headline {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+        }
+        .sv-profile-headline h3 {
+            margin: 0;
+            color: #0f172a;
+            font-family: var(--sv-title-font);
+            font-size: 1.3rem;
+        }
+        .sv-profile-note {
+            color: var(--sv-muted);
+            font-size: .95rem;
+            margin-bottom: 1rem;
+        }
+        .sv-profile-blog-list {
+            display: grid;
+            gap: 1rem;
+        }
+        .sv-profile-blog-card {
+            border: 1px solid #e2e8f0;
+            border-radius: 18px;
+            background: #fff;
+            overflow: hidden;
+            box-shadow: 0 14px 32px rgba(15, 23, 42, 0.06);
+        }
+        .sv-profile-blog-cover {
+            display: block;
+            width: 100%;
+            aspect-ratio: 16 / 7;
+            background: linear-gradient(135deg, #dbeafe, #f8fafc);
+            background-size: cover;
+            background-position: center;
+        }
+        .sv-profile-blog-cover.is-empty {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #1d4ed8;
+            font-size: 1.8rem;
+        }
+        .sv-profile-blog-body {
+            padding: 1rem 1.1rem 1.1rem;
+        }
+        .sv-profile-blog-top {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: .65rem;
+        }
+        .sv-profile-blog-title {
+            font-family: 'Merriweather', Georgia, serif;
+            font-size: 1.18rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: .55rem;
+        }
+        .sv-profile-blog-title a {
+            color: inherit;
+            text-decoration: none;
+        }
+        .sv-profile-blog-title a:hover {
+            color: #1d4ed8;
+        }
+        .sv-profile-blog-excerpt {
+            color: #334155;
+            line-height: 1.7;
+            margin-bottom: .85rem;
+        }
+        .sv-profile-blog-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .55rem;
+            color: var(--sv-muted);
+            font-size: .88rem;
+        }
+        .sv-profile-blog-meta strong {
+            color: #1e3a8a;
+        }
+        .sv-profile-empty {
+            padding: 1.2rem;
+            border-radius: 16px;
+            border: 1px dashed #cbd5e1;
+            background: #f8fafc;
+            color: var(--sv-muted);
+        }
+        .sv-profile-tabs {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .65rem;
+            margin-bottom: 1rem;
+        }
+        .sv-profile-tab {
+            border: 1px solid #cbd5e1;
+            background: #fff;
+            color: #334155;
+            border-radius: 999px;
+            padding: .55rem 1rem;
+            font-weight: 700;
+            transition: background-color .2s ease, color .2s ease, border-color .2s ease, box-shadow .2s ease;
+        }
+        .sv-profile-tab:hover {
+            border-color: #93c5fd;
+            color: #1d4ed8;
+        }
+        .sv-profile-tab.is-active {
+            background: #1d4ed8;
+            color: #fff;
+            border-color: #1d4ed8;
+            box-shadow: 0 10px 24px rgba(29, 78, 216, 0.18);
+        }
+        .sv-profile-tab-panel.d-none {
+            display: none !important;
         }
     </style>
 </head>
@@ -145,8 +288,21 @@
                     <div class="sv-profile-nickname" id="profile-nickname"></div>
                     <div class="sv-profile-meta" id="profile-role"></div>
                     <div class="sv-profile-meta" id="profile-email"></div>
+                    <div class="sv-profile-kpis">
+                        <div class="sv-profile-kpi">
+                            <strong id="profile-blog-count">0</strong>
+                            <span>Bài blog</span>
+                        </div>
+                        <div class="sv-profile-kpi">
+                            <strong id="profile-follower-count">0</strong>
+                            <span>Người theo dõi</span>
+                        </div>
+                    </div>
                     <div id="profile-message-actions" class="sv-profile-card__actions d-none">
-                        <a id="profile-message-link" class="btn btn-primary" href="chat.html">Gửi tin nhắn</a>
+                        <a id="profile-write-link" class="btn btn-primary d-none" href="create_new_article.html?mode=blog">Viết blog mới</a>
+                        <button id="profile-follow-btn" class="btn btn-primary d-none" type="button">Theo dõi</button>
+                        <a id="profile-follow-login" class="btn btn-outline-primary d-none" href="login.html">Đăng nhập để theo dõi</a>
+                        <a id="profile-message-link" class="btn btn-outline-secondary d-none" href="chat.html">Gửi tin nhắn</a>
                     </div>
                 </div>
             </div>
@@ -154,39 +310,76 @@
 
         <div class="col-lg-8">
             <div class="sv-card">
-                <div class="sv-card__hd"><i class="fa-solid fa-user-pen me-2 text-primary"></i>Không gian thành viên</div>
+                <div class="sv-card__hd" id="profile-panel-head"><i class="fa-solid fa-user-pen me-2 text-primary"></i><span id="profile-panel-title"></span></div>
                 <div class="p-3">
-                    <form id="profile-form" class="sv-profile-form">
-                        <div class="mb-3">
-                            <label class="form-label" for="profile-display-input">Tên hiển thị</label>
-                            <input class="form-control" id="profile-display-input" type="text" maxlength="80" placeholder="Tên hiển thị">
-                            <div class="form-text">Tên hiển thị sẽ xuất hiện trên bài viết và bình luận.</div>
+                    <div class="sv-profile-headline mb-3" id="profile-headline">
+                        <div>
+                            <h3 id="profile-space-title"></h3>
+                            <div id="profile-space-note" class="sv-profile-note mb-0"></div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="profile-avatar-url">Ảnh đại diện (URL)</label>
-                            <input class="form-control" id="profile-avatar-url" type="url" placeholder="https://...">
-                            <div class="form-text">Dán URL ảnh hoặc tải ảnh ở bên dưới.</div>
+                    </div>
+                    <div class="sv-profile-tabs" id="profile-tabs" role="tablist" aria-label="Điều hướng espace cá nhân">
+                        <button
+                            id="profile-tab-blog"
+                            class="sv-profile-tab is-active"
+                            type="button"
+                            data-profile-tab="blog"
+                            role="tab"
+                            aria-selected="true"
+                            aria-controls="profile-panel-blog"
+                        >
+                            Blog cá nhân
+                        </button>
+                        <button
+                            id="profile-tab-manage"
+                            class="sv-profile-tab"
+                            type="button"
+                            data-profile-tab="manage"
+                            role="tab"
+                            aria-selected="false"
+                            aria-controls="profile-panel-manage"
+                        >
+                            Quản lý espace cá nhân
+                        </button>
+                    </div>
+                    <div id="profile-panel-blog" class="sv-profile-tab-panel" data-profile-panel="blog" role="tabpanel" aria-labelledby="profile-tab-blog">
+                        <div id="profile-blog-list" class="sv-profile-blog-list">
+                            <div class="sv-profile-empty">Đang tải danh sách blog...</div>
                         </div>
-                        <div class="mb-3">
-                            <label class="form-label" for="profile-avatar-file">Tải ảnh mới</label>
-                            <input class="form-control" id="profile-avatar-file" type="file" accept="image/*">
-                            <div class="form-text">PNG/JPG, tối đa 2MB.</div>
-                        </div>
-                        <div class="sv-profile-preview mb-3">
-                            <div class="sv-profile-avatar" id="profile-preview-avatar">?</div>
-                            <div>
-                                <div class="fw-semibold">Xem trước ảnh đại diện</div>
-                                <div class="sv-meta" id="profile-preview-label">Chưa có thay đổi</div>
+                    </div>
+                    <div id="profile-panel-manage" class="sv-profile-tab-panel d-none" data-profile-panel="manage" role="tabpanel" aria-labelledby="profile-tab-manage">
+                        <form id="profile-form" class="sv-profile-form">
+                            <div class="mb-3">
+                                <label class="form-label" for="profile-display-input">Tên hiển thị</label>
+                                <input class="form-control" id="profile-display-input" type="text" maxlength="80" placeholder="Tên hiển thị">
+                                <div class="form-text">Tên hiển thị sẽ xuất hiện trên bài viết và bình luận.</div>
                             </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="profile-avatar-url">Ảnh đại diện (URL)</label>
+                                <input class="form-control" id="profile-avatar-url" type="url" placeholder="https://...">
+                                <div class="form-text">Dán URL ảnh hoặc tải ảnh ở bên dưới.</div>
+                            </div>
+                            <div class="mb-3">
+                                <label class="form-label" for="profile-avatar-file">Tải ảnh mới</label>
+                                <input class="form-control" id="profile-avatar-file" type="file" accept="image/*">
+                                <div class="form-text">PNG/JPG, tối đa 2MB.</div>
+                            </div>
+                            <div class="sv-profile-preview mb-3">
+                                <div class="sv-profile-avatar" id="profile-preview-avatar">?</div>
+                                <div>
+                                    <div class="fw-semibold">Xem trước ảnh đại diện</div>
+                                    <div class="sv-meta" id="profile-preview-label">Chưa có thay đổi</div>
+                                </div>
+                            </div>
+                            <div class="sv-profile-actions mb-2">
+                                <button class="btn btn-primary" type="submit">Lưu thay đổi</button>
+                                <button class="btn btn-outline-secondary" type="button" id="profile-clear-avatar">Gỡ avatar</button>
+                            </div>
+                            <div id="profile-status" class="sv-profile-status small"></div>
+                        </form>
+                        <div id="profile-readonly" class="sv-profile-readonly d-none">
+                            Đây là espace công khai của thành viên này. Bạn có thể đọc blog, theo dõi và nhắn tin nếu đã đăng nhập.
                         </div>
-                        <div class="sv-profile-actions mb-2">
-                            <button class="btn btn-primary" type="submit">Lưu thay đổi</button>
-                            <button class="btn btn-outline-secondary" type="button" id="profile-clear-avatar">Gỡ avatar</button>
-                        </div>
-                        <div id="profile-status" class="sv-profile-status small"></div>
-                    </form>
-                    <div id="profile-readonly" class="sv-profile-readonly d-none">
-                        Bạn đang xem hồ sơ của thành viên khác. Hãy đăng nhập bằng tài khoản của bạn để chỉnh sửa.
                     </div>
                 </div>
             </div>
@@ -215,303 +408,6 @@
 <script src="config.js"></script>
 <script src="avatar-utils.js"></script>
 <script src="auth-topbar.js"></script>
-<script>
-    (function () {
-        const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
-        const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
-        const avatarEl = document.getElementById('profile-avatar');
-        const nameEl = document.getElementById('profile-display-name');
-        const nicknameEl = document.getElementById('profile-nickname');
-        const roleEl = document.getElementById('profile-role');
-        const emailEl = document.getElementById('profile-email');
-        const messageActionsEl = document.getElementById('profile-message-actions');
-        const messageLinkEl = document.getElementById('profile-message-link');
-        const formEl = document.getElementById('profile-form');
-        const readonlyEl = document.getElementById('profile-readonly');
-        const displayInput = document.getElementById('profile-display-input');
-        const avatarUrlInput = document.getElementById('profile-avatar-url');
-        const avatarFileInput = document.getElementById('profile-avatar-file');
-        const previewAvatar = document.getElementById('profile-preview-avatar');
-        const previewLabel = document.getElementById('profile-preview-label');
-        const statusEl = document.getElementById('profile-status');
-        const clearAvatarBtn = document.getElementById('profile-clear-avatar');
-
-        let accessToken = '';
-        let me = null;
-        let profile = null;
-        let isSelf = false;
-
-        const escapeHtml = (value) => String(value ?? '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-
-        const setStatus = (text, type) => {
-            statusEl.textContent = text || '';
-            statusEl.className = 'sv-profile-status small';
-            if (type === 'error') statusEl.classList.add('text-danger');
-            if (type === 'success') statusEl.classList.add('text-success');
-        };
-
-        const buildProfileHref = (nickname, userId) => {
-            if (nickname) return `profile.html?nickname=${encodeURIComponent(nickname)}`;
-            if (userId) return `profile.html?userId=${encodeURIComponent(userId)}`;
-            return 'profile.html';
-        };
-
-        const buildChatHref = (nickname, userId) => {
-            if (nickname) return `chat.html?nickname=${encodeURIComponent(nickname)}`;
-            if (userId) return `chat.html?userId=${encodeURIComponent(userId)}`;
-            return 'chat.html';
-        };
-
-        const renderAvatar = (targetEl, displayName, avatarUrl, seed) => {
-            if (!targetEl) return;
-            const safeName = String(displayName || '').trim();
-            const fallbackInitial = window.SVPAvatar?.initial ? window.SVPAvatar.initial(safeName) : (safeName.charAt(0) || 'U').toUpperCase();
-            const palette = window.SVPAvatar?.palette ? window.SVPAvatar.palette(seed || safeName) : { bg: '#e2e8f0', fg: '#475569' };
-            if (avatarUrl) {
-                targetEl.style.backgroundImage = `url('${escapeHtml(avatarUrl)}')`;
-                targetEl.style.backgroundColor = '#e2e8f0';
-                targetEl.textContent = '';
-                targetEl.style.color = '#fff';
-            } else {
-                targetEl.style.backgroundImage = '';
-                targetEl.style.backgroundColor = palette.bg;
-                targetEl.textContent = fallbackInitial;
-                targetEl.style.color = palette.fg;
-            }
-        };
-
-        const fetchMe = async () => {
-            if (!window.SVPAuth?.getValidAccessToken) return null;
-            accessToken = await window.SVPAuth.getValidAccessToken();
-            if (!accessToken) return null;
-            const response = await fetch(`${API_BASE_URL}/me`, {
-                headers: { Authorization: `Bearer ${accessToken}` }
-            });
-            if (response.ok) {
-                return await response.json();
-            }
-            // Fallback to token/localStorage when /me fails (network, CORS, etc.)
-            const payload = window.SVPAuth?.parseJwtPayload
-                ? window.SVPAuth.parseJwtPayload(accessToken) || {}
-                : {};
-            return {
-                userId: payload.userId || null,
-                email: payload.email || localStorage.getItem('userEmail') || '',
-                nickname: payload.nickname || localStorage.getItem('userNickname') || '',
-                displayName: payload.displayName || localStorage.getItem('userDisplayName') || ''
-            };
-        };
-
-        const fetchProfile = async (nickname, userId) => {
-            const params = new URLSearchParams();
-            if (nickname) params.set('nickname', nickname);
-            if (!nickname && userId) params.set('userId', userId);
-            const response = await fetch(`${API_BASE_URL}/users/profile?${params.toString()}`, {
-                headers: {
-                    Accept: 'application/json',
-                    Authorization: accessToken ? `Bearer ${accessToken}` : ''
-                }
-            });
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok) {
-                throw new Error(payload.error || 'Không thể tải hồ sơ.');
-            }
-            return payload;
-        };
-
-        const uploadAvatarFile = async (file) => {
-            if (!file) return '';
-            if (file.size > AVATAR_MAX_BYTES) {
-                throw new Error('Ảnh vượt quá 2MB.');
-            }
-            const presignResponse = await fetch(`${API_BASE_URL}/api/upload/post-image`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
-                },
-                body: JSON.stringify({ filename: file.name, contentType: file.type })
-            });
-            const presignPayload = await presignResponse.json().catch(() => ({}));
-            if (!presignResponse.ok) {
-                throw new Error(presignPayload.error || 'Không thể tạo link upload.');
-            }
-            await fetch(presignPayload.uploadUrl, {
-                method: presignPayload.method || 'PUT',
-                headers: { 'Content-Type': presignPayload.contentType || file.type },
-                body: file
-            });
-            return presignPayload.publicUrl || '';
-        };
-
-        const updateProfile = async (displayName, avatarUrl) => {
-            if (!accessToken) throw new Error('Bạn cần đăng nhập để cập nhật hồ sơ.');
-            const response = await fetch(`${API_BASE_URL}/me/profile`, {
-                method: 'PATCH',
-                headers: {
-                    'Content-Type': 'application/json',
-                    Accept: 'application/json',
-                    Authorization: `Bearer ${accessToken}`
-                },
-                body: JSON.stringify({ displayName, avatarUrl })
-            });
-            const payload = await response.json().catch(() => ({}));
-            if (!response.ok) {
-                throw new Error(payload.error || 'Không thể cập nhật hồ sơ.');
-            }
-            return payload;
-        };
-
-        const renderProfile = () => {
-            if (!profile) return;
-            const displayName = profile.displayName || profile.nickname || 'Thành viên';
-            if (nameEl) nameEl.textContent = displayName;
-            if (nicknameEl) nicknameEl.textContent = profile.nickname ? `@${profile.nickname}` : '';
-            if (roleEl) roleEl.textContent = profile.role ? `Vai trò: ${profile.role}` : '';
-            if (emailEl) {
-                if (isSelf && me?.email) {
-                    emailEl.textContent = me.email;
-                } else {
-                    emailEl.textContent = '';
-                }
-            }
-            if (messageActionsEl && messageLinkEl) {
-                const showMessageAction = !isSelf && Boolean(accessToken) && Boolean(profile.nickname || profile.userId);
-                messageActionsEl.classList.toggle('d-none', !showMessageAction);
-                if (showMessageAction) {
-                    messageLinkEl.href = buildChatHref(profile.nickname, profile.userId);
-                    messageLinkEl.setAttribute('aria-label', `Gửi tin nhắn cho ${displayName}`);
-                }
-            }
-            renderAvatar(avatarEl, displayName, profile.avatarUrl, profile.nickname || profile.userId);
-            renderAvatar(previewAvatar, displayName, profile.avatarUrl, profile.nickname || profile.userId);
-            if (displayInput) displayInput.value = displayName;
-            if (avatarUrlInput) avatarUrlInput.value = profile.avatarUrl || '';
-            if (isSelf) {
-                localStorage.setItem('userDisplayName', displayName);
-                if (profile.avatarUrl) {
-                    localStorage.setItem('userAvatarUrl', profile.avatarUrl);
-                } else {
-                    localStorage.removeItem('userAvatarUrl');
-                }
-            }
-        };
-
-        const updatePreview = () => {
-            const displayName = displayInput.value.trim() || profile?.displayName || profile?.nickname || 'Thành viên';
-            const avatarUrl = avatarUrlInput.value.trim();
-            renderAvatar(previewAvatar, displayName, avatarUrl, profile?.nickname || profile?.userId);
-            previewLabel.textContent = avatarUrl ? 'Sẽ dùng URL ảnh mới.' : 'Ảnh đại diện sẽ theo chữ cái và màu mặc định.';
-        };
-
-        const setEditable = (editable) => {
-            if (!formEl || !readonlyEl) return;
-            formEl.classList.toggle('d-none', !editable);
-            readonlyEl.classList.toggle('d-none', editable);
-        };
-
-        const normalizeNickname = (value) => String(value ?? '').trim().toLowerCase();
-
-        const init = async () => {
-            const params = new URLSearchParams(window.location.search);
-            let nickname = params.get('nickname');
-            let userId = params.get('userId');
-
-            me = await fetchMe();
-            if (!accessToken) {
-                setStatus('Bạn cần đăng nhập để xem hồ sơ.', 'error');
-                setEditable(false);
-                return;
-            }
-            if (!nickname && !userId && me?.nickname) {
-                nickname = me.nickname;
-                window.history.replaceState({}, '', buildProfileHref(nickname));
-            }
-
-            if (!nickname && !userId) {
-                setStatus('Thiếu thông tin thành viên.', 'error');
-                setEditable(false);
-                return;
-            }
-
-            try {
-                profile = await fetchProfile(nickname, userId);
-            } catch (error) {
-                setStatus(error.message || 'Không thể tải hồ sơ.', 'error');
-                setEditable(false);
-                return;
-            }
-
-            const profileNick = normalizeNickname(profile?.nickname);
-            const meNick = normalizeNickname(me?.nickname);
-            const storedNick = normalizeNickname(localStorage.getItem('userNickname'));
-            const hasToken = Boolean(accessToken);
-            isSelf = Boolean(profileNick && (
-                (meNick && meNick === profileNick) ||
-                (hasToken && storedNick && storedNick === profileNick)
-            ));
-            setEditable(isSelf);
-            renderProfile();
-            updatePreview();
-        };
-
-        if (avatarUrlInput) {
-            avatarUrlInput.addEventListener('input', updatePreview);
-        }
-        if (displayInput) {
-            displayInput.addEventListener('input', updatePreview);
-        }
-        if (avatarFileInput) {
-            avatarFileInput.addEventListener('change', () => {
-                const file = avatarFileInput.files && avatarFileInput.files[0] ? avatarFileInput.files[0] : null;
-                if (file) {
-                    previewLabel.textContent = `Sẵn sàng tải ảnh: ${file.name}`;
-                } else {
-                    updatePreview();
-                }
-            });
-        }
-        if (clearAvatarBtn) {
-            clearAvatarBtn.addEventListener('click', () => {
-                avatarUrlInput.value = '';
-                avatarFileInput.value = '';
-                updatePreview();
-            });
-        }
-
-        if (formEl) {
-            formEl.addEventListener('submit', async (event) => {
-                event.preventDefault();
-                if (!isSelf) return;
-                setStatus('Đang lưu...', '');
-                try {
-                    let avatarUrl = avatarUrlInput.value.trim();
-                    const file = avatarFileInput.files && avatarFileInput.files[0] ? avatarFileInput.files[0] : null;
-                    if (file) {
-                        previewLabel.textContent = 'Đang tải ảnh lên...';
-                        avatarUrl = await uploadAvatarFile(file);
-                        avatarUrlInput.value = avatarUrl;
-                    }
-                    const displayName = displayInput.value.trim();
-                    const updated = await updateProfile(displayName, avatarUrl);
-                    profile = updated;
-                    renderProfile();
-                    updatePreview();
-                    setStatus('Đã cập nhật hồ sơ.', 'success');
-                } catch (error) {
-                    setStatus(error.message || 'Không thể cập nhật hồ sơ.', 'error');
-                }
-            });
-        }
-
-        init();
-    })();
-</script>
+<script src="profile.js"></script>
 </body>
 </html>

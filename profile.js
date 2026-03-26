@@ -71,7 +71,7 @@
     let profile = null;
     let isSelf = false;
     let followInFlight = false;
-    let activeTab = 'blog';
+    let activeTab = 'manage';
 
     const escapeHtml = (value) => String(value ?? '')
         .replace(/&/g, '&amp;')

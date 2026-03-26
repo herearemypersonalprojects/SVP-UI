@@ -93,6 +93,93 @@
         imageUploadStatusEl.style.color = type === 'error' ? '#b91c1c' : (type === 'success' ? '#15803d' : '#475569');
     };
 
+    const extractArrondissement = (...candidates) => {
+        for (const candidate of candidates) {
+            const value = String(candidate || '').trim();
+            if (!value) {
+                continue;
+            }
+            const match = value.match(/\b(\d{1,2})(?:er|e)?\s+arr(?:ondissement)?\b/i);
+            if (match && match[1]) {
+                return match[1];
+            }
+        }
+        return '';
+    };
+
+    const toNominatimSuggestion = (item) => {
+        const latitude = Number(item && item.lat);
+        const longitude = Number(item && item.lon);
+        if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+            return null;
+        }
+        const address = item && item.address && typeof item.address === 'object' ? item.address : {};
+        const label = String(item && (item.display_name || item.name) || '').trim();
+        const city = String(
+            address.city
+            || address.town
+            || address.village
+            || address.municipality
+            || address.hamlet
+            || address.county
+            || address.state_district
+            || ''
+        ).trim();
+        const arrondissement = extractArrondissement(
+            address.city_district,
+            address.borough,
+            address.suburb,
+            address.quarter,
+            label,
+            city
+        );
+        return {
+            label: label || `${latitude.toFixed(5)}, ${longitude.toFixed(5)}`,
+            latitude,
+            longitude,
+            city,
+            arrondissement,
+            context: label,
+            provider: 'nominatim.openstreetmap.org'
+        };
+    };
+
+    const geocodeViaNominatim = async (query) => {
+        const url = new URL('https://nominatim.openstreetmap.org/search');
+        url.searchParams.set('q', query);
+        url.searchParams.set('format', 'jsonv2');
+        url.searchParams.set('addressdetails', '1');
+        url.searchParams.set('limit', '5');
+        url.searchParams.set('countrycodes', 'fr');
+
+        const response = await fetch(url.toString(), {
+            method: 'GET',
+            headers: {
+                Accept: 'application/json'
+            }
+        });
+        if (!response.ok) {
+            throw new Error(`Nominatim geocoding failed (${response.status}).`);
+        }
+        const payload = await response.json().catch(() => []);
+        const suggestions = Array.isArray(payload)
+            ? payload.map((item) => toNominatimSuggestion(item)).filter(Boolean)
+            : [];
+        return {
+            suggestions,
+            cached: false,
+            provider: 'nominatim.openstreetmap.org'
+        };
+    };
+
+    const shouldFallbackToDirectNominatim = (error) => {
+        const message = String(error && error.message || '').trim().toLowerCase();
+        return message.includes('housing geocoding is unavailable')
+            || message.includes('failed to fetch')
+            || message.includes('networkerror')
+            || message.includes('load failed');
+    };
+
     const nextId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
 
     const ensureSinglePrimary = (items, targetId, key) => items.map((item) => ({
@@ -401,13 +488,27 @@
         try {
             await ensureAuth();
             setGeocodeStatus('Đang tìm khu vực trên bản đồ...', 'info');
-            const payload = await shared.requestWithAuth(`${shared.API_BASE_URL}/api/housing/geocode?q=${encodeURIComponent(query)}`, {
-                headers: { Accept: 'application/json' }
-            });
+            let payload;
+            let usedDirectNominatim = false;
+            try {
+                payload = await shared.requestWithAuth(`${shared.API_BASE_URL}/api/housing/geocode?q=${encodeURIComponent(query)}`, {
+                    headers: { Accept: 'application/json' }
+                });
+            } catch (error) {
+                if (!shouldFallbackToDirectNominatim(error)) {
+                    throw error;
+                }
+                payload = await geocodeViaNominatim(query);
+                usedDirectNominatim = true;
+            }
             state.geocodeSuggestions = Array.isArray(payload.suggestions) ? payload.suggestions : [];
             renderGeocodeSuggestions();
             if (!state.geocodeSuggestions.length) {
                 setGeocodeStatus('Không tìm thấy gợi ý phù hợp. Hãy thử nhập rộng hơn.', 'error');
+                return;
+            }
+            if (usedDirectNominatim) {
+                setGeocodeStatus('Đã tải gợi ý geocode trực tiếp từ OpenStreetMap Nominatim.', 'success');
                 return;
             }
             setGeocodeStatus(payload.cached ? 'Đã tải gợi ý từ cache geocode.' : 'Đã tải gợi ý geocode.', 'success');

@@ -176,10 +176,12 @@
         try {
             const token = await shared.getAccessToken();
             const headers = { Accept: 'application/json' };
+            const requestOptions = { headers };
             if (token) {
                 headers.Authorization = `Bearer ${token}`;
+                requestOptions.cache = 'no-store';
             }
-            const payload = await shared.fetchJson(`${shared.API_BASE_URL}/api/housing/${encodeURIComponent(listingId)}`, { headers });
+            const payload = await shared.fetchJson(`${shared.API_BASE_URL}/api/housing/${encodeURIComponent(listingId)}`, requestOptions);
             breadcrumbEl.textContent = payload.title || 'Chi tiết';
             titleEl.textContent = payload.title || 'Tin thuê nhà';
             document.title = `${payload.title || 'Chi tiết thuê nhà'} | SVP`;

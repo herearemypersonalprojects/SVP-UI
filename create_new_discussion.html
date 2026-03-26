@@ -172,13 +172,13 @@
 
 <main class="container my-3 my-md-4">
     <div class="sv-breadcrumb">
-        <a href="index.html">Trang chủ</a> / <a href="forum.html">Diễn đàn</a> / <span>Tạo chủ đề mới</span>
+        <a href="index.html">Trang chủ</a> / <a href="forum.html">Diễn đàn</a> / <span id="discussion-breadcrumb-current">Tạo chủ đề mới</span>
     </div>
 
     <section class="sv-page-hero mb-3">
-        <div class="sv-page-hero__eyebrow">Trình tạo thảo luận</div>
-        <h2 class="sv-page-hero__title">Tạo Chủ Đề Mới</h2>
-        <p class="sv-page-hero__subtitle">Đăng chủ đề discussion. Bạn có thể đính kèm ảnh trong bài viết.</p>
+        <div id="discussion-hero-eyebrow" class="sv-page-hero__eyebrow">Trình tạo thảo luận</div>
+        <h2 id="discussion-hero-title" class="sv-page-hero__title">Tạo Chủ Đề Mới</h2>
+        <p id="discussion-hero-subtitle" class="sv-page-hero__subtitle">Đăng chủ đề discussion. Bạn có thể đính kèm ảnh trong bài viết.</p>
     </section>
 
     <div class="row g-3">
@@ -229,7 +229,7 @@
                         <div id="discussion-cover-preview" class="sv-preview-cover" aria-label="Xem trước ảnh chủ đề"></div>
                         <label for="discussion-cover-file" class="form-label">Hoặc tải ảnh từ máy</label>
                         <input id="discussion-cover-file" class="form-control" type="file" accept="image/*">
-                        <div class="sv-upload-note">Ảnh sẽ được upload lên cloud khi bấm "Tạo chủ đề mới".</div>
+                        <div id="discussion-cover-upload-note" class="sv-upload-note">Ảnh sẽ được upload lên cloud khi bấm "Tạo chủ đề mới".</div>
                         <div id="discussion-cover-upload-status" class="sv-meta mt-2"></div>
                     </div>
 
@@ -239,7 +239,7 @@
                     </div>
 
                     <div class="d-flex flex-wrap justify-content-between gap-2">
-                        <button type="submit" class="btn btn-primary"><i class="fa-solid fa-plus me-2"></i>Tạo chủ đề mới</button>
+                        <button id="discussion-submit-btn" type="submit" class="btn btn-primary"><i class="fa-solid fa-plus me-2"></i>Tạo chủ đề mới</button>
                     </div>
                     <div id="discussion-submit-feedback" class="sv-meta mt-3" aria-live="polite"></div>
                 </form>
@@ -283,11 +283,18 @@
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
         const MAX_IMAGE_UPLOAD_BYTES = 100 * 1024;
         const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
+        const searchParams = new URLSearchParams(window.location.search);
+        const editPostIdRaw = Number(searchParams.get('editPostId') || 0);
+        const editPostId = Number.isInteger(editPostIdRaw) && editPostIdRaw > 0 ? editPostIdRaw : 0;
         const buildThreadHref = (postId, title) => urlHelpers
             ? urlHelpers.buildDetailPath('thread', postId, title)
             : `thread.html?postId=${encodeURIComponent(postId)}`;
 
         const form = document.getElementById('discussion-form');
+        const breadcrumbCurrentEl = document.getElementById('discussion-breadcrumb-current');
+        const heroEyebrowEl = document.getElementById('discussion-hero-eyebrow');
+        const heroTitleEl = document.getElementById('discussion-hero-title');
+        const heroSubtitleEl = document.getElementById('discussion-hero-subtitle');
         const emailWrap = document.getElementById('discussion-email-wrap');
         const emailInput = document.getElementById('discussion-email');
         const titleInput = document.getElementById('discussion-title');
@@ -295,14 +302,16 @@
         const coverUrlInput = document.getElementById('discussion-cover-url');
         const coverFileInput = document.getElementById('discussion-cover-file');
         const coverPreview = document.getElementById('discussion-cover-preview');
+        const coverUploadNote = document.getElementById('discussion-cover-upload-note');
         const coverUploadStatus = document.getElementById('discussion-cover-upload-status');
         const subjectInput = document.getElementById('discussion-subject');
         const previewTitle = document.getElementById('discussion-preview-title');
         const previewCategory = document.getElementById('discussion-preview-category');
         const previewSubject = document.getElementById('discussion-preview-subject');
         const feedback = document.getElementById('discussion-submit-feedback');
+        const submitBtn = document.getElementById('discussion-submit-btn');
 
-        if (!form || !emailWrap || !emailInput || !titleInput || !categoryInput || !coverUrlInput || !coverFileInput || !coverPreview || !coverUploadStatus || !subjectInput || !previewTitle || !previewCategory || !previewSubject || !feedback) {
+        if (!form || !breadcrumbCurrentEl || !heroEyebrowEl || !heroTitleEl || !heroSubtitleEl || !emailWrap || !emailInput || !titleInput || !categoryInput || !coverUrlInput || !coverFileInput || !coverPreview || !coverUploadNote || !coverUploadStatus || !subjectInput || !previewTitle || !previewCategory || !previewSubject || !feedback || !submitBtn) {
             return;
         }
 
@@ -319,6 +328,23 @@
         let pendingEditorContent = '';
         let editorReady = Promise.resolve();
 
+        const applyPageMode = () => {
+            const editing = Boolean(editPostId);
+            breadcrumbCurrentEl.textContent = editing ? 'Chỉnh sửa chủ đề' : 'Tạo chủ đề mới';
+            heroEyebrowEl.textContent = editing ? 'Trình chỉnh sửa thảo luận' : 'Trình tạo thảo luận';
+            heroTitleEl.textContent = editing ? 'Chỉnh Sửa Chủ Đề' : 'Tạo Chủ Đề Mới';
+            heroSubtitleEl.textContent = editing
+                ? 'Cập nhật nội dung chủ đề đã đăng. Chủ đề vẫn giữ nguyên URL hiện tại.'
+                : 'Đăng chủ đề discussion. Bạn có thể đính kèm ảnh trong bài viết.';
+            coverUploadNote.textContent = editing
+                ? 'Ảnh mới sẽ được upload lên cloud khi bấm "Lưu thay đổi".'
+                : 'Ảnh sẽ được upload lên cloud khi bấm "Tạo chủ đề mới".';
+            submitBtn.innerHTML = editing
+                ? '<i class="fa-solid fa-floppy-disk me-2"></i>Lưu thay đổi'
+                : '<i class="fa-solid fa-plus me-2"></i>Tạo chủ đề mới';
+            document.title = editing ? 'Chỉnh sửa chủ đề - SVP' : 'Tạo chủ đề mới - SVP';
+        };
+
         const sanitizeUrl = (url) => {
             const raw = String(url || '').trim();
             if (!raw) return '';
@@ -332,6 +358,58 @@
             } catch (_) {
                 return '';
             }
+        };
+
+        const extractFirstImageSrc = (html) => {
+            const match = String(html || '').match(/<img[^>]*src\s*=\s*['"]([^'"]+)['"][^>]*>/i);
+            return match && match[1] ? sanitizeUrl(match[1]) : '';
+        };
+
+        const splitDiscussionContentHtml = (html) => {
+            const rawHtml = String(html || '').trim();
+            if (!rawHtml) {
+                return { coverUrl: '', bodyHtml: '' };
+            }
+
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(`<div data-root>${rawHtml}</div>`, 'text/html');
+            const root = doc.body.querySelector('[data-root]');
+            if (!root) {
+                return { coverUrl: extractFirstImageSrc(rawHtml), bodyHtml: rawHtml };
+            }
+
+            const firstMeaningfulNode = Array.from(root.childNodes).find((node) => {
+                if (node.nodeType === Node.TEXT_NODE) {
+                    return String(node.textContent || '').trim().length > 0;
+                }
+                return node.nodeType === Node.ELEMENT_NODE;
+            });
+
+            let coverUrl = '';
+            if (firstMeaningfulNode && firstMeaningfulNode.nodeType === Node.ELEMENT_NODE) {
+                const firstElement = firstMeaningfulNode;
+                const coverImage = firstElement.matches('img[src]')
+                    ? firstElement
+                    : firstElement.querySelector('img[src]');
+                const safeCoverUrl = sanitizeUrl(coverImage?.getAttribute('src') || '');
+                const attachmentType = String(coverImage?.getAttribute('data-svp-attachment') || '').trim().toLowerCase();
+                const altText = String(coverImage?.getAttribute('alt') || '').trim().toLowerCase();
+                const blockText = String(firstElement.textContent || '').replace(/\u00a0/g, ' ').trim();
+                const isImageOnlyBlock = Boolean(coverImage) && !blockText;
+                if (safeCoverUrl && (attachmentType === 'discussion-cover' || altText === 'discussion cover' || isImageOnlyBlock)) {
+                    coverUrl = safeCoverUrl;
+                    firstElement.remove();
+                }
+            }
+
+            if (!coverUrl) {
+                coverUrl = extractFirstImageSrc(rawHtml);
+            }
+
+            return {
+                coverUrl,
+                bodyHtml: root.innerHTML.trim()
+            };
         };
 
         const normalizeEmail = (value) => (value || '').trim().toLowerCase();
@@ -367,6 +445,13 @@
             }
             const email = pickEmailFromStorage();
             return isValidEmail(email) ? email : '';
+        };
+
+        const getAccessToken = async () => {
+            if (window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function') {
+                return String(await window.SVPAuth.getValidAccessToken() || '').trim();
+            }
+            return String(localStorage.getItem('accessToken') || '').trim();
         };
 
         const setFeedback = (text, type) => {
@@ -1013,7 +1098,12 @@
             coverUrlInput.value = '';
             lastResolvedCoverUrl = '';
             refreshCoverPreview();
-            setCoverUploadStatus('Ảnh đã được chọn cục bộ. Ảnh sẽ được upload khi bấm "Tạo chủ đề mới".', 'info');
+            setCoverUploadStatus(
+                editPostId
+                    ? 'Ảnh đã được chọn cục bộ. Ảnh sẽ được upload khi bấm "Lưu thay đổi".'
+                    : 'Ảnh đã được chọn cục bộ. Ảnh sẽ được upload khi bấm "Tạo chủ đề mới".',
+                'info'
+            );
         });
 
         form.addEventListener('submit', async (event) => {
@@ -1029,24 +1119,33 @@
                 return;
             }
 
-            const sessionEmail = await getSessionEmail();
-            const manualEmail = normalizeEmail(emailInput.value);
+            const accessToken = await getAccessToken();
+            const sessionEmail = editPostId ? '' : await getSessionEmail();
+            const manualEmail = editPostId ? '' : normalizeEmail(emailInput.value);
             const email = sessionEmail || manualEmail;
-            if (!email) {
-                emailWrap.classList.remove('d-none');
-                setFeedback('Bạn chưa đăng nhập. Vui lòng nhập email để tạo chủ đề.', 'error');
-                emailInput.focus();
-                return;
-            }
-            if (!sessionEmail && !isValidEmail(email)) {
-                emailWrap.classList.remove('d-none');
-                setFeedback('Email chưa hợp lệ.', 'error');
-                emailInput.focus();
-                return;
-            }
-            if (sessionEmail) {
-                emailInput.value = sessionEmail;
+            if (editPostId) {
                 emailWrap.classList.add('d-none');
+                if (!accessToken) {
+                    setFeedback('Bạn cần đăng nhập để chỉnh sửa chủ đề.', 'error');
+                    return;
+                }
+            } else {
+                if (!email) {
+                    emailWrap.classList.remove('d-none');
+                    setFeedback('Bạn chưa đăng nhập. Vui lòng nhập email để tạo chủ đề.', 'error');
+                    emailInput.focus();
+                    return;
+                }
+                if (!sessionEmail && !isValidEmail(email)) {
+                    emailWrap.classList.remove('d-none');
+                    setFeedback('Email chưa hợp lệ.', 'error');
+                    emailInput.focus();
+                    return;
+                }
+                if (sessionEmail) {
+                    emailInput.value = sessionEmail;
+                    emailWrap.classList.add('d-none');
+                }
             }
 
             const title = titleInput.value.trim();
@@ -1075,13 +1174,9 @@
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang gửi...';
             }
-            setFeedback('Đang tạo chủ đề, vui lòng đợi...', 'info');
+            setFeedback(editPostId ? 'Đang cập nhật chủ đề, vui lòng đợi...' : 'Đang tạo chủ đề, vui lòng đợi...', 'info');
 
             try {
-                const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
-                    ? await window.SVPAuth.getValidAccessToken()
-                    : (localStorage.getItem('accessToken') || '');
-
                 const inputCoverUrl = sanitizeUrl(coverUrlInput.value);
                 if (inputCoverUrl && !pendingCoverFile) {
                     try {
@@ -1114,6 +1209,32 @@
                 }
 
                 const contentHtml = composeContentHtml();
+                if (editPostId) {
+                    const response = await fetch(`${API_BASE_URL}/posts/${editPostId}`, {
+                        method: 'PATCH',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json',
+                            ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+                        },
+                        body: JSON.stringify({
+                            title,
+                            categoryId,
+                            contentHtml
+                        })
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        setFeedback(payload.error || 'Không thể cập nhật chủ đề.', 'error');
+                        return;
+                    }
+                    setFeedback('Đã cập nhật chủ đề thành công.', 'success');
+                    setTimeout(() => {
+                        window.location.href = buildThreadHref(editPostId, title);
+                    }, 600);
+                    return;
+                }
+
                 const response = await fetch(`${API_BASE_URL}/posts/discussions`, {
                     method: 'POST',
                     headers: {
@@ -1197,6 +1318,44 @@
         if (initialEmail) {
             emailInput.value = initialEmail;
             emailWrap.classList.add('d-none');
+        }
+
+        applyPageMode();
+        if (editPostId) {
+            emailWrap.classList.add('d-none');
+
+            (async () => {
+                try {
+                    const headers = { Accept: 'application/json' };
+                    const accessToken = await getAccessToken();
+                    if (accessToken) {
+                        headers.Authorization = `Bearer ${accessToken}`;
+                    }
+                    const response = await fetch(`${API_BASE_URL}/posts/${editPostId}`, {
+                        headers,
+                        cache: accessToken ? 'no-store' : 'default'
+                    });
+                    const data = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        setFeedback(data.error || 'Không thể tải chủ đề.', 'error');
+                        return;
+                    }
+                    const post = data && typeof data.post === 'object' ? data.post : data;
+                    const rawContentHtml = String(post.contentHtml || post.content_html || '');
+                    const parsedDiscussion = splitDiscussionContentHtml(rawContentHtml);
+                    const coverUrl = sanitizeUrl(post.coverImageUrl || post.cover_image_url || parsedDiscussion.coverUrl);
+                    titleInput.value = String(post.title || '');
+                    categoryInput.value = String(post.categoryId || post.category_id || 3);
+                    coverUrlInput.value = coverUrl;
+                    lastResolvedCoverUrl = coverUrl;
+                    refreshCoverPreview();
+                    setCoverUploadStatus(coverUrl ? REMOTE_COVER_URL_DIRECT_STATUS : '', 'info');
+                    setSubjectBodyHtml(parsedDiscussion.bodyHtml || rawContentHtml);
+                    updatePreview();
+                } catch (_) {
+                    setFeedback('Không thể tải chủ đề.', 'error');
+                }
+            })();
         }
 
         subjectInput.addEventListener('input', updatePreview);

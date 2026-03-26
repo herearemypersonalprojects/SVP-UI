@@ -352,7 +352,7 @@
                 <h2 id="thread-title" class="sv-thread-head__title">Đang tải chủ đề...</h2>
                 <div id="thread-author" class="sv-meta mb-2"></div>
                 <div id="thread-tags" class="d-flex flex-wrap gap-2"></div>
-                <div class="mt-3 d-flex flex-wrap gap-2">
+                <div id="thread-head-actions" class="mt-3 d-flex flex-wrap gap-2">
                     <a class="btn btn-sm btn-outline-secondary" href="forum.html"><i class="fa-solid fa-arrow-left me-1"></i>Quay lại forum</a>
                     <button id="btn-scroll-reply" class="btn btn-sm btn-primary" type="button"><i class="fa-solid fa-reply me-1"></i>Viết phản hồi</button>
                 </div>
@@ -515,6 +515,7 @@
         const repliesEl = document.getElementById('thread-replies');
         const titleEl = document.getElementById('thread-title');
         const authorEl = document.getElementById('thread-author');
+        const threadHeadActionsEl = document.getElementById('thread-head-actions');
         const tagsEl = document.getElementById('thread-tags');
         const postsCountEl = document.getElementById('posts-count');
         const statusEl = document.getElementById('thread-status');
@@ -552,7 +553,7 @@
         let currentShareUrl = window.location.href.split('#')[0];
         let replyComposer = null;
 
-        if (!breadcrumbEl || !categoryEl || !createdEl || !viewsEl || !repliesEl || !titleEl || !authorEl || !tagsEl || !postsCountEl || !statusEl || !postsEl || !kpisEl || !relatedEl || !replyForm || !replyGuestFieldsEl || !replyIdentityFieldsEl || !replySessionHintEl || !replyNameEl || !replyCaptchaFieldsEl || !replyCaptchaQuestionEl || !replyCaptchaAnswerEl || !replyMessageEl || !replyCharCountEl || !replyImageFieldsEl || !replyImageEl || !replyImageStatusEl || !replyImagePreviewEl || !replyImageClearBtn || !replyFeedbackEl || !replyClearBtn || !scrollReplyBtn || !replySubmitBtn) {
+        if (!breadcrumbEl || !categoryEl || !createdEl || !viewsEl || !repliesEl || !titleEl || !authorEl || !threadHeadActionsEl || !tagsEl || !postsCountEl || !statusEl || !postsEl || !kpisEl || !relatedEl || !replyForm || !replyGuestFieldsEl || !replyIdentityFieldsEl || !replySessionHintEl || !replyNameEl || !replyCaptchaFieldsEl || !replyCaptchaQuestionEl || !replyCaptchaAnswerEl || !replyMessageEl || !replyCharCountEl || !replyImageFieldsEl || !replyImageEl || !replyImageStatusEl || !replyImagePreviewEl || !replyImageClearBtn || !replyFeedbackEl || !replyClearBtn || !scrollReplyBtn || !replySubmitBtn) {
             return;
         }
 
@@ -740,6 +741,20 @@
             } catch (_) {
                 return null;
             }
+        };
+
+        const getCallerInfo = () => {
+            const token = String(localStorage.getItem('accessToken') || '').trim();
+            if (!token) {
+                return { nickname: '', role: '' };
+            }
+            const payload = (window.SVPAuth && typeof window.SVPAuth.parseJwtPayload === 'function')
+                ? window.SVPAuth.parseJwtPayload(token)
+                : parseJwtPayload(token);
+            return {
+                nickname: String(payload?.nickname || localStorage.getItem('userNickname') || '').trim(),
+                role: String(payload?.role || '').trim().toUpperCase()
+            };
         };
 
         const peekAuthenticatedReplyIdentity = () => {
@@ -1430,6 +1445,29 @@
             tagsEl.innerHTML = `<span class="sv-tag">${escapeHtml(categoryName)}</span><span class="sv-tag">${escapeHtml(timeAgo(thread.updatedAt || thread.createdAt))}</span>`;
         };
 
+        const renderThreadActions = (thread) => {
+            const existingEditLink = threadHeadActionsEl.querySelector('[data-thread-action="edit"]');
+            if (existingEditLink) {
+                existingEditLink.remove();
+            }
+
+            const caller = getCallerInfo();
+            const authorNickname = String(thread?.authorNickname || '').trim();
+            const isOwner = Boolean(caller.nickname && authorNickname && caller.nickname === authorNickname);
+            const isSuperadmin = caller.role === 'SUPERADMIN';
+            const isAdmin = caller.role === 'ADMIN' || isSuperadmin;
+            if (!isOwner && !isAdmin) {
+                return;
+            }
+
+            const editLink = document.createElement('a');
+            editLink.className = 'btn btn-sm btn-outline-primary';
+            editLink.dataset.threadAction = 'edit';
+            editLink.href = `create_new_discussion.html?editPostId=${encodeURIComponent(thread.threadId)}`;
+            editLink.innerHTML = '<i class="fa-solid fa-pen-to-square me-1"></i>Sửa chủ đề';
+            threadHeadActionsEl.appendChild(editLink);
+        };
+
         const toPostItem = (post, index, isOriginalPost, knownUsers) => {
             const sanitizedContentHtml = sanitizeRichContentHtml(
                 String(post.contentHtml || post.content_html || '').trim()
@@ -2072,9 +2110,17 @@
             const shouldTrackView = shouldTrackThreadView(postId);
 
             try {
+                const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
+                    ? String(await window.SVPAuth.getValidAccessToken() || '').trim()
+                    : String(localStorage.getItem('accessToken') || '').trim();
+                const headers = { Accept: 'application/json' };
+                if (accessToken) {
+                    headers.Authorization = `Bearer ${accessToken}`;
+                }
                 const response = await fetch(`${API_BASE_URL}/posts/${postId}?trackView=${shouldTrackView ? 'true' : 'false'}`, {
                     method: 'GET',
-                    headers: { Accept: 'application/json' }
+                    headers,
+                    cache: accessToken ? 'no-store' : 'default'
                 });
                 const payload = await response.json().catch(() => ({}));
                 if (!response.ok) {
@@ -2099,6 +2145,7 @@
                         title: String(localDiscussion.title || 'Chủ đề mới'),
                         categoryId: Number(localDiscussion.categoryId || 0),
                         authorName: String(localDiscussion?.author?.displayName || localDiscussion?.author?.nickname || 'Bạn'),
+                        authorNickname: String(localDiscussion?.author?.nickname || localStorage.getItem('userNickname') || ''),
                         createdAt: String(localDiscussion.createdAt || new Date().toISOString()),
                         updatedAt: String(localDiscussion.createdAt || new Date().toISOString()),
                         contentLines: htmlToLines(discussionContentHtml),
@@ -2122,6 +2169,7 @@
                         title: String(localArticle.title || 'Chủ đề mới'),
                         categoryId: Number(localArticle.categoryId || 0),
                         authorName: String(localArticle?.author?.displayName || localArticle?.author?.nickname || 'Bạn'),
+                        authorNickname: String(localArticle?.author?.nickname || localStorage.getItem('userNickname') || ''),
                         createdAt: String(localArticle.createdAt || new Date().toISOString()),
                         updatedAt: String(localArticle.createdAt || new Date().toISOString()),
                         contentLines: htmlToLines(articleContentHtml),
@@ -2159,8 +2207,8 @@
             const totalReplies = apiComments.length + localReplies.length;
 
             const metrics = updateThreadMetrics(thread.threadId, (prev) => ({
-                views: Math.max(prev.views, thread.viewCount),
-                replies: Math.max(prev.replies, thread.commentCount, totalReplies),
+                views: Math.max(prev.views, normalizeCount(thread.viewCount)),
+                replies: Math.max(prev.replies, normalizeCount(thread.commentCount), totalReplies),
                 lastCommentAt: prev.lastCommentAt || thread.updatedAt || thread.createdAt
             }));
 
@@ -2168,6 +2216,7 @@
                 urlHelpers.replaceDetailHistory('thread', thread.threadId, thread.title);
             }
             renderHeader(thread, metrics, totalReplies);
+            renderThreadActions(thread);
             renderShare(thread);
             renderPosts(thread, apiComments, localReplies);
             renderThreadKpis(thread, metrics, 1 + totalReplies, totalReplies);

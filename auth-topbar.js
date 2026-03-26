@@ -440,14 +440,17 @@
 
         const payload = parseJwtPayload(token) || {};
         const nickname = (localStorage.getItem("userNickname") || payload.nickname || "").trim();
+        const userId = (localStorage.getItem("userId") || String(payload.userId || "")).trim();
         const email = (localStorage.getItem("userEmail") || payload.email || "").trim();
         const displayName = (profileOverride && profileOverride.displayName)
             ? String(profileOverride.displayName).trim()
             : (localStorage.getItem("userDisplayName") || payload.displayName || nickname || email || "Tai khoan");
         const initial = (displayName.charAt(0) || "U").toUpperCase();
-        const profileHref = nickname
-            ? "profile.html?nickname=" + encodeURIComponent(nickname)
-            : "profile.html";
+        const profileHref = userId
+            ? "profile.html?user_id=" + encodeURIComponent(userId)
+            : (nickname
+                ? "profile.html?nickname=" + encodeURIComponent(nickname)
+                : "profile.html");
         const role = String(payload.role || "").toUpperCase();
         const dashboardLink = role === "SUPERADMIN" || role === "ADMIN"
             ? '<a class="sv-auth-dashboard" href="admin_dashboard.html">Dashboard</a>'

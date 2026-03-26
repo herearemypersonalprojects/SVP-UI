@@ -257,8 +257,8 @@
             ? urlHelpers.buildDetailPath('article', postId, title)
             : `post_detail.html?postId=${encodeURIComponent(postId)}`;
         const buildProfileHref = (nickname, userId) => {
+            if (userId) return `profile.html?user_id=${encodeURIComponent(userId)}`;
             if (nickname) return `profile.html?nickname=${encodeURIComponent(nickname)}`;
-            if (userId) return `profile.html?userId=${encodeURIComponent(userId)}`;
             return 'profile.html';
         };
         const form = document.getElementById('article-form');

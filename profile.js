@@ -105,8 +105,8 @@
     const getCategoryName = (categoryId) => CATEGORY_NAMES[Number(categoryId)] || 'Chuyên mục khác';
 
     const buildProfileHref = (nickname, userId) => {
+        if (userId) return `profile.html?user_id=${encodeURIComponent(userId)}`;
         if (nickname) return `profile.html?nickname=${encodeURIComponent(nickname)}`;
-        if (userId) return `profile.html?userId=${encodeURIComponent(userId)}`;
         return 'profile.html';
     };
 
@@ -414,10 +414,13 @@
     const init = async () => {
         const params = new URLSearchParams(window.location.search);
         let nickname = params.get('nickname');
-        let userId = params.get('userId');
+        let userId = params.get('user_id') || params.get('userId');
 
         me = await fetchMe();
-        if (!nickname && !userId && me?.nickname) {
+        if (!nickname && !userId && me?.userId) {
+            userId = me.userId;
+            window.history.replaceState({}, '', buildProfileHref(me?.nickname, userId));
+        } else if (!nickname && !userId && me?.nickname) {
             nickname = me.nickname;
             window.history.replaceState({}, '', buildProfileHref(nickname));
         }
@@ -442,6 +445,9 @@
 
         profile = space && typeof space.profile === 'object' ? space.profile : null;
         isSelf = Boolean(space?.viewer?.self);
+        if (profile?.userId) {
+            window.history.replaceState({}, '', buildProfileHref(profile.nickname, profile.userId));
+        }
         setEditable(isSelf);
         renderProfile();
         updatePreview();

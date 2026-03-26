@@ -164,8 +164,8 @@
     const buildProfileHref = (author) => {
         const nickname = String(author && author.nickname || '').trim();
         const userId = String(author && author.userId || '').trim();
+        if (userId) return `profile.html?user_id=${encodeURIComponent(userId)}`;
         if (nickname) return `profile.html?nickname=${encodeURIComponent(nickname)}`;
-        if (userId) return `profile.html?userId=${encodeURIComponent(userId)}`;
         return '';
     };
 

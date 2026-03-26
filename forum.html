@@ -623,9 +623,9 @@
             listEl.innerHTML = items.map((thread) => {
                 const metrics = getMetrics(thread);
                 const lastActive = metrics.lastCommentAt || thread.lastActivityAt || thread.createdAt;
-                const profileHref = thread.authorNickname
-                    ? `profile.html?nickname=${encodeURIComponent(thread.authorNickname)}`
-                    : (thread.authorUserId ? `profile.html?userId=${encodeURIComponent(thread.authorUserId)}` : '');
+                const profileHref = thread.authorUserId
+                    ? `profile.html?user_id=${encodeURIComponent(thread.authorUserId)}`
+                    : (thread.authorNickname ? `profile.html?nickname=${encodeURIComponent(thread.authorNickname)}` : '');
                 const authorNode = profileHref
                     ? `<strong class="sv-forum-author" data-profile="${escapeHtml(profileHref)}" role="link" tabindex="0">${escapeHtml(thread.authorName)}</strong>`
                     : `<strong>${escapeHtml(thread.authorName)}</strong>`;

@@ -60,8 +60,8 @@
         return `post_detail.html?postId=${encodeURIComponent(postId)}`;
     };
     const buildProfileHref = (nickname, userId) => {
+        if (asText(userId)) return `profile.html?user_id=${encodeURIComponent(asText(userId))}`;
         if (asText(nickname)) return `profile.html?nickname=${encodeURIComponent(asText(nickname))}`;
-        if (asText(userId)) return `profile.html?userId=${encodeURIComponent(asText(userId))}`;
         return 'profile.html';
     };
     const updatePrimaryAction = (href, label) => {

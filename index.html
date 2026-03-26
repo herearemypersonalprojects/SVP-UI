@@ -887,9 +887,9 @@
             const safeDate = escapeHtml(formatDate(post.createdAt));
             const safeLead = escapeHtml(post.leadText || 'Bài viết đang được cập nhật nội dung.');
             const safeCover = escapeHtml(post.resolvedCoverImageUrl || DEFAULT_ARTICLE_COVER);
-            const authorProfileHref = author.nickname
-                ? `profile.html?nickname=${encodeURIComponent(author.nickname)}`
-                : (author.userId ? `profile.html?userId=${encodeURIComponent(author.userId)}` : '');
+            const authorProfileHref = author.userId
+                ? `profile.html?user_id=${encodeURIComponent(author.userId)}`
+                : (author.nickname ? `profile.html?nickname=${encodeURIComponent(author.nickname)}` : '');
             const authorLabel = authorProfileHref
                 ? `<a class="sv-author-link" href="${authorProfileHref}">${safeAuthor}</a>`
                 : safeAuthor;
@@ -975,9 +975,9 @@
                     ? categoryLabels.join(', ')
                     : 'Đang cập nhật chủ đề'
             );
-            const profileHref = author.nickname
-                ? `profile.html?nickname=${encodeURIComponent(author.nickname)}`
-                : (author.userId ? `profile.html?userId=${encodeURIComponent(author.userId)}` : 'profile.html');
+            const profileHref = author.userId
+                ? `profile.html?user_id=${encodeURIComponent(author.userId)}`
+                : (author.nickname ? `profile.html?nickname=${encodeURIComponent(author.nickname)}` : 'profile.html');
 
             let avatarHtml;
             const avatarUrl = resolveAvatarUrl(author.avatarUrl ?? author.avatar_url);

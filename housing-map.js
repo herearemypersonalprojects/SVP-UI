@@ -48,7 +48,42 @@
 
     const state = {
         items: [],
-        requestToken: 0
+        requestToken: 0,
+        hasAutoFocusedInitialPins: false,
+        isAutoFittingMap: false,
+        userMovedMap: false
+    };
+
+    const hasValidCoordinates = (item) => Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude));
+
+    const buildItemsBounds = () => {
+        const points = state.items
+            .filter(hasValidCoordinates)
+            .map((item) => L.latLng(Number(item.latitude), Number(item.longitude)));
+        if (!points.length) {
+            return null;
+        }
+        const bounds = L.latLngBounds(points);
+        return bounds.isValid() ? bounds : null;
+    };
+
+    const fitMapToInitialPins = () => {
+        if (state.hasAutoFocusedInitialPins || state.userMovedMap) {
+            return;
+        }
+        const bounds = buildItemsBounds();
+        if (!bounds) {
+            return;
+        }
+        state.hasAutoFocusedInitialPins = true;
+        state.isAutoFittingMap = true;
+        map.fitBounds(bounds, {
+            padding: [28, 28],
+            maxZoom: 13
+        });
+        window.setTimeout(() => {
+            state.isAutoFittingMap = false;
+        }, 0);
     };
 
     const openListingDetail = (listingId) => {
@@ -118,7 +153,7 @@
     const renderMarkers = () => {
         clusterGroup.clearLayers();
         state.items.forEach((item) => {
-            if (!Number.isFinite(Number(item.latitude)) || !Number.isFinite(Number(item.longitude))) {
+            if (!hasValidCoordinates(item)) {
                 return;
             }
             const marker = L.marker([item.latitude, item.longitude], {
@@ -186,6 +221,7 @@
             state.items = Array.isArray(payload.items) ? payload.items : [];
             renderList();
             renderMarkers();
+            fitMapToInitialPins();
             metaEl.textContent = payload.hasMore
                 ? `${state.items.length}+ tin trong khung nhìn`
                 : `${state.items.length} tin trong khung nhìn`;
@@ -206,6 +242,13 @@
         void loadHousing();
     }, 350);
 
+    ['dragstart', 'zoomstart'].forEach((eventName) => {
+        map.on(eventName, () => {
+            if (!state.isAutoFittingMap) {
+                state.userMovedMap = true;
+            }
+        });
+    });
     map.on('moveend', debouncedLoad);
     applyBtn.addEventListener('click', () => { void loadHousing(); });
     resetBtn.addEventListener('click', () => {

@@ -554,9 +554,6 @@
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
         const WORDS_PER_MINUTE = 220;
         const PREVIEW_LEAD_MAX_CHARS = 220;
-        const DEFAULT_ARTICLE_COVER =
-            "data:image/svg+xml;utf8," +
-            encodeURIComponent("<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 520'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='#dbeafe'/><stop offset='100%' stop-color='#e2e8f0'/></linearGradient></defs><rect width='1200' height='520' fill='url(#g)'/><circle cx='260' cy='180' r='90' fill='rgba(37,99,235,.12)'/><circle cx='920' cy='140' r='120' fill='rgba(59,130,246,.10)'/><rect x='192' y='210' width='816' height='170' rx='26' fill='rgba(255,255,255,.72)' stroke='rgba(148,163,184,.34)'/><text x='600' y='285' text-anchor='middle' font-size='44' fill='#1e3a8a' font-family='Arial,sans-serif' font-weight='700'>SVP Forum</text><text x='600' y='336' text-anchor='middle' font-size='28' fill='#475569' font-family='Arial,sans-serif'>Anh xem truoc bai viet</text></svg>");
         const HOME_CACHE_KEY_PREFIX = 'svp.home.payload.cache.v2.';
         const HOME_CACHE_TTL_MS = 2 * 60 * 1000;
         const LOCAL_ARTICLE_KEY = 'svp.latestSubmittedArticle';
@@ -741,8 +738,7 @@
             if (safeExplicitCover) {
                 return safeExplicitCover;
             }
-            const firstImage = extractFirstImageSrc(contentHtml);
-            return firstImage || DEFAULT_ARTICLE_COVER;
+            return extractFirstImageSrc(contentHtml);
         };
 
         const normalizePost = (post) => {
@@ -886,7 +882,7 @@
             const safeAuthor = escapeHtml(author.displayName || author.nickname || 'Ẩn danh');
             const safeDate = escapeHtml(formatDate(post.createdAt));
             const safeLead = escapeHtml(post.leadText || 'Bài viết đang được cập nhật nội dung.');
-            const safeCover = escapeHtml(post.resolvedCoverImageUrl || DEFAULT_ARTICLE_COVER);
+            const safeCover = escapeHtml(post.resolvedCoverImageUrl || '');
             const authorProfileHref = author.userId
                 ? `profile.html?user_id=${encodeURIComponent(author.userId)}`
                 : (author.nickname ? `profile.html?nickname=${encodeURIComponent(author.nickname)}` : '');
@@ -899,6 +895,9 @@
                 : '';
             const detailHref = buildArticleHref(post.postId, post.title);
 
+            const coverNode = safeCover
+                ? `<a class="sv-article__cover d-block" href="${detailHref}" style="background-image:url('${safeCover}')" tabindex="-1" aria-hidden="true"></a>`
+                : '';
             return `
                 <article class="sv-article sv-article--clickable" data-post-id="${post.postId}" data-post-title="${safeTitle}" role="button" tabindex="0" aria-label="Xem chi tiết bài viết ${safeTitle}">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
@@ -909,7 +908,7 @@
                     <div class="sv-article__meta">Bởi ${authorLabel} • Cập nhật ${safeDate}</div>
                     <p class="sv-article__lead">${safeLead}</p>
                     ${pendingNote}
-                    <a class="sv-article__cover d-block" href="${detailHref}" style="background-image:url('${safeCover}')" tabindex="-1" aria-hidden="true"></a>
+                    ${coverNode}
                     <div class="d-flex justify-content-end mt-2">
                         <a class="btn btn-sm btn-outline-primary" href="${detailHref}"><i class="fa-solid fa-book-open me-1"></i>Đọc tiếp</a>
                     </div>

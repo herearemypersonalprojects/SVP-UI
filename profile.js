@@ -298,7 +298,7 @@
             const coverUrl = sanitizeUrl(item.coverImageUrl);
             const coverNode = coverUrl
                 ? `<a class="sv-profile-blog-cover" href="${detailHref}" style="background-image:url('${escapeHtml(coverUrl)}')"></a>`
-                : `<a class="sv-profile-blog-cover is-empty" href="${detailHref}" aria-label="Mở blog"><i class="fa-regular fa-pen-to-square"></i></a>`;
+                : '';
             return `
                 <article class="sv-profile-blog-card">
                     ${coverNode}

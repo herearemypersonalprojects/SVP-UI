@@ -46,6 +46,9 @@
             overflow: hidden;
             border: 1px solid #e5e7eb;
         }
+        .pd-hero.is-hidden {
+            display: none;
+        }
         .pd-hero__overlay {
             position: absolute;
             inset: 0;
@@ -1615,11 +1618,15 @@
 
     /* ── Render functions ── */
     const renderHero = (contentHtml) => {
-        const DEFAULT_COVER = 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?q=80&w=1400&auto=format&fit=crop';
         const first = extractFirstImageSrc(contentHtml);
-        const coverUrl = first || DEFAULT_COVER;
         heroCover.classList.remove('pd-skeleton');
-        heroCover.style.backgroundImage = `url('${escapeHtml(coverUrl)}')`;
+        if (!first) {
+            heroCover.classList.add('is-hidden');
+            heroCover.style.backgroundImage = '';
+            return;
+        }
+        heroCover.classList.remove('is-hidden');
+        heroCover.style.backgroundImage = `url('${escapeHtml(first)}')`;
     };
 
     const renderPostHeader = (post, commentCount) => {

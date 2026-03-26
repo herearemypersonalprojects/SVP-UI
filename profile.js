@@ -91,6 +91,9 @@
         }
     };
 
+    const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        .test(String(value || '').trim());
+
     const setStatus = (text, type) => {
         statusEl.textContent = text || '';
         statusEl.className = 'sv-profile-status small';
@@ -416,13 +419,19 @@
         let nickname = params.get('nickname');
         let userId = params.get('user_id') || params.get('userId');
 
-        me = await fetchMe();
-        if (!nickname && !userId && me?.userId) {
-            userId = me.userId;
-            window.history.replaceState({}, '', buildProfileHref(me?.nickname, userId));
-        } else if (!nickname && !userId && me?.nickname) {
+        try {
+            me = await fetchMe();
+        } catch (error) {
+            console.warn('Cannot resolve current session for profile page.', error);
+            me = null;
+        }
+
+        if (!nickname && !userId && me?.nickname) {
             nickname = me.nickname;
             window.history.replaceState({}, '', buildProfileHref(nickname));
+        } else if (!nickname && !userId && isUuidLike(me?.userId)) {
+            userId = me.userId;
+            window.history.replaceState({}, '', buildProfileHref(me?.nickname, userId));
         }
 
         if (!nickname && !userId) {
@@ -520,5 +529,11 @@
         }
     });
 
-    init();
+    init().catch((error) => {
+        console.error('Cannot initialize profile page.', error);
+        setStatus('Không thể tải hồ sơ thành viên.', 'error');
+        setSpaceNote('Không thể tải espace thành viên vào lúc này.');
+        setEditable(false);
+        blogListEl.innerHTML = '<div class="sv-profile-empty">Không thể tải danh sách blog.</div>';
+    });
 })();

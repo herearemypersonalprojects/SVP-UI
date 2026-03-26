@@ -282,6 +282,9 @@
         }
     };
 
+    const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        .test(String(value || "").trim());
+
     const updateInboxBadge = () => {
         const badgeEl = authBox ? authBox.querySelector("[data-sv-inbox-badge]") : null;
         if (!badgeEl) {
@@ -446,10 +449,10 @@
             ? String(profileOverride.displayName).trim()
             : (localStorage.getItem("userDisplayName") || payload.displayName || nickname || email || "Tai khoan");
         const initial = (displayName.charAt(0) || "U").toUpperCase();
-        const profileHref = userId
-            ? "profile.html?user_id=" + encodeURIComponent(userId)
-            : (nickname
-                ? "profile.html?nickname=" + encodeURIComponent(nickname)
+        const profileHref = nickname
+            ? "profile.html?nickname=" + encodeURIComponent(nickname)
+            : (isUuidLike(userId)
+                ? "profile.html?user_id=" + encodeURIComponent(userId)
                 : "profile.html");
         const role = String(payload.role || "").toUpperCase();
         const dashboardLink = role === "SUPERADMIN" || role === "ADMIN"

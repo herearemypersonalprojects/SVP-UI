@@ -103,6 +103,29 @@
             return '';
         }
     };
+    const extractFirstImageUrl = (html) => {
+        const decoded = decodeHtmlEntities(html).trim();
+        if (!decoded) return '';
+
+        const template = document.createElement('template');
+        template.innerHTML = decoded;
+        const parsedImage = template.content.querySelector('img[src]');
+        if (parsedImage) {
+            const safeParsedUrl = sanitizeUrl(parsedImage.getAttribute('src') || '');
+            if (safeParsedUrl) return safeParsedUrl;
+        }
+
+        const tagMatch = decoded.match(/<img\b[^>]*\bsrc\s*=\s*(?:"([^"]*)|'([^']*)'|([^\s"'<>]+))/i);
+        const rawSrc = tagMatch ? (tagMatch[1] || tagMatch[2] || tagMatch[3] || '') : '';
+        const safeTagUrl = sanitizeUrl(rawSrc);
+        if (safeTagUrl) return safeTagUrl;
+
+        const directImageMatch = decoded.match(/https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?[^\s<>"']*)?/i);
+        return sanitizeUrl(directImageMatch ? directImageMatch[0] : '');
+    };
+    const resolveCoverImageUrl = (explicitImageUrl, contentHtml) => (
+        sanitizeUrl(explicitImageUrl) || extractFirstImageUrl(contentHtml)
+    );
 
     const toTimeValue = (value) => {
         const parsed = Date.parse(String(value || ''));
@@ -131,11 +154,28 @@
         }).format(new Date(time));
     };
 
-    const toPlainText = (html) => decodeHtmlEntities(html)
-        .replace(/<[^>]+>/g, ' ')
+    const normalizePreviewText = (value) => String(value || '')
         .replace(/\u00a0/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
+    const stripHtmlPreviewArtifacts = (value) => normalizePreviewText(String(value || '')
+        .replace(/<!--[\s\S]*?(?:-->|$)/g, ' ')
+        .replace(/<style[\s\S]*?(?:<\/style>|$)/gi, ' ')
+        .replace(/<script[\s\S]*?(?:<\/script>|$)/gi, ' ')
+        .replace(/<img\b[^>]*\bsrc\s*=\s*(?:"[^"]*|'[^']*|[^\s"'<>]+)[^>]*>?/gi, ' ')
+        .replace(/<[^>]+>/g, ' ')
+        .replace(/<[^>]*$/g, ' '));
+    const toPlainText = (html) => {
+        const decoded = decodeHtmlEntities(html);
+        if (!decoded) return '';
+
+        const template = document.createElement('template');
+        template.innerHTML = decoded;
+        const parsedText = stripHtmlPreviewArtifacts(template.content.textContent || '');
+        if (parsedText) return parsedText;
+
+        return stripHtmlPreviewArtifacts(decoded);
+    };
 
     const excerptText = (html, maxLength) => {
         const plain = toPlainText(html);
@@ -282,7 +322,7 @@
             createdAt: item.createdAt,
             sortTime: toTimeValue(item.createdAt),
             author,
-            coverImageUrl: sanitizeUrl(item.coverImageUrl),
+            coverImageUrl: resolveCoverImageUrl(item.coverImageUrl, item.contentHtml),
             excerpt: excerptText(item.contentHtml, 280) || 'Nội dung bài viết đang được cập nhật.',
             footer: [
                 getCategoryName(item.categoryId),
@@ -304,7 +344,7 @@
             createdAt: item.createdAt,
             sortTime: toTimeValue(item.createdAt),
             author,
-            coverImageUrl: sanitizeUrl(item.coverImageUrl),
+            coverImageUrl: resolveCoverImageUrl(item.coverImageUrl, item.contentHtml),
             excerpt: excerptText(item.contentHtml, 260) || 'Nội dung chủ đề đang được cập nhật.',
             footer: [
                 getCategoryName(item.categoryId),
@@ -352,7 +392,7 @@
             createdAt: item.createdAt,
             sortTime: toTimeValue(item.createdAt),
             author,
-            coverImageUrl: sanitizeUrl(item.imageUrl),
+            coverImageUrl: resolveCoverImageUrl(item.imageUrl, item.contentHtml),
             excerpt: excerptText(item.contentHtml, 240) || 'Nội dung bình luận đang được cập nhật.',
             footer: [
                 item.article ? 'Thuộc bài viết' : 'Thuộc chủ đề thảo luận',

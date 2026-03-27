@@ -253,8 +253,11 @@
     };
 
     const renderImageList = () => {
+        const descriptionImageUrl = shared.extractFirstImageUrlFromHtml(getDescriptionHtml());
         if (!state.imageEntries.length) {
-            imageListEl.innerHTML = '<div class="sv-housing-empty">Chưa có ảnh nào. Hãy thêm ít nhất 1 ảnh.</div>';
+            imageListEl.innerHTML = descriptionImageUrl
+                ? '<div class="sv-housing-empty">Ảnh đang được lấy từ mô tả chi tiết. Upload album ảnh riêng ở đây là tùy chọn.</div>'
+                : '<div class="sv-housing-empty">Chưa có album ảnh riêng. Bạn có thể upload ảnh ở đây hoặc chèn URL ảnh hợp lệ trực tiếp trong mô tả chi tiết.</div>';
             return;
         }
         imageListEl.innerHTML = state.imageEntries.map((item) => `
@@ -320,10 +323,16 @@
     };
 
     const updatePreview = () => {
-        const primaryImage = state.imageEntries.find((item) => item.isPrimary) || state.imageEntries[0];
+        const descriptionImageUrl = shared.extractFirstImageUrlFromHtml(getDescriptionHtml());
+        const primaryImage = state.imageEntries.find((item) => item.isPrimary)
+            || state.imageEntries[0]
+            || (descriptionImageUrl ? { previewUrl: descriptionImageUrl } : null);
         const previewTransit = state.transitPoints.find((item) => item.isPrimary) || state.transitPoints[0];
         const statusBadge = '<span class="sv-housing-badge sv-housing-badge--AVAILABLE">Còn trống</span>';
         const descriptionPreview = getDescriptionPlainText();
+        if (!state.imageEntries.length) {
+            renderImageList();
+        }
         previewEl.innerHTML = `
             ${primaryImage ? `<img class="sv-housing-image-thumb mb-3" src="${shared.escapeHtml(primaryImage.previewUrl)}" alt="Preview">` : ''}
             <div class="d-flex justify-content-between align-items-center gap-2 mb-2">

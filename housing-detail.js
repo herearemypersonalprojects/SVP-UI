@@ -42,9 +42,17 @@
         descriptionEl.innerHTML = sanitized || '<div class="sv-housing-empty">Chưa có mô tả chi tiết.</div>';
     };
 
-    const renderGallery = (images) => {
+    const renderGallery = (images, descriptionHtml) => {
+        const fallbackImage = shared.extractFirstImageUrlFromHtml(descriptionHtml || '');
         if (!Array.isArray(images) || !images.length) {
-            galleryEl.innerHTML = '<div class="sv-housing-empty">Tin này chưa có ảnh.</div>';
+            if (fallbackImage) {
+                galleryEl.innerHTML = `
+                    <img class="sv-housing-image-thumb mb-3" src="${shared.escapeHtml(fallbackImage)}" alt="Housing image">
+                    <div class="sv-housing-note">Ảnh đang được lấy từ mô tả chi tiết của tin.</div>
+                `;
+                return;
+            }
+            galleryEl.innerHTML = '<div class="sv-housing-empty">Tin này không có album ảnh riêng.</div>';
             return;
         }
         const primary = images.find((item) => item.primary) || images[0];
@@ -199,7 +207,7 @@
                 payload.cafEligible ? '<span class="sv-housing-tag">CAF</span>' : '',
                 ...(Array.isArray(payload.tags) ? payload.tags.map((tag) => `<span class="sv-housing-tag">${shared.escapeHtml(tag)}</span>`) : [])
             ].join('');
-            renderGallery(payload.images || []);
+            renderGallery(payload.images || [], payload.description || '');
             renderDescription(payload.description || '');
             renderTransit(payload.transitPoints || []);
             renderContact(payload.contact || null);

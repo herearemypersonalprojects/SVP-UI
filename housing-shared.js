@@ -18,6 +18,7 @@
         { value: 'TRAM', label: 'Tram', icon: '🚊' },
         { value: 'BUS', label: 'Bus', icon: '🚌' }
     ];
+    const DIRECT_IMAGE_URL_PATTERN = /https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?[^\s<>"']*)?/i;
 
     const STATUS_META = {
         AVAILABLE: { label: 'Còn trống', className: 'sv-housing-badge--AVAILABLE' },
@@ -56,6 +57,37 @@
     const buildHousingFormHref = (listingId) => listingId
         ? `housing_form.html?listingId=${encodeURIComponent(listingId)}`
         : 'housing_form.html';
+
+    const normalizeHttpUrl = (value) => {
+        const raw = String(value || '').trim();
+        if (!raw) {
+            return '';
+        }
+        try {
+            const parsed = new URL(raw, window.location.href);
+            if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+                return '';
+            }
+            return parsed.href;
+        } catch (_) {
+            return '';
+        }
+    };
+
+    const extractFirstImageUrlFromHtml = (value) => {
+        const raw = String(value || '').trim();
+        if (!raw) {
+            return '';
+        }
+        const template = document.createElement('template');
+        template.innerHTML = raw;
+        const image = template.content.querySelector('img[src]');
+        if (image) {
+            return normalizeHttpUrl(image.getAttribute('src'));
+        }
+        const directMatch = raw.match(DIRECT_IMAGE_URL_PATTERN);
+        return directMatch ? normalizeHttpUrl(directMatch[0]) : '';
+    };
 
     const getAccessToken = async () => {
         if (window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function') {
@@ -141,6 +173,7 @@
         statusMeta,
         propertyTypeLabel,
         transportMeta,
+        extractFirstImageUrlFromHtml,
         buildHousingDetailHref,
         buildHousingFormHref,
         getAccessToken,

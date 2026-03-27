@@ -104,6 +104,29 @@
             background: #e2e8f0 center/cover no-repeat;
             border: 1px solid #e5e7eb;
         }
+        .sv-feed-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .75rem;
+        }
+        .sv-feed-pagination__info {
+            min-width: 120px;
+            text-align: center;
+            font-weight: 600;
+        }
+        @media (max-width: 576px) {
+            .sv-feed-pagination {
+                flex-wrap: wrap;
+            }
+            .sv-feed-pagination > button {
+                flex: 1 1 calc(50% - .375rem);
+            }
+            .sv-feed-pagination__info {
+                order: -1;
+                width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
@@ -188,8 +211,10 @@
                     </a>
                 </div>
                 <div id="sv-article-feed" class="sv-article-feed" aria-live="polite"></div>
-                <div class="px-3 pb-3">
-                    <button id="sv-load-more-posts" class="btn btn-outline-primary w-100" type="button">Xem thêm...</button>
+                <div id="sv-post-pagination" class="sv-feed-pagination px-3 pb-3" aria-label="Phân trang bài viết">
+                    <button id="sv-posts-prev" class="btn btn-outline-primary" type="button">Trước</button>
+                    <div id="sv-posts-page-info" class="sv-feed-pagination__info sv-meta">Trang 1</div>
+                    <button id="sv-posts-next" class="btn btn-outline-primary" type="button">Sau</button>
                 </div>
             </div>
         </div>
@@ -545,9 +570,12 @@
         const feedEl = document.getElementById('sv-article-feed');
         const eventsEl = document.getElementById('sv-upcoming-events');
         const membersEl = document.getElementById('sv-featured-members');
-        const loadMoreBtn = document.getElementById('sv-load-more-posts');
+        const postPaginationEl = document.getElementById('sv-post-pagination');
+        const postsPrevBtn = document.getElementById('sv-posts-prev');
+        const postsPageInfoEl = document.getElementById('sv-posts-page-info');
+        const postsNextBtn = document.getElementById('sv-posts-next');
         const categoryLinks = Array.from(document.querySelectorAll('.sv-cats .nav-link[data-category-id]'));
-        if (!feedEl || !eventsEl || !membersEl || !loadMoreBtn) {
+        if (!feedEl || !eventsEl || !membersEl || !postPaginationEl || !postsPrevBtn || !postsPageInfoEl || !postsNextBtn) {
             return;
         }
 
@@ -817,14 +845,13 @@
             const matchesCategory = !Number.isFinite(activeCategoryId) || Number(post?.categoryId) === activeCategoryId;
             return isArticle && !isBlog && matchesCategory;
         });
-        const HOME_INITIAL_VISIBLE_POSTS_LIMIT = 6;
+        const HOME_PAGE_SIZE = 10;
         const HOME_SOURCE_POSTS_LIMIT = 10;
-        const MORE_POSTS_LIMIT = 5;
+        const HOME_FETCH_BATCH_SIZE = 10;
         const FEATURED_MEMBERS_LIMIT = 10;
         const homeCacheKey = `${HOME_CACHE_KEY_PREFIX}${Number.isFinite(activeCategoryId) ? activeCategoryId : 'all'}`;
         let loadedPosts = [];
-        let visiblePostCount = HOME_INITIAL_VISIBLE_POSTS_LIMIT;
-        let hasMorePosts = true;
+        let currentPageIndex = 0;
         let hasMoreBackendPosts = false;
         let beforeCreatedAt = null;
         let beforePostId = null;
@@ -889,17 +916,41 @@
 
         const getDisplayPosts = () => mergePendingLocalArticle(loadedPosts);
         const getVisibleDisplayPosts = () => getVisiblePosts(getDisplayPosts());
-        const updateLoadMoreState = () => {
+        const scrollFeedCardIntoView = () => {
+            const feedCard = feedEl.closest('.sv-card');
+            if (feedCard) {
+                feedCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        };
+        const getLoadedPageCount = (visibleLoadedCount) => Math.max(1, Math.ceil(visibleLoadedCount / HOME_PAGE_SIZE));
+        const updatePostPaginationState = () => {
             const visibleLoadedCount = getVisibleDisplayPosts().length;
-            const hasHiddenLoadedPosts = visibleLoadedCount > visiblePostCount;
-            hasMorePosts = hasHiddenLoadedPosts || hasMoreBackendPosts;
-            loadMoreBtn.style.display = hasMorePosts ? 'block' : 'none';
-            loadMoreBtn.disabled = !hasMorePosts;
+            const hasPreviousPage = currentPageIndex > 0;
+            const hasNextLoadedPage = visibleLoadedCount > (currentPageIndex + 1) * HOME_PAGE_SIZE;
+            const hasNextPage = hasNextLoadedPage || hasMoreBackendPosts;
+
+            postsPrevBtn.disabled = !hasPreviousPage || isLoadingMore;
+            postsNextBtn.disabled = !hasNextPage || isLoadingMore;
+            postsNextBtn.textContent = isLoadingMore ? 'Đang tải...' : 'Sau';
+
+            if (visibleLoadedCount === 0) {
+                postsPageInfoEl.textContent = '0 bài viết';
+            } else {
+                const start = currentPageIndex * HOME_PAGE_SIZE + 1;
+                const end = Math.min(visibleLoadedCount, (currentPageIndex + 1) * HOME_PAGE_SIZE);
+                const hasUnloadedNextPage = hasMoreBackendPosts && !hasNextLoadedPage;
+                postsPageInfoEl.textContent = `Trang ${currentPageIndex + 1} • ${start}-${end}${hasUnloadedNextPage ? '+' : ''}`;
+            }
+
+            postPaginationEl.style.display = (visibleLoadedCount > 0 || hasMoreBackendPosts || isLoadingMore) ? 'flex' : 'none';
         };
         const renderFeedAndMembers = () => {
             const displayPosts = getDisplayPosts();
             const visiblePosts = getVisiblePosts(displayPosts);
-            const visibleFeedPosts = visiblePosts.slice(0, visiblePostCount);
+            const maxPageIndex = Math.max(0, getLoadedPageCount(visiblePosts.length) - 1);
+            currentPageIndex = Math.min(Math.max(currentPageIndex, 0), maxPageIndex);
+            const pageStart = currentPageIndex * HOME_PAGE_SIZE;
+            const visibleFeedPosts = visiblePosts.slice(pageStart, pageStart + HOME_PAGE_SIZE);
             feedEl.innerHTML = visibleFeedPosts.length === 0
                 ? `<div class="sv-meta">Chưa có bài viết phù hợp để hiển thị.</div>`
                 : visibleFeedPosts.map((post) => renderArticleCard(post)).join('');
@@ -908,6 +959,7 @@
             membersEl.innerHTML = topMembers.length === 0
                 ? `<div class="p-3 sv-meta">Chưa có thành viên nổi bật.</div>`
                 : topMembers.map((member) => renderMember(member)).join('');
+            updatePostPaginationState();
         };
 
         const renderArticleCard = (post) => {
@@ -1041,7 +1093,7 @@
             const upcomingEvents = Array.isArray(payload.upcomingEvents) ? payload.upcomingEvents.map(normalizeEvent) : [];
 
             loadedPosts = latestPosts.slice();
-            visiblePostCount = HOME_INITIAL_VISIBLE_POSTS_LIMIT;
+            currentPageIndex = 0;
             renderFeedAndMembers();
 
             if (upcomingEvents.length === 0) {
@@ -1054,74 +1106,82 @@
             beforeCreatedAt = lastPost?.createdAt || null;
             beforePostId = Number.isFinite(lastPost?.postId) ? lastPost.postId : null;
             hasMoreBackendPosts = loadedPosts.length >= HOME_SOURCE_POSTS_LIMIT;
-            updateLoadMoreState();
+            updatePostPaginationState();
         };
 
         const renderHomeLoadError = () => {
             loadedPosts = [];
-            visiblePostCount = HOME_INITIAL_VISIBLE_POSTS_LIMIT;
-            hasMorePosts = false;
+            currentPageIndex = 0;
             hasMoreBackendPosts = false;
             beforeCreatedAt = null;
             beforePostId = null;
             feedEl.innerHTML = `<div class="sv-meta">Không thể tải bài viết từ backend. Vui lòng thử lại sau.</div>`;
             eventsEl.innerHTML = `<li><div class="sv-meta">Không thể tải sự kiện từ backend.</div></li>`;
             membersEl.innerHTML = `<div class="p-3 sv-meta">Không thể tải danh sách thành viên nổi bật.</div>`;
-            loadMoreBtn.style.display = 'none';
-            loadMoreBtn.disabled = true;
+            postPaginationEl.style.display = 'none';
+            postsPrevBtn.disabled = true;
+            postsNextBtn.disabled = true;
+            postsPageInfoEl.textContent = '0 bài viết';
         };
-        const loadMorePosts = async () => {
-            if (isLoadingMore || !hasMorePosts) {
-                return;
-            }
-            const visibleLoadedCount = getVisibleDisplayPosts().length;
-            if (visiblePostCount < visibleLoadedCount) {
-                visiblePostCount = Math.min(visibleLoadedCount, visiblePostCount + MORE_POSTS_LIMIT);
-                renderFeedAndMembers();
-                updateLoadMoreState();
-                return;
-            }
+        const loadOlderPostsBatch = async () => {
             if (!beforeCreatedAt || !beforePostId) {
-                updateLoadMoreState();
+                hasMoreBackendPosts = false;
+                return [];
+            }
+            const params = new URLSearchParams({
+                limit: String(HOME_FETCH_BATCH_SIZE),
+                beforeCreatedAt,
+                beforePostId: String(beforePostId)
+            });
+            if (Number.isFinite(activeCategoryId)) {
+                params.set('categoryId', String(activeCategoryId));
+            }
+            const payload = await fetchJson(`${API_BASE_URL}/posts/latest-articles?${params.toString()}`);
+            const newItems = Array.isArray(payload.items) ? payload.items.map(normalizePost) : [];
+            if (newItems.length === 0) {
+                hasMoreBackendPosts = false;
+                return [];
+            }
+            loadedPosts = loadedPosts.concat(newItems);
+            const lastPost = loadedPosts[loadedPosts.length - 1];
+            beforeCreatedAt = lastPost?.createdAt || null;
+            beforePostId = Number.isFinite(lastPost?.postId) ? lastPost.postId : null;
+            hasMoreBackendPosts = newItems.length >= HOME_FETCH_BATCH_SIZE;
+            return newItems;
+        };
+        const goToHomePage = async (targetPageIndex) => {
+            if (targetPageIndex < 0 || isLoadingMore) {
                 return;
             }
-            isLoadingMore = true;
-            const scrollYBeforeLoad = window.scrollY;
-            if (document.activeElement === loadMoreBtn) {
-                loadMoreBtn.blur();
+            if (targetPageIndex <= currentPageIndex) {
+                currentPageIndex = targetPageIndex;
+                renderFeedAndMembers();
+                return;
             }
-            loadMoreBtn.disabled = true;
-            const previousLabel = loadMoreBtn.textContent;
-            loadMoreBtn.textContent = 'Đang tải...';
+
+            const requiredVisibleCount = (targetPageIndex + 1) * HOME_PAGE_SIZE;
+            if (getVisibleDisplayPosts().length >= requiredVisibleCount) {
+                currentPageIndex = targetPageIndex;
+                renderFeedAndMembers();
+                return;
+            }
+
+            isLoadingMore = true;
+            updatePostPaginationState();
             try {
-                const params = new URLSearchParams({
-                    limit: String(MORE_POSTS_LIMIT),
-                    beforeCreatedAt,
-                    beforePostId: String(beforePostId)
-                });
-                if (Number.isFinite(activeCategoryId)) {
-                    params.set('categoryId', String(activeCategoryId));
+                while (getVisibleDisplayPosts().length < requiredVisibleCount && hasMoreBackendPosts) {
+                    const newItems = await loadOlderPostsBatch();
+                    if (!newItems.length) {
+                        break;
+                    }
                 }
-                const payload = await fetchJson(`${API_BASE_URL}/posts/latest-articles?${params.toString()}`);
-                const newItems = Array.isArray(payload.items) ? payload.items.map(normalizePost) : [];
-                if (newItems.length === 0) {
-                    hasMoreBackendPosts = false;
-                } else {
-                    loadedPosts = loadedPosts.concat(newItems);
-                    visiblePostCount += MORE_POSTS_LIMIT;
-                    renderFeedAndMembers();
-                    const lastPost = loadedPosts[loadedPosts.length - 1];
-                    beforeCreatedAt = lastPost?.createdAt || null;
-                    beforePostId = Number.isFinite(lastPost?.postId) ? lastPost.postId : null;
-                    hasMoreBackendPosts = newItems.length >= MORE_POSTS_LIMIT;
-                    window.scrollTo(0, scrollYBeforeLoad);
-                }
+                const maxAvailablePageIndex = Math.max(0, getLoadedPageCount(getVisibleDisplayPosts().length) - 1);
+                currentPageIndex = Math.min(targetPageIndex, maxAvailablePageIndex);
             } catch (error) {
-                console.error('Cannot load more posts:', error);
+                console.error('Cannot load next posts page:', error);
             } finally {
                 isLoadingMore = false;
-                loadMoreBtn.textContent = previousLabel;
-                updateLoadMoreState();
+                renderFeedAndMembers();
             }
         };
 
@@ -1133,7 +1193,7 @@
                 feedEl.innerHTML = `<div class="sv-meta">Đang tải bài viết mới nhất...</div>`;
                 eventsEl.innerHTML = `<li><div class="sv-meta">Đang tải sự kiện...</div></li>`;
                 membersEl.innerHTML = `<div class="p-3 sv-meta">Đang tải thành viên...</div>`;
-                loadMoreBtn.style.display = 'none';
+                postPaginationEl.style.display = 'none';
             }
             try {
                 const params = new URLSearchParams();
@@ -1152,7 +1212,21 @@
             }
         };
 
-        loadMoreBtn.addEventListener('click', loadMorePosts);
+        postsPrevBtn.addEventListener('click', () => {
+            if (currentPageIndex <= 0) {
+                return;
+            }
+            currentPageIndex -= 1;
+            renderFeedAndMembers();
+            scrollFeedCardIntoView();
+        });
+        postsNextBtn.addEventListener('click', async () => {
+            const previousPageIndex = currentPageIndex;
+            await goToHomePage(currentPageIndex + 1);
+            if (currentPageIndex !== previousPageIndex) {
+                scrollFeedCardIntoView();
+            }
+        });
         feedEl.addEventListener('click', (event) => {
             const clickable = event.target.closest('.sv-article--clickable[data-post-id]');
             if (!clickable || !feedEl.contains(clickable)) {

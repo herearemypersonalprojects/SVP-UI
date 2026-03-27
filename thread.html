@@ -234,6 +234,19 @@
             color: #64748b;
             text-align: center;
         }
+        .sv-thread-pagination {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: .75rem;
+            padding: .9rem .95rem .95rem;
+            border-top: 1px solid #e2e8f0;
+        }
+        .sv-thread-pagination__info {
+            min-width: 150px;
+            text-align: center;
+            font-weight: 600;
+        }
         .sv-char-count {
             text-align: right;
             color: #64748b;
@@ -293,6 +306,16 @@
                 margin: 0;
                 width: 44px;
                 height: 44px;
+            }
+            .sv-thread-pagination {
+                flex-wrap: wrap;
+            }
+            .sv-thread-pagination > button {
+                flex: 1 1 calc(50% - .375rem);
+            }
+            .sv-thread-pagination__info {
+                order: -1;
+                width: 100%;
             }
         }
     </style>
@@ -376,6 +399,11 @@
                 </div>
                 <div id="thread-status" class="sv-thread-empty">Đang tải dữ liệu...</div>
                 <div id="thread-posts"></div>
+                <div id="thread-post-pagination" class="sv-thread-pagination d-none" aria-label="Phân trang phản hồi">
+                    <button id="thread-posts-prev" class="btn btn-sm btn-outline-primary" type="button">Trước</button>
+                    <div id="thread-posts-page-info" class="sv-thread-pagination__info sv-meta">Phản hồi 1-10 / 10</div>
+                    <button id="thread-posts-next" class="btn btn-sm btn-outline-primary" type="button">Sau</button>
+                </div>
             </section>
 
             <section id="reply-box" class="sv-card sv-form">
@@ -497,6 +525,7 @@
         const GUEST_REPLY_NAME_KEY = 'svp.thread.guestDisplayName';
         const VIEW_TRACK_KEY_PREFIX = 'svp.thread.viewTrack.v1.';
         const VIEW_TRACK_WINDOW_MS = 6 * 60 * 60 * 1000;
+        const THREAD_REPLIES_PAGE_SIZE = 10;
         const MAX_REPLY_IMAGE_SOURCE_BYTES = 10 * 1024 * 1024;
         const MAX_REPLY_IMAGE_UPLOAD_BYTES = 88 * 1024;
         const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
@@ -542,6 +571,10 @@
         const postsCountEl = document.getElementById('posts-count');
         const statusEl = document.getElementById('thread-status');
         const postsEl = document.getElementById('thread-posts');
+        const threadPostPaginationEl = document.getElementById('thread-post-pagination');
+        const threadPostsPrevBtn = document.getElementById('thread-posts-prev');
+        const threadPostsPageInfoEl = document.getElementById('thread-posts-page-info');
+        const threadPostsNextBtn = document.getElementById('thread-posts-next');
         const kpisEl = document.getElementById('thread-kpis');
         const relatedEl = document.getElementById('related-list');
         const shareSectionEl = document.getElementById('thread-share');
@@ -584,8 +617,9 @@
         let currentThread = null;
         let currentApiComments = [];
         let currentLocalReplies = [];
+        let currentReplyPageIndex = 0;
 
-        if (!breadcrumbEl || !categoryEl || !createdEl || !viewsEl || !repliesEl || !titleEl || !authorEl || !threadHeadActionsEl || !tagsEl || !postsCountEl || !statusEl || !postsEl || !kpisEl || !relatedEl || !replyForm || !replyGuestFieldsEl || !replyIdentityFieldsEl || !replySessionHintEl || !replyNameEl || !replyCaptchaFieldsEl || !replyCaptchaQuestionEl || !replyCaptchaAnswerEl || !replyMessageEl || !replyCharCountEl || !replyImageFieldsEl || !replyImageEl || !replyImageStatusEl || !replyImagePreviewEl || !replyImageClearBtn || !replyFeedbackEl || !replyClearBtn || !scrollReplyBtn || !replySubmitBtn) {
+        if (!breadcrumbEl || !categoryEl || !createdEl || !viewsEl || !repliesEl || !titleEl || !authorEl || !threadHeadActionsEl || !tagsEl || !postsCountEl || !statusEl || !postsEl || !threadPostPaginationEl || !threadPostsPrevBtn || !threadPostsPageInfoEl || !threadPostsNextBtn || !kpisEl || !relatedEl || !replyForm || !replyGuestFieldsEl || !replyIdentityFieldsEl || !replySessionHintEl || !replyNameEl || !replyCaptchaFieldsEl || !replyCaptchaQuestionEl || !replyCaptchaAnswerEl || !replyMessageEl || !replyCharCountEl || !replyImageFieldsEl || !replyImageEl || !replyImageStatusEl || !replyImagePreviewEl || !replyImageClearBtn || !replyFeedbackEl || !replyClearBtn || !scrollReplyBtn || !replySubmitBtn) {
             return;
         }
 
@@ -1714,6 +1748,34 @@
             editLink.innerHTML = '<i class="fa-solid fa-pen-to-square me-1"></i>Sửa chủ đề';
             threadHeadActionsEl.appendChild(editLink);
         };
+        const scrollThreadPostsIntoView = () => {
+            const postsCard = postsEl.closest('.sv-card');
+            if (postsCard) {
+                postsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }
+        };
+        const updateThreadReplyPaginationState = (replyCount) => {
+            const totalPages = Math.max(1, Math.ceil(replyCount / THREAD_REPLIES_PAGE_SIZE));
+            const maxPageIndex = Math.max(0, totalPages - 1);
+            currentReplyPageIndex = Math.min(Math.max(currentReplyPageIndex, 0), maxPageIndex);
+
+            if (replyCount <= THREAD_REPLIES_PAGE_SIZE) {
+                threadPostPaginationEl.classList.add('d-none');
+            } else {
+                threadPostPaginationEl.classList.remove('d-none');
+            }
+
+            threadPostsPrevBtn.disabled = currentReplyPageIndex <= 0;
+            threadPostsNextBtn.disabled = currentReplyPageIndex >= maxPageIndex;
+
+            if (replyCount === 0) {
+                threadPostsPageInfoEl.textContent = 'Chưa có phản hồi';
+                return;
+            }
+            const start = currentReplyPageIndex * THREAD_REPLIES_PAGE_SIZE + 1;
+            const end = Math.min(replyCount, (currentReplyPageIndex + 1) * THREAD_REPLIES_PAGE_SIZE);
+            threadPostsPageInfoEl.textContent = `Phản hồi ${start}-${end} / ${replyCount}`;
+        };
 
         const toPostItem = (post, index, isOriginalPost, knownUsers, threadId) => {
             const sanitizedContentHtml = sanitizeRichContentHtml(
@@ -1752,48 +1814,35 @@
                 lines: Array.isArray(post.contentLines) && post.contentLines.length ? post.contentLines : ['Nội dung đang cập nhật.']
             };
         };
-
-        const renderPosts = (thread, apiComments, localReplies) => {
-            const orderedReplies = sortRepliesByTime([...apiComments, ...localReplies]);
-            const knownUsers = buildKnownUserList([thread, ...orderedReplies]);
-            const caller = getCallerInfo();
-            const postItems = [
-                toPostItem(thread, 1, true, knownUsers, thread.threadId),
-                ...orderedReplies.map((item, idx) => toPostItem(item, idx + 2, false, knownUsers, thread.threadId))
-            ];
-
-            postsCountEl.textContent = `${postItems.length} bài`;
-            statusEl.style.display = 'none';
-
-            postsEl.innerHTML = postItems.map((item) => `
-                ${(() => {
-                    const isSuperadmin = caller.role === 'SUPERADMIN';
-                    const isAdmin = caller.role === 'ADMIN' || isSuperadmin;
-                    const canManagePersistedComment = !item.isOriginalPost && item.persisted && item.commentId > 0;
-                    const canEdit = canManagePersistedComment && (isCommentOwner(caller, item) || isAdmin);
-                    const canHide = canManagePersistedComment && isAdmin;
-                    const hiddenBadge = item.hidden
-                        ? '<span class="badge bg-warning text-dark">ĐÃ ẨN</span>'
-                        : '';
-                    const managementButtons = `
-                        ${canEdit
-                            ? `<button type="button" data-edit-comment-id="${item.commentId}"><i class="fa-solid fa-pen me-1"></i>Sửa</button>`
-                            : ''}
-                        ${canHide
-                            ? `<button type="button" data-toggle-comment-id="${item.commentId}" data-hidden="${item.hidden ? 'true' : 'false'}">${
-                                item.hidden
-                                    ? '<i class="fa-solid fa-eye me-1"></i>Hiện'
-                                    : '<i class="fa-solid fa-eye-slash me-1"></i>Ẩn'
-                            }</button>`
-                            : ''}
-                    `;
-                    return `
+        const renderThreadPostItem = (item, caller) => {
+            const isSuperadmin = caller.role === 'SUPERADMIN';
+            const isAdmin = caller.role === 'ADMIN' || isSuperadmin;
+            const canManagePersistedComment = !item.isOriginalPost && item.persisted && item.commentId > 0;
+            const canEdit = canManagePersistedComment && (isCommentOwner(caller, item) || isAdmin);
+            const canHide = canManagePersistedComment && isAdmin;
+            const hiddenBadge = item.hidden
+                ? '<span class="badge bg-warning text-dark">ĐÃ ẨN</span>'
+                : '';
+            const profileHref = buildProfileHref(item.authorNickname, item.authorUserId, item.authorAuthUserId);
+            const managementButtons = `
+                ${canEdit
+                    ? `<button type="button" data-edit-comment-id="${item.commentId}"><i class="fa-solid fa-pen me-1"></i>Sửa</button>`
+                    : ''}
+                ${canHide
+                    ? `<button type="button" data-toggle-comment-id="${item.commentId}" data-hidden="${item.hidden ? 'true' : 'false'}">${
+                        item.hidden
+                            ? '<i class="fa-solid fa-eye me-1"></i>Hiện'
+                            : '<i class="fa-solid fa-eye-slash me-1"></i>Ẩn'
+                    }</button>`
+                    : ''}
+            `;
+            return `
                 <article class="sv-thread-post">
                     <aside class="sv-thread-post__author">
-                        ${renderInitialAvatar(item.authorName, item.authorSeed, item.authorAvatarUrl, buildProfileHref(item.authorNickname, item.authorUserId, item.authorAuthUserId))}
+                        ${renderInitialAvatar(item.authorName, item.authorSeed, item.authorAvatarUrl, profileHref)}
                         <div class="sv-thread-post__author-meta">
-                            ${buildProfileHref(item.authorNickname, item.authorUserId, item.authorAuthUserId)
-                                ? `<a class="sv-thread-post__author-link" href="${buildProfileHref(item.authorNickname, item.authorUserId, item.authorAuthUserId)}"><div class="sv-thread-post__name">${escapeHtml(item.authorName)}</div></a>`
+                            ${profileHref
+                                ? `<a class="sv-thread-post__author-link" href="${profileHref}"><div class="sv-thread-post__name">${escapeHtml(item.authorName)}</div></a>`
                                 : `<div class="sv-thread-post__name">${escapeHtml(item.authorName)}</div>`}
                             <div class="sv-thread-post__role">${escapeHtml(item.role)}</div>
                         </div>
@@ -1825,9 +1874,26 @@
                         </div>
                     </div>
                 </article>
-                    `;
-                })()}
-            `).join('');
+            `;
+        };
+
+        const renderPosts = (thread, apiComments, localReplies) => {
+            const orderedReplies = sortRepliesByTime([...apiComments, ...localReplies]);
+            const knownUsers = buildKnownUserList([thread, ...orderedReplies]);
+            const caller = getCallerInfo();
+            const maxReplyPageIndex = Math.max(0, Math.ceil(orderedReplies.length / THREAD_REPLIES_PAGE_SIZE) - 1);
+            currentReplyPageIndex = Math.min(Math.max(currentReplyPageIndex, 0), maxReplyPageIndex);
+            const replyStart = currentReplyPageIndex * THREAD_REPLIES_PAGE_SIZE;
+            const visibleReplies = orderedReplies.slice(replyStart, replyStart + THREAD_REPLIES_PAGE_SIZE);
+            const postItems = [
+                toPostItem(thread, 1, true, knownUsers, thread.threadId),
+                ...visibleReplies.map((item, idx) => toPostItem(item, replyStart + idx + 2, false, knownUsers, thread.threadId))
+            ];
+
+            postsCountEl.textContent = `${orderedReplies.length + 1} bài`;
+            statusEl.style.display = 'none';
+            postsEl.innerHTML = postItems.map((item) => renderThreadPostItem(item, caller)).join('');
+            updateThreadReplyPaginationState(orderedReplies.length);
         };
 
         const renderThreadKpis = (thread, metrics, totalPosts, totalReplies) => {
@@ -2315,6 +2381,24 @@
                     }
                 });
             }
+            threadPostsPrevBtn.addEventListener('click', () => {
+                if (currentReplyPageIndex <= 0) {
+                    return;
+                }
+                currentReplyPageIndex -= 1;
+                rerenderCurrentThreadPosts();
+                scrollThreadPostsIntoView();
+            });
+            threadPostsNextBtn.addEventListener('click', () => {
+                const totalReplies = currentApiComments.length + currentLocalReplies.length;
+                const maxReplyPageIndex = Math.max(0, Math.ceil(totalReplies / THREAD_REPLIES_PAGE_SIZE) - 1);
+                if (currentReplyPageIndex >= maxReplyPageIndex) {
+                    return;
+                }
+                currentReplyPageIndex += 1;
+                rerenderCurrentThreadPosts();
+                scrollThreadPostsIntoView();
+            });
 
             postsEl.addEventListener('click', (event) => {
                 const target = event.target instanceof HTMLButtonElement
@@ -2411,6 +2495,7 @@
             statusEl.textContent = message;
             statusEl.style.display = '';
             postsEl.innerHTML = '';
+            threadPostPaginationEl.classList.add('d-none');
             kpisEl.innerHTML = '<li><div><strong>Trạng thái</strong><div class="sv-meta">Không tải được dữ liệu thread từ backend.</div></div></li>';
             relatedEl.innerHTML = '<li><div class="sv-meta">Không tải được chủ đề liên quan.</div></li>';
         };
@@ -2522,6 +2607,7 @@
             currentThread = thread;
             currentApiComments = apiComments;
             currentLocalReplies = localReplies;
+            currentReplyPageIndex = 0;
 
             const metrics = updateThreadMetrics(thread.threadId, (prev) => ({
                 views: Math.max(prev.views, normalizeCount(thread.viewCount)),
@@ -2629,6 +2715,7 @@
                         replies: Math.max(prev.replies, nextTotalReplies),
                         lastCommentAt: createdComment.createdAt || new Date().toISOString()
                     }));
+                    currentReplyPageIndex = Math.max(0, Math.ceil(nextTotalReplies / THREAD_REPLIES_PAGE_SIZE) - 1);
 
                     if (isAuthenticated) {
                         if (authenticatedIdentity.email) {

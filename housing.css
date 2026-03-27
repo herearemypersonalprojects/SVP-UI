@@ -421,6 +421,12 @@
     .sv-housing-form-grid {
         grid-template-columns: 1fr;
     }
+    .sv-housing-panel--map {
+        order: 1;
+    }
+    .sv-housing-panel--filters {
+        order: 2;
+    }
     .sv-housing-list {
         max-height: none;
     }

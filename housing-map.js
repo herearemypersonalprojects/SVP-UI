@@ -225,7 +225,7 @@
             metaEl.textContent = payload.hasMore
                 ? `${state.items.length}+ tin trong khung nhìn`
                 : `${state.items.length} tin trong khung nhìn`;
-            mapStatusEl.textContent = 'Pin trên bản đồ hiển thị giá thuê gần đúng theo khu vực.';
+            mapStatusEl.textContent = '';
         } catch (error) {
             if (requestToken !== state.requestToken) {
                 return;

@@ -78,9 +78,23 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    const htmlEntityDecoder = document.createElement('textarea');
+    const decodeHtmlEntities = (value) => {
+        let text = String(value ?? '');
+        if (!text) return '';
+        for (let index = 0; index < 3; index += 1) {
+            htmlEntityDecoder.innerHTML = text;
+            const decoded = htmlEntityDecoder.value;
+            if (decoded === text) {
+                break;
+            }
+            text = decoded;
+        }
+        return text;
+    };
 
     const sanitizeUrl = (value) => {
-        const raw = String(value || '').trim();
+        const raw = decodeHtmlEntities(value).trim();
         if (!raw) return '';
         try {
             const parsed = new URL(raw, window.location.href);
@@ -114,12 +128,9 @@
         }).format(new Date(time));
     };
 
-    const toPlainText = (html) => String(html ?? '')
+    const toPlainText = (html) => decodeHtmlEntities(html)
         .replace(/<[^>]+>/g, ' ')
-        .replace(/&nbsp;/g, ' ')
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
+        .replace(/\u00a0/g, ' ')
         .replace(/\s+/g, ' ')
         .trim();
 
@@ -194,8 +205,8 @@
 
     const normalizeAuthor = (author) => ({
         userId: String(author && author.userId || '').trim(),
-        nickname: String(author && author.nickname || '').trim(),
-        displayName: String(author && author.displayName || author && author.nickname || 'Thành viên SVP').trim(),
+        nickname: decodeHtmlEntities(author && author.nickname || '').trim(),
+        displayName: decodeHtmlEntities(author && author.displayName || author && author.nickname || 'Thành viên SVP').trim(),
         avatarUrl: sanitizeUrl(author && author.avatarUrl || '')
     });
 
@@ -219,7 +230,7 @@
 
     const makeArticleEntry = (item, tagKey, tagLabel, tagIcon) => {
         const author = normalizeAuthor(item.author || {});
-        const title = String(item.title || 'Bài viết mới').trim();
+        const title = decodeHtmlEntities(item.title || 'Bài viết mới').trim();
         return {
             key: `post:${Number(item.postId || 0)}`,
             entityType: 'article',
@@ -241,7 +252,7 @@
 
     const makeDiscussionEntry = (item) => {
         const author = normalizeAuthor(item.author || {});
-        const title = String(item.title || 'Chủ đề mới').trim();
+        const title = decodeHtmlEntities(item.title || 'Chủ đề mới').trim();
         return {
             key: `post:${Number(item.postId || 0)}`,
             entityType: 'discussion',
@@ -262,7 +273,9 @@
     };
 
     const makeEventEntry = (item) => {
-        const title = String(item.title || 'Sự kiện mới').trim();
+        const title = decodeHtmlEntities(item.title || 'Sự kiện mới').trim();
+        const address = decodeHtmlEntities(item.address || '').trim();
+        const eventTypeName = decodeHtmlEntities(item.eventTypeName || '').trim();
         const priceValue = Number(item.price);
         const priceLabel = Number.isFinite(priceValue) && priceValue > 0
             ? `${priceValue.toLocaleString('vi-VN')}€`
@@ -276,9 +289,9 @@
             sortTime: toTimeValue(item.createdAt),
             author: null,
             coverImageUrl: sanitizeUrl(item.coverImageUrl || item.cover_image_url || item.imageUrl || item.image_url),
-            excerpt: `Được thêm ngày ${formatDateTime(item.createdAt)}. Sự kiện diễn ra vào ${formatDateTime(item.eventTime)}${item.address ? ` tại ${String(item.address).trim()}` : ''}.`,
+            excerpt: `Được thêm ngày ${formatDateTime(item.createdAt)}. Sự kiện diễn ra vào ${formatDateTime(item.eventTime)}${address ? ` tại ${address}` : ''}.`,
             footer: [
-                item.eventTypeName ? `Loại: ${item.eventTypeName}` : 'Sự kiện cộng đồng',
+                eventTypeName ? `Loại: ${eventTypeName}` : 'Sự kiện cộng đồng',
                 priceLabel
             ],
             tags: [{ key: 'event', label: 'Sự kiện mới được thêm', icon: 'fa-solid fa-calendar-plus' }]
@@ -287,7 +300,7 @@
 
     const makeCommentEntry = (item) => {
         const author = normalizeAuthor(item.author || {});
-        const postTitle = String(item.postTitle || 'bài viết liên quan').trim();
+        const postTitle = decodeHtmlEntities(item.postTitle || 'bài viết liên quan').trim();
         return {
             key: `comment:${Number(item.commentId || 0)}`,
             entityType: 'comment',

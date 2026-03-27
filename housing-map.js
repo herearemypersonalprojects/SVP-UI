@@ -14,6 +14,7 @@
     const statusInput = document.getElementById('filter-status');
     const typeInput = document.getElementById('filter-type');
     const transportTypeInput = document.getElementById('filter-transport-type');
+    const DEFAULT_STATUS_FILTER = 'AVAILABLE,RENTED';
 
     if (!form || !listEl || !metaEl || !mapStatusEl || !mapEl || !applyBtn || !resetBtn || !statusInput || !typeInput || !transportTypeInput) {
         return;
@@ -253,7 +254,7 @@
     applyBtn.addEventListener('click', () => { void loadHousing(); });
     resetBtn.addEventListener('click', () => {
         form.reset();
-        statusInput.value = 'AVAILABLE';
+        statusInput.value = DEFAULT_STATUS_FILTER;
         void loadHousing();
     });
 

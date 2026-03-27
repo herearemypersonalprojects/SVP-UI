@@ -467,10 +467,15 @@
             imageHeight: '630'
         },
         'events.html': {
-            title: 'Sự kiện cộng đồng, giao lưu và hội thảo người Việt tại Pháp - SVP',
-            description: 'Theo dõi lịch sự kiện, giao lưu, hội thảo và hoạt động cộng đồng dành cho người Việt tại Pháp.',
+            title: 'Các sự kiện văn hóa và lễ hội sắp tới tại Paris',
+            description: 'Khám phá lịch lễ hội, triển lãm, concert và hoạt động văn hóa sắp tới tại Paris dành cho sinh viên, du học sinh và cộng đồng Việt.',
+            url: 'https://www.svpforum.fr/events.html',
             path: '/events.html',
-            schemaType: 'CollectionPage'
+            schemaType: 'CollectionPage',
+            image: 'https://www.svpforum.fr/assets/icons/og_events_paris.png',
+            imageType: 'image/png',
+            imageWidth: '1200',
+            imageHeight: '630'
         },
         'about.html': {
             title: 'Giới thiệu SVP Forum và cộng đồng tri thức Việt tại Pháp',

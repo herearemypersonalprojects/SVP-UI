@@ -93,6 +93,7 @@
 
     const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
         .test(String(value || '').trim());
+    const isPositiveIntegerLike = (value) => /^[1-9]\d*$/.test(String(value || '').trim());
 
     const setStatus = (text, type) => {
         statusEl.textContent = text || '';
@@ -107,9 +108,14 @@
 
     const getCategoryName = (categoryId) => CATEGORY_NAMES[Number(categoryId)] || 'Chuyên mục khác';
 
-    const buildProfileHref = (nickname, userId) => {
+    const buildProfileHref = (nickname, userId, authUserId) => {
+        if (window.SVPAuth?.buildProfileHref) {
+            return window.SVPAuth.buildProfileHref({ nickname, userId, authUserId }, 'profile.html');
+        }
+        const safeAuthUserId = String(authUserId || '').trim();
         const safeUserId = String(userId || '').trim();
         const safeNickname = String(nickname || '').trim();
+        if (isPositiveIntegerLike(safeAuthUserId)) return `profile.html?auth_user_id=${encodeURIComponent(safeAuthUserId)}`;
         if (isUuidLike(safeUserId)) return `profile.html?user_id=${encodeURIComponent(safeUserId)}`;
         if (safeNickname) return `profile.html?nickname=${encodeURIComponent(safeNickname)}`;
         return 'profile.html';
@@ -196,19 +202,30 @@
         const payload = window.SVPAuth?.parseJwtPayload
             ? window.SVPAuth.parseJwtPayload(accessToken) || {}
             : {};
-        const tokenUserId = isUuidLike(payload.userId) ? payload.userId : (isUuidLike(payload.sub) ? payload.sub : null);
+        const tokenUserId = window.SVPAuth?.resolvePublicUserId
+            ? window.SVPAuth.resolvePublicUserId(localStorage.getItem('userId'), payload.userId, payload.publicUserId)
+            : (isUuidLike(localStorage.getItem('userId')) ? localStorage.getItem('userId') : (isUuidLike(payload.userId) ? payload.userId : null));
+        const tokenAuthUserId = window.SVPAuth?.resolveAuthUserId
+            ? window.SVPAuth.resolveAuthUserId(localStorage.getItem('authUserId'), payload.authUserId, payload.sub)
+            : String(localStorage.getItem('authUserId') || payload.authUserId || payload.sub || '').trim();
         return {
             userId: tokenUserId,
+            authUserId: tokenAuthUserId,
             email: payload.email || localStorage.getItem('userEmail') || '',
             nickname: payload.nickname || localStorage.getItem('userNickname') || '',
             displayName: payload.displayName || localStorage.getItem('userDisplayName') || ''
         };
     };
 
-    const fetchUserSpace = async (nickname, userId) => {
+    const fetchUserSpace = async (authUserId, nickname, userId) => {
         const params = new URLSearchParams();
-        if (nickname) params.set('nickname', nickname);
-        if (!nickname && userId) params.set('userId', userId);
+        if (authUserId) {
+            params.set('authUserId', authUserId);
+        } else if (nickname) {
+            params.set('nickname', nickname);
+        } else if (userId) {
+            params.set('userId', userId);
+        }
         params.set('limit', '12');
         const response = await fetch(`${API_BASE_URL}/users/espace?${params.toString()}`, {
             headers: {
@@ -365,7 +382,8 @@
         if (!profile) return;
         const displayName = profile.displayName || profile.nickname || 'Thành viên';
         nameEl.textContent = displayName;
-        nicknameEl.textContent = profile.nickname ? `@${profile.nickname}` : '';
+        nicknameEl.textContent = '';
+        nicknameEl.classList.add('d-none');
         roleEl.textContent = profile.role ? `Vai trò: ${profile.role}` : '';
         blogCountEl.textContent = Number(space?.stats?.blogCount || 0).toLocaleString('vi-VN');
         followerCountEl.textContent = Number(space?.stats?.followerCount || 0).toLocaleString('vi-VN');
@@ -377,13 +395,16 @@
         setSpaceNote('');
         document.title = `${displayName} - Espace SVP`;
 
-        renderAvatar(avatarEl, displayName, profile.avatarUrl, profile.nickname || profile.userId);
-        renderAvatar(previewAvatar, displayName, profile.avatarUrl, profile.nickname || profile.userId);
+        renderAvatar(avatarEl, displayName, profile.avatarUrl, profile.nickname || profile.authUserId || profile.userId);
+        renderAvatar(previewAvatar, displayName, profile.avatarUrl, profile.nickname || profile.authUserId || profile.userId);
         displayInput.value = displayName;
         avatarUrlInput.value = profile.avatarUrl || '';
 
         if (isSelf) {
             localStorage.setItem('userDisplayName', displayName);
+            if (profile.authUserId) {
+                localStorage.setItem('authUserId', String(profile.authUserId));
+            }
             if (profile.avatarUrl) {
                 localStorage.setItem('userAvatarUrl', profile.avatarUrl);
             } else {
@@ -404,7 +425,7 @@
     const updatePreview = () => {
         const displayName = displayInput.value.trim() || profile?.displayName || profile?.nickname || 'Thành viên';
         const avatarUrl = sanitizeUrl(avatarUrlInput.value.trim());
-        renderAvatar(previewAvatar, displayName, avatarUrl, profile?.nickname || profile?.userId);
+        renderAvatar(previewAvatar, displayName, avatarUrl, profile?.nickname || profile?.authUserId || profile?.userId);
         previewLabel.textContent = avatarUrl ? 'Sẽ dùng URL ảnh mới.' : 'Ảnh đại diện sẽ theo chữ cái và màu mặc định.';
     };
 
@@ -419,6 +440,7 @@
 
     const init = async () => {
         const params = new URLSearchParams(window.location.search);
+        let authUserId = params.get('auth_user_id') || params.get('authUserId');
         let nickname = params.get('nickname');
         let userId = params.get('user_id') || params.get('userId');
 
@@ -429,15 +451,18 @@
             me = null;
         }
 
-        if (!nickname && !userId && isUuidLike(me?.userId)) {
+        if (!authUserId && !nickname && !userId && isPositiveIntegerLike(me?.authUserId)) {
+            authUserId = me.authUserId;
+            window.history.replaceState({}, '', buildProfileHref(me?.nickname, me?.userId, authUserId));
+        } else if (!authUserId && !nickname && !userId && isUuidLike(me?.userId)) {
             userId = me.userId;
-            window.history.replaceState({}, '', buildProfileHref(me?.nickname, userId));
-        } else if (!nickname && !userId && me?.nickname) {
+            window.history.replaceState({}, '', buildProfileHref(me?.nickname, userId, me?.authUserId));
+        } else if (!authUserId && !nickname && !userId && me?.nickname) {
             nickname = me.nickname;
-            window.history.replaceState({}, '', buildProfileHref(nickname, me?.userId));
+            window.history.replaceState({}, '', buildProfileHref(nickname, me?.userId, me?.authUserId));
         }
 
-        if (!nickname && !userId) {
+        if (!authUserId && !nickname && !userId) {
             setStatus('Thiếu thông tin thành viên.', 'error');
             setSpaceNote('Hãy mở link profile của một thành viên hoặc đăng nhập để vào espace của bạn.');
             setEditable(false);
@@ -446,7 +471,7 @@
         }
 
         try {
-            space = await fetchUserSpace(nickname, userId);
+            space = await fetchUserSpace(authUserId, nickname, userId);
         } catch (error) {
             setStatus(error.message || 'Không thể tải espace.', 'error');
             setSpaceNote('Không thể tải espace thành viên vào lúc này.');
@@ -457,8 +482,8 @@
 
         profile = space && typeof space.profile === 'object' ? space.profile : null;
         isSelf = Boolean(space?.viewer?.self);
-        if (profile?.userId) {
-            window.history.replaceState({}, '', buildProfileHref(profile.nickname, profile.userId));
+        if (profile?.authUserId || profile?.userId || profile?.nickname) {
+            window.history.replaceState({}, '', buildProfileHref(profile.nickname, profile.userId, profile.authUserId));
         }
         setEditable(isSelf);
         renderProfile();

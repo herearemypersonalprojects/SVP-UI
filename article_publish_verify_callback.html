@@ -55,13 +55,18 @@
     const isObject = (value) => value && typeof value === 'object' && !Array.isArray(value);
     const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
         .test(asText(value));
+    const isPositiveIntegerLike = (value) => /^[1-9]\d*$/.test(asText(value));
     const buildArticleHref = (postId, title) => {
         if (urlHelpers && typeof urlHelpers.buildDetailPath === 'function') {
             return urlHelpers.buildDetailPath('article', postId, title);
         }
         return `post_detail.html?postId=${encodeURIComponent(postId)}`;
     };
-    const buildProfileHref = (nickname, userId) => {
+    const buildProfileHref = (nickname, userId, authUserId) => {
+        if (window.SVPAuth?.buildProfileHref) {
+            return window.SVPAuth.buildProfileHref({ nickname, userId, authUserId }, 'profile.html');
+        }
+        if (isPositiveIntegerLike(authUserId)) return `profile.html?auth_user_id=${encodeURIComponent(asText(authUserId))}`;
         if (isUuidLike(userId)) return `profile.html?user_id=${encodeURIComponent(asText(userId))}`;
         if (asText(nickname)) return `profile.html?nickname=${encodeURIComponent(asText(nickname))}`;
         return 'profile.html';
@@ -96,6 +101,7 @@
             nickname: asText(auth.nickname),
             displayName: asText(auth.displayName),
             userId: asText(auth.userId),
+            authUserId: asText(auth.authUserId),
             tokenType: asText(auth.tokenType),
             accessExpiresAt: asText(auth.accessExpiresAt),
             refreshExpiresAt: asText(auth.refreshExpiresAt)
@@ -138,13 +144,14 @@
     const applyAuthToLocalStorage = (auth) => {
         const normalized = normalizeAuth(auth);
         if (!normalized) return false;
+        if (window.SVPAuth && typeof window.SVPAuth.saveSession === 'function') {
+            return window.SVPAuth.saveSession(normalized);
+        }
         localStorage.setItem('accessToken', normalized.accessToken);
         localStorage.setItem('refreshToken', normalized.refreshToken);
-        if (normalized.email) localStorage.setItem('userEmail', normalized.email);
-        if (normalized.nickname) localStorage.setItem('userNickname', normalized.nickname);
-        if (normalized.displayName) localStorage.setItem('userDisplayName', normalized.displayName);
         if (normalized.userId) localStorage.setItem('userId', normalized.userId);
-        return true;
+        if (normalized.authUserId) localStorage.setItem('authUserId', normalized.authUserId);
+        return Boolean(normalized.accessToken && normalized.refreshToken);
     };
 
     const setError = (message) => {
@@ -190,7 +197,7 @@
             const hasProfileTarget = Boolean(auth);
             updatePrimaryAction(
                 hasProfileTarget
-                    ? buildProfileHref(auth.nickname, auth.userId)
+                    ? buildProfileHref(auth.nickname, auth.userId, auth.authUserId)
                     : (Number(options.postId) > 0 ? buildArticleHref(Number(options.postId), articleTitle) : 'profile.html'),
                 hasProfileTarget ? 'Vào espace của bạn' : 'Mở bài blog'
             );
@@ -237,7 +244,8 @@
         email: readParam('email'),
         nickname: readParam('nickname'),
         displayName: readParam('displayName'),
-        userId: readParam('userId')
+        userId: readParam('userId'),
+        authUserId: readParam('authUserId')
     });
     if (hashAuth) {
         setPendingAuth(hashAuth);

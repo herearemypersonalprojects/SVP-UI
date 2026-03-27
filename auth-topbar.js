@@ -68,10 +68,121 @@
         }
     };
 
+    const asText = (value) => String(value ?? "").trim();
+    const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        .test(asText(value));
+    const isPositiveIntegerLike = (value) => /^[1-9]\d*$/.test(asText(value));
+    const resolvePublicUserId = (...candidates) => {
+        for (const candidate of candidates) {
+            const value = asText(candidate);
+            if (isUuidLike(value)) {
+                return value;
+            }
+        }
+        return "";
+    };
+    const resolveAuthUserId = (...candidates) => {
+        for (const candidate of candidates) {
+            const value = asText(candidate);
+            if (isPositiveIntegerLike(value)) {
+                return value;
+            }
+        }
+        return "";
+    };
+    const buildProfileHref = (identity, fallback = "profile.html") => {
+        const source = identity && typeof identity === "object" ? identity : {};
+        const authUserId = resolveAuthUserId(
+            source.authUserId,
+            source.auth_user_id,
+            !isUuidLike(source.userId) ? source.userId : "",
+            !isUuidLike(source.user_id) ? source.user_id : ""
+        );
+        if (authUserId) {
+            return "profile.html?auth_user_id=" + encodeURIComponent(authUserId);
+        }
+        const publicUserId = resolvePublicUserId(
+            source.userId,
+            source.user_id,
+            source.publicUserId
+        );
+        if (publicUserId) {
+            return "profile.html?user_id=" + encodeURIComponent(publicUserId);
+        }
+        const nickname = asText(source.nickname);
+        if (nickname) {
+            return "profile.html?nickname=" + encodeURIComponent(nickname);
+        }
+        return fallback;
+    };
+    const normalizeSessionPayload = (payload) => {
+        if (!payload || typeof payload !== "object") {
+            return null;
+        }
+        const publicUserId = resolvePublicUserId(payload.userId, payload.publicUserId);
+        const legacyAuthUserId = !isUuidLike(payload.userId) && isPositiveIntegerLike(payload.userId)
+            ? payload.userId
+            : "";
+        const authUserId = resolveAuthUserId(
+            payload.authUserId,
+            legacyAuthUserId,
+            payload.sub
+        );
+        return {
+            accessToken: asText(payload.accessToken),
+            refreshToken: asText(payload.refreshToken),
+            email: asText(payload.email),
+            nickname: asText(payload.nickname),
+            displayName: asText(payload.displayName),
+            userId: publicUserId,
+            authUserId,
+            avatarUrl: resolveAvatarUrl(payload.avatarUrl || "")
+        };
+    };
+    const persistIdentity = (payload) => {
+        const normalized = normalizeSessionPayload(payload);
+        if (!normalized) {
+            return null;
+        }
+        if (normalized.email) {
+            localStorage.setItem("userEmail", normalized.email);
+        } else {
+            localStorage.removeItem("userEmail");
+        }
+        if (normalized.nickname) {
+            localStorage.setItem("userNickname", normalized.nickname);
+        } else {
+            localStorage.removeItem("userNickname");
+        }
+        if (normalized.displayName) {
+            localStorage.setItem("userDisplayName", normalized.displayName);
+        } else {
+            localStorage.removeItem("userDisplayName");
+        }
+        if (normalized.userId) {
+            localStorage.setItem("userId", normalized.userId);
+        } else {
+            localStorage.removeItem("userId");
+        }
+        if (normalized.authUserId) {
+            localStorage.setItem("authUserId", normalized.authUserId);
+        } else {
+            localStorage.removeItem("authUserId");
+        }
+        if (normalized.avatarUrl) {
+            localStorage.setItem("userAvatarUrl", normalized.avatarUrl);
+        }
+        return normalized;
+    };
+
     const getProfileCacheSessionKey = () => {
         const token = localStorage.getItem("accessToken") || "";
         const payload = parseJwtPayload(token) || {};
-        return String(localStorage.getItem("userId") || payload.sub || payload.email || "").trim();
+        return asText(
+            resolveAuthUserId(localStorage.getItem("authUserId"), payload.authUserId, payload.sub)
+            || resolvePublicUserId(localStorage.getItem("userId"), payload.userId)
+            || payload.email
+        );
     };
 
     const clearProfileCache = () => {
@@ -111,10 +222,12 @@
                 sessionKey,
                 ts: Date.now(),
                 profile: {
-                    displayName: String(profile.displayName || "").trim(),
+                    displayName: asText(profile.displayName),
                     avatarUrl: resolveAvatarUrl(profile.avatarUrl || ""),
-                    email: String(profile.email || "").trim(),
-                    nickname: String(profile.nickname || "").trim()
+                    email: asText(profile.email),
+                    nickname: asText(profile.nickname),
+                    userId: resolvePublicUserId(profile.userId),
+                    authUserId: resolveAuthUserId(profile.authUserId)
                 }
             }));
         } catch (_) {
@@ -128,33 +241,26 @@
         localStorage.removeItem("userNickname");
         localStorage.removeItem("userDisplayName");
         localStorage.removeItem("userId");
+        localStorage.removeItem("authUserId");
         localStorage.removeItem("userAvatarUrl");
         clearProfileCache();
     };
 
     const saveSession = (payload) => {
-        if (!payload || typeof payload !== "object") {
+        const normalized = normalizeSessionPayload(payload);
+        if (!normalized) {
             return false;
         }
-        const accessToken = String(payload.accessToken || "").trim();
-        const refreshToken = String(payload.refreshToken || "").trim();
+        const accessToken = normalized.accessToken;
+        const refreshToken = normalized.refreshToken;
         if (!accessToken || !refreshToken) {
             return false;
         }
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
-        if (payload.email) {
-            localStorage.setItem("userEmail", payload.email);
-        }
-        if (payload.nickname) {
-            localStorage.setItem("userNickname", payload.nickname);
-        }
-        if (payload.displayName) {
-            localStorage.setItem("userDisplayName", payload.displayName);
-        }
-        if (payload.userId !== undefined && payload.userId !== null) {
-            localStorage.setItem("userId", String(payload.userId));
-        }
+        localStorage.removeItem("userAvatarUrl");
+        clearProfileCache();
+        persistIdentity(normalized);
         return true;
     };
 
@@ -282,9 +388,6 @@
         }
     };
 
-    const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
-        .test(String(value || "").trim());
-
     const updateInboxBadge = () => {
         const badgeEl = authBox ? authBox.querySelector("[data-sv-inbox-badge]") : null;
         if (!badgeEl) {
@@ -391,7 +494,7 @@
             if (!event || !event.key) {
                 return;
             }
-            if (!["accessToken", "refreshToken", "userId"].includes(event.key)) {
+            if (!["accessToken", "refreshToken", "userId", "authUserId"].includes(event.key)) {
                 return;
             }
             if (!localStorage.getItem("accessToken")) {
@@ -442,19 +545,21 @@
         }
 
         const payload = parseJwtPayload(token) || {};
-        const nickname = (localStorage.getItem("userNickname") || payload.nickname || "").trim();
-        const userId = (localStorage.getItem("userId") || String(payload.userId || payload.sub || "")).trim();
-        const email = (localStorage.getItem("userEmail") || payload.email || "").trim();
+        const nickname = asText(localStorage.getItem("userNickname") || payload.nickname);
+        const userId = resolvePublicUserId(localStorage.getItem("userId"), profileOverride?.userId, payload.userId);
+        const authUserId = resolveAuthUserId(
+            localStorage.getItem("authUserId"),
+            profileOverride?.authUserId,
+            payload.authUserId,
+            payload.sub
+        );
+        const email = asText(localStorage.getItem("userEmail") || payload.email);
         const displayName = (profileOverride && profileOverride.displayName)
-            ? String(profileOverride.displayName).trim()
-            : (localStorage.getItem("userDisplayName") || payload.displayName || nickname || email || "Tai khoan");
+            ? asText(profileOverride.displayName)
+            : asText(localStorage.getItem("userDisplayName") || payload.displayName || nickname || email || "Tai khoan");
         const initial = (displayName.charAt(0) || "U").toUpperCase();
-        const profileHref = isUuidLike(userId)
-            ? "profile.html?user_id=" + encodeURIComponent(userId)
-            : (nickname
-                ? "profile.html?nickname=" + encodeURIComponent(nickname)
-                : "profile.html");
-        const role = String(payload.role || "").toUpperCase();
+        const profileHref = buildProfileHref({ nickname, userId, authUserId }, "profile.html");
+        const role = asText(payload.role).toUpperCase();
         const dashboardLink = role === "SUPERADMIN" || role === "ADMIN"
             ? '<a class="sv-auth-dashboard" href="admin_dashboard.html">Dashboard</a>'
             : "";
@@ -502,6 +607,12 @@
 
     window.SVPAuth = {
         parseJwtPayload,
+        normalizeSessionPayload,
+        persistIdentity,
+        resolvePublicUserId,
+        resolveAuthUserId,
+        buildProfileHref,
+        saveSession,
         removeSession,
         refreshAccessToken,
         getValidAccessToken
@@ -515,12 +626,14 @@
 
     const refreshProfileAvatar = async (accessTokenOverride) => {
         const cachedProfile = readFreshProfileCache();
-        if (cachedProfile) {
+        const knownProfileId = resolveAuthUserId(localStorage.getItem("authUserId"), cachedProfile?.authUserId)
+            || resolvePublicUserId(localStorage.getItem("userId"), cachedProfile?.userId);
+        if (cachedProfile && knownProfileId) {
             renderTopbar(cachedProfile);
             return;
         }
         const existingAvatar = localStorage.getItem("userAvatarUrl");
-        if (existingAvatar) {
+        if (existingAvatar && knownProfileId) {
             return;
         }
         const accessToken = accessTokenOverride || await getValidAccessToken();
@@ -535,25 +648,23 @@
                 return;
             }
             const payload = await response.json().catch(() => ({}));
-            if (payload.displayName) {
-                localStorage.setItem("userDisplayName", String(payload.displayName));
-            } else if (payload.nickname) {
-                localStorage.removeItem("userDisplayName");
-            }
-            if (payload.avatarUrl) {
-                localStorage.setItem("userAvatarUrl", String(payload.avatarUrl));
-            } else {
+            persistIdentity(payload);
+            if (!payload.avatarUrl) {
                 localStorage.removeItem("userAvatarUrl");
             }
             saveProfileCache({
                 displayName: payload.displayName || payload.nickname || payload.email,
                 avatarUrl: payload.avatarUrl,
                 email: payload.email,
-                nickname: payload.nickname
+                nickname: payload.nickname,
+                userId: payload.userId,
+                authUserId: payload.authUserId
             });
             renderTopbar({
                 displayName: payload.displayName || payload.nickname || payload.email,
-                avatarUrl: payload.avatarUrl
+                avatarUrl: payload.avatarUrl,
+                userId: payload.userId,
+                authUserId: payload.authUserId
             });
         } catch (_) {
         }

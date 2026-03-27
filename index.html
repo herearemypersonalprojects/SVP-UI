@@ -676,9 +676,17 @@
         };
         const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
             .test(String(value ?? '').trim());
-        const buildProfileHref = (nickname, userId, fallback = '') => {
+        const isPositiveIntegerLike = (value) => /^[1-9]\d*$/.test(String(value ?? '').trim());
+        const buildProfileHref = (nickname, userId, authUserId, fallback = '') => {
+            if (window.SVPAuth?.buildProfileHref) {
+                return window.SVPAuth.buildProfileHref({ nickname, userId, authUserId }, fallback);
+            }
+            const safeAuthUserId = String(authUserId ?? '').trim();
             const safeUserId = String(userId ?? '').trim();
             const safeNickname = String(nickname ?? '').trim();
+            if (isPositiveIntegerLike(safeAuthUserId)) {
+                return `profile.html?auth_user_id=${encodeURIComponent(safeAuthUserId)}`;
+            }
             if (isUuidLike(safeUserId)) {
                 return `profile.html?user_id=${encodeURIComponent(safeUserId)}`;
             }
@@ -775,6 +783,7 @@
                 resolvedCoverImageUrl: extractCoverFromContent(coverImageUrl, contentHtml),
                 createdAt: post?.createdAt || post?.created_at || new Date().toISOString(),
                 author: {
+                    authUserId: rawAuthor.authUserId ?? rawAuthor.auth_user_id ?? post?.authorAuthUserId ?? post?.author_auth_user_id ?? null,
                     userId: rawAuthor.userId ?? rawAuthor.user_id ?? post?.userId ?? post?.user_id ?? null,
                     nickname: decodeHtmlEntities(rawAuthor.nickname || post?.nickname || rawAuthor.authorName || post?.authorName || 'anonymous'),
                     displayName: decodeHtmlEntities(
@@ -896,7 +905,7 @@
             const safeDate = escapeHtml(formatDate(post.createdAt));
             const safeLead = escapeHtml(post.leadText || 'Bài viết đang được cập nhật nội dung.');
             const safeCover = escapeHtml(post.resolvedCoverImageUrl || '');
-            const authorProfileHref = buildProfileHref(author.nickname, author.userId);
+            const authorProfileHref = buildProfileHref(author.nickname, author.userId, author.authUserId);
             const authorLabel = authorProfileHref
                 ? `<a class="sv-author-link" href="${authorProfileHref}">${safeAuthor}</a>`
                 : safeAuthor;
@@ -953,7 +962,7 @@
             const byUser = new Map();
             posts.forEach((post) => {
                 const author = post.author || {};
-                const userId = author.userId || post.userId || `post-${post.postId}`;
+                const userId = author.authUserId || author.userId || post.userId || `post-${post.postId}`;
                 if (!byUser.has(userId)) {
                     byUser.set(userId, {
                         author,
@@ -985,7 +994,7 @@
                     ? categoryLabels.join(', ')
                     : 'Đang cập nhật chủ đề'
             );
-            const profileHref = buildProfileHref(author.nickname, author.userId, 'profile.html');
+            const profileHref = buildProfileHref(author.nickname, author.userId, author.authUserId, 'profile.html');
 
             let avatarHtml;
             const avatarUrl = resolveAvatarUrl(author.avatarUrl ?? author.avatar_url);

@@ -41,12 +41,14 @@
             hideSpinner();
             return;
         }
-        localStorage.setItem('accessToken', accessToken);
-        localStorage.setItem('refreshToken', refreshToken);
-        if (data.email) localStorage.setItem('userEmail', data.email);
-        if (data.nickname) localStorage.setItem('userNickname', data.nickname);
-        if (data.displayName) localStorage.setItem('userDisplayName', data.displayName);
-        if (data.userId) localStorage.setItem('userId', data.userId);
+        if (window.SVPAuth && typeof window.SVPAuth.saveSession === 'function') {
+            window.SVPAuth.saveSession(data);
+        } else {
+            localStorage.setItem('accessToken', accessToken);
+            localStorage.setItem('refreshToken', refreshToken);
+            if (data.userId) localStorage.setItem('userId', data.userId);
+            if (data.authUserId) localStorage.setItem('authUserId', data.authUserId);
+        }
 
         msg.textContent = 'Đăng nhập thành công. Đang chuyển về trang chủ...';
         setTimeout(() => { window.location.replace('index.html'); }, 500);
@@ -86,7 +88,8 @@
         email: hashParams.get('email') || '',
         nickname: hashParams.get('nickname') || '',
         displayName: hashParams.get('displayName') || '',
-        userId: hashParams.get('userId') || ''
+        userId: hashParams.get('userId') || '',
+        authUserId: hashParams.get('authUserId') || ''
     });
 })();
 </script>

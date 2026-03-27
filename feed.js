@@ -110,6 +110,7 @@
     };
     const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
         .test(String(value || '').trim());
+    const isPositiveIntegerLike = (value) => /^[1-9]\d*$/.test(String(value || '').trim());
 
     const formatDateTime = (value) => {
         const time = toTimeValue(value);
@@ -176,7 +177,12 @@
 
     const buildProfileHref = (author) => {
         const nickname = String(author && author.nickname || '').trim();
+        const authUserId = String(author && author.authUserId || '').trim();
         const userId = String(author && author.userId || '').trim();
+        if (window.SVPAuth?.buildProfileHref) {
+            return window.SVPAuth.buildProfileHref({ nickname, userId, authUserId }, '');
+        }
+        if (isPositiveIntegerLike(authUserId)) return `profile.html?auth_user_id=${encodeURIComponent(authUserId)}`;
         if (isUuidLike(userId)) return `profile.html?user_id=${encodeURIComponent(userId)}`;
         if (nickname) return `profile.html?nickname=${encodeURIComponent(nickname)}`;
         return '';
@@ -206,6 +212,16 @@
     };
 
     const normalizeAuthor = (author, fallbackSource) => ({
+        authUserId: decodeHtmlEntities(
+            author && author.authUserId
+            || author && author.auth_user_id
+            || author && author.authorAuthUserId
+            || fallbackSource && fallbackSource.authorAuthUserId
+            || fallbackSource && fallbackSource.author_auth_user_id
+            || (!isUuidLike(author && author.userId) ? author && author.userId : '')
+            || (!isUuidLike(fallbackSource && fallbackSource.authorUserId) ? fallbackSource && fallbackSource.authorUserId : '')
+            || ''
+        ).trim(),
         userId: decodeHtmlEntities(
             author && author.userId
             || author && author.user_id

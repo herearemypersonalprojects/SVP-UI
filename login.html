@@ -72,12 +72,14 @@
                 setMsg(payload.error || 'Đăng nhập thất bại.', false);
                 return;
             }
-            localStorage.setItem('accessToken', payload.accessToken || '');
-            localStorage.setItem('refreshToken', payload.refreshToken || '');
-            if (payload.email) localStorage.setItem('userEmail', payload.email);
-            if (payload.nickname) localStorage.setItem('userNickname', payload.nickname);
-            if (payload.displayName) localStorage.setItem('userDisplayName', payload.displayName);
-            if (payload.userId) localStorage.setItem('userId', payload.userId);
+            if (window.SVPAuth && typeof window.SVPAuth.saveSession === 'function') {
+                window.SVPAuth.saveSession(payload);
+            } else {
+                localStorage.setItem('accessToken', payload.accessToken || '');
+                localStorage.setItem('refreshToken', payload.refreshToken || '');
+                if (payload.userId) localStorage.setItem('userId', payload.userId);
+                if (payload.authUserId) localStorage.setItem('authUserId', payload.authUserId);
+            }
             setMsg('Đăng nhập thành công, đang chuyển trang...', true);
             window.location.replace('index.html');
         } catch (_) {

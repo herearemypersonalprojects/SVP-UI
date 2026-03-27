@@ -871,9 +871,17 @@
         } catch { return ''; }
     };
 
-    const buildProfileHref = (nickname, userId) => {
+    const isPositiveIntegerLike = (value) => /^[1-9]\d*$/.test(String(value || '').trim());
+    const buildProfileHref = (nickname, userId, authUserId) => {
+        if (window.SVPAuth?.buildProfileHref) {
+            return window.SVPAuth.buildProfileHref({ nickname, userId, authUserId }, '');
+        }
+        const safeAuthUserId = String(authUserId || '').trim();
         const safeUserId = String(userId || '').trim();
         const safeNickname = String(nickname || '').trim();
+        if (isPositiveIntegerLike(safeAuthUserId)) {
+            return `profile.html?auth_user_id=${encodeURIComponent(safeAuthUserId)}`;
+        }
         if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(safeUserId)) {
             return `profile.html?user_id=${encodeURIComponent(safeUserId)}`;
         }
@@ -1114,22 +1122,27 @@
 
     const buildKnownCommentUsers = (post, comments) => {
         const lookup = new Map();
-        const rememberUser = (displayName, nickname, userId) => {
+        const rememberUser = (displayName, nickname, userId, authUserId) => {
             const normalizedName = normalizeReplyTarget(displayName);
             if (!normalizedName) {
                 return;
             }
             const key = normalizeReplyLookupKey(normalizedName);
-            const profileHref = buildProfileHref(String(nickname || ''), String(userId || ''));
+            const profileHref = buildProfileHref(String(nickname || ''), String(userId || ''), String(authUserId || ''));
             const current = lookup.get(key);
             if (!current || (!current.profileHref && profileHref)) {
                 lookup.set(key, { displayName: normalizedName, profileHref });
             }
         };
 
-        rememberUser(post?.author?.displayName || post?.author?.nickname || '', post?.author?.nickname || '', post?.author?.userId || '');
+        rememberUser(
+            post?.author?.displayName || post?.author?.nickname || '',
+            post?.author?.nickname || '',
+            post?.author?.userId || '',
+            post?.author?.authUserId || ''
+        );
         (Array.isArray(comments) ? comments : []).forEach((comment) => {
-            rememberUser(comment?.authorName || '', comment?.authorNickname || '', comment?.authorUserId || '');
+            rememberUser(comment?.authorName || '', comment?.authorNickname || '', comment?.authorUserId || '', comment?.authorAuthUserId || '');
         });
 
         return Array.from(lookup.values()).sort((left, right) => right.displayName.length - left.displayName.length);
@@ -1236,6 +1249,7 @@
             createdAt: post?.createdAt || post?.created_at || new Date().toISOString(),
             status: String(post?.status || 'PUBLISHED'),
             author: {
+                authUserId: rawAuthor.authUserId || rawAuthor.auth_user_id || post?.authorAuthUserId || post?.author_auth_user_id || null,
                 userId: rawAuthor.userId || post?.authorUserId || post?.author_user_id || null,
                 nickname: rawAuthor.nickname || post?.authorNickname || post?.author_nickname || post?.nickname || 'anonymous',
                 displayName: rawAuthor.displayName || post?.authorDisplayName || post?.author_display_name || post?.authorName || post?.nickname || 'Ẩn danh',
@@ -1257,6 +1271,7 @@
             authorName: String(author.displayName || author.nickname || c?.authorName || 'Ẩn danh'),
             authorSeed: String(author.nickname || author.userId || author.displayName || c?.authorName || 'anonymous'),
             authorNickname: String(author.nickname || ''),
+            authorAuthUserId: String(author.authUserId || author.auth_user_id || c?.authorAuthUserId || c?.author_auth_user_id || ''),
             authorUserId: String(author.userId || ''),
             authorAvatarUrl: String(author.avatarUrl || author.avatar_url || c?.authorAvatarUrl || c?.author_avatar_url || c?.avatarUrl || c?.avatar_url || ''),
             createdAt: String(c?.createdAt || c?.created_at || ''),
@@ -1659,7 +1674,7 @@
         if (titleEl) titleEl.textContent = post.title || 'Chưa có tiêu đề';
 
         // Author
-        const profileHref = buildProfileHref(author.nickname, author.userId) || 'profile.html';
+        const profileHref = buildProfileHref(author.nickname, author.userId, author.authUserId) || 'profile.html';
         if (authorAvatarEl) {
             const avatarUrl = toSafeHttpUrl(author.avatarUrl || author.avatar_url || '');
             if (avatarUrl) {
@@ -1784,7 +1799,7 @@
             : (palette
                 ? ` style="background:${escapeHtml(palette.bg)};color:${escapeHtml(palette.fg)};"`
                 : '');
-        const profileHref = buildProfileHref(comment.authorNickname, comment.authorUserId);
+        const profileHref = buildProfileHref(comment.authorNickname, comment.authorUserId, comment.authorAuthUserId);
         const avatarLabel = avatarUrl ? '' : escapeHtml(initial);
         const avatarNode = profileHref
             ? `<a class="pd-comment-link" href="${profileHref}" aria-label="Hồ sơ ${escapeHtml(comment.authorName)}"><div class="pd-comment-avatar"${avatarStyle}>${avatarLabel}</div></a>`

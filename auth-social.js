@@ -37,15 +37,14 @@
     });
 
     const saveSession = (payload) => {
+        if (window.SVPAuth && typeof window.SVPAuth.saveSession === 'function') {
+            window.SVPAuth.saveSession(payload);
+            return;
+        }
         localStorage.setItem('accessToken', String(payload?.accessToken || ''));
         localStorage.setItem('refreshToken', String(payload?.refreshToken || ''));
-        localStorage.removeItem('userAvatarUrl');
-        if (payload?.email) localStorage.setItem('userEmail', String(payload.email));
-        if (payload?.nickname) localStorage.setItem('userNickname', String(payload.nickname));
-        if (payload?.displayName) localStorage.setItem('userDisplayName', String(payload.displayName));
-        if (payload?.userId !== undefined && payload?.userId !== null) {
-            localStorage.setItem('userId', String(payload.userId));
-        }
+        if (payload?.userId) localStorage.setItem('userId', String(payload.userId));
+        if (payload?.authUserId) localStorage.setItem('authUserId', String(payload.authUserId));
     };
 
     const fetchProviderConfig = async () => {

@@ -108,6 +108,8 @@
         const parsed = Date.parse(String(value || ''));
         return Number.isFinite(parsed) ? parsed : 0;
     };
+    const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        .test(String(value || '').trim());
 
     const formatDateTime = (value) => {
         const time = toTimeValue(value);
@@ -175,7 +177,7 @@
     const buildProfileHref = (author) => {
         const nickname = String(author && author.nickname || '').trim();
         const userId = String(author && author.userId || '').trim();
-        if (userId) return `profile.html?user_id=${encodeURIComponent(userId)}`;
+        if (isUuidLike(userId)) return `profile.html?user_id=${encodeURIComponent(userId)}`;
         if (nickname) return `profile.html?nickname=${encodeURIComponent(nickname)}`;
         return '';
     };
@@ -203,11 +205,36 @@
         };
     };
 
-    const normalizeAuthor = (author) => ({
-        userId: String(author && author.userId || '').trim(),
-        nickname: decodeHtmlEntities(author && author.nickname || '').trim(),
-        displayName: decodeHtmlEntities(author && author.displayName || author && author.nickname || 'Thành viên SVP').trim(),
-        avatarUrl: sanitizeUrl(author && author.avatarUrl || '')
+    const normalizeAuthor = (author, fallbackSource) => ({
+        userId: decodeHtmlEntities(
+            author && author.userId
+            || author && author.user_id
+            || fallbackSource && fallbackSource.authorUserId
+            || fallbackSource && fallbackSource.author_user_id
+            || ''
+        ).trim(),
+        nickname: decodeHtmlEntities(
+            author && author.nickname
+            || fallbackSource && fallbackSource.authorNickname
+            || fallbackSource && fallbackSource.author_nickname
+            || ''
+        ).trim(),
+        displayName: decodeHtmlEntities(
+            author && author.displayName
+            || author && author.display_name
+            || fallbackSource && fallbackSource.authorDisplayName
+            || fallbackSource && fallbackSource.author_display_name
+            || author && author.nickname
+            || fallbackSource && fallbackSource.authorNickname
+            || 'Thành viên SVP'
+        ).trim(),
+        avatarUrl: sanitizeUrl(
+            author && author.avatarUrl
+            || author && author.avatar_url
+            || fallbackSource && fallbackSource.authorAvatarUrl
+            || fallbackSource && fallbackSource.author_avatar_url
+            || ''
+        )
     });
 
     const renderAuthorLink = (author) => {
@@ -229,7 +256,7 @@
     };
 
     const makeArticleEntry = (item, tagKey, tagLabel, tagIcon) => {
-        const author = normalizeAuthor(item.author || {});
+        const author = normalizeAuthor(item.author || {}, item);
         const title = decodeHtmlEntities(item.title || 'Bài viết mới').trim();
         return {
             key: `post:${Number(item.postId || 0)}`,
@@ -251,7 +278,7 @@
     };
 
     const makeDiscussionEntry = (item) => {
-        const author = normalizeAuthor(item.author || {});
+        const author = normalizeAuthor(item.author || {}, item);
         const title = decodeHtmlEntities(item.title || 'Chủ đề mới').trim();
         return {
             key: `post:${Number(item.postId || 0)}`,
@@ -299,7 +326,7 @@
     };
 
     const makeCommentEntry = (item) => {
-        const author = normalizeAuthor(item.author || {});
+        const author = normalizeAuthor(item.author || {}, item);
         const postTitle = decodeHtmlEntities(item.postTitle || 'bài viết liên quan').trim();
         return {
             key: `comment:${Number(item.commentId || 0)}`,

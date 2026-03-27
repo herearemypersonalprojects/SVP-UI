@@ -53,6 +53,8 @@
     const safeTitle = (value) => String(value || '').trim();
     const asText = (value) => String(value || '').trim();
     const isObject = (value) => value && typeof value === 'object' && !Array.isArray(value);
+    const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+        .test(asText(value));
     const buildArticleHref = (postId, title) => {
         if (urlHelpers && typeof urlHelpers.buildDetailPath === 'function') {
             return urlHelpers.buildDetailPath('article', postId, title);
@@ -60,7 +62,7 @@
         return `post_detail.html?postId=${encodeURIComponent(postId)}`;
     };
     const buildProfileHref = (nickname, userId) => {
-        if (asText(userId)) return `profile.html?user_id=${encodeURIComponent(asText(userId))}`;
+        if (isUuidLike(userId)) return `profile.html?user_id=${encodeURIComponent(asText(userId))}`;
         if (asText(nickname)) return `profile.html?nickname=${encodeURIComponent(asText(nickname))}`;
         return 'profile.html';
     };

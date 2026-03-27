@@ -608,6 +608,18 @@
             return sorted;
         };
 
+        const buildProfileHref = (nickname, userId) => {
+            const safeUserId = String(userId || '').trim();
+            const safeNickname = String(nickname || '').trim();
+            if (/^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(safeUserId)) {
+                return `profile.html?user_id=${encodeURIComponent(safeUserId)}`;
+            }
+            if (safeNickname) {
+                return `profile.html?nickname=${encodeURIComponent(safeNickname)}`;
+            }
+            return '';
+        };
+
         const renderList = (items) => {
             if (!items.length) {
                 if (state.loadError && state.threads.length === 0) {
@@ -623,9 +635,7 @@
             listEl.innerHTML = items.map((thread) => {
                 const metrics = getMetrics(thread);
                 const lastActive = metrics.lastCommentAt || thread.lastActivityAt || thread.createdAt;
-                const profileHref = thread.authorUserId
-                    ? `profile.html?user_id=${encodeURIComponent(thread.authorUserId)}`
-                    : (thread.authorNickname ? `profile.html?nickname=${encodeURIComponent(thread.authorNickname)}` : '');
+                const profileHref = buildProfileHref(thread.authorNickname, thread.authorUserId);
                 const authorNode = profileHref
                     ? `<strong class="sv-forum-author" data-profile="${escapeHtml(profileHref)}" role="link" tabindex="0">${escapeHtml(thread.authorName)}</strong>`
                     : `<strong>${escapeHtml(thread.authorName)}</strong>`;

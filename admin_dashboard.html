@@ -932,9 +932,11 @@
                 case 'users': {
                     const headers = ['ID', 'Email', 'Tên hiển thị', 'Role', 'Ngày tạo'];
                     const rows = items.map((item) => {
-                        const profile = (item.userId || item.user_id)
-                            ? `profile.html?user_id=${encodeURIComponent(item.userId || item.user_id)}`
-                            : (item.nickname ? `profile.html?nickname=${encodeURIComponent(item.nickname)}` : '');
+                        const safeUserId = String(item.userId || item.user_id || '').trim();
+                        const safeNickname = String(item.nickname || '').trim();
+                        const profile = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(safeUserId)
+                            ? `profile.html?user_id=${encodeURIComponent(safeUserId)}`
+                            : (safeNickname ? `profile.html?nickname=${encodeURIComponent(safeNickname)}` : '');
                         const displayName = item.displayName || item.nickname || '';
                         const displayNameNode = profile
                             ? `<a href="${profile}">${escapeHtml(displayName)}</a>`

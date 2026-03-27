@@ -108,8 +108,10 @@
     const getCategoryName = (categoryId) => CATEGORY_NAMES[Number(categoryId)] || 'Chuyên mục khác';
 
     const buildProfileHref = (nickname, userId) => {
-        if (userId) return `profile.html?user_id=${encodeURIComponent(userId)}`;
-        if (nickname) return `profile.html?nickname=${encodeURIComponent(nickname)}`;
+        const safeUserId = String(userId || '').trim();
+        const safeNickname = String(nickname || '').trim();
+        if (isUuidLike(safeUserId)) return `profile.html?user_id=${encodeURIComponent(safeUserId)}`;
+        if (safeNickname) return `profile.html?nickname=${encodeURIComponent(safeNickname)}`;
         return 'profile.html';
     };
 
@@ -194,8 +196,9 @@
         const payload = window.SVPAuth?.parseJwtPayload
             ? window.SVPAuth.parseJwtPayload(accessToken) || {}
             : {};
+        const tokenUserId = isUuidLike(payload.userId) ? payload.userId : (isUuidLike(payload.sub) ? payload.sub : null);
         return {
-            userId: payload.userId || null,
+            userId: tokenUserId,
             email: payload.email || localStorage.getItem('userEmail') || '',
             nickname: payload.nickname || localStorage.getItem('userNickname') || '',
             displayName: payload.displayName || localStorage.getItem('userDisplayName') || ''
@@ -426,12 +429,12 @@
             me = null;
         }
 
-        if (!nickname && !userId && me?.nickname) {
-            nickname = me.nickname;
-            window.history.replaceState({}, '', buildProfileHref(nickname));
-        } else if (!nickname && !userId && isUuidLike(me?.userId)) {
+        if (!nickname && !userId && isUuidLike(me?.userId)) {
             userId = me.userId;
             window.history.replaceState({}, '', buildProfileHref(me?.nickname, userId));
+        } else if (!nickname && !userId && me?.nickname) {
+            nickname = me.nickname;
+            window.history.replaceState({}, '', buildProfileHref(nickname, me?.userId));
         }
 
         if (!nickname && !userId) {

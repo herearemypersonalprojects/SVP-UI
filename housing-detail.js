@@ -172,6 +172,7 @@
             statusSelect.addEventListener('change', async () => {
                 const nextStatus = statusSelect.value;
                 try {
+                    feedbackEl.hidden = false;
                     feedbackEl.textContent = 'Đang cập nhật trạng thái...';
                     const result = await shared.requestWithAuth(`${shared.API_BASE_URL}/api/housing/${encodeURIComponent(payload.id)}/status`, {
                         method: 'PUT',
@@ -181,6 +182,7 @@
                     statusWrapEl.innerHTML = `<span class="sv-housing-badge ${statusMeta.className}">${shared.escapeHtml(result.statusLabel || statusMeta.label)}</span>`;
                     feedbackEl.textContent = 'Đã cập nhật trạng thái.';
                 } catch (error) {
+                    feedbackEl.hidden = false;
                     feedbackEl.textContent = error && error.message ? error.message : 'Không thể cập nhật trạng thái.';
                     statusSelect.value = payload.status;
                 }
@@ -280,8 +282,10 @@
             renderOwner(payload.owner || null);
             renderActions(payload);
             applyMap(payload.latitude, payload.longitude, payload.addressText);
-            feedbackEl.textContent = 'Vị trí trên bản đồ là gần đúng để bảo vệ riêng tư người đăng.';
+            feedbackEl.textContent = '';
+            feedbackEl.hidden = true;
         } catch (error) {
+            feedbackEl.hidden = false;
             feedbackEl.textContent = error && error.message ? error.message : 'Không thể tải chi tiết tin thuê nhà.';
         }
     };
@@ -291,7 +295,7 @@
             return;
         }
         marker.setLatLng([latitude, longitude]);
-        marker.bindPopup(shared.escapeHtml(addressText || 'Vị trí gần đúng'));
+        marker.bindPopup(shared.escapeHtml(addressText || 'Vị trí nhà thuê'));
         map.setView([latitude, longitude], 13);
     };
 

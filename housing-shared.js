@@ -1,5 +1,7 @@
 (function () {
     const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+    const SITE_URL = String((window.SVPSeo && window.SVPSeo.siteUrl) || window.SVP_PUBLIC_SITE_URL || 'https://svpforum.fr').replace(/\/+$/g, '');
+    const SHARE_SITE_URL = String(window.SVP_SHARE_BASE_URL || 'https://share.svpforum.fr').replace(/\/+$/g, '');
 
     const PROPERTY_TYPES = [
         { value: 'STUDIO', label: 'Studio' },
@@ -57,6 +59,35 @@
     const buildHousingFormHref = (listingId) => listingId
         ? `housing_form.html?listingId=${encodeURIComponent(listingId)}`
         : 'housing_form.html';
+    const slugify = (value, fallback = 'tin-thue-nha') => {
+        if (window.SVPSeo && window.SVPSeo.urls && typeof window.SVPSeo.urls.slugify === 'function') {
+            return window.SVPSeo.urls.slugify(value, fallback);
+        }
+        const base = String(value || '')
+            .trim()
+            .replace(/[đĐ]/g, (char) => (char === 'Đ' ? 'D' : 'd'))
+            .normalize('NFD')
+            .replace(/[\u0300-\u036f]/g, '')
+            .toLowerCase()
+            .replace(/[^a-z0-9\s-]/g, ' ')
+            .replace(/\s+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        return base || fallback;
+    };
+    const buildHousingCanonicalUrl = (listingId) => {
+        const safeId = String(listingId || '').trim();
+        return safeId
+            ? `${SITE_URL}/housing_detail.html?listingId=${encodeURIComponent(safeId)}`
+            : `${SITE_URL}/housing_detail.html`;
+    };
+    const buildHousingShareUrl = (listingId, title) => {
+        const safeId = String(listingId || '').trim();
+        if (!safeId) {
+            return buildHousingCanonicalUrl(listingId);
+        }
+        return `${SHARE_SITE_URL}/housing/${encodeURIComponent(safeId)}/${slugify(title, 'tin-thue-nha')}`;
+    };
 
     const normalizeHttpUrl = (value) => {
         const raw = String(value || '').trim();
@@ -175,7 +206,9 @@
         transportMeta,
         extractFirstImageUrlFromHtml,
         buildHousingDetailHref,
+        buildHousingCanonicalUrl,
         buildHousingFormHref,
+        buildHousingShareUrl,
         getAccessToken,
         fetchJson,
         requestWithAuth,

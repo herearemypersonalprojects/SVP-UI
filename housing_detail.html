@@ -73,20 +73,34 @@
 
     <div class="sv-housing-form-grid">
         <section class="sv-housing-stack">
-            <section class="sv-housing-section">
+            <section class="sv-housing-section sv-housing-section--detail-hero">
                 <div class="sv-housing-section__body">
-                    <div class="d-flex flex-wrap justify-content-between align-items-start gap-3">
-                        <div>
-                            <div id="housing-detail-status-wrap" class="mb-2"></div>
-                            <h2 id="housing-detail-title" class="mb-2">Tin thuê nhà</h2>
-                            <div id="housing-detail-meta" class="sv-housing-meta"></div>
+                    <div class="sv-housing-detail-hero">
+                        <div class="sv-housing-detail-hero__main">
+                            <div id="housing-detail-status-wrap" class="sv-housing-detail-hero__status"></div>
+                            <h2 id="housing-detail-title" class="sv-housing-detail-hero__title">Tin thuê nhà</h2>
+                            <div id="housing-detail-meta" class="sv-housing-meta sv-housing-detail-hero__meta"></div>
+                            <div id="housing-detail-share" class="sv-housing-detail-share d-flex flex-wrap gap-2 mt-3 d-none">
+                                <a id="housing-detail-share-fb" class="btn btn-sm btn-outline-primary" href="#" target="_blank" rel="noopener noreferrer">
+                                    <i class="fa-brands fa-facebook-f me-1"></i>Facebook
+                                </a>
+                                <a id="housing-detail-share-messenger" class="btn btn-sm btn-outline-info" href="#" target="_blank" rel="noopener noreferrer">
+                                    <i class="fa-brands fa-facebook-messenger me-1"></i>Messenger
+                                </a>
+                                <button id="housing-detail-share-copy" class="btn btn-sm btn-outline-secondary" type="button">
+                                    <i class="fa-regular fa-copy me-1"></i>Copy link
+                                </button>
+                            </div>
                         </div>
-                        <div class="text-md-end">
-                            <div id="housing-detail-price" class="sv-housing-price mb-2"></div>
-                            <div id="housing-detail-actions" class="d-flex flex-wrap gap-2 justify-content-md-end"></div>
-                        </div>
+                        <aside class="sv-housing-detail-hero__aside">
+                            <div class="sv-housing-detail-price-card">
+                                <div class="sv-housing-detail-price-card__label">Giá thuê</div>
+                                <div id="housing-detail-price" class="sv-housing-price sv-housing-detail-price-card__value"></div>
+                            </div>
+                            <div id="housing-detail-actions" class="sv-housing-detail-actions"></div>
+                        </aside>
                     </div>
-                    <div id="housing-detail-tags" class="sv-housing-tags mt-3"></div>
+                    <div id="housing-detail-tags" class="sv-housing-tags sv-housing-detail-hero__tags mt-3"></div>
                 </div>
             </section>
 

@@ -14,6 +14,10 @@
     const metaEl = document.getElementById('housing-detail-meta');
     const priceEl = document.getElementById('housing-detail-price');
     const actionsEl = document.getElementById('housing-detail-actions');
+    const shareSectionEl = document.getElementById('housing-detail-share');
+    const shareFbEl = document.getElementById('housing-detail-share-fb');
+    const shareMessengerEl = document.getElementById('housing-detail-share-messenger');
+    const shareCopyBtn = document.getElementById('housing-detail-share-copy');
     const tagsEl = document.getElementById('housing-detail-tags');
     const galleryEl = document.getElementById('housing-detail-gallery');
     const descriptionEl = document.getElementById('housing-detail-description');
@@ -26,6 +30,10 @@
     if (!listingId || !feedbackEl || !breadcrumbEl || !titleEl || !statusWrapEl || !metaEl || !priceEl || !actionsEl || !tagsEl || !galleryEl || !descriptionEl || !transitEl || !contactEl || !ownerEl || !mapEl) {
         return;
     }
+
+    let currentCanonicalUrl = shared.buildHousingCanonicalUrl(listingId);
+    let currentShareUrl = shared.buildHousingShareUrl(listingId, '');
+    let facebookAppIdPromise = null;
 
     const map = L.map(mapEl, { scrollWheelZoom: false }).setView([48.8566, 2.3522], 13);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -40,6 +48,43 @@
             ? editorLib.sanitizeHtml(raw)
             : shared.escapeHtml(raw);
         descriptionEl.innerHTML = sanitized || '<div class="sv-housing-empty">Chưa có mô tả chi tiết.</div>';
+    };
+
+    const extractShareImageUrl = (payload) => {
+        const images = Array.isArray(payload && payload.images) ? payload.images : [];
+        const primaryImage = images.find((item) => item && item.primary && item.imageUrl)
+            || images.find((item) => item && item.imageUrl);
+        return String(
+            (primaryImage && primaryImage.imageUrl)
+            || shared.extractFirstImageUrlFromHtml(payload && payload.description)
+            || '/assets/icons/og_housing_map.png'
+        ).trim();
+    };
+
+    const loadFacebookAppId = async () => {
+        if (facebookAppIdPromise) {
+            return facebookAppIdPromise;
+        }
+        facebookAppIdPromise = (async () => {
+            try {
+                const providers = await shared.fetchJson(`${shared.API_BASE_URL}/auth/providers`, {
+                    headers: { Accept: 'application/json' }
+                });
+                return String(providers && providers.facebook && providers.facebook.appId || '').trim();
+            } catch (_) {
+                return '';
+            }
+        })();
+        return facebookAppIdPromise;
+    };
+
+    const buildMessengerShareUrl = async () => {
+        const encodedShareUrl = encodeURIComponent(currentShareUrl);
+        const appId = await loadFacebookAppId();
+        if (!appId) {
+            return `fb-messenger://share/?link=${encodedShareUrl}`;
+        }
+        return `https://www.facebook.com/dialog/send?app_id=${encodeURIComponent(appId)}&link=${encodedShareUrl}&redirect_uri=${encodeURIComponent(currentCanonicalUrl)}`;
     };
 
     const renderGallery = (images, descriptionHtml) => {
@@ -164,20 +209,40 @@
         }
         const finalListingId = String(payload.id || listingId || '').trim();
         const title = payload.title ? `${payload.title} | SVP` : 'Chi tiết thuê nhà | SVP';
-        const detailPath = finalListingId
-            ? `/housing_detail.html?listingId=${encodeURIComponent(finalListingId)}`
-            : '/housing_detail.html';
+        const detailUrl = shared.buildHousingCanonicalUrl(finalListingId);
+        const shareImage = extractShareImageUrl(payload);
+        const usingDefaultImage = shareImage === '/assets/icons/og_housing_map.png';
         seo.setPage({
             title,
             description: buildSeoDescription(payload),
-            url: detailPath,
-            path: detailPath,
-            image: '/assets/icons/og_housing_map.png',
-            imageType: 'image/png',
-            imageWidth: '1200',
-            imageHeight: '630',
+            url: detailUrl,
+            path: detailUrl,
+            image: shareImage,
+            imageType: usingDefaultImage ? 'image/png' : '',
+            imageWidth: usingDefaultImage ? '1200' : '',
+            imageHeight: usingDefaultImage ? '630' : '',
             schemaType: 'WebPage'
         });
+    };
+
+    const renderShare = async (payload) => {
+        if (!shareSectionEl || !payload) {
+            return;
+        }
+        currentCanonicalUrl = shared.buildHousingCanonicalUrl(payload.id);
+        currentShareUrl = shared.buildHousingShareUrl(payload.id, payload.title);
+        const encodedUrl = encodeURIComponent(currentShareUrl);
+        if (shareFbEl) {
+            shareFbEl.href = `https://www.facebook.com/sharer/sharer.php?u=${encodedUrl}`;
+        }
+        if (shareMessengerEl) {
+            shareMessengerEl.href = `fb-messenger://share/?link=${encodedUrl}`;
+            shareMessengerEl.target = '_self';
+            const messengerHref = await buildMessengerShareUrl();
+            shareMessengerEl.href = messengerHref;
+            shareMessengerEl.target = messengerHref.startsWith('fb-messenger:') ? '_self' : '_blank';
+        }
+        shareSectionEl.classList.remove('d-none');
     };
 
     const loadDetail = async () => {
@@ -194,6 +259,7 @@
             titleEl.textContent = payload.title || 'Tin thuê nhà';
             document.title = `${payload.title || 'Chi tiết thuê nhà'} | SVP`;
             applySeo(payload);
+            await renderShare(payload);
             const statusMeta = shared.statusMeta(payload.status);
             statusWrapEl.innerHTML = `<span class="sv-housing-badge ${statusMeta.className}">${shared.escapeHtml(payload.statusLabel || statusMeta.label)}</span>`;
             priceEl.textContent = payload.priceLabel || shared.formatPrice(payload.price);
@@ -228,6 +294,20 @@
         marker.bindPopup(shared.escapeHtml(addressText || 'Vị trí gần đúng'));
         map.setView([latitude, longitude], 13);
     };
+
+    if (shareCopyBtn) {
+        shareCopyBtn.addEventListener('click', async () => {
+            try {
+                await navigator.clipboard.writeText(currentShareUrl);
+                shareCopyBtn.innerHTML = '<i class="fa-solid fa-check me-1"></i>Đã sao chép!';
+                window.setTimeout(() => {
+                    shareCopyBtn.innerHTML = '<i class="fa-regular fa-copy me-1"></i>Copy link';
+                }, 2000);
+            } catch (_) {
+                alert(currentShareUrl);
+            }
+        });
+    }
 
     void loadDetail();
 })();

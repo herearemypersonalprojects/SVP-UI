@@ -817,11 +817,15 @@
             const matchesCategory = !Number.isFinite(activeCategoryId) || Number(post?.categoryId) === activeCategoryId;
             return isArticle && !isBlog && matchesCategory;
         });
-        const HOME_POSTS_LIMIT = 6;
+        const HOME_INITIAL_VISIBLE_POSTS_LIMIT = 6;
+        const HOME_SOURCE_POSTS_LIMIT = 10;
         const MORE_POSTS_LIMIT = 5;
+        const FEATURED_MEMBERS_LIMIT = 10;
         const homeCacheKey = `${HOME_CACHE_KEY_PREFIX}${Number.isFinite(activeCategoryId) ? activeCategoryId : 'all'}`;
         let loadedPosts = [];
+        let visiblePostCount = HOME_INITIAL_VISIBLE_POSTS_LIMIT;
         let hasMorePosts = true;
+        let hasMoreBackendPosts = false;
         let beforeCreatedAt = null;
         let beforePostId = null;
         let isLoadingMore = false;
@@ -883,12 +887,22 @@
             return [pendingArticle, ...posts.filter((post) => post.postId !== pendingArticle.postId)];
         };
 
+        const getDisplayPosts = () => mergePendingLocalArticle(loadedPosts);
+        const getVisibleDisplayPosts = () => getVisiblePosts(getDisplayPosts());
+        const updateLoadMoreState = () => {
+            const visibleLoadedCount = getVisibleDisplayPosts().length;
+            const hasHiddenLoadedPosts = visibleLoadedCount > visiblePostCount;
+            hasMorePosts = hasHiddenLoadedPosts || hasMoreBackendPosts;
+            loadMoreBtn.style.display = hasMorePosts ? 'block' : 'none';
+            loadMoreBtn.disabled = !hasMorePosts;
+        };
         const renderFeedAndMembers = () => {
-            const displayPosts = mergePendingLocalArticle(loadedPosts);
+            const displayPosts = getDisplayPosts();
             const visiblePosts = getVisiblePosts(displayPosts);
-            feedEl.innerHTML = visiblePosts.length === 0
+            const visibleFeedPosts = visiblePosts.slice(0, visiblePostCount);
+            feedEl.innerHTML = visibleFeedPosts.length === 0
                 ? `<div class="sv-meta">Chưa có bài viết phù hợp để hiển thị.</div>`
-                : visiblePosts.map((post) => renderArticleCard(post)).join('');
+                : visibleFeedPosts.map((post) => renderArticleCard(post)).join('');
 
             const topMembers = collectTopMembers(displayPosts);
             membersEl.innerHTML = topMembers.length === 0
@@ -979,7 +993,7 @@
 
             return Array.from(byUser.values())
                 .sort((a, b) => b.postCount - a.postCount)
-                .slice(0, 4);
+                .slice(0, FEATURED_MEMBERS_LIMIT);
         };
 
         const renderMember = (member) => {
@@ -1027,6 +1041,7 @@
             const upcomingEvents = Array.isArray(payload.upcomingEvents) ? payload.upcomingEvents.map(normalizeEvent) : [];
 
             loadedPosts = latestPosts.slice();
+            visiblePostCount = HOME_INITIAL_VISIBLE_POSTS_LIMIT;
             renderFeedAndMembers();
 
             if (upcomingEvents.length === 0) {
@@ -1038,14 +1053,15 @@
             const lastPost = loadedPosts[loadedPosts.length - 1];
             beforeCreatedAt = lastPost?.createdAt || null;
             beforePostId = Number.isFinite(lastPost?.postId) ? lastPost.postId : null;
-            hasMorePosts = loadedPosts.length >= HOME_POSTS_LIMIT;
-            loadMoreBtn.style.display = hasMorePosts ? 'block' : 'none';
-            loadMoreBtn.disabled = !hasMorePosts;
+            hasMoreBackendPosts = loadedPosts.length >= HOME_SOURCE_POSTS_LIMIT;
+            updateLoadMoreState();
         };
 
         const renderHomeLoadError = () => {
             loadedPosts = [];
+            visiblePostCount = HOME_INITIAL_VISIBLE_POSTS_LIMIT;
             hasMorePosts = false;
+            hasMoreBackendPosts = false;
             beforeCreatedAt = null;
             beforePostId = null;
             feedEl.innerHTML = `<div class="sv-meta">Không thể tải bài viết từ backend. Vui lòng thử lại sau.</div>`;
@@ -1055,7 +1071,18 @@
             loadMoreBtn.disabled = true;
         };
         const loadMorePosts = async () => {
-            if (isLoadingMore || !hasMorePosts || !beforeCreatedAt || !beforePostId) {
+            if (isLoadingMore || !hasMorePosts) {
+                return;
+            }
+            const visibleLoadedCount = getVisibleDisplayPosts().length;
+            if (visiblePostCount < visibleLoadedCount) {
+                visiblePostCount = Math.min(visibleLoadedCount, visiblePostCount + MORE_POSTS_LIMIT);
+                renderFeedAndMembers();
+                updateLoadMoreState();
+                return;
+            }
+            if (!beforeCreatedAt || !beforePostId) {
+                updateLoadMoreState();
                 return;
             }
             isLoadingMore = true;
@@ -1078,14 +1105,15 @@
                 const payload = await fetchJson(`${API_BASE_URL}/posts/latest-articles?${params.toString()}`);
                 const newItems = Array.isArray(payload.items) ? payload.items.map(normalizePost) : [];
                 if (newItems.length === 0) {
-                    hasMorePosts = false;
+                    hasMoreBackendPosts = false;
                 } else {
                     loadedPosts = loadedPosts.concat(newItems);
+                    visiblePostCount += MORE_POSTS_LIMIT;
                     renderFeedAndMembers();
                     const lastPost = loadedPosts[loadedPosts.length - 1];
                     beforeCreatedAt = lastPost?.createdAt || null;
                     beforePostId = Number.isFinite(lastPost?.postId) ? lastPost.postId : null;
-                    hasMorePosts = newItems.length >= MORE_POSTS_LIMIT;
+                    hasMoreBackendPosts = newItems.length >= MORE_POSTS_LIMIT;
                     window.scrollTo(0, scrollYBeforeLoad);
                 }
             } catch (error) {
@@ -1093,8 +1121,7 @@
             } finally {
                 isLoadingMore = false;
                 loadMoreBtn.textContent = previousLabel;
-                loadMoreBtn.disabled = !hasMorePosts;
-                loadMoreBtn.style.display = hasMorePosts ? 'block' : 'none';
+                updateLoadMoreState();
             }
         };
 

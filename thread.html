@@ -446,6 +446,28 @@
     </div>
 </main>
 
+<div class="modal fade" id="thread-comment-edit-modal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Sửa phản hồi</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <label for="thread-comment-edit-message" class="form-label">Nội dung phản hồi</label>
+                <textarea id="thread-comment-edit-message" class="form-control" rows="8" placeholder=""></textarea>
+                <div id="thread-comment-edit-feedback" class="sv-meta mt-3" aria-live="polite"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Đóng</button>
+                <button type="button" id="thread-comment-edit-save" class="btn btn-primary">
+                    <i class="fa-solid fa-floppy-disk me-1"></i>Lưu thay đổi
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <footer class="container py-4">
     <div class="row">
         <div class="col-md">
@@ -546,12 +568,22 @@
         const replyClearBtn = document.getElementById('reply-clear');
         const scrollReplyBtn = document.getElementById('btn-scroll-reply');
         const replySubmitBtn = replyForm.querySelector('button[type="submit"]');
+        const commentEditModalEl = document.getElementById('thread-comment-edit-modal');
+        const commentEditMessageEl = document.getElementById('thread-comment-edit-message');
+        const commentEditFeedbackEl = document.getElementById('thread-comment-edit-feedback');
+        const commentEditSaveBtn = document.getElementById('thread-comment-edit-save');
         const commentEditorApi = window.SVPCommentEditor || null;
         let replyImagePreviewObjectUrl = '';
         let replyCaptchaAnswer = null;
         let pendingReplyTarget = '';
         let currentShareUrl = window.location.href.split('#')[0];
         let replyComposer = null;
+        let commentEditComposer = null;
+        let commentEditModal = null;
+        let editingCommentContext = null;
+        let currentThread = null;
+        let currentApiComments = [];
+        let currentLocalReplies = [];
 
         if (!breadcrumbEl || !categoryEl || !createdEl || !viewsEl || !repliesEl || !titleEl || !authorEl || !threadHeadActionsEl || !tagsEl || !postsCountEl || !statusEl || !postsEl || !kpisEl || !relatedEl || !replyForm || !replyGuestFieldsEl || !replyIdentityFieldsEl || !replySessionHintEl || !replyNameEl || !replyCaptchaFieldsEl || !replyCaptchaQuestionEl || !replyCaptchaAnswerEl || !replyMessageEl || !replyCharCountEl || !replyImageFieldsEl || !replyImageEl || !replyImageStatusEl || !replyImagePreviewEl || !replyImageClearBtn || !replyFeedbackEl || !replyClearBtn || !scrollReplyBtn || !replySubmitBtn) {
             return;
@@ -746,15 +778,27 @@
         const getCallerInfo = () => {
             const token = String(localStorage.getItem('accessToken') || '').trim();
             if (!token) {
-                return { nickname: '', role: '' };
+                return { userId: '', nickname: '', role: '' };
             }
             const payload = (window.SVPAuth && typeof window.SVPAuth.parseJwtPayload === 'function')
                 ? window.SVPAuth.parseJwtPayload(token)
                 : parseJwtPayload(token);
             return {
+                userId: String(localStorage.getItem('userId') || payload?.userId || payload?.sub || '').trim(),
                 nickname: String(payload?.nickname || localStorage.getItem('userNickname') || '').trim(),
                 role: String(payload?.role || '').trim().toUpperCase()
             };
+        };
+
+        const isCommentOwner = (caller, comment) => {
+            const callerUserId = String(caller?.userId || '').trim();
+            const commentUserId = String(comment?.authorUserId || '').trim();
+            if (callerUserId && commentUserId) {
+                return callerUserId === commentUserId;
+            }
+            const callerNickname = String(caller?.nickname || '').trim();
+            const commentNickname = String(comment?.authorNickname || '').trim();
+            return Boolean(callerNickname && commentNickname && callerNickname === commentNickname);
         };
 
         const peekAuthenticatedReplyIdentity = () => {
@@ -921,6 +965,190 @@
 
             const sanitized = Array.from(template.content.childNodes).map((node) => sanitizeNode(node)).join('').trim();
             return sanitized || '<p>Nội dung đang được cập nhật.</p>';
+        };
+
+        const textToCommentHtml = (value) => {
+            const lines = String(value || '')
+                .split(/\n+/)
+                .map((line) => line.trim())
+                .filter(Boolean);
+            return linesToParagraphsHtml(lines);
+        };
+
+        const htmlToCommentText = (value) => htmlToLines(value).join('\n');
+
+        const sanitizeCommentHtml = (value) => {
+            if (commentEditorApi && typeof commentEditorApi.sanitizeHtml === 'function') {
+                return commentEditorApi.sanitizeHtml(value);
+            }
+            return textToCommentHtml(htmlToCommentText(value));
+        };
+
+        const hasRenderableCommentContent = (value) => {
+            if (commentEditorApi && typeof commentEditorApi.hasRenderableContent === 'function') {
+                return commentEditorApi.hasRenderableContent(value);
+            }
+            return Boolean(String(value || '').trim());
+        };
+
+        const setCommentEditFeedback = (text, type) => {
+            if (!commentEditFeedbackEl) {
+                return;
+            }
+            commentEditFeedbackEl.textContent = text || '';
+            commentEditFeedbackEl.style.color = type === 'error'
+                ? '#b91c1c'
+                : (type === 'success' ? '#15803d' : '#64748b');
+        };
+
+        const ensureCommentEditComposer = async () => {
+            if (!commentEditMessageEl) {
+                return null;
+            }
+            if (!commentEditComposer && commentEditorApi) {
+                commentEditComposer = commentEditorApi.create({
+                    target: commentEditMessageEl,
+                    minHeight: 260,
+                    placeholder: commentEditMessageEl.getAttribute('placeholder') || ''
+                });
+            }
+            if (commentEditComposer) {
+                await commentEditComposer.whenReady;
+            }
+            return commentEditComposer;
+        };
+
+        const rerenderCurrentThreadPosts = () => {
+            if (!currentThread) {
+                return;
+            }
+            renderPosts(currentThread, currentApiComments, currentLocalReplies);
+        };
+
+        const findEditableApiComment = (commentId) => currentApiComments.find((item) => Number(item?.id || 0) === Number(commentId || 0)) || null;
+
+        const openCommentEditModal = async (comment) => {
+            if (!commentEditModalEl || !commentEditMessageEl || !commentEditSaveBtn || !comment) {
+                return;
+            }
+            editingCommentContext = { commentId: comment.id };
+            setCommentEditFeedback('', 'info');
+            if (!commentEditModal && window.bootstrap?.Modal) {
+                commentEditModal = new window.bootstrap.Modal(commentEditModalEl);
+            }
+
+            const composer = await ensureCommentEditComposer();
+            if (composer && composer.isReady()) {
+                composer.setHtml(comment.contentHtml || textToCommentHtml(htmlToCommentText(comment.contentHtml)));
+            } else {
+                commentEditMessageEl.value = htmlToCommentText(comment.contentHtml);
+            }
+
+            commentEditModal?.show();
+            window.setTimeout(() => {
+                if (composer && composer.isReady()) {
+                    composer.focus();
+                    return;
+                }
+                commentEditMessageEl.focus();
+            }, 160);
+        };
+
+        const saveEditedComment = async () => {
+            if (!editingCommentContext) {
+                return;
+            }
+            const comment = findEditableApiComment(editingCommentContext.commentId);
+            if (!comment) {
+                setCommentEditFeedback('Không tìm thấy phản hồi cần sửa.', 'error');
+                return;
+            }
+
+            const editorReady = Boolean(commentEditComposer && commentEditComposer.isReady());
+            const contentHtml = editorReady
+                ? sanitizeCommentHtml(commentEditComposer.getSubmissionHtml())
+                : textToCommentHtml(commentEditMessageEl?.value || '');
+
+            if (!hasRenderableCommentContent(contentHtml)) {
+                setCommentEditFeedback('Nội dung phản hồi không được để trống.', 'error');
+                if (editorReady) {
+                    commentEditComposer.focus();
+                } else {
+                    commentEditMessageEl?.focus();
+                }
+                return;
+            }
+
+            const token = await (window.SVPAuth && window.SVPAuth.getValidAccessToken
+                ? window.SVPAuth.getValidAccessToken()
+                : Promise.resolve(localStorage.getItem('accessToken')));
+            if (!token) {
+                setCommentEditFeedback('Vui lòng đăng nhập.', 'error');
+                return;
+            }
+
+            const oldLabel = commentEditSaveBtn.innerHTML;
+            commentEditSaveBtn.disabled = true;
+            commentEditSaveBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang lưu...';
+            try {
+                const response = await fetch(`${API_BASE_URL}/posts/${comment.postId}/comments/${comment.id}`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json'
+                    },
+                    body: JSON.stringify({ contentHtml })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Cập nhật phản hồi thất bại.');
+                }
+
+                comment.contentHtml = contentHtml;
+                rerenderCurrentThreadPosts();
+                setCommentEditFeedback('Đã cập nhật phản hồi.', 'success');
+                window.setTimeout(() => {
+                    commentEditModal?.hide();
+                }, 220);
+            } catch (error) {
+                setCommentEditFeedback(String(error?.message || 'Không thể kết nối máy chủ.'), 'error');
+            } finally {
+                commentEditSaveBtn.disabled = false;
+                commentEditSaveBtn.innerHTML = oldLabel;
+            }
+        };
+
+        const toggleCommentVisibility = async (commentId, hidden) => {
+            const comment = findEditableApiComment(commentId);
+            if (!comment) {
+                return;
+            }
+            const token = await (window.SVPAuth && window.SVPAuth.getValidAccessToken
+                ? window.SVPAuth.getValidAccessToken()
+                : Promise.resolve(localStorage.getItem('accessToken')));
+            if (!token) {
+                alert('Vui lòng đăng nhập.');
+                return;
+            }
+            const endpoint = hidden ? 'unhide' : 'hide';
+            try {
+                const response = await fetch(`${API_BASE_URL}/posts/${comment.postId}/comments/${comment.id}/${endpoint}`, {
+                    method: 'PATCH',
+                    headers: {
+                        Authorization: `Bearer ${token}`,
+                        Accept: 'application/json'
+                    }
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Thao tác thất bại.');
+                }
+                comment.hidden = !hidden;
+                rerenderCurrentThreadPosts();
+            } catch (error) {
+                alert(String(error?.message || 'Không thể kết nối máy chủ.'));
+            }
         };
 
         const getReplyContentHtml = () => {
@@ -1398,6 +1626,7 @@
             const commentContentHtml = String(comment?.contentHtml || comment?.content_html || '');
             return {
                 id: Number(comment?.commentId || comment?.comment_id || Date.now()),
+                postId: Number(comment?.postId || comment?.post_id || 0),
                 authorName: String(commentAuthor.displayName || commentAuthor.nickname || comment?.authorName || 'Thành viên'),
                 authorSeed: String(commentAuthor.nickname || commentAuthor.userId || commentAuthor.displayName || comment?.authorName || 'anonymous'),
                 authorNickname: String(commentAuthor.nickname || ''),
@@ -1405,7 +1634,9 @@
                 authorAvatarUrl: String(commentAuthor.avatarUrl || commentAuthor.avatar_url || comment?.authorAvatarUrl || comment?.author_avatar_url || comment?.avatarUrl || comment?.avatar_url || ''),
                 createdAt: String(comment?.createdAt || comment?.created_at || ''),
                 contentHtml: commentContentHtml,
-                imageUrls: collectImageUrls(comment?.imageUrl || comment?.image_url || '', commentContentHtml)
+                imageUrls: collectImageUrls(comment?.imageUrl || comment?.image_url || '', commentContentHtml),
+                hidden: Boolean(comment?.hidden),
+                persisted: true
             };
         };
 
@@ -1472,7 +1703,7 @@
             threadHeadActionsEl.appendChild(editLink);
         };
 
-        const toPostItem = (post, index, isOriginalPost, knownUsers) => {
+        const toPostItem = (post, index, isOriginalPost, knownUsers, threadId) => {
             const sanitizedContentHtml = sanitizeRichContentHtml(
                 String(post.contentHtml || post.content_html || '').trim()
                 || linesToParagraphsHtml(post.contentLines)
@@ -1487,6 +1718,8 @@
             return {
                 index,
                 isOriginalPost,
+                commentId: isOriginalPost ? 0 : Number(post.id || 0),
+                postId: isOriginalPost ? Number(threadId || 0) : Number(post.postId || threadId || 0),
                 authorName: post.authorName,
                 authorSeed: post.authorSeed || post.authorName,
                 authorNickname: post.authorNickname || '',
@@ -1498,6 +1731,8 @@
                 replyTargetName: separatedReplyContext.replyTargetName,
                 replyTargetProfileHref: separatedReplyContext.replyTargetProfileHref,
                 quoteText: htmlToLines(separatedReplyContext.contentHtml).join('\n'),
+                hidden: Boolean(post.hidden),
+                persisted: Boolean(post.persisted),
                 imageUrls: Array.isArray(post.imageUrls)
                     ? post.imageUrls.filter((url) => typeof url === 'string' && url)
                     : [],
@@ -1508,15 +1743,38 @@
         const renderPosts = (thread, apiComments, localReplies) => {
             const orderedReplies = sortRepliesByTime([...apiComments, ...localReplies]);
             const knownUsers = buildKnownUserList([thread, ...orderedReplies]);
+            const caller = getCallerInfo();
             const postItems = [
-                toPostItem(thread, 1, true, knownUsers),
-                ...orderedReplies.map((item, idx) => toPostItem(item, idx + 2, false, knownUsers))
+                toPostItem(thread, 1, true, knownUsers, thread.threadId),
+                ...orderedReplies.map((item, idx) => toPostItem(item, idx + 2, false, knownUsers, thread.threadId))
             ];
 
             postsCountEl.textContent = `${postItems.length} bài`;
             statusEl.style.display = 'none';
 
             postsEl.innerHTML = postItems.map((item) => `
+                ${(() => {
+                    const isSuperadmin = caller.role === 'SUPERADMIN';
+                    const isAdmin = caller.role === 'ADMIN' || isSuperadmin;
+                    const canManagePersistedComment = !item.isOriginalPost && item.persisted && item.commentId > 0;
+                    const canEdit = canManagePersistedComment && (isCommentOwner(caller, item) || isAdmin);
+                    const canHide = canManagePersistedComment && isAdmin;
+                    const hiddenBadge = item.hidden
+                        ? '<span class="badge bg-warning text-dark">ĐÃ ẨN</span>'
+                        : '';
+                    const managementButtons = `
+                        ${canEdit
+                            ? `<button type="button" data-edit-comment-id="${item.commentId}"><i class="fa-solid fa-pen me-1"></i>Sửa</button>`
+                            : ''}
+                        ${canHide
+                            ? `<button type="button" data-toggle-comment-id="${item.commentId}" data-hidden="${item.hidden ? 'true' : 'false'}">${
+                                item.hidden
+                                    ? '<i class="fa-solid fa-eye me-1"></i>Hiện'
+                                    : '<i class="fa-solid fa-eye-slash me-1"></i>Ẩn'
+                            }</button>`
+                            : ''}
+                    `;
+                    return `
                 <article class="sv-thread-post">
                     <aside class="sv-thread-post__author">
                         ${renderInitialAvatar(item.authorName, item.authorSeed, item.authorAvatarUrl, buildProfileHref(item.authorNickname, item.authorUserId))}
@@ -1530,7 +1788,7 @@
                     <div class="sv-thread-post__body">
                         <div class="sv-thread-post__meta">
                             <span>${escapeHtml(formatDateTime(item.createdAt))}</span>
-                            <span>#${item.index}</span>
+                            <span class="d-flex align-items-center gap-2">#${item.index}${hiddenBadge}</span>
                         </div>
                         ${item.replyTargetName
                             ? `<div class="sv-thread-post__reply-target">Trả lời ${
@@ -1550,9 +1808,12 @@
                         <div class="sv-thread-post__actions">
                             <button type="button" data-reply="${escapeHtml(item.authorName)}">Trả lời</button>
                             <button type="button" data-quote="${escapeHtml(item.quoteText || '')}" data-quote-author="${escapeHtml(item.authorName || '')}">Trích dẫn</button>
+                            ${managementButtons}
                         </div>
                     </div>
                 </article>
+                    `;
+                })()}
             `).join('');
         };
 
@@ -2043,8 +2304,26 @@
             }
 
             postsEl.addEventListener('click', (event) => {
-                const target = event.target;
+                const target = event.target instanceof HTMLButtonElement
+                    ? event.target
+                    : event.target instanceof Element
+                        ? event.target.closest('button')
+                        : null;
                 if (!(target instanceof HTMLButtonElement)) return;
+                const editCommentId = Number(target.dataset.editCommentId || 0);
+                if (editCommentId > 0) {
+                    const comment = findEditableApiComment(editCommentId);
+                    if (comment) {
+                        openCommentEditModal(comment);
+                    }
+                    return;
+                }
+                const toggleCommentId = Number(target.dataset.toggleCommentId || 0);
+                if (toggleCommentId > 0) {
+                    const hidden = String(target.dataset.hidden || '').toLowerCase() === 'true';
+                    void toggleCommentVisibility(toggleCommentId, hidden);
+                    return;
+                }
                 const replyTo = String(target.dataset.reply || '').trim();
                 if (replyTo) {
                     if (hasRichReplyEditor()) {
@@ -2077,6 +2356,24 @@
                     focusReplyComposer();
                 }
             });
+
+            if (commentEditModalEl) {
+                commentEditModalEl.addEventListener('hidden.bs.modal', () => {
+                    editingCommentContext = null;
+                    setCommentEditFeedback('', 'info');
+                    if (commentEditComposer) {
+                        commentEditComposer.clear();
+                    } else if (commentEditMessageEl) {
+                        commentEditMessageEl.value = '';
+                    }
+                });
+            }
+
+            if (commentEditSaveBtn) {
+                commentEditSaveBtn.addEventListener('click', () => {
+                    void saveEditedComment();
+                });
+            }
         };
 
         const loadUserPrefill = () => {
@@ -2209,6 +2506,9 @@
             const localReplies = loadLocalReplies(thread.threadId);
             let apiComments = Array.isArray(thread.comments) ? thread.comments : [];
             const totalReplies = apiComments.length + localReplies.length;
+            currentThread = thread;
+            currentApiComments = apiComments;
+            currentLocalReplies = localReplies;
 
             const metrics = updateThreadMetrics(thread.threadId, (prev) => ({
                 views: Math.max(prev.views, normalizeCount(thread.viewCount)),
@@ -2222,7 +2522,7 @@
             renderHeader(thread, metrics, totalReplies);
             renderThreadActions(thread);
             renderShare(thread);
-            renderPosts(thread, apiComments, localReplies);
+            renderPosts(currentThread, currentApiComments, currentLocalReplies);
             renderThreadKpis(thread, metrics, 1 + totalReplies, totalReplies);
             syncSeo(thread, totalReplies);
             renderRelatedThreads(thread.threadId, thread.categoryId);
@@ -2306,8 +2606,10 @@
                     );
                     commentPersisted = true;
                     apiComments = [...apiComments, createdComment];
+                    currentApiComments = apiComments;
 
                     const currentReplies = loadLocalReplies(thread.threadId);
+                    currentLocalReplies = currentReplies;
                     const nextTotalReplies = apiComments.length + currentReplies.length;
                     const nextMetrics = updateThreadMetrics(thread.threadId, (prev) => ({
                         views: prev.views,
@@ -2327,7 +2629,7 @@
                     }
 
                     renderHeader(thread, nextMetrics, nextTotalReplies);
-                    renderPosts(thread, apiComments, currentReplies);
+                    renderPosts(thread, currentApiComments, currentLocalReplies);
                     renderThreadKpis(thread, nextMetrics, 1 + nextTotalReplies, nextTotalReplies);
 
                     resetReplyComposer({ preserveGuestName: true, clearFeedback: false });

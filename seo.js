@@ -429,10 +429,15 @@
             schemaType: 'WebPage'
         },
         'forum.html': {
-            title: 'Diễn đàn người Việt tại Pháp | Thảo luận du học, việc làm, đời sống - SVP',
-            description: 'Tham gia diễn đàn SVP để trao đổi về du học, việc làm, nhà ở, thủ tục và cuộc sống tại Pháp.',
+            title: 'Diễn đàn sinh viên và tri thức Việt tại Pháp',
+            description: 'Không gian thảo luận cho sinh viên và cộng đồng tri thức Việt tại Pháp về du học, việc làm, nhà ở, thủ tục và đời sống.',
+            url: 'https://www.svpforum.fr/forum.html',
             path: '/forum.html',
-            schemaType: 'CollectionPage'
+            schemaType: 'CollectionPage',
+            image: 'https://www.svpforum.fr/assets/icons/og_forum_viet_tri_thuc.png',
+            imageType: 'image/png',
+            imageWidth: '1200',
+            imageHeight: '630'
         },
         'categories.html': {
             title: 'Chuyên mục du học, việc làm và cuộc sống tại Pháp - SVP',

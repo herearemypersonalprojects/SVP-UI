@@ -661,6 +661,7 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="config.js"></script>
 <script src="avatar-utils.js"></script>
+<script src="svp-rich-content.js"></script>
 <script src="auth-topbar.js"></script>
 <script src="comment-editor.js"></script>
 <script>
@@ -753,6 +754,16 @@
     const commentEditFeedbackEl = document.getElementById('comment-edit-feedback');
     const commentEditSaveBtn = document.getElementById('comment-edit-save');
     const commentEditorApi = window.SVPCommentEditor || null;
+    const richContent = window.SVPRichContent || null;
+    const articleSanitizeOptions = {
+        allowedTags: [
+            'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
+            'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+            'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'div', 'span',
+            'img', 'figure', 'figcaption', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'iframe'
+        ],
+        allowGoogleDriveEmbeds: true
+    };
     let replyImageObjectUrl  = '';
     let replyComposer = null;
     let commentEditComposer = null;
@@ -1329,6 +1340,10 @@
 
     /* ── Render full content (without trimming preview) ── */
     const sanitizePostContentHtml = (html) => {
+        if (richContent && typeof richContent.sanitizeHtml === 'function') {
+            const sanitized = richContent.sanitizeHtml(html, articleSanitizeOptions);
+            return sanitized || '<p>Nội dung đang được cập nhật.</p>';
+        }
         const rawHtml = String(html || '').trim();
         if (!rawHtml) return '<p>Nội dung đang được cập nhật.</p>';
 
@@ -1713,6 +1728,15 @@
     const renderBody = (post) => {
         if (!bodyEl) return;
         bodyEl.innerHTML = sanitizePostContentHtml(post.contentHtml);
+        if (richContent && typeof richContent.arrangePortraitImageRows === 'function') {
+            richContent.arrangePortraitImageRows(bodyEl);
+        }
+    };
+
+    const applyCommentPortraitLayout = (root) => {
+        if (richContent && typeof richContent.arrangePortraitImageRows === 'function' && root instanceof HTMLElement) {
+            richContent.arrangePortraitImageRows(root);
+        }
     };
 
     const copyShareLink = async (button) => {
@@ -1848,6 +1872,7 @@
         }
         if (contentEl) {
             contentEl.innerHTML = renderedComment.renderedContentHtml || '<p>Đang cập nhật nội dung.</p>';
+            applyCommentPortraitLayout(contentEl);
         }
         const quoteBtn = commentEl.querySelector('[data-quote]');
         if (quoteBtn instanceof HTMLButtonElement) {
@@ -1868,6 +1893,9 @@
             return;
         }
         commentListEl.innerHTML = `<div class="pd-comment-list">${renderedComments.map(renderCommentItem).join('')}</div>`;
+        Array.from(commentListEl.querySelectorAll('.pd-comment-text')).forEach((contentEl) => {
+            applyCommentPortraitLayout(contentEl);
+        });
         comments.forEach(c => {
             const el = document.getElementById(`comment-${c.id}`);
             if (el) renderCommentActions(el, c);
@@ -1986,7 +2014,7 @@
             if (name.length < 2) { setReplyFeedback('Tên hiển thị cần tối thiểu 2 ký tự.','error'); replyNameEl.focus(); return; }
             if (!/^[^\s@]+@[^\s@]+$/.test(email)) { setReplyFeedback('Email chưa hợp lệ.','error'); replyEmailEl.focus(); return; }
             if (!hasReplyContent && !imgFile) { setReplyFeedback('Vui lòng nhập nội dung hoặc chọn ảnh đính kèm.','error'); focusReplyComposer(); return; }
-            if (hasReplyContent && message && message.length < 5 && !imgFile && !contentHtml.includes('<img')) { setReplyFeedback('Nội dung cần tối thiểu 5 ký tự.','error'); focusReplyComposer(); return; }
+            if (hasReplyContent && message && message.length < 5 && !imgFile && !/<(?:img|iframe)\b/i.test(contentHtml)) { setReplyFeedback('Nội dung cần tối thiểu 5 ký tự.','error'); focusReplyComposer(); return; }
 
             const oldLabel = replySubmitBtn.innerHTML;
             replySubmitBtn.disabled = true;

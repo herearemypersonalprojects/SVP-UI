@@ -237,15 +237,18 @@
         .sv-thread-pagination {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
+            flex-direction: column;
             gap: .75rem;
             padding: .9rem .95rem .95rem;
             border-top: 1px solid #e2e8f0;
         }
         .sv-thread-pagination__info {
-            min-width: 150px;
             text-align: center;
             font-weight: 600;
+        }
+        .sv-thread-pagination__action {
+            min-width: 170px;
         }
         .sv-char-count {
             text-align: right;
@@ -306,16 +309,6 @@
                 margin: 0;
                 width: 44px;
                 height: 44px;
-            }
-            .sv-thread-pagination {
-                flex-wrap: wrap;
-            }
-            .sv-thread-pagination > button {
-                flex: 1 1 calc(50% - .375rem);
-            }
-            .sv-thread-pagination__info {
-                order: -1;
-                width: 100%;
             }
         }
     </style>
@@ -400,9 +393,8 @@
                 <div id="thread-status" class="sv-thread-empty">Đang tải dữ liệu...</div>
                 <div id="thread-posts"></div>
                 <div id="thread-post-pagination" class="sv-thread-pagination d-none" aria-label="Phân trang phản hồi">
-                    <button id="thread-posts-prev" class="btn btn-sm btn-outline-primary" type="button">Trước</button>
-                    <div id="thread-posts-page-info" class="sv-thread-pagination__info sv-meta">Phản hồi 1-10 / 10</div>
-                    <button id="thread-posts-next" class="btn btn-sm btn-outline-primary" type="button">Sau</button>
+                    <div id="thread-posts-page-info" class="sv-thread-pagination__info sv-meta">Chưa có phản hồi</div>
+                    <button id="thread-posts-load-more" class="btn btn-sm btn-outline-primary sv-thread-pagination__action" type="button">Xem thêm...</button>
                 </div>
             </section>
 
@@ -516,10 +508,21 @@
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="config.js"></script>
 <script src="avatar-utils.js"></script>
+<script src="svp-rich-content.js"></script>
 <script src="comment-editor.js"></script>
 <script>
     (function () {
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+        const richContent = window.SVPRichContent || null;
+        const discussionSanitizeOptions = {
+            allowedTags: [
+                'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
+                'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+                'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'div', 'span',
+                'img', 'figure', 'figcaption', 'iframe'
+            ],
+            allowGoogleDriveEmbeds: true
+        };
         const METRIC_KEY = 'svp.forum.thread.metrics.v1';
         const LOCAL_REPLY_PREFIX = 'svp.thread.localReplies.v1.';
         const GUEST_REPLY_NAME_KEY = 'svp.thread.guestDisplayName';
@@ -572,9 +575,8 @@
         const statusEl = document.getElementById('thread-status');
         const postsEl = document.getElementById('thread-posts');
         const threadPostPaginationEl = document.getElementById('thread-post-pagination');
-        const threadPostsPrevBtn = document.getElementById('thread-posts-prev');
         const threadPostsPageInfoEl = document.getElementById('thread-posts-page-info');
-        const threadPostsNextBtn = document.getElementById('thread-posts-next');
+        const threadPostsLoadMoreBtn = document.getElementById('thread-posts-load-more');
         const kpisEl = document.getElementById('thread-kpis');
         const relatedEl = document.getElementById('related-list');
         const shareSectionEl = document.getElementById('thread-share');
@@ -617,9 +619,9 @@
         let currentThread = null;
         let currentApiComments = [];
         let currentLocalReplies = [];
-        let currentReplyPageIndex = 0;
+        let visibleReplyCount = THREAD_REPLIES_PAGE_SIZE;
 
-        if (!breadcrumbEl || !categoryEl || !createdEl || !viewsEl || !repliesEl || !titleEl || !authorEl || !threadHeadActionsEl || !tagsEl || !postsCountEl || !statusEl || !postsEl || !threadPostPaginationEl || !threadPostsPrevBtn || !threadPostsPageInfoEl || !threadPostsNextBtn || !kpisEl || !relatedEl || !replyForm || !replyGuestFieldsEl || !replyIdentityFieldsEl || !replySessionHintEl || !replyNameEl || !replyCaptchaFieldsEl || !replyCaptchaQuestionEl || !replyCaptchaAnswerEl || !replyMessageEl || !replyCharCountEl || !replyImageFieldsEl || !replyImageEl || !replyImageStatusEl || !replyImagePreviewEl || !replyImageClearBtn || !replyFeedbackEl || !replyClearBtn || !scrollReplyBtn || !replySubmitBtn) {
+        if (!breadcrumbEl || !categoryEl || !createdEl || !viewsEl || !repliesEl || !titleEl || !authorEl || !threadHeadActionsEl || !tagsEl || !postsCountEl || !statusEl || !postsEl || !threadPostPaginationEl || !threadPostsPageInfoEl || !threadPostsLoadMoreBtn || !kpisEl || !relatedEl || !replyForm || !replyGuestFieldsEl || !replyIdentityFieldsEl || !replySessionHintEl || !replyNameEl || !replyCaptchaFieldsEl || !replyCaptchaQuestionEl || !replyCaptchaAnswerEl || !replyMessageEl || !replyCharCountEl || !replyImageFieldsEl || !replyImageEl || !replyImageStatusEl || !replyImagePreviewEl || !replyImageClearBtn || !replyFeedbackEl || !replyClearBtn || !scrollReplyBtn || !replySubmitBtn) {
             return;
         }
 
@@ -942,6 +944,10 @@
         };
 
         const sanitizeRichContentHtml = (html) => {
+            if (richContent && typeof richContent.sanitizeHtml === 'function') {
+                const sanitized = richContent.sanitizeHtml(html, discussionSanitizeOptions);
+                return sanitized || '<p>Nội dung đang được cập nhật.</p>';
+            }
             const raw = String(html || '').trim();
             if (!raw) {
                 return '<p>Nội dung đang được cập nhật.</p>';
@@ -1748,33 +1754,18 @@
             editLink.innerHTML = '<i class="fa-solid fa-pen-to-square me-1"></i>Sửa chủ đề';
             threadHeadActionsEl.appendChild(editLink);
         };
-        const scrollThreadPostsIntoView = () => {
-            const postsCard = postsEl.closest('.sv-card');
-            if (postsCard) {
-                postsCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        };
         const updateThreadReplyPaginationState = (replyCount) => {
-            const totalPages = Math.max(1, Math.ceil(replyCount / THREAD_REPLIES_PAGE_SIZE));
-            const maxPageIndex = Math.max(0, totalPages - 1);
-            currentReplyPageIndex = Math.min(Math.max(currentReplyPageIndex, 0), maxPageIndex);
-
-            if (replyCount <= THREAD_REPLIES_PAGE_SIZE) {
-                threadPostPaginationEl.classList.add('d-none');
-            } else {
-                threadPostPaginationEl.classList.remove('d-none');
-            }
-
-            threadPostsPrevBtn.disabled = currentReplyPageIndex <= 0;
-            threadPostsNextBtn.disabled = currentReplyPageIndex >= maxPageIndex;
-
             if (replyCount === 0) {
+                threadPostPaginationEl.classList.add('d-none');
+                threadPostsLoadMoreBtn.disabled = true;
                 threadPostsPageInfoEl.textContent = 'Chưa có phản hồi';
                 return;
             }
-            const start = currentReplyPageIndex * THREAD_REPLIES_PAGE_SIZE + 1;
-            const end = Math.min(replyCount, (currentReplyPageIndex + 1) * THREAD_REPLIES_PAGE_SIZE);
-            threadPostsPageInfoEl.textContent = `Phản hồi ${start}-${end} / ${replyCount}`;
+            const safeVisibleCount = Math.min(Math.max(visibleReplyCount, THREAD_REPLIES_PAGE_SIZE), replyCount);
+            visibleReplyCount = safeVisibleCount;
+            threadPostsPageInfoEl.textContent = `Hiển thị ${safeVisibleCount} / ${replyCount} phản hồi`;
+            threadPostsLoadMoreBtn.disabled = safeVisibleCount >= replyCount;
+            threadPostPaginationEl.classList.toggle('d-none', safeVisibleCount >= replyCount);
         };
 
         const toPostItem = (post, index, isOriginalPost, knownUsers, threadId) => {
@@ -1881,18 +1872,22 @@
             const orderedReplies = sortRepliesByTime([...apiComments, ...localReplies]);
             const knownUsers = buildKnownUserList([thread, ...orderedReplies]);
             const caller = getCallerInfo();
-            const maxReplyPageIndex = Math.max(0, Math.ceil(orderedReplies.length / THREAD_REPLIES_PAGE_SIZE) - 1);
-            currentReplyPageIndex = Math.min(Math.max(currentReplyPageIndex, 0), maxReplyPageIndex);
-            const replyStart = currentReplyPageIndex * THREAD_REPLIES_PAGE_SIZE;
-            const visibleReplies = orderedReplies.slice(replyStart, replyStart + THREAD_REPLIES_PAGE_SIZE);
+            const safeVisibleReplyCount = Math.min(Math.max(visibleReplyCount, THREAD_REPLIES_PAGE_SIZE), orderedReplies.length || THREAD_REPLIES_PAGE_SIZE);
+            visibleReplyCount = safeVisibleReplyCount;
+            const visibleReplies = orderedReplies.slice(0, safeVisibleReplyCount);
             const postItems = [
                 toPostItem(thread, 1, true, knownUsers, thread.threadId),
-                ...visibleReplies.map((item, idx) => toPostItem(item, replyStart + idx + 2, false, knownUsers, thread.threadId))
+                ...visibleReplies.map((item, idx) => toPostItem(item, idx + 2, false, knownUsers, thread.threadId))
             ];
 
             postsCountEl.textContent = `${orderedReplies.length + 1} bài`;
             statusEl.style.display = 'none';
             postsEl.innerHTML = postItems.map((item) => renderThreadPostItem(item, caller)).join('');
+            if (richContent && typeof richContent.arrangePortraitImageRows === 'function') {
+                Array.from(postsEl.querySelectorAll('.sv-thread-post__content')).forEach((contentEl) => {
+                    richContent.arrangePortraitImageRows(contentEl);
+                });
+            }
             updateThreadReplyPaginationState(orderedReplies.length);
         };
 
@@ -2381,23 +2376,13 @@
                     }
                 });
             }
-            threadPostsPrevBtn.addEventListener('click', () => {
-                if (currentReplyPageIndex <= 0) {
-                    return;
-                }
-                currentReplyPageIndex -= 1;
-                rerenderCurrentThreadPosts();
-                scrollThreadPostsIntoView();
-            });
-            threadPostsNextBtn.addEventListener('click', () => {
+            threadPostsLoadMoreBtn.addEventListener('click', () => {
                 const totalReplies = currentApiComments.length + currentLocalReplies.length;
-                const maxReplyPageIndex = Math.max(0, Math.ceil(totalReplies / THREAD_REPLIES_PAGE_SIZE) - 1);
-                if (currentReplyPageIndex >= maxReplyPageIndex) {
+                if (visibleReplyCount >= totalReplies) {
                     return;
                 }
-                currentReplyPageIndex += 1;
+                visibleReplyCount += THREAD_REPLIES_PAGE_SIZE;
                 rerenderCurrentThreadPosts();
-                scrollThreadPostsIntoView();
             });
 
             postsEl.addEventListener('click', (event) => {
@@ -2607,7 +2592,7 @@
             currentThread = thread;
             currentApiComments = apiComments;
             currentLocalReplies = localReplies;
-            currentReplyPageIndex = 0;
+            visibleReplyCount = THREAD_REPLIES_PAGE_SIZE;
 
             const metrics = updateThreadMetrics(thread.threadId, (prev) => ({
                 views: Math.max(prev.views, normalizeCount(thread.viewCount)),
@@ -2660,7 +2645,7 @@
                     focusReplyComposer();
                     return;
                 }
-                if (hasReplyContent && message && message.length < 5 && !selectedImageFile && !contentHtml.includes('<img')) {
+                if (hasReplyContent && message && message.length < 5 && !selectedImageFile && !/<(?:img|iframe)\b/i.test(contentHtml)) {
                     setReplyFeedback('Nội dung phản hồi cần tối thiểu 5 ký tự (hoặc thêm ảnh đính kèm).', 'error');
                     focusReplyComposer();
                     return;
@@ -2715,7 +2700,7 @@
                         replies: Math.max(prev.replies, nextTotalReplies),
                         lastCommentAt: createdComment.createdAt || new Date().toISOString()
                     }));
-                    currentReplyPageIndex = Math.max(0, Math.ceil(nextTotalReplies / THREAD_REPLIES_PAGE_SIZE) - 1);
+                    visibleReplyCount = Math.max(visibleReplyCount, nextTotalReplies);
 
                     if (isAuthenticated) {
                         if (authenticatedIdentity.email) {

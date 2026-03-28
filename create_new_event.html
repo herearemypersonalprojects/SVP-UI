@@ -24,6 +24,15 @@
             background-size: cover;
             background-position: center;
         }
+        .sv-event-cover > .svp-image-row-cover {
+            width: 100%;
+            height: 100%;
+            border-radius: inherit;
+            overflow: hidden;
+        }
+        .sv-event-cover > .svp-image-row-cover > img {
+            height: 100%;
+        }
         .sv-grid-2 {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -307,9 +316,19 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="config.js"></script>
+<script src="svp-rich-content.js"></script>
 <script>
     (function () {
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+        const richContent = window.SVPRichContent || null;
+        const eventSanitizeOptions = {
+            allowedTags: [
+                'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
+                'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+                'h2', 'h3', 'a', 'div', 'span', 'img', 'figure', 'figcaption', 'iframe'
+            ],
+            allowGoogleDriveEmbeds: true
+        };
         const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
         const buildEventHref = (eventId, title) => urlHelpers
             ? urlHelpers.buildDetailPath('event', eventId, title)
@@ -430,6 +449,9 @@
             }
         };
         const sanitizeEventBodyHtml = (html) => {
+            if (richContent && typeof richContent.sanitizeHtml === 'function') {
+                return richContent.sanitizeHtml(html, eventSanitizeOptions);
+            }
             const raw = String(html || '').trim();
             if (!raw) return '';
 
@@ -500,7 +522,10 @@
         const getDescriptionBodyHtml = () => {
             const editor = getEditorInstance();
             if (editor) {
-                return String(editor.getContent() || '').trim();
+                const rawHtml = editor.getContent();
+                return richContent && typeof richContent.cleanupPortraitLayoutHtml === 'function'
+                    ? richContent.cleanupPortraitLayoutHtml(rawHtml)
+                    : String(rawHtml || '').trim();
             }
             return textToParagraphsHtml(descriptionInput.value.trim());
         };
@@ -523,12 +548,50 @@
             }
             descriptionInput.focus();
         };
+        const scheduleEventEditorPortraitLayout = () => {
+            if (!eventEditor || !richContent || typeof richContent.arrangePortraitImageRows !== 'function') {
+                return;
+            }
+            const editorWindow = eventEditor.getWin ? eventEditor.getWin() : window;
+            const requestFrame = editorWindow && typeof editorWindow.requestAnimationFrame === 'function'
+                ? editorWindow.requestAnimationFrame.bind(editorWindow)
+                : ((callback) => window.setTimeout(callback, 0));
+            const cancelFrame = editorWindow && typeof editorWindow.cancelAnimationFrame === 'function'
+                ? editorWindow.cancelAnimationFrame.bind(editorWindow)
+                : window.clearTimeout.bind(window);
+            if (eventEditorPortraitLayoutFrame) {
+                cancelFrame(eventEditorPortraitLayoutFrame);
+            }
+            eventEditorPortraitLayoutFrame = requestFrame(() => {
+                eventEditorPortraitLayoutFrame = 0;
+                const editorBody = eventEditor.getBody ? eventEditor.getBody() : null;
+                if (!editorBody) {
+                    return;
+                }
+                const applyLayout = () => {
+                    richContent.arrangePortraitImageRows(editorBody, {
+                        sortable: true,
+                        onSortChange: () => {
+                            preview();
+                            if (eventEditor && typeof eventEditor.nodeChanged === 'function') {
+                                eventEditor.nodeChanged();
+                            }
+                        }
+                    });
+                };
+                if (eventEditor.undoManager && typeof eventEditor.undoManager.ignore === 'function') {
+                    eventEditor.undoManager.ignore(applyLayout);
+                    return;
+                }
+                applyLayout();
+            });
+        };
         const initEventEditor = async () => {
             if (!window.tinymce || !descriptionInput) {
                 return;
             }
 
-            const editors = await window.tinymce.init({
+            const editorConfig = {
                 selector: '#event-description',
                 license_key: 'gpl',
                 menubar: 'insert format tools view',
@@ -607,7 +670,12 @@
                     }
                     a { color: #1d4ed8; }
                 `
-            });
+            };
+            const editors = await window.tinymce.init(
+                richContent && typeof richContent.withGoogleDriveTinyMceConfig === 'function'
+                    ? richContent.withGoogleDriveTinyMceConfig(editorConfig)
+                    : editorConfig
+            );
 
             eventEditor = Array.isArray(editors) && editors.length
                 ? editors[0]
@@ -616,13 +684,17 @@
                 return;
             }
             eventEditorReady = true;
-            eventEditor.on('change input undo redo keyup setcontent', preview);
+            eventEditor.on('change input undo redo keyup setcontent', () => {
+                scheduleEventEditorPortraitLayout();
+                preview();
+            });
 
             const initialEditorContent = String(pendingEditorContent || descriptionInput.value || '').trim();
             if (initialEditorContent) {
                 eventEditor.setContent(initialEditorContent);
             }
             pendingEditorContent = '';
+            scheduleEventEditorPortraitLayout();
             preview();
         };
 
@@ -648,6 +720,7 @@
         let eventEditor = null;
         let eventEditorReady = false;
         let pendingEditorContent = '';
+        let eventEditorPortraitLayoutFrame = 0;
         const clearImageFilePreview = () => {
             if (imageFilePreviewUrl) {
                 URL.revokeObjectURL(imageFilePreviewUrl);
@@ -982,12 +1055,32 @@
             const descriptionHtml = sanitizePreviewHtml(buildEventContent());
             const imageUrl = sanitizeUrl(imageUrlInput.value);
             const contentCoverUrl = extractFirstImageUrl(descriptionHtml);
+            const contentImageRowUrls = richContent && typeof richContent.extractLeadingImageRowUrls === 'function'
+                ? richContent.extractLeadingImageRowUrls(descriptionHtml, { maxItems: 3 })
+                : [];
+            const imageRowCoverHtml = contentImageRowUrls.length >= 2 && richContent && typeof richContent.buildImageRowCoverHtml === 'function'
+                ? richContent.buildImageRowCoverHtml({
+                    tagName: 'div',
+                    imageUrls: contentImageRowUrls,
+                    maxItems: 3,
+                    altPrefix: title || 'Ảnh cover sự kiện'
+                })
+                : '';
             previewTitle.textContent = title || 'Tên sự kiện sẽ hiển thị tại đây';
             previewDatetime.textContent = startText
                 ? `Ngày giờ: ${startText}${endText ? ` - ${endText}` : ''}`
                 : 'Ngày giờ: Chưa cập nhật';
             previewLocation.textContent = `Địa điểm: ${location || (onlineInput.checked ? 'Online' : 'Chưa cập nhật')}`;
             previewDescription.innerHTML = descriptionHtml || 'Mô tả sự kiện sẽ xuất hiện ở đây sau khi bạn nhập.';
+            if (descriptionHtml && richContent && typeof richContent.arrangePortraitImageRows === 'function') {
+                richContent.arrangePortraitImageRows(previewDescription);
+            }
+            if (imageRowCoverHtml) {
+                previewCover.innerHTML = imageRowCoverHtml;
+                previewCover.style.backgroundImage = 'none';
+                return;
+            }
+            previewCover.innerHTML = '';
             previewCover.style.backgroundImage = imageUrl
                 ? `url("${encodeURI(imageUrl)}")`
                 : (imageFilePreviewUrl

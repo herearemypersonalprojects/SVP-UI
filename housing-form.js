@@ -1,6 +1,7 @@
 (function () {
     const shared = window.SVPHousing;
     const editorLib = window.SVPCommentEditor || null;
+    const richContent = window.SVPRichContent || null;
     if (!shared) {
         return;
     }
@@ -323,18 +324,31 @@
     };
 
     const updatePreview = () => {
-        const descriptionImageUrl = shared.extractFirstImageUrlFromHtml(getDescriptionHtml());
+        const descriptionHtml = getDescriptionHtml();
+        const descriptionImageUrl = shared.extractFirstImageUrlFromHtml(descriptionHtml);
+        const descriptionImageRowUrls = richContent && typeof richContent.extractLeadingImageRowUrls === 'function'
+            ? richContent.extractLeadingImageRowUrls(descriptionHtml, { maxItems: 3 })
+            : [];
         const primaryImage = state.imageEntries.find((item) => item.isPrimary)
             || state.imageEntries[0]
             || (descriptionImageUrl ? { previewUrl: descriptionImageUrl } : null);
         const previewTransit = state.transitPoints.find((item) => item.isPrimary) || state.transitPoints[0];
         const statusBadge = '<span class="sv-housing-badge sv-housing-badge--AVAILABLE">Còn trống</span>';
         const descriptionPreview = getDescriptionPlainText();
+        const previewCoverHtml = descriptionImageRowUrls.length >= 2 && richContent && typeof richContent.buildImageRowCoverHtml === 'function'
+            ? richContent.buildImageRowCoverHtml({
+                tagName: 'div',
+                imageUrls: descriptionImageRowUrls,
+                className: 'sv-housing-image-thumb mb-3',
+                altPrefix: titleEl.value || 'Ảnh preview housing',
+                maxItems: 3
+            })
+            : (primaryImage ? `<img class="sv-housing-image-thumb mb-3" src="${shared.escapeHtml(primaryImage.previewUrl)}" alt="Preview">` : '');
         if (!state.imageEntries.length) {
             renderImageList();
         }
         previewEl.innerHTML = `
-            ${primaryImage ? `<img class="sv-housing-image-thumb mb-3" src="${shared.escapeHtml(primaryImage.previewUrl)}" alt="Preview">` : ''}
+            ${previewCoverHtml}
             <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
                 <div class="sv-housing-price">${shared.escapeHtml(shared.formatPrice(priceEl.value))}</div>
                 ${statusBadge}

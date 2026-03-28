@@ -1,6 +1,7 @@
 (function () {
     const shared = window.SVPHousing;
     const editorLib = window.SVPCommentEditor || null;
+    const richContent = window.SVPRichContent || null;
     if (!shared) {
         return;
     }
@@ -48,6 +49,9 @@
             ? editorLib.sanitizeHtml(raw)
             : shared.escapeHtml(raw);
         descriptionEl.innerHTML = sanitized || '<div class="sv-housing-empty">Chưa có mô tả chi tiết.</div>';
+        if (richContent && typeof richContent.arrangePortraitImageRows === 'function') {
+            richContent.arrangePortraitImageRows(descriptionEl);
+        }
     };
 
     const extractShareImageUrl = (payload) => {

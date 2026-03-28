@@ -1,5 +1,6 @@
 (function () {
     const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+    const richContent = window.SVPRichContent || null;
     const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
     const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
     const CATEGORY_NAMES = {
@@ -90,6 +91,11 @@
             return '';
         }
     };
+    const extractLeadingImageRowUrls = (contentHtml) => (
+        richContent && typeof richContent.extractLeadingImageRowUrls === 'function'
+            ? richContent.extractLeadingImageRowUrls(contentHtml, { maxItems: 3 })
+            : []
+    );
 
     const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
         .test(String(value || '').trim());
@@ -319,9 +325,18 @@
         blogListEl.innerHTML = articles.map((item) => {
             const detailHref = buildArticleHref(item.postId, item.title);
             const coverUrl = sanitizeUrl(item.coverImageUrl);
-            const coverNode = coverUrl
-                ? `<a class="sv-profile-blog-cover" href="${detailHref}" style="background-image:url('${escapeHtml(coverUrl)}')"></a>`
-                : '';
+            const coverImageRowUrls = extractLeadingImageRowUrls(item.contentHtml);
+            const coverNode = coverImageRowUrls.length >= 2 && richContent && typeof richContent.buildImageRowCoverHtml === 'function'
+                ? richContent.buildImageRowCoverHtml({
+                    href: detailHref,
+                    imageUrls: coverImageRowUrls,
+                    className: 'sv-profile-blog-cover',
+                    altPrefix: item.title || 'Ảnh cover blog',
+                    maxItems: 3
+                })
+                : (coverUrl
+                    ? `<a class="sv-profile-blog-cover" href="${detailHref}" style="background-image:url('${escapeHtml(coverUrl)}')"></a>`
+                    : '');
             return `
                 <article class="sv-profile-blog-card">
                     ${coverNode}

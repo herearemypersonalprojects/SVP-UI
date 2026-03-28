@@ -97,6 +97,10 @@
             height: 100%;
             border: 0;
         }
+        #article-multi-image-urls {
+            min-height: 180px;
+            resize: vertical;
+        }
     </style>
 </head>
 <body>
@@ -206,7 +210,12 @@
                     </div>
 
                     <div class="mb-3">
-                        <label for="article-content-editor" class="form-label">Nội dung bài viết</label>
+                        <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-2">
+                            <label for="article-content-editor" class="form-label mb-0">Nội dung bài viết</label>
+                            <button id="article-insert-multi-image-btn" type="button" class="btn btn-outline-secondary btn-sm">
+                                <i class="fa-regular fa-images me-2"></i>Chèn nhiều ảnh liên tiếp
+                            </button>
+                        </div>
                         <textarea
                             id="article-content-editor"
                             class="form-control sv-editor-textarea"
@@ -229,6 +238,31 @@
     </div>
 </main>
 
+<div class="modal fade" id="article-multi-image-modal" tabindex="-1" aria-labelledby="article-multi-image-modal-title" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 id="article-multi-image-modal-title" class="modal-title">Chèn nhiều ảnh liên tiếp</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Đóng"></button>
+            </div>
+            <div class="modal-body">
+                <label for="article-multi-image-urls" class="form-label">Mỗi dòng một URL ảnh</label>
+                <textarea
+                    id="article-multi-image-urls"
+                    class="form-control"
+                    placeholder="https://.../img-1.jpg&#10;https://.../img-2.jpg&#10;https://drive.google.com/file/d/.../view?usp=sharing"
+                ></textarea>
+                <div class="sv-meta mt-2">Hệ thống sẽ chèn các ảnh này thành một hàng ngang duy nhất. Hỗ trợ cả link ảnh thường và link file ảnh Google Drive.</div>
+                <div id="article-multi-image-feedback" class="sv-meta mt-2" aria-live="polite"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Hủy</button>
+                <button id="article-multi-image-insert-btn" type="button" class="btn btn-primary">Chèn vào bài viết</button>
+            </div>
+        </div>
+    </div>
+</div>
+
 <footer class="container py-4">
     <div class="row">
         <div class="col-md">
@@ -248,9 +282,20 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="config.js"></script>
+<script src="svp-rich-content.js"></script>
 <script>
     (function () {
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+        const richContent = window.SVPRichContent || null;
+        const articleSanitizeOptions = {
+            allowedTags: [
+                'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
+                'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+                'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'div', 'span',
+                'img', 'figure', 'figcaption', 'table', 'thead', 'tbody', 'tfoot', 'tr', 'td', 'th', 'iframe'
+            ],
+            allowGoogleDriveEmbeds: true
+        };
         const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
         const searchParams = new URLSearchParams(window.location.search);
         const buildArticleHref = (postId, title) => urlHelpers
@@ -284,6 +329,11 @@
         const emailWrap = document.getElementById('article-email-wrap');
         const emailInput = document.getElementById('article-email');
         const feedback = document.getElementById('article-submit-feedback');
+        const multiImageBtn = document.getElementById('article-insert-multi-image-btn');
+        const multiImageModalEl = document.getElementById('article-multi-image-modal');
+        const multiImageUrlsInput = document.getElementById('article-multi-image-urls');
+        const multiImageFeedback = document.getElementById('article-multi-image-feedback');
+        const multiImageInsertBtn = document.getElementById('article-multi-image-insert-btn');
         const breadcrumbCurrentEl = document.querySelector('.sv-breadcrumb span');
         const heroTitleEl = document.querySelector('.sv-page-hero__title');
         const heroSubtitleEl = document.querySelector('.sv-page-hero__subtitle');
@@ -302,6 +352,8 @@
         let persistedCoverUrl = '';
         let pendingCoverFile = null;
         let pendingCoverPreviewUrl = '';
+        let editorPortraitLayoutFrame = 0;
+        let multiImageModal = null;
         const MAX_IMAGE_UPLOAD_BYTES = 100 * 1024;
         const BLOG_DEFAULT_CATEGORY_ID = 11;
         const editPostId = searchParams.get('editPostId');
@@ -310,6 +362,13 @@
         if (!form || !titleInput || !contentEditor || !contentHiddenInput || !coverUrlInput || !coverFileInput || !coverPreview || !coverUploadStatus || !categoryInput || !categoryWrap || !feedback || !emailWrap || !emailInput) {
             return;
         }
+
+        const escapeHtml = (value) => String(value || '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
 
         const getSubmitButton = () => form.querySelector('button[type="submit"]');
         const isBlogMode = () => editorMode === 'blog';
@@ -375,6 +434,58 @@
             }
         };
 
+        const normalizeInsertedImageUrl = (url) => {
+            const safeUrl = sanitizeUrl(url);
+            if (!safeUrl) {
+                return '';
+            }
+            if (richContent && typeof richContent.toGoogleDriveImageUrl === 'function') {
+                const driveImageUrl = richContent.toGoogleDriveImageUrl(safeUrl);
+                if (driveImageUrl) {
+                    return driveImageUrl;
+                }
+            }
+            return safeUrl;
+        };
+
+        const setMultiImageFeedback = (text, type) => {
+            if (!multiImageFeedback) {
+                return;
+            }
+            multiImageFeedback.textContent = text || '';
+            multiImageFeedback.style.color = type === 'error'
+                ? '#b91c1c'
+                : (type === 'success' ? '#15803d' : '#475569');
+        };
+
+        const parseMultiImageUrls = (value) => {
+            const urls = [];
+            const invalidEntries = [];
+            String(value || '')
+                .split(/\r?\n+/)
+                .map((item) => item.trim())
+                .filter(Boolean)
+                .forEach((item) => {
+                    const normalized = normalizeInsertedImageUrl(item);
+                    if (!normalized) {
+                        invalidEntries.push(item);
+                        return;
+                    }
+                    urls.push(normalized);
+                });
+            return { urls, invalidEntries };
+        };
+
+        const buildMultiImageRowHtml = (urls) => {
+            if (!Array.isArray(urls) || !urls.length) {
+                return '';
+            }
+            const imagesHtml = urls
+                .map((url, index) => `<img src="${escapeHtml(url)}" alt="Ảnh bài viết ${index + 1}" loading="lazy">`)
+                .join('');
+            return `<div class="image-row">${imagesHtml}</div><p><br></p>`;
+        };
+
         const extractFirstImageSrc = (html) => {
             const match = String(html || '').match(/<img[^>]*src\s*=\s*['"]([^'"]+)['"][^>]*>/i);
             return match && match[1] ? sanitizeUrl(match[1]) : '';
@@ -403,21 +514,20 @@
             let coverUrl = '';
             if (firstMeaningfulNode && firstMeaningfulNode.nodeType === Node.ELEMENT_NODE) {
                 const firstElement = firstMeaningfulNode;
-                const coverImage = firstElement.matches('img[src]')
-                    ? firstElement
-                    : firstElement.querySelector('img[src]');
+                const blockImages = firstElement.matches('img[src]')
+                    ? [firstElement]
+                    : Array.from(firstElement.querySelectorAll('img[src]'));
+                const imageCount = blockImages.length;
+                const coverImage = imageCount === 1 ? blockImages[0] : null;
                 const safeCoverUrl = sanitizeUrl(coverImage?.getAttribute('src') || '');
                 const altText = String(coverImage?.getAttribute('alt') || '').trim().toLowerCase();
                 const blockText = String(firstElement.textContent || '').replace(/\u00a0/g, ' ').trim();
-                const isImageOnlyBlock = Boolean(coverImage) && !blockText;
-                if (safeCoverUrl && (altText === 'cover image' || isImageOnlyBlock)) {
+                const isImageOnlyBlock = imageCount === 1 && !blockText;
+                const isGroupedImageRow = firstElement.classList?.contains('image-row') === true || imageCount > 1;
+                if (safeCoverUrl && !isGroupedImageRow && (altText === 'cover image' || isImageOnlyBlock)) {
                     coverUrl = safeCoverUrl;
                     firstElement.remove();
                 }
-            }
-
-            if (!coverUrl) {
-                coverUrl = extractFirstImageSrc(rawHtml);
             }
 
             return {
@@ -548,7 +658,10 @@
         const getEditorContent = () => {
             const editor = getEditorInstance();
             if (editor) {
-                return editor.getContent();
+                const rawHtml = editor.getContent();
+                return richContent && typeof richContent.cleanupPortraitLayoutHtml === 'function'
+                    ? richContent.cleanupPortraitLayoutHtml(rawHtml)
+                    : rawHtml;
             }
             return String(contentEditor.value || '').trim();
         };
@@ -574,8 +687,117 @@
             contentEditor.focus();
         };
 
+        const openMultiImageDialog = () => {
+            if (!(multiImageModalEl instanceof HTMLElement) || !(multiImageUrlsInput instanceof HTMLTextAreaElement)) {
+                return;
+            }
+            setMultiImageFeedback('', 'info');
+            multiImageUrlsInput.value = '';
+            if (!multiImageModal && window.bootstrap?.Modal) {
+                multiImageModal = new window.bootstrap.Modal(multiImageModalEl);
+            }
+            multiImageModal?.show();
+            window.setTimeout(() => {
+                multiImageUrlsInput.focus();
+                multiImageUrlsInput.select();
+            }, 160);
+        };
+
+        const insertMultiImageRow = () => {
+            if (!(multiImageUrlsInput instanceof HTMLTextAreaElement)) {
+                return;
+            }
+            const { urls, invalidEntries } = parseMultiImageUrls(multiImageUrlsInput.value);
+            if (invalidEntries.length) {
+                setMultiImageFeedback(`Có ${invalidEntries.length} URL không hợp lệ. Mỗi dòng phải là một link ảnh hoặc link file ảnh Google Drive hợp lệ.`, 'error');
+                return;
+            }
+            if (urls.length < 2) {
+                setMultiImageFeedback('Nhập ít nhất 2 URL ảnh để tạo một hàng ảnh ngang.', 'error');
+                return;
+            }
+
+            const rowHtml = buildMultiImageRowHtml(urls);
+            if (!rowHtml) {
+                setMultiImageFeedback('Không tạo được cụm ảnh.', 'error');
+                return;
+            }
+
+            const editor = getEditorInstance();
+            if (editor) {
+                editor.focus();
+                editor.insertContent(rowHtml);
+                scheduleEditorPortraitLayout();
+                updateDraft();
+                if (typeof editor.nodeChanged === 'function') {
+                    editor.nodeChanged();
+                }
+            } else {
+                const currentContent = String(getEditorContent() || '').trim();
+                const nextContent = currentContent ? `${currentContent}\n${rowHtml}` : rowHtml;
+                setEditorContent(nextContent);
+                updateDraft();
+            }
+
+            setMultiImageFeedback('Đã chèn hàng ảnh vào bài viết.', 'success');
+            multiImageModal?.hide();
+        };
+
         const updateDraft = () => {
             contentHiddenInput.value = getEditorContent();
+        };
+
+        const scheduleEditorPortraitLayout = () => {
+            if (!articleEditor || !richContent || typeof richContent.arrangePortraitImageRows !== 'function') {
+                return;
+            }
+            const editorWindow = articleEditor.getWin ? articleEditor.getWin() : window;
+            const requestFrame = editorWindow && typeof editorWindow.requestAnimationFrame === 'function'
+                ? editorWindow.requestAnimationFrame.bind(editorWindow)
+                : window.requestAnimationFrame.bind(window);
+            const cancelFrame = editorWindow && typeof editorWindow.cancelAnimationFrame === 'function'
+                ? editorWindow.cancelAnimationFrame.bind(editorWindow)
+                : window.cancelAnimationFrame.bind(window);
+            if (editorPortraitLayoutFrame) {
+                cancelFrame(editorPortraitLayoutFrame);
+            }
+            editorPortraitLayoutFrame = requestFrame(() => {
+                editorPortraitLayoutFrame = 0;
+                const editorBody = articleEditor.getBody ? articleEditor.getBody() : null;
+                if (!editorBody) {
+                    return;
+                }
+                if (articleEditor.undoManager && typeof articleEditor.undoManager.ignore === 'function') {
+                    articleEditor.undoManager.ignore(() => {
+                        richContent.arrangePortraitImageRows(editorBody, {
+                            sortable: true,
+                            onSortChange: () => {
+                                updateDraft();
+                                if (articleEditor && typeof articleEditor.nodeChanged === 'function') {
+                                    articleEditor.nodeChanged();
+                                }
+                            }
+                        });
+                    });
+                    return;
+                }
+                richContent.arrangePortraitImageRows(editorBody, {
+                    sortable: true,
+                    onSortChange: () => {
+                        updateDraft();
+                        if (articleEditor && typeof articleEditor.nodeChanged === 'function') {
+                            articleEditor.nodeChanged();
+                        }
+                    }
+                });
+            });
+        };
+
+        const sanitizeArticleBodyHtml = (html) => {
+            if (richContent && typeof richContent.sanitizeHtml === 'function') {
+                return richContent.sanitizeHtml(html, articleSanitizeOptions);
+            }
+            return String(html || '').trim();
         };
 
         const normalizeEmail = (value) => (value || '').trim().toLowerCase();
@@ -622,7 +844,7 @@
         };
 
         const composeContentHtml = () => {
-            const editorHtml = getEditorContent().trim();
+            const editorHtml = sanitizeArticleBodyHtml(getEditorContent()).trim();
             const coverUrl = sanitizeUrl(coverUrlInput.value);
             const coverHtml = coverUrl ? `<p><img src="${coverUrl}" alt="cover image"></p>` : '';
             if (!editorHtml) {
@@ -653,7 +875,7 @@
                 return;
             }
 
-            const editors = await window.tinymce.init({
+            const editorConfig = {
                 selector: '#article-content-editor',
                 license_key: 'gpl',
                 menubar: false,
@@ -718,7 +940,12 @@
                         background: #eff6ff;
                     }
                 `
-            });
+            };
+            const editors = await window.tinymce.init(
+                richContent && typeof richContent.withGoogleDriveTinyMceConfig === 'function'
+                    ? richContent.withGoogleDriveTinyMceConfig(editorConfig)
+                    : editorConfig
+            );
 
             articleEditor = Array.isArray(editors) && editors.length
                 ? editors[0]
@@ -728,12 +955,17 @@
             }
             articleEditorReady = true;
 
-            articleEditor.on('change input undo redo keyup setcontent', updateDraft);
+            const handleEditorMutation = () => {
+                scheduleEditorPortraitLayout();
+                updateDraft();
+            };
+            articleEditor.on('change input undo redo setcontent', handleEditorMutation);
             const initialEditorContent = String(pendingEditorContent || contentEditor.value || '').trim();
             if (initialEditorContent) {
                 articleEditor.setContent(initialEditorContent);
             }
             pendingEditorContent = '';
+            scheduleEditorPortraitLayout();
             updateDraft();
         };
 
@@ -950,6 +1182,14 @@
             element.addEventListener('change', updateDraft);
         });
         contentEditor.addEventListener('input', updateDraft);
+        multiImageBtn?.addEventListener('click', openMultiImageDialog);
+        multiImageInsertBtn?.addEventListener('click', insertMultiImageRow);
+        multiImageModalEl?.addEventListener('hidden.bs.modal', () => {
+            if (multiImageUrlsInput instanceof HTMLTextAreaElement) {
+                multiImageUrlsInput.value = '';
+            }
+            setMultiImageFeedback('', 'info');
+        });
         editorReady = initArticleEditor().catch((error) => {
             console.error('TinyMCE init failed:', error);
             setFeedback('Không thể tải trình soạn thảo nâng cao. Hệ thống chuyển sang chế độ nhập HTML cơ bản.', 'error');

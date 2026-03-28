@@ -278,9 +278,20 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="config.js"></script>
+<script src="svp-rich-content.js"></script>
 <script>
     (function () {
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+        const richContent = window.SVPRichContent || null;
+        const discussionSanitizeOptions = {
+            allowedTags: [
+                'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
+                'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+                'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'a', 'div', 'span',
+                'img', 'figure', 'figcaption', 'iframe'
+            ],
+            allowGoogleDriveEmbeds: true
+        };
         const MAX_IMAGE_UPLOAD_BYTES = 100 * 1024;
         const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
         const searchParams = new URLSearchParams(window.location.search);
@@ -326,6 +337,7 @@
         let discussionEditor = null;
         let discussionEditorReady = false;
         let pendingEditorContent = '';
+        let discussionEditorPortraitLayoutFrame = 0;
         let editorReady = Promise.resolve();
 
         const applyPageMode = () => {
@@ -388,21 +400,24 @@
             let coverUrl = '';
             if (firstMeaningfulNode && firstMeaningfulNode.nodeType === Node.ELEMENT_NODE) {
                 const firstElement = firstMeaningfulNode;
-                const coverImage = firstElement.matches('img[src]')
-                    ? firstElement
-                    : firstElement.querySelector('img[src]');
+                const blockImages = firstElement.matches('img[src]')
+                    ? [firstElement]
+                    : Array.from(firstElement.querySelectorAll('img[src]'));
+                const imageCount = blockImages.length;
+                const coverImage = imageCount === 1 ? blockImages[0] : null;
                 const safeCoverUrl = sanitizeUrl(coverImage?.getAttribute('src') || '');
                 const attachmentType = String(coverImage?.getAttribute('data-svp-attachment') || '').trim().toLowerCase();
                 const altText = String(coverImage?.getAttribute('alt') || '').trim().toLowerCase();
                 const blockText = String(firstElement.textContent || '').replace(/\u00a0/g, ' ').trim();
-                const isImageOnlyBlock = Boolean(coverImage) && !blockText;
-                if (safeCoverUrl && (attachmentType === 'discussion-cover' || altText === 'discussion cover' || isImageOnlyBlock)) {
+                const isImageOnlyBlock = imageCount === 1 && !blockText;
+                const isGroupedImageRow = firstElement.classList?.contains('image-row') === true || imageCount > 1;
+                if (safeCoverUrl && !isGroupedImageRow && (attachmentType === 'discussion-cover' || altText === 'discussion cover' || isImageOnlyBlock)) {
                     coverUrl = safeCoverUrl;
                     firstElement.remove();
                 }
             }
 
-            if (!coverUrl) {
+            if (!coverUrl && !(firstMeaningfulNode instanceof HTMLElement && (firstMeaningfulNode.classList?.contains('image-row') === true || firstMeaningfulNode.querySelectorAll?.('img[src]').length > 1))) {
                 coverUrl = extractFirstImageSrc(rawHtml);
             }
 
@@ -765,6 +780,9 @@
         };
 
         const sanitizeDiscussionBodyHtml = (html) => {
+            if (richContent && typeof richContent.sanitizeHtml === 'function') {
+                return richContent.sanitizeHtml(html, discussionSanitizeOptions);
+            }
             const raw = String(html || '').trim();
             if (!raw) return '';
 
@@ -825,6 +843,9 @@
         };
 
         const sanitizePreviewHtml = (html) => {
+            if (richContent && typeof richContent.sanitizeHtml === 'function') {
+                return richContent.sanitizeHtml(html, discussionSanitizeOptions);
+            }
             const raw = String(html || '').trim();
             if (!raw) return '';
 
@@ -888,7 +909,10 @@
         const getSubjectBodyHtml = () => {
             const editor = getEditorInstance();
             if (editor) {
-                return String(editor.getContent() || '').trim();
+                const rawHtml = editor.getContent();
+                return richContent && typeof richContent.cleanupPortraitLayoutHtml === 'function'
+                    ? richContent.cleanupPortraitLayoutHtml(rawHtml)
+                    : String(rawHtml || '').trim();
             }
             return textToParagraphsHtml(subjectInput.value.trim());
         };
@@ -915,12 +939,51 @@
             subjectInput.focus();
         };
 
+        const scheduleDiscussionEditorPortraitLayout = () => {
+            if (!discussionEditor || !richContent || typeof richContent.arrangePortraitImageRows !== 'function') {
+                return;
+            }
+            const editorWindow = discussionEditor.getWin ? discussionEditor.getWin() : window;
+            const requestFrame = editorWindow && typeof editorWindow.requestAnimationFrame === 'function'
+                ? editorWindow.requestAnimationFrame.bind(editorWindow)
+                : ((callback) => window.setTimeout(callback, 0));
+            const cancelFrame = editorWindow && typeof editorWindow.cancelAnimationFrame === 'function'
+                ? editorWindow.cancelAnimationFrame.bind(editorWindow)
+                : window.clearTimeout.bind(window);
+            if (discussionEditorPortraitLayoutFrame) {
+                cancelFrame(discussionEditorPortraitLayoutFrame);
+            }
+            discussionEditorPortraitLayoutFrame = requestFrame(() => {
+                discussionEditorPortraitLayoutFrame = 0;
+                const editorBody = discussionEditor.getBody ? discussionEditor.getBody() : null;
+                if (!editorBody) {
+                    return;
+                }
+                const applyLayout = () => {
+                    richContent.arrangePortraitImageRows(editorBody, {
+                        sortable: true,
+                        onSortChange: () => {
+                            updatePreview();
+                            if (discussionEditor && typeof discussionEditor.nodeChanged === 'function') {
+                                discussionEditor.nodeChanged();
+                            }
+                        }
+                    });
+                };
+                if (discussionEditor.undoManager && typeof discussionEditor.undoManager.ignore === 'function') {
+                    discussionEditor.undoManager.ignore(applyLayout);
+                    return;
+                }
+                applyLayout();
+            });
+        };
+
         const initDiscussionEditor = async () => {
             if (!window.tinymce || !subjectInput) {
                 return;
             }
 
-            const editors = await window.tinymce.init({
+            const editorConfig = {
                 selector: '#discussion-subject',
                 license_key: 'gpl',
                 menubar: 'insert format tools view',
@@ -999,7 +1062,12 @@
                     }
                     a { color: #1d4ed8; }
                 `
-            });
+            };
+            const editors = await window.tinymce.init(
+                richContent && typeof richContent.withGoogleDriveTinyMceConfig === 'function'
+                    ? richContent.withGoogleDriveTinyMceConfig(editorConfig)
+                    : editorConfig
+            );
 
             discussionEditor = Array.isArray(editors) && editors.length
                 ? editors[0]
@@ -1009,12 +1077,16 @@
             }
             discussionEditorReady = true;
 
-            discussionEditor.on('change input undo redo keyup setcontent', updatePreview);
+            discussionEditor.on('change input undo redo keyup setcontent', () => {
+                scheduleDiscussionEditorPortraitLayout();
+                updatePreview();
+            });
             const initialEditorContent = String(pendingEditorContent || '').trim();
             if (initialEditorContent) {
                 discussionEditor.setContent(initialEditorContent);
             }
             pendingEditorContent = '';
+            scheduleDiscussionEditorPortraitLayout();
             updatePreview();
         };
 
@@ -1043,6 +1115,9 @@
             previewTitle.textContent = title || 'Tiêu đề chủ đề sẽ hiển thị tại đây';
             previewCategory.textContent = categoryText || 'Chưa chọn';
             previewSubject.innerHTML = subjectHtml || 'Nội dung Subject sẽ xuất hiện ở đây sau khi bạn nhập.';
+            if (subjectHtml && richContent && typeof richContent.arrangePortraitImageRows === 'function') {
+                richContent.arrangePortraitImageRows(previewSubject);
+            }
         };
 
         [titleInput, categoryInput].forEach((element) => {

@@ -224,8 +224,8 @@
             renderMarkers();
             fitMapToInitialPins();
             metaEl.textContent = payload.hasMore
-                ? `${state.items.length}+ tin trong khung nhìn`
-                : `${state.items.length} tin trong khung nhìn`;
+                ? `${state.items.length}+ tin`
+                : `${state.items.length} tin`;
             mapStatusEl.textContent = '';
         } catch (error) {
             if (requestToken !== state.requestToken) {

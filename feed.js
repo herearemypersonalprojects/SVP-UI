@@ -1,5 +1,6 @@
 (function () {
     const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+    const richContent = window.SVPRichContent || null;
     const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
     const CATEGORY_NAMES = {
         1: 'Học tập và nghiên cứu tại Pháp',
@@ -125,6 +126,11 @@
     };
     const resolveCoverImageUrl = (explicitImageUrl, contentHtml) => (
         sanitizeUrl(explicitImageUrl) || extractFirstImageUrl(contentHtml)
+    );
+    const extractLeadingImageRowUrls = (contentHtml) => (
+        richContent && typeof richContent.extractLeadingImageRowUrls === 'function'
+            ? richContent.extractLeadingImageRowUrls(contentHtml, { maxItems: 3 })
+            : []
     );
 
     const toTimeValue = (value) => {
@@ -304,10 +310,22 @@
         `<span class="sv-feed-tag" data-tag="${escapeHtml(tag.key)}"><i class="${escapeHtml(tag.icon)}"></i>${escapeHtml(tag.label)}</span>`
     )).join('');
 
-    const renderCover = (href, imageUrl, compact) => {
+    const renderCover = (href, imageUrl, compact, imageRowUrls) => {
+        const rowUrls = Array.isArray(imageRowUrls) ? imageRowUrls : [];
+        const extraClass = compact ? ' is-compact' : '';
+        if (rowUrls.length >= 2 && richContent && typeof richContent.buildImageRowCoverHtml === 'function') {
+            return richContent.buildImageRowCoverHtml({
+                href,
+                imageUrls: rowUrls,
+                className: `sv-feed-card__cover${extraClass}`,
+                tabIndex: -1,
+                ariaHidden: true,
+                altPrefix: 'Ảnh preview bảng tin',
+                maxItems: 3
+            });
+        }
         const safeUrl = sanitizeUrl(imageUrl);
         if (!safeUrl) return '';
-        const extraClass = compact ? ' is-compact' : '';
         return `<a class="sv-feed-card__cover${extraClass}" href="${href}" style="background-image:url('${escapeHtml(safeUrl)}')"></a>`;
     };
 
@@ -323,6 +341,7 @@
             sortTime: toTimeValue(item.createdAt),
             author,
             coverImageUrl: resolveCoverImageUrl(item.coverImageUrl, item.contentHtml),
+            coverImageRowUrls: extractLeadingImageRowUrls(item.contentHtml),
             excerpt: excerptText(item.contentHtml, 280) || 'Nội dung bài viết đang được cập nhật.',
             footer: [
                 getCategoryName(item.categoryId),
@@ -345,6 +364,7 @@
             sortTime: toTimeValue(item.createdAt),
             author,
             coverImageUrl: resolveCoverImageUrl(item.coverImageUrl, item.contentHtml),
+            coverImageRowUrls: extractLeadingImageRowUrls(item.contentHtml),
             excerpt: excerptText(item.contentHtml, 260) || 'Nội dung chủ đề đang được cập nhật.',
             footer: [
                 getCategoryName(item.categoryId),
@@ -393,6 +413,7 @@
             sortTime: toTimeValue(item.createdAt),
             author,
             coverImageUrl: resolveCoverImageUrl(item.imageUrl, item.contentHtml),
+            coverImageRowUrls: extractLeadingImageRowUrls(item.contentHtml),
             excerpt: excerptText(item.contentHtml, 240) || 'Nội dung bình luận đang được cập nhật.',
             footer: [
                 item.article ? 'Thuộc bài viết' : 'Thuộc chủ đề thảo luận',
@@ -421,6 +442,11 @@
             });
             if (!existing.coverImageUrl && entry.coverImageUrl) {
                 existing.coverImageUrl = entry.coverImageUrl;
+            }
+            if ((!Array.isArray(existing.coverImageRowUrls) || existing.coverImageRowUrls.length < 2)
+                && Array.isArray(entry.coverImageRowUrls)
+                && entry.coverImageRowUrls.length >= 2) {
+                existing.coverImageRowUrls = entry.coverImageRowUrls.slice();
             }
             if ((!existing.excerpt || existing.excerpt === 'Nội dung bài viết đang được cập nhật.') && entry.excerpt) {
                 existing.excerpt = entry.excerpt;
@@ -452,7 +478,7 @@
                     <p class="sv-feed-card__excerpt">${escapeHtml(entry.excerpt)}</p>
                     <div class="sv-feed-card__footer">${(entry.footer || []).map((item) => `<span>${escapeHtml(item)}</span>`).join('')}</div>
                 </div>
-                ${renderCover(entry.href, entry.coverImageUrl, entry.entityType === 'comment' || entry.entityType === 'event')}
+                ${renderCover(entry.href, entry.coverImageUrl, entry.entityType === 'comment' || entry.entityType === 'event', entry.coverImageRowUrls)}
             </article>
         `;
     };

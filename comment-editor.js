@@ -5,6 +5,16 @@
         return;
     }
 
+    const richContent = window.SVPRichContent || null;
+    const richContentSanitizeOptions = {
+        allowedTags: [
+            'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
+            'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+            'a', 'div', 'span', 'img', 'figure', 'figcaption', 'iframe'
+        ],
+        allowGoogleDriveEmbeds: true
+    };
+
     const escapeHtml = (value) => String(value || '')
         .replace(/&/g, '&amp;')
         .replace(/</g, '&lt;')
@@ -84,6 +94,9 @@
     };
 
     const hasRenderableContent = (value) => {
+        if (richContent && typeof richContent.hasRenderableContent === 'function') {
+            return richContent.hasRenderableContent(value, richContentSanitizeOptions);
+        }
         const raw = String(value || '').trim();
         if (!raw) {
             return false;
@@ -97,6 +110,9 @@
     };
 
     const sanitizeHtml = (value) => {
+        if (richContent && typeof richContent.sanitizeHtml === 'function') {
+            return richContent.sanitizeHtml(value, richContentSanitizeOptions);
+        }
         const raw = String(value || '').trim();
         if (!raw) {
             return '';
@@ -220,6 +236,7 @@
         let ready = false;
         let pendingHtml = String(target.value || '').trim();
         let initPromise = Promise.resolve(null);
+        let editorPortraitLayoutFrame = 0;
 
         const emitChange = () => {
             if (typeof options.onChange === 'function') {
@@ -231,26 +248,90 @@
             target.value = String(value || '');
         };
 
+        const cleanupEditorHtml = (value) => {
+            const raw = String(value || '').trim();
+            if (!raw) {
+                return '';
+            }
+            return richContent && typeof richContent.cleanupPortraitLayoutHtml === 'function'
+                ? richContent.cleanupPortraitLayoutHtml(raw)
+                : raw;
+        };
+
+        const getStoredEditorHtml = () => {
+            if (ready && editor) {
+                return cleanupEditorHtml(editor.getContent());
+            }
+            return String(target.value || '').trim();
+        };
+
+        const syncTextareaFromEditor = () => {
+            if (!ready || !editor) {
+                return;
+            }
+            setTextareaValue(getStoredEditorHtml());
+        };
+
+        const scheduleEditorPortraitLayout = () => {
+            if (!editor || !richContent || typeof richContent.arrangePortraitImageRows !== 'function') {
+                return;
+            }
+            const editorWindow = editor.getWin ? editor.getWin() : window;
+            const requestFrame = editorWindow && typeof editorWindow.requestAnimationFrame === 'function'
+                ? editorWindow.requestAnimationFrame.bind(editorWindow)
+                : ((callback) => window.setTimeout(callback, 0));
+            const cancelFrame = editorWindow && typeof editorWindow.cancelAnimationFrame === 'function'
+                ? editorWindow.cancelAnimationFrame.bind(editorWindow)
+                : window.clearTimeout.bind(window);
+            if (editorPortraitLayoutFrame) {
+                cancelFrame(editorPortraitLayoutFrame);
+            }
+            editorPortraitLayoutFrame = requestFrame(() => {
+                editorPortraitLayoutFrame = 0;
+                const editorBody = editor.getBody ? editor.getBody() : null;
+                if (!editorBody) {
+                    return;
+                }
+                const applyLayout = () => {
+                    richContent.arrangePortraitImageRows(editorBody, {
+                        sortable: true,
+                        onSortChange: () => {
+                            syncTextareaFromEditor();
+                            if (editor && typeof editor.nodeChanged === 'function') {
+                                editor.nodeChanged();
+                            }
+                            emitChange();
+                        }
+                    });
+                };
+                if (editor.undoManager && typeof editor.undoManager.ignore === 'function') {
+                    editor.undoManager.ignore(applyLayout);
+                    return;
+                }
+                applyLayout();
+            });
+        };
+
         const controller = {
             whenReady: initPromise,
             isReady: () => ready,
             getEditor: () => editor,
             getHtml: () => {
                 if (ready && editor) {
-                    return String(editor.getContent() || '').trim();
+                    return getStoredEditorHtml();
                 }
                 return String(target.value || '').trim();
             },
             getSubmissionHtml: () => {
                 const raw = ready && editor
-                    ? editor.getContent()
+                    ? getStoredEditorHtml()
                     : textToParagraphsHtml(target.value);
                 return sanitizeHtml(raw);
             },
             hasContent: () => hasRenderableContent(controller.getSubmissionHtml()),
             getText: () => {
                 if (ready && editor) {
-                    return htmlToPlainText(editor.getContent());
+                    return htmlToPlainText(getStoredEditorHtml());
                 }
                 return String(target.value || '').replace(/\r\n/g, '\n').trim();
             },
@@ -263,7 +344,7 @@
                 setTextareaValue(nextHtml);
                 if (ready && editor) {
                     editor.setContent(nextHtml || '');
-                    setTextareaValue(editor.getContent() || '');
+                    syncTextareaFromEditor();
                 }
                 emitChange();
             },
@@ -282,7 +363,8 @@
                 if (ready && editor) {
                     editor.focus();
                     editor.insertContent(safeHtml || '');
-                    setTextareaValue(editor.getContent() || '');
+                    syncTextareaFromEditor();
+                    scheduleEditorPortraitLayout();
                     emitChange();
                     return;
                 }
@@ -306,7 +388,7 @@
                 return null;
             }
 
-            const editors = await window.tinymce.init({
+            const editorConfig = {
                 target,
                 license_key: 'gpl',
                 menubar: 'insert format tools view',
@@ -332,7 +414,12 @@
                 link_default_target: '_blank',
                 link_assume_external_targets: 'https',
                 content_style: options.contentStyle || baseContentStyle
-            });
+            };
+            const editors = await window.tinymce.init(
+                richContent && typeof richContent.withGoogleDriveTinyMceConfig === 'function'
+                    ? richContent.withGoogleDriveTinyMceConfig(editorConfig)
+                    : editorConfig
+            );
 
             editor = Array.isArray(editors) && editors.length
                 ? editors[0]
@@ -348,11 +435,14 @@
             } else if (target.value.trim()) {
                 editor.setContent(textToParagraphsHtml(target.value.trim()) || '');
             }
-            setTextareaValue(editor.getContent() || '');
-            editor.on('change input undo redo keyup setcontent', () => {
-                setTextareaValue(editor.getContent() || '');
+            const handleEditorMutation = () => {
+                scheduleEditorPortraitLayout();
+                syncTextareaFromEditor();
                 emitChange();
-            });
+            };
+            syncTextareaFromEditor();
+            editor.on('change input undo redo keyup setcontent', handleEditorMutation);
+            scheduleEditorPortraitLayout();
             emitChange();
             return editor;
         };

@@ -107,25 +107,16 @@
         .sv-feed-pagination {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
+            flex-direction: column;
             gap: .75rem;
         }
         .sv-feed-pagination__info {
-            min-width: 120px;
             text-align: center;
             font-weight: 600;
         }
-        @media (max-width: 576px) {
-            .sv-feed-pagination {
-                flex-wrap: wrap;
-            }
-            .sv-feed-pagination > button {
-                flex: 1 1 calc(50% - .375rem);
-            }
-            .sv-feed-pagination__info {
-                order: -1;
-                width: 100%;
-            }
+        .sv-feed-pagination__action {
+            min-width: 170px;
         }
     </style>
 </head>
@@ -212,9 +203,8 @@
                 </div>
                 <div id="sv-article-feed" class="sv-article-feed" aria-live="polite"></div>
                 <div id="sv-post-pagination" class="sv-feed-pagination px-3 pb-3" aria-label="Phân trang bài viết">
-                    <button id="sv-posts-prev" class="btn btn-outline-primary" type="button">Trước</button>
-                    <div id="sv-posts-page-info" class="sv-feed-pagination__info sv-meta">Trang 1</div>
-                    <button id="sv-posts-next" class="btn btn-outline-primary" type="button">Sau</button>
+                    <div id="sv-posts-page-info" class="sv-feed-pagination__info sv-meta">0 bài viết</div>
+                    <button id="sv-posts-load-more" class="btn btn-outline-primary sv-feed-pagination__action" type="button">Xem thêm...</button>
                 </div>
             </div>
         </div>
@@ -416,6 +406,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="config.js"></script>
+<script src="svp-rich-content.js"></script>
 <script src="avatar-utils.js"></script>
 <script src="auth-topbar.js"></script>
 <script>
@@ -571,15 +562,15 @@
         const eventsEl = document.getElementById('sv-upcoming-events');
         const membersEl = document.getElementById('sv-featured-members');
         const postPaginationEl = document.getElementById('sv-post-pagination');
-        const postsPrevBtn = document.getElementById('sv-posts-prev');
         const postsPageInfoEl = document.getElementById('sv-posts-page-info');
-        const postsNextBtn = document.getElementById('sv-posts-next');
+        const postsLoadMoreBtn = document.getElementById('sv-posts-load-more');
         const categoryLinks = Array.from(document.querySelectorAll('.sv-cats .nav-link[data-category-id]'));
-        if (!feedEl || !eventsEl || !membersEl || !postPaginationEl || !postsPrevBtn || !postsPageInfoEl || !postsNextBtn) {
+        if (!feedEl || !eventsEl || !membersEl || !postPaginationEl || !postsPageInfoEl || !postsLoadMoreBtn) {
             return;
         }
 
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+        const richContent = window.SVPRichContent || null;
         const WORDS_PER_MINUTE = 220;
         const PREVIEW_LEAD_MAX_CHARS = 220;
         const HOME_CACHE_KEY_PREFIX = 'svp.home.payload.cache.v2.';
@@ -789,6 +780,24 @@
             }
             return extractFirstImageSrc(contentHtml);
         };
+        const extractLeadingImageRowUrls = (contentHtml) => (
+            richContent && typeof richContent.extractLeadingImageRowUrls === 'function'
+                ? richContent.extractLeadingImageRowUrls(contentHtml, { maxItems: 3 })
+                : []
+        );
+        const renderLeadingImageRowCover = (detailHref, title, imageUrls) => (
+            richContent && typeof richContent.buildImageRowCoverHtml === 'function'
+                ? richContent.buildImageRowCoverHtml({
+                    href: detailHref,
+                    imageUrls,
+                    className: 'sv-article__cover d-block',
+                    tabIndex: -1,
+                    ariaHidden: true,
+                    altPrefix: title || 'Ảnh cover bài viết',
+                    maxItems: 3
+                })
+                : ''
+        );
 
         const normalizePost = (post) => {
             const rawAuthor = post?.author || {};
@@ -808,6 +817,7 @@
                 plainText,
                 leadText: buildLeadFromPlainText(plainText),
                 readTimeLabel: estimateReadTimeFromPlainText(plainText),
+                leadingImageRowUrls: extractLeadingImageRowUrls(contentHtml),
                 resolvedCoverImageUrl: extractCoverFromContent(coverImageUrl, contentHtml),
                 createdAt: post?.createdAt || post?.created_at || new Date().toISOString(),
                 author: {
@@ -851,7 +861,7 @@
         const FEATURED_MEMBERS_LIMIT = 10;
         const homeCacheKey = `${HOME_CACHE_KEY_PREFIX}${Number.isFinite(activeCategoryId) ? activeCategoryId : 'all'}`;
         let loadedPosts = [];
-        let currentPageIndex = 0;
+        let visiblePostCount = HOME_PAGE_SIZE;
         let hasMoreBackendPosts = false;
         let beforeCreatedAt = null;
         let beforePostId = null;
@@ -916,41 +926,28 @@
 
         const getDisplayPosts = () => mergePendingLocalArticle(loadedPosts);
         const getVisibleDisplayPosts = () => getVisiblePosts(getDisplayPosts());
-        const scrollFeedCardIntoView = () => {
-            const feedCard = feedEl.closest('.sv-card');
-            if (feedCard) {
-                feedCard.scrollIntoView({ behavior: 'smooth', block: 'start' });
-            }
-        };
-        const getLoadedPageCount = (visibleLoadedCount) => Math.max(1, Math.ceil(visibleLoadedCount / HOME_PAGE_SIZE));
         const updatePostPaginationState = () => {
             const visibleLoadedCount = getVisibleDisplayPosts().length;
-            const hasPreviousPage = currentPageIndex > 0;
-            const hasNextLoadedPage = visibleLoadedCount > (currentPageIndex + 1) * HOME_PAGE_SIZE;
-            const hasNextPage = hasNextLoadedPage || hasMoreBackendPosts;
-
-            postsPrevBtn.disabled = !hasPreviousPage || isLoadingMore;
-            postsNextBtn.disabled = !hasNextPage || isLoadingMore;
-            postsNextBtn.textContent = isLoadingMore ? 'Đang tải...' : 'Sau';
-
             if (visibleLoadedCount === 0) {
                 postsPageInfoEl.textContent = '0 bài viết';
             } else {
-                const start = currentPageIndex * HOME_PAGE_SIZE + 1;
-                const end = Math.min(visibleLoadedCount, (currentPageIndex + 1) * HOME_PAGE_SIZE);
-                const hasUnloadedNextPage = hasMoreBackendPosts && !hasNextLoadedPage;
-                postsPageInfoEl.textContent = `Trang ${currentPageIndex + 1} • ${start}-${end}${hasUnloadedNextPage ? '+' : ''}`;
+                const safeVisibleCount = Math.min(Math.max(visiblePostCount, HOME_PAGE_SIZE), visibleLoadedCount);
+                const hasUnloadedMore = hasMoreBackendPosts && safeVisibleCount >= visibleLoadedCount;
+                postsPageInfoEl.textContent = `Hiển thị ${safeVisibleCount}${hasUnloadedMore ? '+' : ''} / ${visibleLoadedCount}${hasUnloadedMore ? '+' : ''} bài viết`;
             }
 
-            postPaginationEl.style.display = (visibleLoadedCount > 0 || hasMoreBackendPosts || isLoadingMore) ? 'flex' : 'none';
+            const hasMoreVisibleItems = visibleLoadedCount > visiblePostCount;
+            const canLoadMore = hasMoreVisibleItems || hasMoreBackendPosts;
+            postsLoadMoreBtn.disabled = !canLoadMore || isLoadingMore;
+            postsLoadMoreBtn.textContent = isLoadingMore ? 'Đang tải...' : 'Xem thêm...';
+            postPaginationEl.style.display = canLoadMore ? 'flex' : 'none';
         };
         const renderFeedAndMembers = () => {
             const displayPosts = getDisplayPosts();
             const visiblePosts = getVisiblePosts(displayPosts);
-            const maxPageIndex = Math.max(0, getLoadedPageCount(visiblePosts.length) - 1);
-            currentPageIndex = Math.min(Math.max(currentPageIndex, 0), maxPageIndex);
-            const pageStart = currentPageIndex * HOME_PAGE_SIZE;
-            const visibleFeedPosts = visiblePosts.slice(pageStart, pageStart + HOME_PAGE_SIZE);
+            const safeVisibleCount = Math.min(Math.max(visiblePostCount, HOME_PAGE_SIZE), visiblePosts.length || HOME_PAGE_SIZE);
+            visiblePostCount = safeVisibleCount;
+            const visibleFeedPosts = visiblePosts.slice(0, safeVisibleCount);
             feedEl.innerHTML = visibleFeedPosts.length === 0
                 ? `<div class="sv-meta">Chưa có bài viết phù hợp để hiển thị.</div>`
                 : visibleFeedPosts.map((post) => renderArticleCard(post)).join('');
@@ -980,10 +977,13 @@
                 ? `<div class="sv-meta text-danger mt-2">Hãy kiểm tra hòm thư và xác nhận đăng bài này.</div>`
                 : '';
             const detailHref = buildArticleHref(post.postId, post.title);
-
-            const coverNode = safeCover
-                ? `<a class="sv-article__cover d-block" href="${detailHref}" style="background-image:url('${safeCover}')" tabindex="-1" aria-hidden="true"></a>`
+            const imageRowCover = Array.isArray(post.leadingImageRowUrls) && post.leadingImageRowUrls.length >= 2
+                ? renderLeadingImageRowCover(detailHref, post.title, post.leadingImageRowUrls)
                 : '';
+
+            const coverNode = imageRowCover || (safeCover
+                ? `<a class="sv-article__cover d-block" href="${detailHref}" style="background-image:url('${safeCover}')" tabindex="-1" aria-hidden="true"></a>`
+                : '');
             return `
                 <article class="sv-article sv-article--clickable" data-post-id="${post.postId}" data-post-title="${safeTitle}" role="button" tabindex="0" aria-label="Xem chi tiết bài viết ${safeTitle}">
                     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
@@ -1093,7 +1093,7 @@
             const upcomingEvents = Array.isArray(payload.upcomingEvents) ? payload.upcomingEvents.map(normalizeEvent) : [];
 
             loadedPosts = latestPosts.slice();
-            currentPageIndex = 0;
+            visiblePostCount = HOME_PAGE_SIZE;
             renderFeedAndMembers();
 
             if (upcomingEvents.length === 0) {
@@ -1111,7 +1111,7 @@
 
         const renderHomeLoadError = () => {
             loadedPosts = [];
-            currentPageIndex = 0;
+            visiblePostCount = HOME_PAGE_SIZE;
             hasMoreBackendPosts = false;
             beforeCreatedAt = null;
             beforePostId = null;
@@ -1119,8 +1119,7 @@
             eventsEl.innerHTML = `<li><div class="sv-meta">Không thể tải sự kiện từ backend.</div></li>`;
             membersEl.innerHTML = `<div class="p-3 sv-meta">Không thể tải danh sách thành viên nổi bật.</div>`;
             postPaginationEl.style.display = 'none';
-            postsPrevBtn.disabled = true;
-            postsNextBtn.disabled = true;
+            postsLoadMoreBtn.disabled = true;
             postsPageInfoEl.textContent = '0 bài viết';
         };
         const loadOlderPostsBatch = async () => {
@@ -1149,19 +1148,13 @@
             hasMoreBackendPosts = newItems.length >= HOME_FETCH_BATCH_SIZE;
             return newItems;
         };
-        const goToHomePage = async (targetPageIndex) => {
-            if (targetPageIndex < 0 || isLoadingMore) {
+        const loadMoreHomePosts = async () => {
+            if (isLoadingMore) {
                 return;
             }
-            if (targetPageIndex <= currentPageIndex) {
-                currentPageIndex = targetPageIndex;
-                renderFeedAndMembers();
-                return;
-            }
-
-            const requiredVisibleCount = (targetPageIndex + 1) * HOME_PAGE_SIZE;
-            if (getVisibleDisplayPosts().length >= requiredVisibleCount) {
-                currentPageIndex = targetPageIndex;
+            const nextVisibleCount = visiblePostCount + HOME_PAGE_SIZE;
+            if (getVisibleDisplayPosts().length >= nextVisibleCount) {
+                visiblePostCount = nextVisibleCount;
                 renderFeedAndMembers();
                 return;
             }
@@ -1169,16 +1162,15 @@
             isLoadingMore = true;
             updatePostPaginationState();
             try {
-                while (getVisibleDisplayPosts().length < requiredVisibleCount && hasMoreBackendPosts) {
+                while (getVisibleDisplayPosts().length < nextVisibleCount && hasMoreBackendPosts) {
                     const newItems = await loadOlderPostsBatch();
                     if (!newItems.length) {
                         break;
                     }
                 }
-                const maxAvailablePageIndex = Math.max(0, getLoadedPageCount(getVisibleDisplayPosts().length) - 1);
-                currentPageIndex = Math.min(targetPageIndex, maxAvailablePageIndex);
+                visiblePostCount = Math.min(nextVisibleCount, Math.max(getVisibleDisplayPosts().length, HOME_PAGE_SIZE));
             } catch (error) {
-                console.error('Cannot load next posts page:', error);
+                console.error('Cannot load more home posts:', error);
             } finally {
                 isLoadingMore = false;
                 renderFeedAndMembers();
@@ -1212,20 +1204,8 @@
             }
         };
 
-        postsPrevBtn.addEventListener('click', () => {
-            if (currentPageIndex <= 0) {
-                return;
-            }
-            currentPageIndex -= 1;
-            renderFeedAndMembers();
-            scrollFeedCardIntoView();
-        });
-        postsNextBtn.addEventListener('click', async () => {
-            const previousPageIndex = currentPageIndex;
-            await goToHomePage(currentPageIndex + 1);
-            if (currentPageIndex !== previousPageIndex) {
-                scrollFeedCardIntoView();
-            }
+        postsLoadMoreBtn.addEventListener('click', async () => {
+            await loadMoreHomePosts();
         });
         feedEl.addEventListener('click', (event) => {
             const clickable = event.target.closest('.sv-article--clickable[data-post-id]');

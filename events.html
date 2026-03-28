@@ -34,26 +34,17 @@
         .sv-events-pagination {
             display: flex;
             align-items: center;
-            justify-content: space-between;
+            justify-content: center;
+            flex-direction: column;
             gap: .75rem;
             padding-top: 1rem;
         }
         .sv-events-pagination__info {
-            min-width: 140px;
             text-align: center;
             font-weight: 600;
         }
-        @media (max-width: 576px) {
-            .sv-events-pagination {
-                flex-wrap: wrap;
-            }
-            .sv-events-pagination > button {
-                flex: 1 1 calc(50% - .375rem);
-            }
-            .sv-events-pagination__info {
-                order: -1;
-                width: 100%;
-            }
+        .sv-events-pagination__action {
+            min-width: 170px;
         }
     </style>
 </head>
@@ -118,18 +109,16 @@
                 <div class="tab-pane fade show active" id="upcoming" role="tabpanel" aria-labelledby="upcoming-tab" tabindex="0">
                     <ul id="sv-events-upcoming-list" class="sv-list mb-0" aria-live="polite"></ul>
                     <div id="sv-events-upcoming-pagination" class="sv-events-pagination d-none" aria-label="Phân trang sự kiện sắp diễn ra">
-                        <button id="sv-events-upcoming-prev" class="btn btn-outline-primary" type="button">Trước</button>
-                        <div id="sv-events-upcoming-page-info" class="sv-events-pagination__info sv-meta">Trang 1</div>
-                        <button id="sv-events-upcoming-next" class="btn btn-outline-primary" type="button">Sau</button>
+                        <div id="sv-events-upcoming-page-info" class="sv-events-pagination__info sv-meta">0 sự kiện</div>
+                        <button id="sv-events-upcoming-load-more" class="btn btn-outline-primary sv-events-pagination__action" type="button">Xem thêm...</button>
                     </div>
                 </div>
 
                 <div class="tab-pane fade" id="past" role="tabpanel" aria-labelledby="past-tab" tabindex="0">
                     <ul id="sv-events-past-list" class="sv-list mb-0" aria-live="polite"></ul>
                     <div id="sv-events-past-pagination" class="sv-events-pagination d-none" aria-label="Phân trang sự kiện đã qua">
-                        <button id="sv-events-past-prev" class="btn btn-outline-primary" type="button">Trước</button>
-                        <div id="sv-events-past-page-info" class="sv-events-pagination__info sv-meta">Trang 1</div>
-                        <button id="sv-events-past-next" class="btn btn-outline-primary" type="button">Sau</button>
+                        <div id="sv-events-past-page-info" class="sv-events-pagination__info sv-meta">0 sự kiện</div>
+                        <button id="sv-events-past-load-more" class="btn btn-outline-primary sv-events-pagination__action" type="button">Xem thêm...</button>
                     </div>
                 </div>
             </div>
@@ -163,20 +152,18 @@
         const upcomingList = document.getElementById('sv-events-upcoming-list');
         const pastList = document.getElementById('sv-events-past-list');
         const upcomingPagination = document.getElementById('sv-events-upcoming-pagination');
-        const upcomingPrevBtn = document.getElementById('sv-events-upcoming-prev');
         const upcomingPageInfo = document.getElementById('sv-events-upcoming-page-info');
-        const upcomingNextBtn = document.getElementById('sv-events-upcoming-next');
+        const upcomingLoadMoreBtn = document.getElementById('sv-events-upcoming-load-more');
         const pastPagination = document.getElementById('sv-events-past-pagination');
-        const pastPrevBtn = document.getElementById('sv-events-past-prev');
         const pastPageInfo = document.getElementById('sv-events-past-page-info');
-        const pastNextBtn = document.getElementById('sv-events-past-next');
-        if (!upcomingList || !pastList || !upcomingPagination || !upcomingPrevBtn || !upcomingPageInfo || !upcomingNextBtn || !pastPagination || !pastPrevBtn || !pastPageInfo || !pastNextBtn) {
+        const pastLoadMoreBtn = document.getElementById('sv-events-past-load-more');
+        if (!upcomingList || !pastList || !upcomingPagination || !upcomingPageInfo || !upcomingLoadMoreBtn || !pastPagination || !pastPageInfo || !pastLoadMoreBtn) {
             return;
         }
         let upcomingEvents = [];
         let pastEvents = [];
-        let upcomingPageIndex = 0;
-        let pastPageIndex = 0;
+        let upcomingVisibleCount = EVENTS_PAGE_SIZE;
+        let pastVisibleCount = EVENTS_PAGE_SIZE;
 
         const escapeHtml = (value) => String(value || '')
             .replace(/&/g, '&amp;')
@@ -265,32 +252,23 @@
         const updatePaginationState = (config) => {
             const {
                 items,
-                pageIndex,
+                visibleCount,
                 paginationEl,
-                prevBtn,
-                nextBtn,
+                loadMoreBtn,
                 pageInfoEl
             } = config;
             const total = Array.isArray(items) ? items.length : 0;
-            const totalPages = Math.max(1, Math.ceil(total / EVENTS_PAGE_SIZE));
-            const safePageIndex = Math.min(Math.max(pageIndex, 0), Math.max(0, totalPages - 1));
-
-            if (total <= EVENTS_PAGE_SIZE) {
-                paginationEl.classList.add('d-none');
-            } else {
-                paginationEl.classList.remove('d-none');
-            }
-            prevBtn.disabled = safePageIndex <= 0;
-            nextBtn.disabled = safePageIndex >= totalPages - 1;
-
             if (total === 0) {
+                paginationEl.classList.add('d-none');
+                loadMoreBtn.disabled = true;
                 pageInfoEl.textContent = '0 sự kiện';
-                return safePageIndex;
+                return 0;
             }
-            const start = safePageIndex * EVENTS_PAGE_SIZE + 1;
-            const end = Math.min(total, (safePageIndex + 1) * EVENTS_PAGE_SIZE);
-            pageInfoEl.textContent = `Trang ${safePageIndex + 1} • ${start}-${end}`;
-            return safePageIndex;
+            const safeVisibleCount = Math.min(Math.max(visibleCount, EVENTS_PAGE_SIZE), total);
+            pageInfoEl.textContent = `Hiển thị ${safeVisibleCount} / ${total} sự kiện`;
+            loadMoreBtn.disabled = safeVisibleCount >= total;
+            paginationEl.classList.toggle('d-none', total <= safeVisibleCount);
+            return safeVisibleCount;
         };
         const renderPaginatedList = (config) => {
             const {
@@ -299,48 +277,43 @@
                 emptyMessage,
                 listEl,
                 paginationEl,
-                prevBtn,
-                nextBtn,
+                loadMoreBtn,
                 pageInfoEl,
-                pageIndex
+                visibleCount
             } = config;
-            const safePageIndex = updatePaginationState({
+            const safeVisibleCount = updatePaginationState({
                 items,
-                pageIndex,
+                visibleCount,
                 paginationEl,
-                prevBtn,
-                nextBtn,
+                loadMoreBtn,
                 pageInfoEl
             });
-            const start = safePageIndex * EVENTS_PAGE_SIZE;
-            const pageItems = items.slice(start, start + EVENTS_PAGE_SIZE);
+            const pageItems = items.slice(0, safeVisibleCount);
             renderList(listEl, pageItems, isPast, emptyMessage);
-            return safePageIndex;
+            return safeVisibleCount;
         };
         const renderUpcomingEvents = () => {
-            upcomingPageIndex = renderPaginatedList({
+            upcomingVisibleCount = renderPaginatedList({
                 items: upcomingEvents,
                 isPast: false,
                 emptyMessage: 'Chưa có sự kiện sắp diễn ra.',
                 listEl: upcomingList,
                 paginationEl: upcomingPagination,
-                prevBtn: upcomingPrevBtn,
-                nextBtn: upcomingNextBtn,
+                loadMoreBtn: upcomingLoadMoreBtn,
                 pageInfoEl: upcomingPageInfo,
-                pageIndex: upcomingPageIndex
+                visibleCount: upcomingVisibleCount
             });
         };
         const renderPastEvents = () => {
-            pastPageIndex = renderPaginatedList({
+            pastVisibleCount = renderPaginatedList({
                 items: pastEvents,
                 isPast: true,
                 emptyMessage: 'Chưa có sự kiện đã qua.',
                 listEl: pastList,
                 paginationEl: pastPagination,
-                prevBtn: pastPrevBtn,
-                nextBtn: pastNextBtn,
+                loadMoreBtn: pastLoadMoreBtn,
                 pageInfoEl: pastPageInfo,
-                pageIndex: pastPageIndex
+                visibleCount: pastVisibleCount
             });
         };
 
@@ -375,8 +348,8 @@
                         return time > 0 && time < now;
                     })
                     .sort((left, right) => getEventEndTime(right) - getEventEndTime(left));
-                upcomingPageIndex = 0;
-                pastPageIndex = 0;
+                upcomingVisibleCount = EVENTS_PAGE_SIZE;
+                pastVisibleCount = EVENTS_PAGE_SIZE;
                 renderUpcomingEvents();
                 renderPastEvents();
             } catch (error) {
@@ -391,34 +364,18 @@
             }
         };
 
-        upcomingPrevBtn.addEventListener('click', () => {
-            if (upcomingPageIndex <= 0) {
+        upcomingLoadMoreBtn.addEventListener('click', () => {
+            if (upcomingVisibleCount >= upcomingEvents.length) {
                 return;
             }
-            upcomingPageIndex -= 1;
+            upcomingVisibleCount += EVENTS_PAGE_SIZE;
             renderUpcomingEvents();
         });
-        upcomingNextBtn.addEventListener('click', () => {
-            const maxPageIndex = Math.max(0, Math.ceil(upcomingEvents.length / EVENTS_PAGE_SIZE) - 1);
-            if (upcomingPageIndex >= maxPageIndex) {
+        pastLoadMoreBtn.addEventListener('click', () => {
+            if (pastVisibleCount >= pastEvents.length) {
                 return;
             }
-            upcomingPageIndex += 1;
-            renderUpcomingEvents();
-        });
-        pastPrevBtn.addEventListener('click', () => {
-            if (pastPageIndex <= 0) {
-                return;
-            }
-            pastPageIndex -= 1;
-            renderPastEvents();
-        });
-        pastNextBtn.addEventListener('click', () => {
-            const maxPageIndex = Math.max(0, Math.ceil(pastEvents.length / EVENTS_PAGE_SIZE) - 1);
-            if (pastPageIndex >= maxPageIndex) {
-                return;
-            }
-            pastPageIndex += 1;
+            pastVisibleCount += EVENTS_PAGE_SIZE;
             renderPastEvents();
         });
 

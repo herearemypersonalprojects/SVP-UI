@@ -354,7 +354,8 @@
         let pendingCoverPreviewUrl = '';
         let editorPortraitLayoutFrame = 0;
         let multiImageModal = null;
-        const MAX_IMAGE_UPLOAD_BYTES = 100 * 1024;
+        const DEFAULT_MAX_IMAGE_UPLOAD_BYTES = 100 * 1024;
+        const FALLBACK_MAX_IMAGE_UPLOAD_BYTES = 300 * 1024;
         const BLOG_DEFAULT_CATEGORY_ID = 11;
         const editPostId = searchParams.get('editPostId');
         let editorMode = (searchParams.get('mode') || '').trim().toLowerCase() === 'blog' ? 'blog' : 'article';
@@ -1084,6 +1085,10 @@
             );
         };
 
+        const isCompressionLimitError = (error) => String(error?.message || '')
+            .toLowerCase()
+            .includes('không thể nén ảnh xuống dưới');
+
         const uploadCoverToCloudflare = async (file) => {
             if (!file) {
                 return;
@@ -1092,8 +1097,38 @@
                 throw new Error('Chỉ hỗ trợ file ảnh.');
             }
             setCoverUploadStatus(`Đang tải ảnh...`, 'info');
-            const compressedFile = await compressImageBelowLimit(file, MAX_IMAGE_UPLOAD_BYTES);
-            if (compressedFile.size !== file.size) {
+            let compressedFile;
+            let activeUploadLimit = DEFAULT_MAX_IMAGE_UPLOAD_BYTES;
+            let usedFallbackLimit = false;
+
+            try {
+                compressedFile = await compressImageBelowLimit(file, activeUploadLimit);
+            } catch (error) {
+                if (!isCompressionLimitError(error)) {
+                    throw error;
+                }
+                activeUploadLimit = FALLBACK_MAX_IMAGE_UPLOAD_BYTES;
+                usedFallbackLimit = true;
+                setCoverUploadStatus(
+                    `Không thể nén ảnh xuống ${formatSize(DEFAULT_MAX_IMAGE_UPLOAD_BYTES)}. Chuyển sang giới hạn ${formatSize(FALLBACK_MAX_IMAGE_UPLOAD_BYTES)}...`,
+                    'info'
+                );
+                compressedFile = await compressImageBelowLimit(file, activeUploadLimit);
+            }
+
+            if (usedFallbackLimit) {
+                if (compressedFile.size !== file.size) {
+                    setCoverUploadStatus(
+                        `Không thể nén dưới ${formatSize(DEFAULT_MAX_IMAGE_UPLOAD_BYTES)}. Hệ thống dùng giới hạn ${formatSize(activeUploadLimit)} và đã nén ảnh từ ${formatSize(file.size)} xuống ${formatSize(compressedFile.size)}. Đang upload...`,
+                        'info'
+                    );
+                } else {
+                    setCoverUploadStatus(
+                        `Không thể nén dưới ${formatSize(DEFAULT_MAX_IMAGE_UPLOAD_BYTES)}. Hệ thống dùng giới hạn ${formatSize(activeUploadLimit)} và sẽ upload ảnh ${formatSize(compressedFile.size)}.`,
+                        'info'
+                    );
+                }
+            } else if (compressedFile.size !== file.size) {
                 setCoverUploadStatus(
                     `Đã nén ảnh từ ${formatSize(file.size)} xuống ${formatSize(compressedFile.size)}. Đang upload...`,
                     'info'

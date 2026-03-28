@@ -881,6 +881,7 @@
             return (u.protocol==='http:'||u.protocol==='https:') ? u.href : '';
         } catch { return ''; }
     };
+    const escapeCssUrl = (value) => String(value || '').replace(/\\/g, '\\\\').replace(/'/g, "\\'");
 
     const isPositiveIntegerLike = (value) => /^[1-9]\d*$/.test(String(value || '').trim());
     const buildProfileHref = (nickname, userId, authUserId) => {
@@ -1012,7 +1013,7 @@
         const template = document.createElement('template');
         template.innerHTML = String(html || '');
         const image = template.content.querySelector('img[src]');
-        return image ? String(image.getAttribute('src') || '').trim() : '';
+        return image ? toSafeHttpUrl(image.getAttribute('src') || '') : '';
     };
 
     const estimateReadTime = (html) => {
@@ -1257,6 +1258,7 @@
             isBlog: Boolean(post?.isBlog ?? post?.is_blog ?? false),
             title: post?.title || '',
             contentHtml: post?.contentHtml || post?.content_html || post?.content || '',
+            coverImageUrl: toSafeHttpUrl(post?.coverImageUrl || post?.cover_image_url || ''),
             createdAt: post?.createdAt || post?.created_at || new Date().toISOString(),
             status: String(post?.status || 'PUBLISHED'),
             author: {
@@ -1651,16 +1653,16 @@
     };
 
     /* ── Render functions ── */
-    const renderHero = (contentHtml) => {
-        const first = extractFirstImageSrc(contentHtml);
+    const renderHero = (post) => {
+        const coverUrl = toSafeHttpUrl(post?.coverImageUrl || '') || extractFirstImageSrc(post?.contentHtml || '');
         heroCover.classList.remove('pd-skeleton');
-        if (!first) {
+        if (!coverUrl) {
             heroCover.classList.add('is-hidden');
             heroCover.style.backgroundImage = '';
             return;
         }
         heroCover.classList.remove('is-hidden');
-        heroCover.style.backgroundImage = `url('${escapeHtml(first)}')`;
+        heroCover.style.backgroundImage = `url('${escapeCssUrl(coverUrl)}')`;
     };
 
     const renderPostHeader = (post, commentCount) => {
@@ -1693,7 +1695,7 @@
         if (authorAvatarEl) {
             const avatarUrl = toSafeHttpUrl(author.avatarUrl || author.avatar_url || '');
             if (avatarUrl) {
-                authorAvatarEl.style.backgroundImage = `url('${escapeHtml(avatarUrl)}')`;
+                authorAvatarEl.style.backgroundImage = `url('${escapeCssUrl(avatarUrl)}')`;
                 authorAvatarEl.style.backgroundSize = 'cover';
                 authorAvatarEl.style.backgroundPosition = 'center';
                 authorAvatarEl.style.backgroundColor = '#e2e8f0';
@@ -1772,7 +1774,7 @@
         const articleText = seo.htmlToText(post.contentHtml || '');
         const description = seo.excerpt(articleText || post.title || '', 170)
             || 'Đọc bài viết và chia sẻ từ cộng đồng SVP Forum.';
-        const coverImage = extractFirstImageSrc(post.contentHtml || '') || seo.defaultImage;
+        const coverImage = toSafeHttpUrl(post.coverImageUrl || '') || extractFirstImageSrc(post.contentHtml || '') || seo.defaultImage;
         const canonicalUrl = buildArticleCanonicalUrl(post.postId, post.title);
         const wordCount = articleText ? articleText.split(/\s+/).filter(Boolean).length : 0;
         const noindex = String(post.status || '').toUpperCase() !== 'PUBLISHED';
@@ -2307,7 +2309,7 @@
         if (urlHelpers) {
             urlHelpers.replaceDetailHistory('article', post.postId, post.title);
         }
-        renderHero(post.contentHtml);
+        renderHero(post);
         renderPostHeader(post, comments.length);
         renderBody(post);
         renderShare(post);

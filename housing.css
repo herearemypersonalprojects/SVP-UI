@@ -134,6 +134,22 @@
     padding-right: .15rem;
 }
 
+.sv-housing-load-more {
+    display: flex;
+    justify-content: center;
+    margin-top: .9rem;
+}
+
+.sv-housing-load-more[hidden] {
+    display: none !important;
+}
+
+.sv-housing-load-more .btn {
+    min-width: 180px;
+    border-radius: 999px;
+    font-weight: 700;
+}
+
 .sv-housing-card {
     border: 1px solid #dbe5f3;
     border-radius: 16px;

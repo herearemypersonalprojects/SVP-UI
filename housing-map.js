@@ -11,14 +11,21 @@
     const mapEl = document.getElementById('housing-map');
     const applyBtn = document.getElementById('filter-apply-btn');
     const resetBtn = document.getElementById('filter-reset-btn');
+    const loadMoreBtn = document.getElementById('housing-load-more-btn');
+    const loadMoreWrap = document.getElementById('housing-load-more-wrap');
     const filterToggleBtn = document.getElementById('housing-filter-toggle');
     const filterControlsEl = document.getElementById('housing-filter-controls');
     const statusInput = document.getElementById('filter-status');
     const typeInput = document.getElementById('filter-type');
     const transportTypeInput = document.getElementById('filter-transport-type');
     const DEFAULT_STATUS_FILTER = 'AVAILABLE,RENTED';
+    const INITIAL_VISIBLE_COUNT = 10;
+    const LOAD_MORE_STEP = 5;
+    const DATASET_LIMIT = 1000;
+    const SESSION_CACHE_KEY = 'svp-housing-map-dataset-v1';
+    const SESSION_CACHE_TTL_MS = 5 * 60 * 1000;
 
-    if (!form || !listEl || !metaEl || !mapStatusEl || !mapEl || !applyBtn || !resetBtn || !filterToggleBtn || !filterControlsEl || !statusInput || !typeInput || !transportTypeInput) {
+    if (!form || !listEl || !metaEl || !mapStatusEl || !mapEl || !applyBtn || !resetBtn || !loadMoreBtn || !loadMoreWrap || !filterToggleBtn || !filterControlsEl || !statusInput || !typeInput || !transportTypeInput) {
         return;
     }
 
@@ -51,7 +58,10 @@
 
     const state = {
         items: [],
+        filteredItems: [],
+        visibleCount: INITIAL_VISIBLE_COUNT,
         requestToken: 0,
+        datasetHasMore: false,
         hasAutoFocusedInitialPins: false,
         isAutoFittingMap: false,
         userMovedMap: false
@@ -59,8 +69,23 @@
 
     const hasValidCoordinates = (item) => Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude));
 
-    const buildItemsBounds = () => {
-        const points = state.items
+    const normalizeText = (value) => String(value || '')
+        .trim()
+        .toLowerCase();
+
+    const parseOptionalNumber = (value) => {
+        const raw = String(value || '').trim();
+        if (!raw) {
+            return null;
+        }
+        const parsed = Number(raw);
+        return Number.isFinite(parsed) ? parsed : null;
+    };
+
+    const formatLoadedCount = (count) => `${count}${state.datasetHasMore ? '+' : ''}`;
+
+    const buildItemsBounds = (items) => {
+        const points = items
             .filter(hasValidCoordinates)
             .map((item) => L.latLng(Number(item.latitude), Number(item.longitude)));
         if (!points.length) {
@@ -74,7 +99,7 @@
         if (state.hasAutoFocusedInitialPins || state.userMovedMap) {
             return;
         }
-        const bounds = buildItemsBounds();
+        const bounds = buildItemsBounds(state.filteredItems.length ? state.filteredItems : state.items);
         if (!bounds) {
             return;
         }
@@ -119,12 +144,37 @@
         return `${transit.transportIcon || '🚏'}${line} ${transit.stationName}${walk}`;
     };
 
-    const renderList = () => {
-        if (!state.items.length) {
-            listEl.innerHTML = '<div class="sv-housing-empty">Chưa có tin phù hợp trong khung bản đồ hiện tại.</div>';
+    const updateLoadMoreButton = () => {
+        const remaining = Math.max(0, state.filteredItems.length - state.visibleCount);
+        if (remaining <= 0) {
+            loadMoreWrap.hidden = true;
             return;
         }
-        listEl.innerHTML = state.items.map((item) => {
+        loadMoreWrap.hidden = false;
+        const nextCount = Math.min(LOAD_MORE_STEP, remaining);
+        loadMoreBtn.textContent = `Xem thêm ${nextCount} tin nữa`;
+    };
+
+    const renderMeta = () => {
+        if (!state.items.length) {
+            metaEl.textContent = 'Chưa có tin để hiển thị';
+            return;
+        }
+        const total = state.filteredItems.length;
+        const visible = Math.min(total, state.visibleCount);
+        const totalLabel = total === state.items.length ? formatLoadedCount(total) : String(total);
+        metaEl.textContent = `${totalLabel} tin phù hợp • đang hiện ${visible} bên trái`;
+    };
+
+    const renderList = () => {
+        if (!state.filteredItems.length) {
+            listEl.innerHTML = '<div class="sv-housing-empty">Chưa có tin phù hợp với bộ lọc hiện tại.</div>';
+            updateLoadMoreButton();
+            renderMeta();
+            return;
+        }
+        const visibleItems = state.filteredItems.slice(0, state.visibleCount);
+        listEl.innerHTML = visibleItems.map((item) => {
             const statusMeta = shared.statusMeta(item.status);
             const tags = Array.isArray(item.tags) ? item.tags.slice(0, 4) : [];
             const image = item.primaryImageUrl || 'assets/img/forum_svp_background.png';
@@ -151,11 +201,13 @@
                 </a>
             `;
         }).join('');
+        updateLoadMoreButton();
+        renderMeta();
     };
 
     const renderMarkers = () => {
         clusterGroup.clearLayers();
-        state.items.forEach((item) => {
+        state.filteredItems.forEach((item) => {
             if (!hasValidCoordinates(item)) {
                 return;
             }
@@ -167,73 +219,185 @@
         });
     };
 
-    const getBoundsQuery = () => {
-        const bounds = map.getBounds();
+    const buildFilterState = () => {
+        const selectedStatuses = String(form.elements.status.value || '')
+            .split(',')
+            .map((item) => item.trim().toUpperCase())
+            .filter(Boolean);
+
+        const minPriceRaw = parseOptionalNumber(form.elements.minPrice.value);
+        const maxPriceRaw = parseOptionalNumber(form.elements.maxPrice.value);
+
         return {
-            minLat: bounds.getSouth().toFixed(6),
-            maxLat: bounds.getNorth().toFixed(6),
-            minLng: bounds.getWest().toFixed(6),
-            maxLng: bounds.getEast().toFixed(6)
+            city: normalizeText(form.elements.city.value),
+            arrondissement: normalizeText(form.elements.arrondissement.value),
+            minPrice: minPriceRaw,
+            maxPrice: maxPriceRaw,
+            stationName: normalizeText(form.elements.stationName.value),
+            transportType: normalizeText(form.elements.transportType.value),
+            lineLabel: normalizeText(form.elements.lineLabel.value),
+            maxWalkingMinutes: parseOptionalNumber(form.elements.maxWalkingMinutes.value),
+            propertyType: normalizeText(form.elements.type.value),
+            statuses: selectedStatuses,
+            cafOnly: Boolean(form.elements.caf.checked)
         };
     };
 
-    const buildQuery = () => {
-        const params = new URLSearchParams();
-        const bounds = getBoundsQuery();
-        Object.entries(bounds).forEach(([key, value]) => params.set(key, value));
-        params.set('limit', '120');
-
-        const city = (form.elements.city.value || '').trim();
-        const arrondissement = (form.elements.arrondissement.value || '').trim();
-        const minPrice = (form.elements.minPrice.value || '').trim();
-        const maxPrice = (form.elements.maxPrice.value || '').trim();
-        const stationName = (form.elements.stationName.value || '').trim();
-        const transportType = (form.elements.transportType.value || '').trim();
-        const lineLabel = (form.elements.lineLabel.value || '').trim();
-        const maxWalkingMinutes = (form.elements.maxWalkingMinutes.value || '').trim();
-        const type = (form.elements.type.value || '').trim();
-        const status = (form.elements.status.value || '').trim();
-        if (city) params.set('city', city);
-        if (arrondissement) params.set('arrondissement', arrondissement);
-        if (minPrice) params.set('minPrice', minPrice);
-        if (maxPrice) params.set('maxPrice', maxPrice);
-        if (stationName) params.set('station_name', stationName);
-        if (transportType) params.set('transport_type', transportType);
-        if (lineLabel) params.set('line_label', lineLabel);
-        if (maxWalkingMinutes) params.set('max_walking_minutes', maxWalkingMinutes);
-        if (type) params.set('type', type);
-        if (status) params.set('status', status);
-        if (form.elements.caf.checked) params.set('caf', 'true');
-        return params.toString();
+    const matchesTransitFilters = (item, filters) => {
+        const needsTransitFilter = Boolean(filters.stationName || filters.transportType || filters.lineLabel || filters.maxWalkingMinutes !== null);
+        if (!needsTransitFilter) {
+            return true;
+        }
+        const transitPoints = Array.isArray(item.transitPoints) ? item.transitPoints : [];
+        if (!transitPoints.length) {
+            return false;
+        }
+        return transitPoints.some((point) => {
+            const stationName = normalizeText(point.stationName);
+            const transportType = normalizeText(point.transportType);
+            const lineLabel = normalizeText(point.lineLabel);
+            const walkingMinutes = Number(point.walkingMinutes);
+            if (filters.stationName && !stationName.includes(filters.stationName)) {
+                return false;
+            }
+            if (filters.transportType && transportType !== filters.transportType) {
+                return false;
+            }
+            if (filters.lineLabel && !lineLabel.includes(filters.lineLabel)) {
+                return false;
+            }
+            if (filters.maxWalkingMinutes !== null && (!Number.isFinite(walkingMinutes) || walkingMinutes > filters.maxWalkingMinutes)) {
+                return false;
+            }
+            return true;
+        });
     };
 
-    const loadHousing = async () => {
+    const matchesFilters = (item, filters) => {
+        const city = normalizeText(item.city);
+        const arrondissement = normalizeText(item.arrondissement);
+        const propertyType = normalizeText(item.propertyType);
+        const status = normalizeText(item.status).toUpperCase();
+        const price = Number(item.price);
+        if (filters.city && !city.includes(filters.city)) {
+            return false;
+        }
+        if (filters.arrondissement && !arrondissement.includes(filters.arrondissement)) {
+            return false;
+        }
+        if (filters.propertyType && propertyType !== filters.propertyType) {
+            return false;
+        }
+        if (filters.statuses.length && !filters.statuses.includes(status)) {
+            return false;
+        }
+        if (filters.minPrice !== null && (!Number.isFinite(price) || price < filters.minPrice)) {
+            return false;
+        }
+        if (filters.maxPrice !== null && (!Number.isFinite(price) || price > filters.maxPrice)) {
+            return false;
+        }
+        if (filters.cafOnly && !item.cafEligible) {
+            return false;
+        }
+        return matchesTransitFilters(item, filters);
+    };
+
+    const updateMapStatus = () => {
+        if (!state.items.length) {
+            mapStatusEl.textContent = 'Chưa có pin công khai để hiển thị.';
+            return;
+        }
+        const filteredCount = state.filteredItems.length;
+        const loadedCount = formatLoadedCount(state.items.length);
+        if (!filteredCount) {
+            mapStatusEl.textContent = `Đã tải ${loadedCount} tin công khai. Bộ lọc hiện tại chưa khớp tin nào.`;
+            return;
+        }
+        const limitNote = state.datasetHasMore ? ' Dữ liệu đang dùng giới hạn tải an toàn cho map.' : '';
+        mapStatusEl.textContent = `Đang hiển thị ${filteredCount} pin từ ${loadedCount} tin đã tải. Kéo hoặc zoom chỉ thay đổi góc nhìn, không gọi backend lại.${limitNote}`;
+    };
+
+    const applyClientFilters = ({ resetVisibleCount = true } = {}) => {
+        const filters = buildFilterState();
+        state.filteredItems = state.items.filter((item) => matchesFilters(item, filters));
+        if (resetVisibleCount) {
+            state.visibleCount = INITIAL_VISIBLE_COUNT;
+        } else {
+            state.visibleCount = Math.max(INITIAL_VISIBLE_COUNT, state.visibleCount);
+        }
+        renderList();
+        renderMarkers();
+        updateMapStatus();
+    };
+
+    const readCachedDataset = () => {
+        try {
+            const raw = window.sessionStorage.getItem(SESSION_CACHE_KEY);
+            if (!raw) {
+                return null;
+            }
+            const cached = JSON.parse(raw);
+            if (!cached || typeof cached !== 'object') {
+                return null;
+            }
+            if (!Number.isFinite(Number(cached.cachedAt)) || (Date.now() - Number(cached.cachedAt)) > SESSION_CACHE_TTL_MS) {
+                return null;
+            }
+            const payload = cached.payload;
+            if (!payload || !Array.isArray(payload.items)) {
+                return null;
+            }
+            return payload;
+        } catch (_) {
+            return null;
+        }
+    };
+
+    const writeCachedDataset = (payload) => {
+        try {
+            window.sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify({
+                cachedAt: Date.now(),
+                payload
+            }));
+        } catch (_) {
+            // Ignore cache write failures: frontend should still work without sessionStorage.
+        }
+    };
+
+    const loadHousingDataset = async () => {
+        const cachedPayload = readCachedDataset();
+        if (cachedPayload) {
+            state.items = Array.isArray(cachedPayload.items) ? cachedPayload.items : [];
+            state.datasetHasMore = Boolean(cachedPayload.hasMore);
+            applyClientFilters();
+            fitMapToInitialPins();
+            mapStatusEl.textContent = `Đang hiển thị ${state.filteredItems.length} pin từ ${formatLoadedCount(state.items.length)} tin đã tải. Dữ liệu lấy từ bộ nhớ phiên nên không cần gọi backend lại.`;
+            return;
+        }
+
         const requestToken = ++state.requestToken;
         metaEl.textContent = 'Đang tải...';
-        mapStatusEl.textContent = 'Đang tải tin trong khung bản đồ hiện tại...';
+        mapStatusEl.textContent = 'Đang tải toàn bộ pin công khai cho bản đồ...';
         try {
-            const token = await shared.getAccessToken();
-            const headers = { Accept: 'application/json' };
-            if (token) {
-                headers.Authorization = `Bearer ${token}`;
-            }
-            const payload = await shared.fetchJson(`${shared.API_BASE_URL}/api/housing?${buildQuery()}`, { headers });
+            const payload = await shared.fetchJson(`${shared.API_BASE_URL}/api/housing?limit=${DATASET_LIMIT}`, {
+                headers: { Accept: 'application/json' }
+            });
             if (requestToken !== state.requestToken) {
                 return;
             }
             state.items = Array.isArray(payload.items) ? payload.items : [];
-            renderList();
-            renderMarkers();
+            state.datasetHasMore = Boolean(payload.hasMore);
+            writeCachedDataset(payload);
+            applyClientFilters();
             fitMapToInitialPins();
-            metaEl.textContent = payload.hasMore
-                ? `${state.items.length}+ tin`
-                : `${state.items.length} tin`;
-            mapStatusEl.textContent = '';
         } catch (error) {
             if (requestToken !== state.requestToken) {
                 return;
             }
             state.items = [];
+            state.filteredItems = [];
+            state.datasetHasMore = false;
             renderList();
             renderMarkers();
             metaEl.textContent = 'Không tải được dữ liệu';
@@ -241,9 +405,9 @@
         }
     };
 
-    const debouncedLoad = shared.debounce(() => {
-        void loadHousing();
-    }, 350);
+    const debouncedApplyFilters = shared.debounce(() => {
+        applyClientFilters();
+    }, 180);
 
     const setFilterPanelExpanded = (expanded) => {
         filterControlsEl.hidden = !expanded;
@@ -257,20 +421,29 @@
             }
         });
     });
-    map.on('moveend', debouncedLoad);
+
     filterToggleBtn.addEventListener('click', () => {
         setFilterPanelExpanded(filterControlsEl.hidden);
     });
-    applyBtn.addEventListener('click', () => { void loadHousing(); });
+
+    loadMoreBtn.addEventListener('click', () => {
+        state.visibleCount += LOAD_MORE_STEP;
+        renderList();
+    });
+
+    applyBtn.addEventListener('click', () => {
+        applyClientFilters();
+    });
+
     resetBtn.addEventListener('click', () => {
         form.reset();
         statusInput.value = DEFAULT_STATUS_FILTER;
-        void loadHousing();
+        applyClientFilters();
     });
 
     form.addEventListener('submit', (event) => {
         event.preventDefault();
-        void loadHousing();
+        applyClientFilters();
     });
 
     ['input', 'change'].forEach((eventName) => {
@@ -279,10 +452,10 @@
             if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) {
                 return;
             }
-            debouncedLoad();
+            debouncedApplyFilters();
         });
     });
 
     setFilterPanelExpanded(false);
-    void loadHousing();
+    void loadHousingDataset();
 })();

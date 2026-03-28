@@ -161,6 +161,15 @@
                     <span id="housing-results-meta" class="sv-housing-note">Đang tải...</span>
                 </div>
                 <div id="housing-list" class="sv-housing-list" aria-live="polite"></div>
+                <div id="housing-load-more-wrap" class="sv-housing-load-more" hidden>
+                    <button
+                        id="housing-load-more-btn"
+                        class="btn btn-outline-primary"
+                        type="button"
+                        aria-controls="housing-list">
+                        Xem thêm ...
+                    </button>
+                </div>
             </div>
         </aside>
 
@@ -168,9 +177,9 @@
             <div class="sv-housing-panel__head d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <div>
                     <strong><i class="fa-solid fa-map-location-dot me-2 text-primary"></i>Bản đồ</strong>
-                    <div class="sv-housing-note mt-1">Pin hiển thị giá thuê và gom cluster khi zoom out. Click pin hoặc item để mở ngay trang chi tiết.</div>
+                    <div class="sv-housing-note mt-1">Tải toàn bộ pin phù hợp một lần, gom cluster khi zoom out. Click pin hoặc item để mở ngay trang chi tiết.</div>
                 </div>
-                <span id="housing-map-status" class="sv-housing-note">Kéo hoặc zoom bản đồ để tải khu vực mới.</span>
+                <span id="housing-map-status" class="sv-housing-note">Đang chuẩn bị dữ liệu pin...</span>
             </div>
             <div id="housing-map" class="sv-housing-map" aria-label="Bản đồ thuê nhà SVP"></div>
         </section>

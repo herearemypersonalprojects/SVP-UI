@@ -104,6 +104,18 @@
             return '';
         }
     };
+    const normalizeCoverUrl = (value) => {
+        const raw = decodeHtmlEntities(value).trim();
+        if (!raw) return '';
+        const safeUrl = richContent && typeof richContent.normalizeSafeHref === 'function'
+            ? richContent.normalizeSafeHref(raw)
+            : sanitizeUrl(raw);
+        if (!safeUrl) return '';
+        const driveImageUrl = richContent && typeof richContent.toGoogleDriveImageUrl === 'function'
+            ? richContent.toGoogleDriveImageUrl(safeUrl)
+            : '';
+        return sanitizeUrl(driveImageUrl || safeUrl);
+    };
     const extractFirstImageUrl = (html) => {
         const decoded = decodeHtmlEntities(html).trim();
         if (!decoded) return '';
@@ -112,20 +124,20 @@
         template.innerHTML = decoded;
         const parsedImage = template.content.querySelector('img[src]');
         if (parsedImage) {
-            const safeParsedUrl = sanitizeUrl(parsedImage.getAttribute('src') || '');
+            const safeParsedUrl = normalizeCoverUrl(parsedImage.getAttribute('src') || '');
             if (safeParsedUrl) return safeParsedUrl;
         }
 
         const tagMatch = decoded.match(/<img\b[^>]*\bsrc\s*=\s*(?:"([^"]*)|'([^']*)'|([^\s"'<>]+))/i);
         const rawSrc = tagMatch ? (tagMatch[1] || tagMatch[2] || tagMatch[3] || '') : '';
-        const safeTagUrl = sanitizeUrl(rawSrc);
+        const safeTagUrl = normalizeCoverUrl(rawSrc);
         if (safeTagUrl) return safeTagUrl;
 
         const directImageMatch = decoded.match(/https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?[^\s<>"']*)?/i);
-        return sanitizeUrl(directImageMatch ? directImageMatch[0] : '');
+        return normalizeCoverUrl(directImageMatch ? directImageMatch[0] : '');
     };
     const resolveCoverImageUrl = (explicitImageUrl, contentHtml) => (
-        sanitizeUrl(explicitImageUrl) || extractFirstImageUrl(contentHtml)
+        normalizeCoverUrl(explicitImageUrl) || extractFirstImageUrl(contentHtml)
     );
     const extractLeadingImageRowUrls = (contentHtml) => (
         richContent && typeof richContent.extractLeadingImageRowUrls === 'function'
@@ -324,7 +336,7 @@
                 maxItems: 3
             });
         }
-        const safeUrl = sanitizeUrl(imageUrl);
+        const safeUrl = normalizeCoverUrl(imageUrl);
         if (!safeUrl) return '';
         return `<a class="sv-feed-card__cover${extraClass}" href="${href}" style="background-image:url('${escapeHtml(safeUrl)}')"></a>`;
     };
@@ -379,6 +391,7 @@
         const title = decodeHtmlEntities(item.title || 'Sự kiện mới').trim();
         const address = decodeHtmlEntities(item.address || '').trim();
         const eventTypeName = decodeHtmlEntities(item.eventTypeName || '').trim();
+        const contentHtml = item.contentHtml || item.content || '';
         const priceValue = Number(item.price);
         const priceLabel = Number.isFinite(priceValue) && priceValue > 0
             ? `${priceValue.toLocaleString('vi-VN')}€`
@@ -391,7 +404,11 @@
             createdAt: item.createdAt,
             sortTime: toTimeValue(item.createdAt),
             author: null,
-            coverImageUrl: sanitizeUrl(item.coverImageUrl || item.cover_image_url || item.imageUrl || item.image_url),
+            coverImageUrl: resolveCoverImageUrl(
+                item.coverImageUrl || item.cover_image_url || item.imageUrl || item.image_url,
+                contentHtml
+            ),
+            coverImageRowUrls: extractLeadingImageRowUrls(contentHtml),
             excerpt: `Được thêm ngày ${formatDateTime(item.createdAt)}. Sự kiện diễn ra vào ${formatDateTime(item.eventTime)}${address ? ` tại ${address}` : ''}.`,
             footer: [
                 eventTypeName ? `Loại: ${eventTypeName}` : 'Sự kiện cộng đồng',

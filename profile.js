@@ -49,6 +49,7 @@
     const managePanelEl = document.getElementById('profile-panel-manage');
     const blogListEl = document.getElementById('profile-blog-list');
     const formEl = document.getElementById('profile-form');
+    const passwordFormEl = document.getElementById('profile-password-form');
     const readonlyEl = document.getElementById('profile-readonly');
     const displayInput = document.getElementById('profile-display-input');
     const avatarUrlInput = document.getElementById('profile-avatar-url');
@@ -56,15 +57,20 @@
     const previewAvatar = document.getElementById('profile-preview-avatar');
     const previewLabel = document.getElementById('profile-preview-label');
     const statusEl = document.getElementById('profile-status');
+    const currentPasswordInput = document.getElementById('profile-current-password');
+    const newPasswordInput = document.getElementById('profile-new-password');
+    const confirmPasswordInput = document.getElementById('profile-confirm-password');
+    const passwordStatusEl = document.getElementById('profile-password-status');
     const clearAvatarBtn = document.getElementById('profile-clear-avatar');
 
     if (!avatarEl || !nameEl || !nicknameEl || !roleEl || !emailEl || !blogCountEl || !followerCountEl
         || !messageActionsEl || !writeLinkEl || !followBtnEl || !followLoginEl || !messageLinkEl
         || !panelHeadEl || !panelTitleEl || !headlineEl || !spaceTitleEl || !spaceNoteEl
         || !tabsEl || !blogTabEl || !manageTabEl || !blogPanelEl || !managePanelEl
-        || !blogListEl || !formEl || !readonlyEl
+        || !blogListEl || !formEl || !passwordFormEl || !readonlyEl
         || !displayInput || !avatarUrlInput || !avatarFileInput || !previewAvatar || !previewLabel
-        || !statusEl || !clearAvatarBtn) {
+        || !statusEl || !currentPasswordInput || !newPasswordInput || !confirmPasswordInput
+        || !passwordStatusEl || !clearAvatarBtn) {
         return;
     }
 
@@ -104,11 +110,17 @@
         .test(String(value || '').trim());
     const isPositiveIntegerLike = (value) => /^[1-9]\d*$/.test(String(value || '').trim());
 
+    const setStatusMessage = (targetEl, text, type) => {
+        targetEl.textContent = text || '';
+        targetEl.className = 'sv-profile-status small';
+        if (type === 'error') targetEl.classList.add('text-danger');
+        if (type === 'success') targetEl.classList.add('text-success');
+    };
     const setStatus = (text, type) => {
-        statusEl.textContent = text || '';
-        statusEl.className = 'sv-profile-status small';
-        if (type === 'error') statusEl.classList.add('text-danger');
-        if (type === 'success') statusEl.classList.add('text-success');
+        setStatusMessage(statusEl, text, type);
+    };
+    const setPasswordStatus = (text, type) => {
+        setStatusMessage(passwordStatusEl, text, type);
     };
 
     const setSpaceNote = (text) => {
@@ -137,6 +149,21 @@
         }
         URL.revokeObjectURL(previewAvatarObjectUrl);
         previewAvatarObjectUrl = '';
+    };
+
+    const resolveAccessToken = async () => {
+        if (window.SVPAuth?.getValidAccessToken) {
+            accessToken = await window.SVPAuth.getValidAccessToken();
+        } else if (!accessToken) {
+            accessToken = String(window.localStorage?.getItem('accessToken') || '').trim();
+        }
+        return accessToken;
+    };
+
+    const clearPasswordForm = () => {
+        currentPasswordInput.value = '';
+        newPasswordInput.value = '';
+        confirmPasswordInput.value = '';
     };
 
     const loadImageFromFile = (file) => new Promise((resolve, reject) => {
@@ -318,30 +345,34 @@
     };
 
     const fetchMe = async () => {
-        if (!window.SVPAuth?.getValidAccessToken) return null;
-        accessToken = await window.SVPAuth.getValidAccessToken();
-        if (!accessToken) return null;
+        const token = await resolveAccessToken();
+        if (!token) return null;
         const response = await fetch(`${API_BASE_URL}/me`, {
-            headers: { Authorization: `Bearer ${accessToken}` }
+            headers: { Authorization: `Bearer ${token}` }
         });
         if (response.ok) {
             return await response.json();
         }
+        const storedUserId = String(window.localStorage?.getItem('userId') || '').trim();
+        const storedAuthUserId = String(window.localStorage?.getItem('authUserId') || '').trim();
+        const storedEmail = String(window.localStorage?.getItem('userEmail') || '').trim();
+        const storedNickname = String(window.localStorage?.getItem('userNickname') || '').trim();
+        const storedDisplayName = String(window.localStorage?.getItem('userDisplayName') || '').trim();
         const payload = window.SVPAuth?.parseJwtPayload
-            ? window.SVPAuth.parseJwtPayload(accessToken) || {}
+            ? window.SVPAuth.parseJwtPayload(token) || {}
             : {};
         const tokenUserId = window.SVPAuth?.resolvePublicUserId
-            ? window.SVPAuth.resolvePublicUserId(localStorage.getItem('userId'), payload.userId, payload.publicUserId)
-            : (isUuidLike(localStorage.getItem('userId')) ? localStorage.getItem('userId') : (isUuidLike(payload.userId) ? payload.userId : null));
+            ? window.SVPAuth.resolvePublicUserId(storedUserId, payload.userId, payload.publicUserId)
+            : (isUuidLike(storedUserId) ? storedUserId : (isUuidLike(payload.userId) ? payload.userId : null));
         const tokenAuthUserId = window.SVPAuth?.resolveAuthUserId
-            ? window.SVPAuth.resolveAuthUserId(localStorage.getItem('authUserId'), payload.authUserId, payload.sub)
-            : String(localStorage.getItem('authUserId') || payload.authUserId || payload.sub || '').trim();
+            ? window.SVPAuth.resolveAuthUserId(storedAuthUserId, payload.authUserId, payload.sub)
+            : String(storedAuthUserId || payload.authUserId || payload.sub || '').trim();
         return {
             userId: tokenUserId,
             authUserId: tokenAuthUserId,
-            email: payload.email || localStorage.getItem('userEmail') || '',
-            nickname: payload.nickname || localStorage.getItem('userNickname') || '',
-            displayName: payload.displayName || localStorage.getItem('userDisplayName') || ''
+            email: payload.email || storedEmail || '',
+            nickname: payload.nickname || storedNickname || '',
+            displayName: payload.displayName || storedDisplayName || ''
         };
     };
 
@@ -376,6 +407,10 @@
         if (file.size > AVATAR_SELECTION_MAX_BYTES) {
             throw new Error(`Avatar vượt quá ${formatSize(AVATAR_SELECTION_MAX_BYTES)}.`);
         }
+        const token = await resolveAccessToken();
+        if (!token) {
+            throw new Error('Bạn cần đăng nhập để cập nhật hồ sơ.');
+        }
         setStatus(
             `Đang nén avatar về ${AVATAR_OUTPUT_SIZE}x${AVATAR_OUTPUT_SIZE} dưới ${formatSize(AVATAR_UPLOAD_MAX_BYTES)}...`,
             ''
@@ -390,7 +425,7 @@
             headers: {
                 'Content-Type': 'application/json',
                 Accept: 'application/json',
-                ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+                Authorization: `Bearer ${token}`
             },
             body: JSON.stringify({
                 filename: `avatar-${Date.now()}.${imageExtForMime(uploadFile.type || file.type)}`,
@@ -417,13 +452,14 @@
     };
 
     const updateProfile = async (displayName, avatarUrl) => {
-        if (!accessToken) throw new Error('Bạn cần đăng nhập để cập nhật hồ sơ.');
+        const token = await resolveAccessToken();
+        if (!token) throw new Error('Bạn cần đăng nhập để cập nhật hồ sơ.');
         const response = await fetch(`${API_BASE_URL}/me/profile`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 Accept: 'application/json',
-                Authorization: `Bearer ${accessToken}`
+                Authorization: `Bearer ${token}`
             },
             body: JSON.stringify({ displayName, avatarUrl })
         });
@@ -435,14 +471,15 @@
     };
 
     const updateFollow = async (following) => {
-        if (!accessToken) throw new Error('Bạn cần đăng nhập để theo dõi.');
+        const token = await resolveAccessToken();
+        if (!token) throw new Error('Bạn cần đăng nhập để theo dõi.');
         if (!profile?.userId) throw new Error('Không xác định được thành viên cần theo dõi.');
         const response = await fetch(`${API_BASE_URL}/users/follows`, {
             method: 'PATCH',
             headers: {
                 'Content-Type': 'application/json',
                 Accept: 'application/json',
-                Authorization: `Bearer ${accessToken}`
+                Authorization: `Bearer ${token}`
             },
             body: JSON.stringify({
                 targetUserId: profile.userId,
@@ -452,6 +489,25 @@
         const payload = await response.json().catch(() => ({}));
         if (!response.ok) {
             throw new Error(payload.error || 'Không thể cập nhật trạng thái theo dõi.');
+        }
+        return payload;
+    };
+
+    const changePassword = async (currentPassword, newPassword) => {
+        const token = await resolveAccessToken();
+        if (!token) throw new Error('Bạn cần đăng nhập để đổi mật khẩu.');
+        const response = await fetch(`${API_BASE_URL}/me/password`, {
+            method: 'PATCH',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                Authorization: `Bearer ${token}`
+            },
+            body: JSON.stringify({ currentPassword, newPassword })
+        });
+        const payload = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            throw new Error(payload.error || 'Không thể đổi mật khẩu.');
         }
         return payload;
     };
@@ -561,16 +617,18 @@
         avatarUrlInput.value = profile.avatarUrl || '';
         avatarFileInput.value = '';
         previewLabel.textContent = 'Chưa có thay đổi';
+        clearPasswordForm();
+        setPasswordStatus('', '');
 
         if (isSelf) {
-            localStorage.setItem('userDisplayName', displayName);
+            window.localStorage?.setItem('userDisplayName', displayName);
             if (profile.authUserId) {
-                localStorage.setItem('authUserId', String(profile.authUserId));
+                window.localStorage?.setItem('authUserId', String(profile.authUserId));
             }
             if (profile.avatarUrl) {
-                localStorage.setItem('userAvatarUrl', profile.avatarUrl);
+                window.localStorage?.setItem('userAvatarUrl', profile.avatarUrl);
             } else {
-                localStorage.removeItem('userAvatarUrl');
+                window.localStorage?.removeItem('userAvatarUrl');
             }
         }
 
@@ -608,6 +666,7 @@
 
     const setEditable = (editable) => {
         formEl.classList.toggle('d-none', !editable);
+        passwordFormEl.classList.toggle('d-none', !editable);
         readonlyEl.classList.toggle('d-none', editable);
         manageTabEl.classList.toggle('d-none', !editable);
         if (!editable && activeTab === 'manage') {
@@ -741,6 +800,41 @@
             setStatus('Đã cập nhật hồ sơ.', 'success');
         } catch (error) {
             setStatus(error.message || 'Không thể cập nhật hồ sơ.', 'error');
+        }
+    });
+    passwordFormEl.addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!isSelf) return;
+
+        const currentPassword = currentPasswordInput.value || '';
+        const newPassword = newPasswordInput.value || '';
+        const confirmPassword = confirmPasswordInput.value || '';
+
+        if (!newPassword.trim()) {
+            setPasswordStatus('Mật khẩu mới không được để trống.', 'error');
+            return;
+        }
+        if (newPassword.length < 6) {
+            setPasswordStatus('Mật khẩu mới phải có ít nhất 6 ký tự.', 'error');
+            return;
+        }
+        if (newPassword !== confirmPassword) {
+            setPasswordStatus('Mật khẩu xác nhận không khớp.', 'error');
+            return;
+        }
+
+        setPasswordStatus('Đang cập nhật mật khẩu...', '');
+        try {
+            const payload = await changePassword(currentPassword, newPassword);
+            clearPasswordForm();
+            setPasswordStatus(
+                payload && payload.passwordCreated
+                    ? 'Đã tạo mật khẩu mới cho tài khoản.'
+                    : 'Đã đổi mật khẩu.',
+                'success'
+            );
+        } catch (error) {
+            setPasswordStatus(error.message || 'Không thể đổi mật khẩu.', 'error');
         }
     });
 

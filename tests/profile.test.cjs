@@ -34,6 +34,7 @@ const REQUIRED_IDS = [
     'profile-panel-manage',
     'profile-blog-list',
     'profile-form',
+    'profile-password-form',
     'profile-readonly',
     'profile-display-input',
     'profile-avatar-url',
@@ -41,6 +42,10 @@ const REQUIRED_IDS = [
     'profile-preview-avatar',
     'profile-preview-label',
     'profile-status',
+    'profile-current-password',
+    'profile-new-password',
+    'profile-confirm-password',
+    'profile-password-status',
     'profile-clear-avatar'
 ];
 

@@ -116,6 +116,17 @@
             flex-wrap: wrap;
             gap: .6rem;
         }
+        .sv-profile-section {
+            margin-top: 1.25rem;
+            padding-top: 1.15rem;
+            border-top: 1px solid #e2e8f0;
+        }
+        .sv-profile-section h4 {
+            margin: 0 0 .8rem;
+            color: #0f172a;
+            font-size: 1.05rem;
+            font-weight: 800;
+        }
         .sv-profile-readonly {
             color: var(--sv-muted);
             font-size: .95rem;
@@ -365,11 +376,33 @@
                                 </div>
                             </div>
                             <div class="sv-profile-actions mb-2">
-                                <button class="btn btn-primary" type="submit">Lưu thay đổi</button>
+                                <button class="btn btn-primary" type="submit">Lưu hồ sơ</button>
                                 <button class="btn btn-outline-secondary" type="button" id="profile-clear-avatar">Gỡ avatar</button>
                             </div>
                             <div id="profile-status" class="sv-profile-status small"></div>
                         </form>
+                        <section class="sv-profile-section">
+                            <h4>Đổi mật khẩu</h4>
+                            <form id="profile-password-form" class="sv-profile-form">
+                                <div class="mb-3">
+                                    <label class="form-label" for="profile-current-password">Mật khẩu hiện tại</label>
+                                    <input class="form-control" id="profile-current-password" type="password" autocomplete="current-password" placeholder="Nhập mật khẩu hiện tại">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="profile-new-password">Mật khẩu mới</label>
+                                    <input class="form-control" id="profile-new-password" type="password" autocomplete="new-password" placeholder="Ít nhất 6 ký tự">
+                                </div>
+                                <div class="mb-3">
+                                    <label class="form-label" for="profile-confirm-password">Nhập lại mật khẩu mới</label>
+                                    <input class="form-control" id="profile-confirm-password" type="password" autocomplete="new-password" placeholder="Nhập lại mật khẩu mới">
+                                    <div class="form-text">Nếu tài khoản của bạn đăng nhập bằng Google/Facebook và chưa từng có mật khẩu, có thể để trống mật khẩu hiện tại để đặt mật khẩu mới.</div>
+                                </div>
+                                <div class="sv-profile-actions mb-2">
+                                    <button class="btn btn-outline-primary" type="submit">Đổi mật khẩu</button>
+                                </div>
+                                <div id="profile-password-status" class="sv-profile-status small"></div>
+                            </form>
+                        </section>
                         <div id="profile-readonly" class="sv-profile-readonly d-none">
                             Đây là espace công khai của thành viên này. Bạn có thể đọc blog, theo dõi và nhắn tin nếu đã đăng nhập.
                         </div>

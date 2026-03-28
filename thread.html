@@ -1263,6 +1263,37 @@
             return urls;
         };
 
+        const extractInlineImageUrls = (html, maxItems = 12) => {
+            const source = String(html || '');
+            if (!source) return [];
+            const urls = [];
+            const template = document.createElement('template');
+            template.innerHTML = source;
+            const images = Array.from(template.content.querySelectorAll('img[src]'));
+            for (const image of images) {
+                if (urls.length >= maxItems) {
+                    break;
+                }
+                const candidate = normalizeSafeImageUrl(image.getAttribute('src') || '');
+                if (candidate && !urls.includes(candidate)) {
+                    urls.push(candidate);
+                }
+            }
+            return urls;
+        };
+
+        const collectSupplementaryImageUrls = (imageUrls, contentHtml) => {
+            const candidates = Array.isArray(imageUrls) ? imageUrls : [];
+            if (!candidates.length) {
+                return [];
+            }
+            const inlineImageUrls = extractInlineImageUrls(contentHtml);
+            if (!inlineImageUrls.length) {
+                return candidates.filter((url) => typeof url === 'string' && url);
+            }
+            return candidates.filter((url) => typeof url === 'string' && url && !inlineImageUrls.includes(url));
+        };
+
         const toMillis = (value) => {
             const time = Date.parse(String(value || ''));
             return Number.isFinite(time) ? time : 0;
@@ -1815,6 +1846,7 @@
                 ? '<span class="badge bg-warning text-dark">ĐÃ ẨN</span>'
                 : '';
             const profileHref = buildProfileHref(item.authorNickname, item.authorUserId, item.authorAuthUserId);
+            const supplementaryImageUrls = collectSupplementaryImageUrls(item.imageUrls, item.contentHtml);
             const managementButtons = `
                 ${canEdit
                     ? `<button type="button" data-edit-comment-id="${item.commentId}"><i class="fa-solid fa-pen me-1"></i>Sửa</button>`
@@ -1853,9 +1885,9 @@
                         <div class="sv-thread-post__content">
                             ${item.contentHtml}
                         </div>
-                        ${item.imageUrls.length ? `
+                        ${supplementaryImageUrls.length ? `
                         <div class="sv-thread-post__media">
-                            ${item.imageUrls.map((url, imageIndex) => `<img class="sv-thread-post__image" src="${escapeHtml(url)}" alt="Ảnh đính kèm #${item.index}.${imageIndex + 1}" loading="lazy" decoding="async">`).join('')}
+                            ${supplementaryImageUrls.map((url, imageIndex) => `<img class="sv-thread-post__image" src="${escapeHtml(url)}" alt="Ảnh đính kèm #${item.index}.${imageIndex + 1}" loading="lazy" decoding="async">`).join('')}
                         </div>
                         ` : ''}
                         <div class="sv-thread-post__actions">

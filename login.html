@@ -48,6 +48,23 @@
 <script>
 (() => {
     const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+    const searchParams = new URLSearchParams(window.location.search);
+    const normalizeRedirectTarget = (value) => {
+        const raw = String(value || '').trim();
+        if (!raw) {
+            return 'index.html';
+        }
+        try {
+            const url = new URL(raw, window.location.href);
+            if (url.origin !== window.location.origin) {
+                return 'index.html';
+            }
+            return `${url.pathname}${url.search}${url.hash}` || 'index.html';
+        } catch (_) {
+            return 'index.html';
+        }
+    };
+    const redirectTarget = normalizeRedirectTarget(searchParams.get('redirect'));
     const msgEl = document.getElementById('msg');
     const setMsg = (text, ok) => {
         msgEl.textContent = text || '';
@@ -81,7 +98,7 @@
                 if (payload.authUserId) localStorage.setItem('authUserId', payload.authUserId);
             }
             setMsg('Đăng nhập thành công, đang chuyển trang...', true);
-            window.location.replace('index.html');
+            window.location.replace(redirectTarget);
         } catch (_) {
             setMsg('Không thể kết nối máy chủ.', false);
         }
@@ -113,7 +130,7 @@
     if (window.SVPSocialAuth && typeof window.SVPSocialAuth.init === 'function') {
         window.SVPSocialAuth.init({
             mode: 'login',
-            redirectUrl: 'index.html',
+            redirectUrl: redirectTarget,
             sectionId: 'social-auth',
             googleRowId: 'google-signin-row',
             googleContainerId: 'google-signin',

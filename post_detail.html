@@ -190,6 +190,58 @@
         }
         .pd-body a { color: #2563eb; }
         .pd-body a:hover { color: #1d4ed8; }
+        .pd-body--locked {
+            position: relative;
+            overflow: hidden;
+        }
+        .pd-body--locked::after {
+            content: '';
+            position: absolute;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            height: clamp(110px, 18vw, 170px);
+            background: linear-gradient(to bottom, rgba(255,255,255,0), rgba(255,255,255,.92) 58%, #fff 100%);
+            pointer-events: none;
+        }
+        .pd-login-gate {
+            margin-top: 1.25rem;
+            padding: 1.1rem 1.15rem;
+            border: 1px solid #bfdbfe;
+            border-radius: 16px;
+            background: linear-gradient(135deg, #eff6ff 0%, #f8fafc 100%);
+            box-shadow: 0 14px 32px rgba(37, 99, 235, 0.08);
+        }
+        .pd-login-gate[hidden] {
+            display: none !important;
+        }
+        .pd-login-gate__eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            margin-bottom: .45rem;
+            font-size: .78rem;
+            font-weight: 800;
+            letter-spacing: .05em;
+            text-transform: uppercase;
+            color: #1d4ed8;
+        }
+        .pd-login-gate__title {
+            font-family: var(--sv-title-font, 'Roboto Condensed', sans-serif);
+            font-size: 1.1rem;
+            font-weight: 800;
+            color: #0f172a;
+            margin-bottom: .35rem;
+        }
+        .pd-login-gate__text {
+            margin: 0 0 .9rem;
+            color: #334155;
+        }
+        .pd-login-gate__actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .65rem;
+        }
 
         /* Divider */
         .pd-divider {
@@ -521,6 +573,18 @@
                 <div class="pd-skeleton" style="height:1.1rem;margin-bottom:.75rem;border-radius:6px;width:95%;"></div>
                 <div class="pd-skeleton" style="height:1.1rem;border-radius:6px;width:70%;"></div>
             </div>
+            <div id="pd-login-gate" class="pd-login-gate" hidden>
+                <div class="pd-login-gate__eyebrow">
+                    <i class="fa-solid fa-lock"></i>
+                    Nội dung dành cho thành viên
+                </div>
+                <div class="pd-login-gate__title">Hãy đăng nhập để đọc tiếp bài viết này.</div>
+                <p class="pd-login-gate__text">Bạn đang xem phần mở đầu của bài viết. Đăng nhập để mở toàn bộ nội dung và tiếp tục theo dõi thảo luận.</p>
+                <div class="pd-login-gate__actions">
+                    <a id="pd-login-gate-link" class="btn btn-primary" href="login.html">Đăng nhập để đọc tiếp</a>
+                    <a class="btn btn-outline-primary" href="signup.html">Tạo tài khoản</a>
+                </div>
+            </div>
 
             <!-- Share buttons -->
             <div class="pd-share mt-3" id="pd-share" style="display:none!important">
@@ -726,6 +790,8 @@
     const likesEl        = document.getElementById('pd-likes');
     const commentCountEl = document.getElementById('pd-comment-count');
     const bodyEl         = document.getElementById('pd-body');
+    const loginGateEl    = document.getElementById('pd-login-gate');
+    const loginGateLinkEl = document.getElementById('pd-login-gate-link');
     const shareSection   = document.getElementById('pd-share');
     const shareFbEl      = document.getElementById('pd-share-fb');
     const shareTwEl      = document.getElementById('pd-share-tw');
@@ -777,6 +843,9 @@
     let currentCommentCount = 0;
     let likeInFlight = false;
     let likeHandlerAttached = false;
+    const ARTICLE_PREVIEW_RATIO = 0.5;
+    const ARTICLE_PREVIEW_MIN_HEIGHT = 120;
+    const ARTICLE_PREVIEW_HIDDEN_OFFSET = 48;
 
     /* ── Utilities ── */
     const escapeHtml = (v) => String(v ?? '')
@@ -805,6 +874,64 @@
         const d = new Date(iso);
         if (isNaN(d)) return '';
         return new Intl.DateTimeFormat('vi-VN',{dateStyle:'long'}).format(d);
+    };
+
+    const buildLoginRedirectHref = () => {
+        const redirectTarget = window.location.href.split('#')[0];
+        return `login.html?redirect=${encodeURIComponent(redirectTarget)}`;
+    };
+
+    const hideArticleLoginGate = () => {
+        if (bodyEl) {
+            bodyEl.classList.remove('pd-body--locked');
+            bodyEl.style.removeProperty('max-height');
+        }
+        if (loginGateEl) {
+            loginGateEl.hidden = true;
+        }
+    };
+
+    const computeArticlePreviewHeight = (contentHeight) => {
+        const totalHeight = Number(contentHeight) || 0;
+        if (!Number.isFinite(totalHeight) || totalHeight <= 0) {
+            return 0;
+        }
+        const maxVisibleHeight = Math.max(80, totalHeight - ARTICLE_PREVIEW_HIDDEN_OFFSET);
+        const halfHeight = Math.floor(totalHeight * ARTICLE_PREVIEW_RATIO);
+        return Math.min(Math.max(ARTICLE_PREVIEW_MIN_HEIGHT, halfHeight), maxVisibleHeight);
+    };
+
+    const applyArticleLoginGate = () => {
+        if (!bodyEl) return;
+        const fullHeight = bodyEl.scrollHeight || 0;
+        const previewHeight = computeArticlePreviewHeight(fullHeight);
+        if (!previewHeight || previewHeight >= fullHeight) {
+            hideArticleLoginGate();
+            return;
+        }
+        bodyEl.classList.add('pd-body--locked');
+        bodyEl.style.maxHeight = `${previewHeight}px`;
+        if (loginGateLinkEl) {
+            loginGateLinkEl.href = buildLoginRedirectHref();
+        }
+        if (loginGateEl) {
+            loginGateEl.hidden = false;
+        }
+
+        const refreshLockedHeight = () => {
+            if (!bodyEl.classList.contains('pd-body--locked')) return;
+            const nextHeight = computeArticlePreviewHeight(bodyEl.scrollHeight || 0);
+            if (nextHeight > 0) {
+                bodyEl.style.maxHeight = `${nextHeight}px`;
+            }
+        };
+
+        window.requestAnimationFrame(refreshLockedHeight);
+        bodyEl.querySelectorAll('img').forEach((img) => {
+            if (!(img instanceof HTMLImageElement) || img.complete) return;
+            img.addEventListener('load', refreshLockedHeight, { once: true });
+            img.addEventListener('error', refreshLockedHeight, { once: true });
+        });
     };
 
     const timeAgo = (iso) => {
@@ -1728,12 +1855,17 @@
         renderPostActions(post);
     };
 
-    const renderBody = (post) => {
+    const renderBody = (post, options = {}) => {
         if (!bodyEl) return;
         bodyEl.innerHTML = sanitizePostContentHtml(post.contentHtml);
         if (richContent && typeof richContent.applyImageLayouts === 'function') {
             richContent.applyImageLayouts(bodyEl);
         }
+        if (options.isAuthenticated) {
+            hideArticleLoginGate();
+            return;
+        }
+        applyArticleLoginGate();
     };
 
     const applyCommentPortraitLayout = (root) => {
@@ -2293,11 +2425,15 @@
         }
 
         let post, apiComments = [];
+        let isAuthenticatedViewer = false;
         const shouldTrackView = shouldTrackPostView(postId);
 
         try {
             const headers = { Accept: 'application/json' };
-            const token = localStorage.getItem('accessToken') || '';
+            const token = await (window.SVPAuth?.getValidAccessToken
+                ? window.SVPAuth.getValidAccessToken()
+                : Promise.resolve(localStorage.getItem('accessToken') || ''));
+            isAuthenticatedViewer = Boolean(token);
             if (token) headers.Authorization = `Bearer ${token}`;
             const res = await fetch(`${API_BASE_URL}/posts/${postId}?trackView=${shouldTrackView ? 'true' : 'false'}`, { headers });
             const data = await res.json().catch(()=>({}));
@@ -2347,7 +2483,7 @@
         }
         renderHero(post);
         renderPostHeader(post, comments.length);
-        renderBody(post);
+        renderBody(post, { isAuthenticated: isAuthenticatedViewer });
         renderShare(post);
         syncSeo(post, comments.length);
         renderComments(comments);

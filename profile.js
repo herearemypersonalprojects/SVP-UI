@@ -2,7 +2,9 @@
     const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
     const richContent = window.SVPRichContent || null;
     const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
-    const AVATAR_MAX_BYTES = 2 * 1024 * 1024;
+    const AVATAR_SELECTION_MAX_BYTES = 10 * 1024 * 1024;
+    const AVATAR_UPLOAD_MAX_BYTES = 10 * 1024;
+    const AVATAR_OUTPUT_SIZE = 96;
     const CATEGORY_NAMES = {
         1: 'Học tập và nghiên cứu tại Pháp',
         2: 'Kinh nghiệm xin học bổng và du học',
@@ -73,6 +75,7 @@
     let isSelf = false;
     let followInFlight = false;
     let activeTab = 'manage';
+    let previewAvatarObjectUrl = '';
 
     const escapeHtml = (value) => String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -110,6 +113,123 @@
 
     const setSpaceNote = (text) => {
         spaceNoteEl.textContent = text || '';
+    };
+
+    const formatSize = (value) => {
+        const bytes = Number(value);
+        if (!Number.isFinite(bytes) || bytes <= 0) return '0 B';
+        if (bytes < 1024) return `${Math.round(bytes)} B`;
+        if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+        return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+    };
+
+    const imageExtForMime = (mimeType) => {
+        const mime = String(mimeType || '').toLowerCase();
+        if (mime === 'image/png') return 'png';
+        if (mime === 'image/webp') return 'webp';
+        if (mime === 'image/gif') return 'gif';
+        return 'jpg';
+    };
+
+    const revokePreviewAvatarObjectUrl = () => {
+        if (!previewAvatarObjectUrl) {
+            return;
+        }
+        URL.revokeObjectURL(previewAvatarObjectUrl);
+        previewAvatarObjectUrl = '';
+    };
+
+    const loadImageFromFile = (file) => new Promise((resolve, reject) => {
+        const objectUrl = URL.createObjectURL(file);
+        const image = new Image();
+        image.onload = () => {
+            URL.revokeObjectURL(objectUrl);
+            resolve(image);
+        };
+        image.onerror = () => {
+            URL.revokeObjectURL(objectUrl);
+            reject(new Error('Không đọc được ảnh avatar.'));
+        };
+        image.src = objectUrl;
+    });
+
+    const canvasToBlob = (canvas, mimeType, quality) => new Promise((resolve) => {
+        canvas.toBlob((blob) => resolve(blob), mimeType, quality);
+    });
+
+    const compressAvatarFile = async (file, maxBytes) => {
+        if (!(file instanceof File)) {
+            throw new Error('File avatar không hợp lệ.');
+        }
+        const image = await loadImageFromFile(file);
+        const sourceWidth = image.naturalWidth || image.width;
+        const sourceHeight = image.naturalHeight || image.height;
+        if (!sourceWidth || !sourceHeight) {
+            throw new Error('Không xác định được kích thước ảnh avatar.');
+        }
+
+        const canvas = document.createElement('canvas');
+        const context = canvas.getContext('2d');
+        if (!context) {
+            throw new Error('Trình duyệt không hỗ trợ nén ảnh avatar.');
+        }
+
+        canvas.width = AVATAR_OUTPUT_SIZE;
+        canvas.height = AVATAR_OUTPUT_SIZE;
+
+        const cropSize = Math.min(sourceWidth, sourceHeight);
+        const cropX = Math.max(0, Math.round((sourceWidth - cropSize) / 2));
+        const cropY = Math.max(0, Math.round((sourceHeight - cropSize) / 2));
+        const qualities = [0.92, 0.84, 0.76, 0.68, 0.6, 0.52, 0.44, 0.36, 0.28, 0.2, 0.14, 0.1, 0.08];
+        const mimeTypes = ['image/webp', 'image/jpeg'];
+        let bestBlob = null;
+        let bestMimeType = '';
+
+        for (const mimeType of mimeTypes) {
+            context.clearRect(0, 0, AVATAR_OUTPUT_SIZE, AVATAR_OUTPUT_SIZE);
+            if (mimeType === 'image/jpeg') {
+                context.fillStyle = '#ffffff';
+                context.fillRect(0, 0, AVATAR_OUTPUT_SIZE, AVATAR_OUTPUT_SIZE);
+            }
+            context.drawImage(
+                image,
+                cropX,
+                cropY,
+                cropSize,
+                cropSize,
+                0,
+                0,
+                AVATAR_OUTPUT_SIZE,
+                AVATAR_OUTPUT_SIZE
+            );
+
+            for (const quality of qualities) {
+                const blob = await canvasToBlob(canvas, mimeType, quality);
+                if (!blob) {
+                    continue;
+                }
+                if (!bestBlob || blob.size < bestBlob.size) {
+                    bestBlob = blob;
+                    bestMimeType = mimeType;
+                }
+                if (blob.size <= maxBytes) {
+                    return new File(
+                        [blob],
+                        `avatar-${Date.now()}.${imageExtForMime(mimeType)}`,
+                        { type: mimeType }
+                    );
+                }
+            }
+        }
+
+        if (bestBlob && bestBlob.size <= maxBytes) {
+            return new File(
+                [bestBlob],
+                `avatar-${Date.now()}.${imageExtForMime(bestMimeType)}`,
+                { type: bestMimeType }
+            );
+        }
+        throw new Error(`Không thể nén ảnh avatar xuống dưới ${formatSize(maxBytes)}.`);
     };
 
     const getCategoryName = (categoryId) => CATEGORY_NAMES[Number(categoryId)] || 'Chuyên mục khác';
@@ -177,13 +297,15 @@
         }).format(date);
     };
 
-    const renderAvatar = (targetEl, displayName, avatarUrl, seed) => {
+    const renderAvatar = (targetEl, displayName, avatarUrl, seed, options = {}) => {
         const safeName = String(displayName || '').trim();
         const fallbackInitial = window.SVPAvatar?.initial ? window.SVPAvatar.initial(safeName) : (safeName.charAt(0) || 'U').toUpperCase();
         const palette = window.SVPAvatar?.palette ? window.SVPAvatar.palette(seed || safeName) : { bg: '#e2e8f0', fg: '#475569' };
-        const safeAvatarUrl = sanitizeUrl(avatarUrl);
+        const safeAvatarUrl = options.allowObjectUrl
+            ? String(avatarUrl || '').trim()
+            : sanitizeUrl(avatarUrl);
         if (safeAvatarUrl) {
-            targetEl.style.backgroundImage = `url('${escapeHtml(safeAvatarUrl)}')`;
+            targetEl.style.backgroundImage = `url('${safeAvatarUrl.replace(/'/g, "\\'")}')`;
             targetEl.style.backgroundColor = '#e2e8f0';
             targetEl.textContent = '';
             targetEl.style.color = '#fff';
@@ -248,9 +370,21 @@
 
     const uploadAvatarFile = async (file) => {
         if (!file) return '';
-        if (file.size > AVATAR_MAX_BYTES) {
-            throw new Error('Ảnh vượt quá 2MB.');
+        if (!String(file.type || '').toLowerCase().startsWith('image/')) {
+            throw new Error('Chỉ hỗ trợ file ảnh làm avatar.');
         }
+        if (file.size > AVATAR_SELECTION_MAX_BYTES) {
+            throw new Error(`Avatar vượt quá ${formatSize(AVATAR_SELECTION_MAX_BYTES)}.`);
+        }
+        setStatus(
+            `Đang nén avatar về ${AVATAR_OUTPUT_SIZE}x${AVATAR_OUTPUT_SIZE} dưới ${formatSize(AVATAR_UPLOAD_MAX_BYTES)}...`,
+            ''
+        );
+        const uploadFile = await compressAvatarFile(file, AVATAR_UPLOAD_MAX_BYTES);
+        setStatus(
+            `Avatar đã nén còn ${formatSize(uploadFile.size)} ở ${AVATAR_OUTPUT_SIZE}x${AVATAR_OUTPUT_SIZE}. Đang chuẩn bị upload...`,
+            ''
+        );
         const presignResponse = await fetch(`${API_BASE_URL}/api/upload/post-image`, {
             method: 'POST',
             headers: {
@@ -258,17 +392,27 @@
                 Accept: 'application/json',
                 ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
             },
-            body: JSON.stringify({ filename: file.name, contentType: file.type })
+            body: JSON.stringify({
+                filename: `avatar-${Date.now()}.${imageExtForMime(uploadFile.type || file.type)}`,
+                contentType: uploadFile.type || file.type || 'image/jpeg'
+            })
         });
         const presignPayload = await presignResponse.json().catch(() => ({}));
         if (!presignResponse.ok) {
             throw new Error(presignPayload.error || 'Không thể tạo link upload.');
         }
-        await fetch(presignPayload.uploadUrl, {
+        if (!presignPayload.uploadUrl || !presignPayload.publicUrl) {
+            throw new Error('Thiếu thông tin upload avatar từ máy chủ.');
+        }
+        setStatus(`Đang upload avatar (${formatSize(uploadFile.size)})...`, '');
+        const uploadResponse = await fetch(presignPayload.uploadUrl, {
             method: presignPayload.method || 'PUT',
-            headers: { 'Content-Type': presignPayload.contentType || file.type },
-            body: file
+            headers: { 'Content-Type': presignPayload.contentType || uploadFile.type || file.type || 'image/jpeg' },
+            body: uploadFile
         });
+        if (!uploadResponse.ok) {
+            throw new Error(`Upload avatar thất bại (${uploadResponse.status}).`);
+        }
         return presignPayload.publicUrl || '';
     };
 
@@ -395,6 +539,7 @@
 
     const renderProfile = () => {
         if (!profile) return;
+        revokePreviewAvatarObjectUrl();
         const displayName = profile.displayName || profile.nickname || 'Thành viên';
         nameEl.textContent = displayName;
         nicknameEl.textContent = '';
@@ -414,6 +559,8 @@
         renderAvatar(previewAvatar, displayName, profile.avatarUrl, profile.nickname || profile.authUserId || profile.userId);
         displayInput.value = displayName;
         avatarUrlInput.value = profile.avatarUrl || '';
+        avatarFileInput.value = '';
+        previewLabel.textContent = 'Chưa có thay đổi';
 
         if (isSelf) {
             localStorage.setItem('userDisplayName', displayName);
@@ -439,6 +586,21 @@
 
     const updatePreview = () => {
         const displayName = displayInput.value.trim() || profile?.displayName || profile?.nickname || 'Thành viên';
+        const avatarFile = avatarFileInput.files && avatarFileInput.files[0] ? avatarFileInput.files[0] : null;
+        if (avatarFile) {
+            revokePreviewAvatarObjectUrl();
+            previewAvatarObjectUrl = URL.createObjectURL(avatarFile);
+            renderAvatar(
+                previewAvatar,
+                displayName,
+                previewAvatarObjectUrl,
+                profile?.nickname || profile?.authUserId || profile?.userId,
+                { allowObjectUrl: true }
+            );
+            previewLabel.textContent = `Đã chọn: ${avatarFile.name} (${formatSize(avatarFile.size)}). Ảnh sẽ được crop về ${AVATAR_OUTPUT_SIZE}x${AVATAR_OUTPUT_SIZE} và nén xuống dưới ${formatSize(AVATAR_UPLOAD_MAX_BYTES)} trước khi upload.`;
+            return;
+        }
+        revokePreviewAvatarObjectUrl();
         const avatarUrl = sanitizeUrl(avatarUrlInput.value.trim());
         renderAvatar(previewAvatar, displayName, avatarUrl, profile?.nickname || profile?.authUserId || profile?.userId);
         previewLabel.textContent = avatarUrl ? 'Sẽ dùng URL ảnh mới.' : 'Ảnh đại diện sẽ theo chữ cái và màu mặc định.';
@@ -516,9 +678,17 @@
     });
     avatarFileInput.addEventListener('change', () => {
         const file = avatarFileInput.files && avatarFileInput.files[0] ? avatarFileInput.files[0] : null;
-        previewLabel.textContent = file ? `Sẵn sàng tải ảnh: ${file.name}` : 'Chưa có thay đổi';
+        if (file && file.size > AVATAR_SELECTION_MAX_BYTES) {
+            avatarFileInput.value = '';
+            revokePreviewAvatarObjectUrl();
+            setStatus(`Avatar vượt quá ${formatSize(AVATAR_SELECTION_MAX_BYTES)}.`, 'error');
+            updatePreview();
+            return;
+        }
+        updatePreview();
     });
     clearAvatarBtn.addEventListener('click', () => {
+        revokePreviewAvatarObjectUrl();
         avatarUrlInput.value = '';
         avatarFileInput.value = '';
         updatePreview();
@@ -557,6 +727,8 @@
                 previewLabel.textContent = 'Đang tải ảnh lên...';
                 avatarUrl = await uploadAvatarFile(file);
                 avatarUrlInput.value = avatarUrl;
+                avatarFileInput.value = '';
+                revokePreviewAvatarObjectUrl();
             }
             const displayName = displayInput.value.trim();
             const updated = await updateProfile(displayName, avatarUrl);
@@ -579,4 +751,10 @@
         setEditable(false);
         blogListEl.innerHTML = '<div class="sv-profile-empty">Không thể tải danh sách blog.</div>';
     });
+
+    if (typeof window.addEventListener === 'function') {
+        window.addEventListener('beforeunload', () => {
+            revokePreviewAvatarObjectUrl();
+        });
+    }
 })();

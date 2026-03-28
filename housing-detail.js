@@ -93,7 +93,26 @@
 
     const renderGallery = (images, descriptionHtml) => {
         const fallbackImage = shared.extractFirstImageUrlFromHtml(descriptionHtml || '');
+        const fallbackImageRowUrls = richContent && typeof richContent.extractLeadingImageRowUrls === 'function'
+            ? richContent.extractLeadingImageRowUrls(descriptionHtml || '', { maxItems: 3 })
+            : [];
+        const fallbackImageRowHtml = fallbackImageRowUrls.length >= 2 && richContent && typeof richContent.buildImageRowCoverHtml === 'function'
+            ? richContent.buildImageRowCoverHtml({
+                tagName: 'div',
+                imageUrls: fallbackImageRowUrls,
+                className: 'sv-housing-image-thumb mb-3',
+                altPrefix: 'Housing image',
+                maxItems: 3
+            })
+            : '';
         if (!Array.isArray(images) || !images.length) {
+            if (fallbackImageRowHtml) {
+                galleryEl.innerHTML = `
+                    ${fallbackImageRowHtml}
+                    <div class="sv-housing-note">Ảnh cover đang được lấy từ cụm ảnh đầu bài.</div>
+                `;
+                return;
+            }
             if (fallbackImage) {
                 galleryEl.innerHTML = `
                     <img class="sv-housing-image-thumb mb-3" src="${shared.escapeHtml(fallbackImage)}" alt="Housing image">
@@ -105,8 +124,10 @@
             return;
         }
         const primary = images.find((item) => item.primary) || images[0];
+        const mainCoverHtml = fallbackImageRowHtml
+            || `<img class="sv-housing-image-thumb mb-3" src="${shared.escapeHtml(primary.imageUrl)}" alt="Housing image">`;
         galleryEl.innerHTML = `
-            <img class="sv-housing-image-thumb mb-3" src="${shared.escapeHtml(primary.imageUrl)}" alt="Housing image">
+            ${mainCoverHtml}
             <div class="row g-2">
                 ${images.map((item) => `
                     <div class="col-4">

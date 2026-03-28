@@ -323,7 +323,16 @@
                 return `<figure${classAttr}>${childrenHtml}</figure>`;
             }
             if (tag === 'div') {
-                const safeClasses = filterClassNames(node.getAttribute('class') || '', allowedDivClasses);
+                const classNames = new Set(
+                    filterClassNames(node.getAttribute('class') || '', allowedDivClasses)
+                        .split(/\s+/)
+                        .map((item) => item.trim())
+                        .filter(Boolean)
+                );
+                if (isImplicitImageRowElement(node)) {
+                    classNames.add('image-row');
+                }
+                const safeClasses = Array.from(classNames).join(' ');
                 const classAttr = safeClasses ? ` class="${escapeHtml(safeClasses)}"` : '';
                 return `<div${classAttr}>${childrenHtml}</div>`;
             }
@@ -360,6 +369,29 @@
         return null;
     };
 
+    const isImplicitImageRowElement = (node) => {
+        if (!(node instanceof HTMLElement) || node.tagName.toLowerCase() !== 'div' || node.classList.contains('sv-embed-video')) {
+            return false;
+        }
+        if (node.querySelector('iframe,video')) {
+            return false;
+        }
+        const images = Array.from(node.querySelectorAll('img[src]'));
+        if (images.length < 2) {
+            return false;
+        }
+        const clone = node.cloneNode(true);
+        Array.from(clone.querySelectorAll('img,br')).forEach((element) => element.remove());
+        return !String(clone.textContent || '').replace(/\u00a0/g, ' ').trim();
+    };
+
+    const isImageRowElement = (node) => {
+        if (!(node instanceof HTMLElement) || node.tagName.toLowerCase() !== 'div') {
+            return false;
+        }
+        return node.classList.contains('image-row') || isImplicitImageRowElement(node);
+    };
+
     const extractLeadingImageRowUrls = (value, options = {}) => {
         const raw = String(value || '').trim();
         if (!raw) {
@@ -368,7 +400,7 @@
         const template = document.createElement('template');
         template.innerHTML = raw;
         const firstElement = findLeadingElement(template.content);
-        if (!(firstElement instanceof HTMLElement) || !firstElement.matches('div.image-row')) {
+        if (!isImageRowElement(firstElement)) {
             return [];
         }
         const maxItems = Math.max(2, Number(options.maxItems || 4));

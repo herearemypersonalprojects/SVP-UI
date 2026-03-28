@@ -31,6 +31,162 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
     <link rel="stylesheet" href="svp.css">
     <style>
+        .sv-events-list li {
+            padding: 0;
+            border-bottom: 0;
+            background: transparent;
+        }
+        .sv-event-item {
+            width: 100%;
+            display: grid;
+            grid-template-columns: 176px minmax(0, 1fr);
+            gap: 1rem;
+            padding: 1rem;
+            border-radius: 22px;
+            border: 1px solid rgba(15, 23, 42, 0.08);
+            background:
+                linear-gradient(180deg, rgba(255,255,255,0.98), rgba(248,250,252,0.95)),
+                linear-gradient(135deg, rgba(219,234,254,0.18), rgba(255,255,255,0));
+            box-shadow: 0 18px 36px rgba(15, 23, 42, 0.08);
+            transition: transform .18s ease, box-shadow .18s ease, border-color .18s ease;
+        }
+        .sv-event-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 24px 44px rgba(15, 23, 42, 0.12);
+            border-color: rgba(37, 99, 235, 0.18);
+        }
+        .sv-event-item__thumb-link {
+            position: relative;
+            display: block;
+            overflow: hidden;
+            border-radius: 18px;
+        }
+        .sv-event-item__thumb {
+            width: 100%;
+            height: 132px;
+            display: block;
+            object-fit: cover;
+            background: linear-gradient(135deg, #e2e8f0, #cbd5e1);
+            border: 1px solid #dbe3ef;
+            transition: transform .24s ease;
+        }
+        .sv-event-item:hover .sv-event-item__thumb {
+            transform: scale(1.03);
+        }
+        .sv-event-item__content {
+            min-width: 0;
+            display: grid;
+            gap: .9rem;
+        }
+        .sv-event-item__header {
+            display: grid;
+            grid-template-columns: auto minmax(0, 1fr) auto;
+            gap: .9rem;
+            align-items: start;
+        }
+        .sv-event-item__calendar {
+            min-width: 66px;
+            padding: .7rem .55rem;
+            border-radius: 16px;
+            background: linear-gradient(180deg, #eff6ff, #ffffff);
+            border: 1px solid rgba(37, 99, 235, 0.12);
+            text-align: center;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.72);
+        }
+        .sv-event-item__calendar-day {
+            display: inline-block;
+            font-size: 1.7rem;
+            line-height: 1;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .sv-event-item__calendar-month {
+            display: block;
+            margin-top: .22rem;
+            font-size: .76rem;
+            letter-spacing: .12em;
+            text-transform: uppercase;
+            color: #475569;
+            font-weight: 800;
+        }
+        .sv-event-item__eyebrow {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            color: #2563eb;
+            font-size: .78rem;
+            text-transform: uppercase;
+            letter-spacing: .12em;
+            font-weight: 800;
+        }
+        .sv-event-item__title {
+            margin-top: .32rem;
+            display: inline-block;
+            font-size: 1.12rem;
+            line-height: 1.35;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .sv-event-item__meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .55rem;
+        }
+        .sv-event-item__meta-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: .42rem;
+            padding: .5rem .72rem;
+            border-radius: 999px;
+            background: #f8fafc;
+            border: 1px solid rgba(15, 23, 42, 0.07);
+            color: #475569;
+            font-size: .84rem;
+            font-weight: 600;
+        }
+        .sv-event-item__footer {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+            gap: .85rem;
+        }
+        .sv-event-item__type {
+            position: absolute;
+            top: .7rem;
+            left: .7rem;
+            max-width: calc(100% - 1.4rem);
+            padding: .42rem .68rem;
+            border-radius: 999px;
+            background: rgba(15, 23, 42, 0.72);
+            color: #fff;
+            font-size: .74rem;
+            font-weight: 700;
+            backdrop-filter: blur(8px);
+        }
+        .sv-event-item__link {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+        .sv-event-item__status {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            color: #475569;
+            font-size: .84rem;
+            font-weight: 700;
+        }
+        .sv-events-list .sv-badge {
+            flex: 0 0 auto;
+            padding: .48rem .8rem;
+            background: linear-gradient(180deg, #eff6ff, #ffffff);
+            border: 1px solid rgba(37, 99, 235, 0.12);
+            color: #1d4ed8;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.78);
+        }
         .sv-events-pagination {
             display: flex;
             align-items: center;
@@ -45,6 +201,28 @@
         }
         .sv-events-pagination__action {
             min-width: 170px;
+        }
+        @media (max-width: 575.98px) {
+            .sv-events-list li {
+                align-items: stretch;
+            }
+            .sv-event-item {
+                grid-template-columns: 1fr;
+            }
+            .sv-event-item__header {
+                grid-template-columns: 1fr;
+            }
+            .sv-event-item__thumb {
+                width: 100%;
+                height: 212px;
+            }
+            .sv-event-item__footer {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+            .sv-events-list .sv-badge {
+                align-self: flex-start;
+            }
         }
     </style>
 </head>
@@ -107,7 +285,7 @@
 
             <div class="tab-content" id="eventTabsContent">
                 <div class="tab-pane fade show active" id="upcoming" role="tabpanel" aria-labelledby="upcoming-tab" tabindex="0">
-                    <ul id="sv-events-upcoming-list" class="sv-list mb-0" aria-live="polite"></ul>
+                    <ul id="sv-events-upcoming-list" class="sv-list sv-events-list mb-0" aria-live="polite"></ul>
                     <div id="sv-events-upcoming-pagination" class="sv-events-pagination d-none" aria-label="Phân trang sự kiện sắp diễn ra">
                         <div id="sv-events-upcoming-page-info" class="sv-events-pagination__info sv-meta">0 sự kiện</div>
                         <button id="sv-events-upcoming-load-more" class="btn btn-outline-primary sv-events-pagination__action" type="button">Xem thêm...</button>
@@ -115,7 +293,7 @@
                 </div>
 
                 <div class="tab-pane fade" id="past" role="tabpanel" aria-labelledby="past-tab" tabindex="0">
-                    <ul id="sv-events-past-list" class="sv-list mb-0" aria-live="polite"></ul>
+                    <ul id="sv-events-past-list" class="sv-list sv-events-list mb-0" aria-live="polite"></ul>
                     <div id="sv-events-past-pagination" class="sv-events-pagination d-none" aria-label="Phân trang sự kiện đã qua">
                         <div id="sv-events-past-page-info" class="sv-events-pagination__info sv-meta">0 sự kiện</div>
                         <button id="sv-events-past-load-more" class="btn btn-outline-primary sv-events-pagination__action" type="button">Xem thêm...</button>
@@ -172,6 +350,77 @@
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
 
+        const normalizeSafeHref = (href) => {
+            const raw = String(href || '').trim();
+            if (!raw) {
+                return '';
+            }
+            try {
+                const parsed = new URL(raw, window.location.href);
+                return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+                    ? parsed.toString()
+                    : '';
+            } catch (_) {
+                return '';
+            }
+        };
+
+        const extractFirstImageUrl = (value) => {
+            const raw = String(value || '').trim();
+            if (!raw) {
+                return '';
+            }
+            const template = document.createElement('template');
+            template.innerHTML = raw;
+            const image = template.content.querySelector('img[src]');
+            if (image) {
+                const safeSrc = normalizeSafeHref(image.getAttribute('src'));
+                if (safeSrc) {
+                    return safeSrc;
+                }
+            }
+            const directMatch = raw.match(/https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?[^\s<>"']*)?/i);
+            return directMatch ? normalizeSafeHref(directMatch[0]) : '';
+        };
+
+        const buildEventFallbackImage = (title) => {
+            const safeTitle = escapeHtml(String(title || 'SVP Event')).slice(0, 26);
+            const svg = [
+                "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 480 320'>",
+                "<defs>",
+                "<linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0%' stop-color='#dbeafe'/><stop offset='100%' stop-color='#fef3c7'/></linearGradient>",
+                "</defs>",
+                "<rect width='480' height='320' fill='url(#g)'/>",
+                "<circle cx='376' cy='82' r='52' fill='rgba(255,255,255,0.34)'/>",
+                "<rect x='86' y='76' width='120' height='92' rx='18' fill='rgba(29,78,216,0.14)'/>",
+                "<rect x='224' y='100' width='168' height='18' rx='9' fill='rgba(15,23,42,0.14)'/>",
+                "<rect x='224' y='132' width='124' height='18' rx='9' fill='rgba(15,23,42,0.1)'/>",
+                "<rect x='86' y='196' width='308' height='18' rx='9' fill='rgba(15,23,42,0.11)'/>",
+                `<text x='86' y='256' fill='#0f172a' font-size='28' font-family='Arial,sans-serif' font-weight='700'>${safeTitle}</text>`,
+                "<text x='86' y='286' fill='#475569' font-size='18' font-family='Arial,sans-serif'>Su kien SVP</text>",
+                "</svg>"
+            ].join('');
+            return `data:image/svg+xml;utf8,${encodeURIComponent(svg)}`;
+        };
+
+        const resolveEventPreviewImageUrl = (event) => {
+            const explicitImageUrl = normalizeSafeHref(
+                event?.coverImageUrl
+                || event?.cover_image_url
+                || event?.imageUrl
+                || event?.image_url
+            );
+            if (explicitImageUrl) {
+                return explicitImageUrl;
+            }
+            return extractFirstImageUrl(
+                event?.contentHtml
+                || event?.content_html
+                || event?.content
+                || ''
+            );
+        };
+
         const toTimeValue = (value) => {
             const time = Date.parse(String(value || ''));
             return Number.isFinite(time) ? time : 0;
@@ -203,6 +452,22 @@
                 timeStyle: 'short'
             }).format(new Date(time));
         };
+
+        const formatCalendarParts = (value) => {
+            const time = toTimeValue(value);
+            if (!time) {
+                return {
+                    day: '--',
+                    month: 'TBD'
+                };
+            }
+            const date = new Date(time);
+            return {
+                day: new Intl.DateTimeFormat('vi-VN', { day: '2-digit' }).format(date),
+                month: new Intl.DateTimeFormat('vi-VN', { month: 'short' }).format(date).replace('.', '')
+            };
+        };
+
         const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
         const buildEventHref = (eventId, title) => urlHelpers
             ? urlHelpers.buildDetailPath('event', eventId, title)
@@ -219,6 +484,26 @@
             return event.online ? 'Online' : 'Free';
         };
 
+        const toEyebrow = (event, isPast) => {
+            if (isPast) {
+                return 'Sự kiện đã diễn ra';
+            }
+            if (event.online) {
+                return 'Sự kiện trực tuyến';
+            }
+            return 'Sự kiện sắp diễn ra';
+        };
+
+        const toStatusLabel = (event, isPast) => {
+            if (isPast) {
+                return 'Lưu lại để xem chi tiết';
+            }
+            if (event.online) {
+                return 'Tham gia online';
+            }
+            return 'Đang mở xem chi tiết';
+        };
+
         const renderEventItem = (event, isPast) => {
             const title = escapeHtml(event.title || 'Sự kiện mới');
             const eventId = Number(event.eventId || 0);
@@ -228,16 +513,47 @@
             const eventTypeName = String(event.eventTypeName || '').trim();
             const badge = escapeHtml(toBadge(event, isPast));
             const iconClass = isPast ? 'fa-regular fa-calendar-check' : 'fa fa-calendar-day';
-            const metaParts = [date];
-            if (eventTypeName) metaParts.push(`Loại: ${escapeHtml(eventTypeName)}`);
-            metaParts.push(address);
+            const calendarParts = formatCalendarParts(event.eventTime);
+            const eyebrow = escapeHtml(toEyebrow(event, isPast));
+            const statusLabel = escapeHtml(toStatusLabel(event, isPast));
+            const previewImageUrl = resolveEventPreviewImageUrl(event);
+            const fallbackImageUrl = buildEventFallbackImage(event.title || 'SVP Event');
+            const previewSrc = escapeHtml(previewImageUrl || fallbackImageUrl);
+            const previewAlt = escapeHtml(event.title || 'Ảnh sự kiện');
+            const typeChip = eventTypeName
+                ? `<span class="sv-event-item__type">${escapeHtml(eventTypeName)}</span>`
+                : '';
             return `
                 <li>
-                    <div>
-                        <a href="${href}"><i class="${iconClass} me-2 text-primary"></i>${title}</a>
-                        <div class="sv-meta">${metaParts.join(' • ')}</div>
+                    <div class="sv-event-item">
+                        <a class="sv-event-item__thumb-link" href="${href}" aria-label="${title}">
+                            ${typeChip}
+                            <img class="sv-event-item__thumb" src="${previewSrc}" alt="${previewAlt}" loading="lazy" decoding="async"
+                                 onerror="this.onerror=null;this.src='${escapeHtml(fallbackImageUrl)}';">
+                        </a>
+                        <div class="sv-event-item__content">
+                            <div class="sv-event-item__header">
+                                <div class="sv-event-item__calendar" aria-hidden="true">
+                                    <span class="sv-event-item__calendar-day">${escapeHtml(calendarParts.day)}</span>
+                                    <span class="sv-event-item__calendar-month">${escapeHtml(calendarParts.month)}</span>
+                                </div>
+                                <div>
+                                    <div class="sv-event-item__eyebrow"><i class="${iconClass}"></i>${eyebrow}</div>
+                                    <a class="sv-event-item__title" href="${href}">${title}</a>
+                                </div>
+                                <span class="sv-badge">${badge}</span>
+                            </div>
+                            <div class="sv-event-item__meta">
+                                <span class="sv-event-item__meta-chip"><i class="fa-regular fa-clock"></i>${date}</span>
+                                <span class="sv-event-item__meta-chip"><i class="fa-solid fa-location-dot"></i>${address}</span>
+                                ${eventTypeName ? `<span class="sv-event-item__meta-chip"><i class="fa-regular fa-folder-open"></i>${escapeHtml(eventTypeName)}</span>` : ''}
+                            </div>
+                            <div class="sv-event-item__footer">
+                                <span class="sv-event-item__status"><i class="fa-solid fa-arrow-trend-up"></i>${statusLabel}</span>
+                                <a class="sv-event-item__link" href="${href}">Xem chi tiết<i class="fa-solid fa-arrow-right"></i></a>
+                            </div>
+                        </div>
                     </div>
-                    <span class="sv-badge">${badge}</span>
                 </li>
             `;
         };

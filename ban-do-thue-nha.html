@@ -82,75 +82,82 @@
                     <a class="btn btn-primary btn-sm" href="housing_form.html">
                         <i class="fa-solid fa-plus me-1"></i>Đăng tin
                     </a>
-                    <div>
-                        <strong><i class="fa-solid fa-sliders me-2 text-primary"></i>Bộ lọc</strong>
-                    </div>
-
+                    <button
+                        id="housing-filter-toggle"
+                        class="btn btn-outline-primary btn-sm sv-housing-filter-toggle"
+                        type="button"
+                        aria-expanded="false"
+                        aria-controls="housing-filter-controls">
+                        <span><i class="fa-solid fa-sliders me-2"></i>Bộ lọc</span>
+                        <i class="fa-solid fa-chevron-down sv-housing-filter-toggle__icon" aria-hidden="true"></i>
+                    </button>
                 </div>
             </div>
             <div class="sv-housing-panel__body">
-                <form id="housing-filter-form" class="sv-housing-filters">
-                    <div>
-                        <label class="form-label" for="filter-city">Thành phố / khu vực</label>
-                        <input id="filter-city" name="city" class="form-control" type="text" placeholder="Paris, Lyon, Villejuif...">
+                <div id="housing-filter-controls" class="sv-housing-filter-controls" hidden>
+                    <form id="housing-filter-form" class="sv-housing-filters">
+                        <div>
+                            <label class="form-label" for="filter-city">Thành phố / khu vực</label>
+                            <input id="filter-city" name="city" class="form-control" type="text" placeholder="Paris, Lyon, Villejuif...">
+                        </div>
+                        <div>
+                            <label class="form-label" for="filter-arrondissement">Arrondissement</label>
+                            <input id="filter-arrondissement" name="arrondissement" class="form-control" type="text" placeholder="13, 5e, 92...">
+                        </div>
+                        <div>
+                            <label class="form-label" for="filter-min-price">Giá từ (€)</label>
+                            <input id="filter-min-price" name="minPrice" class="form-control" type="number" min="0" step="10" placeholder="400">
+                        </div>
+                        <div>
+                            <label class="form-label" for="filter-max-price">Giá đến (€)</label>
+                            <input id="filter-max-price" name="maxPrice" class="form-control" type="number" min="0" step="10" placeholder="900">
+                        </div>
+                        <div>
+                            <label class="form-label" for="filter-type">Loại nhà</label>
+                            <select id="filter-type" name="type" class="form-select">
+                                <option value="">Tất cả</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label" for="filter-status">Tình trạng</label>
+                            <select id="filter-status" name="status" class="form-select">
+                                <option value="AVAILABLE,RENTED" selected>Còn trống + Đã thuê</option>
+                                <option value="AVAILABLE">Còn trống</option>
+                                <option value="RENTED">Đã thuê</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label" for="filter-station">Tên ga / trạm</label>
+                            <input id="filter-station" name="stationName" class="form-control" type="text" placeholder="Tolbiac, RER B...">
+                        </div>
+                        <div>
+                            <label class="form-label" for="filter-transport-type">Loại phương tiện</label>
+                            <select id="filter-transport-type" name="transportType" class="form-select">
+                                <option value="">Tất cả</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="form-label" for="filter-line-label">Line</label>
+                            <input id="filter-line-label" name="lineLabel" class="form-control" type="text" placeholder="M7, RER B, T3a">
+                        </div>
+                        <div>
+                            <label class="form-label" for="filter-max-walking">Đi bộ tối đa (phút)</label>
+                            <input id="filter-max-walking" name="maxWalkingMinutes" class="form-control" type="number" min="0" max="120" step="1" placeholder="10">
+                        </div>
+                        <div class="form-check pt-4">
+                            <input id="filter-caf" name="caf" class="form-check-input" type="checkbox">
+                            <label class="form-check-label" for="filter-caf">Chỉ hiện nhà có CAF</label>
+                        </div>
+                    </form>
+                    <div class="sv-housing-filters__actions mt-3">
+                        <button id="filter-apply-btn" class="btn btn-primary" type="button">
+                            <i class="fa-solid fa-filter me-1"></i>Áp dụng
+                        </button>
+                        <button id="filter-reset-btn" class="btn btn-outline-secondary" type="button">Reset</button>
                     </div>
-                    <div>
-                        <label class="form-label" for="filter-arrondissement">Arrondissement</label>
-                        <input id="filter-arrondissement" name="arrondissement" class="form-control" type="text" placeholder="13, 5e, 92...">
-                    </div>
-                    <div>
-                        <label class="form-label" for="filter-min-price">Giá từ (€)</label>
-                        <input id="filter-min-price" name="minPrice" class="form-control" type="number" min="0" step="10" placeholder="400">
-                    </div>
-                    <div>
-                        <label class="form-label" for="filter-max-price">Giá đến (€)</label>
-                        <input id="filter-max-price" name="maxPrice" class="form-control" type="number" min="0" step="10" placeholder="900">
-                    </div>
-                    <div>
-                        <label class="form-label" for="filter-type">Loại nhà</label>
-                        <select id="filter-type" name="type" class="form-select">
-                            <option value="">Tất cả</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label" for="filter-status">Tình trạng</label>
-                        <select id="filter-status" name="status" class="form-select">
-                            <option value="AVAILABLE,RENTED" selected>Còn trống + Đã thuê</option>
-                            <option value="AVAILABLE">Còn trống</option>
-                            <option value="RENTED">Đã thuê</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label" for="filter-station">Tên ga / trạm</label>
-                        <input id="filter-station" name="stationName" class="form-control" type="text" placeholder="Tolbiac, RER B...">
-                    </div>
-                    <div>
-                        <label class="form-label" for="filter-transport-type">Loại phương tiện</label>
-                        <select id="filter-transport-type" name="transportType" class="form-select">
-                            <option value="">Tất cả</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label class="form-label" for="filter-line-label">Line</label>
-                        <input id="filter-line-label" name="lineLabel" class="form-control" type="text" placeholder="M7, RER B, T3a">
-                    </div>
-                    <div>
-                        <label class="form-label" for="filter-max-walking">Đi bộ tối đa (phút)</label>
-                        <input id="filter-max-walking" name="maxWalkingMinutes" class="form-control" type="number" min="0" max="120" step="1" placeholder="10">
-                    </div>
-                    <div class="form-check pt-4">
-                        <input id="filter-caf" name="caf" class="form-check-input" type="checkbox">
-                        <label class="form-check-label" for="filter-caf">Chỉ hiện nhà có CAF</label>
-                    </div>
-                </form>
-                <div class="sv-housing-filters__actions mt-3">
-                    <button id="filter-apply-btn" class="btn btn-primary" type="button">
-                        <i class="fa-solid fa-filter me-1"></i>Áp dụng
-                    </button>
-                    <button id="filter-reset-btn" class="btn btn-outline-secondary" type="button">Reset</button>
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center mt-4 mb-2 gap-2">
+                <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
                     <span id="housing-results-meta" class="sv-housing-note">Đang tải...</span>
                 </div>
                 <div id="housing-list" class="sv-housing-list" aria-live="polite"></div>

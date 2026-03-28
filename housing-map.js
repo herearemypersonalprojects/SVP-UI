@@ -11,12 +11,14 @@
     const mapEl = document.getElementById('housing-map');
     const applyBtn = document.getElementById('filter-apply-btn');
     const resetBtn = document.getElementById('filter-reset-btn');
+    const filterToggleBtn = document.getElementById('housing-filter-toggle');
+    const filterControlsEl = document.getElementById('housing-filter-controls');
     const statusInput = document.getElementById('filter-status');
     const typeInput = document.getElementById('filter-type');
     const transportTypeInput = document.getElementById('filter-transport-type');
     const DEFAULT_STATUS_FILTER = 'AVAILABLE,RENTED';
 
-    if (!form || !listEl || !metaEl || !mapStatusEl || !mapEl || !applyBtn || !resetBtn || !statusInput || !typeInput || !transportTypeInput) {
+    if (!form || !listEl || !metaEl || !mapStatusEl || !mapEl || !applyBtn || !resetBtn || !filterToggleBtn || !filterControlsEl || !statusInput || !typeInput || !transportTypeInput) {
         return;
     }
 
@@ -243,6 +245,11 @@
         void loadHousing();
     }, 350);
 
+    const setFilterPanelExpanded = (expanded) => {
+        filterControlsEl.hidden = !expanded;
+        filterToggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+    };
+
     ['dragstart', 'zoomstart'].forEach((eventName) => {
         map.on(eventName, () => {
             if (!state.isAutoFittingMap) {
@@ -251,6 +258,9 @@
         });
     });
     map.on('moveend', debouncedLoad);
+    filterToggleBtn.addEventListener('click', () => {
+        setFilterPanelExpanded(filterControlsEl.hidden);
+    });
     applyBtn.addEventListener('click', () => { void loadHousing(); });
     resetBtn.addEventListener('click', () => {
         form.reset();
@@ -273,5 +283,6 @@
         });
     });
 
+    setFilterPanelExpanded(false);
     void loadHousing();
 })();

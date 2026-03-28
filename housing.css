@@ -82,6 +82,32 @@
     padding: 1rem;
 }
 
+.sv-housing-filter-toggle {
+    display: inline-flex;
+    align-items: center;
+    gap: .6rem;
+    border-radius: 999px;
+    font-weight: 700;
+}
+
+.sv-housing-filter-toggle__icon {
+    transition: transform .18s ease;
+}
+
+.sv-housing-filter-toggle[aria-expanded="true"] .sv-housing-filter-toggle__icon {
+    transform: rotate(180deg);
+}
+
+.sv-housing-filter-controls {
+    margin-bottom: 1rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #e6ebf2;
+}
+
+.sv-housing-filter-controls[hidden] {
+    display: none !important;
+}
+
 .sv-housing-filters {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

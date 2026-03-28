@@ -330,13 +330,15 @@
                 return `<figure${classAttr}>${childrenHtml}</figure>`;
             }
             if (tag === 'div') {
+                const directImageItemCount = countDirectImageRowItems(node);
                 const classNames = new Set(
                     filterClassNames(node.getAttribute('class') || '', allowedDivClasses)
                         .split(/\s+/)
                         .map((item) => item.trim())
                         .filter(Boolean)
+                        .filter((item) => item !== 'image-row' || directImageItemCount >= 2)
                 );
-                if (isImplicitImageRowElement(node)) {
+                if (directImageItemCount >= 2) {
                     classNames.add('image-row');
                 }
                 const safeClasses = Array.from(classNames).join(' ');
@@ -356,6 +358,117 @@
             .replace(/\u00a0/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
+    };
+
+    const hasMeaningfulText = (value) => String(value || '').replace(/\u00a0/g, ' ').trim().length > 0;
+
+    const isEmptyImageSpacerElement = (node) => {
+        if (!(node instanceof HTMLElement) || !node.matches('p, div')) {
+            return false;
+        }
+        if (node.classList.contains('image-row') || node.classList.contains('sv-embed-video')) {
+            return false;
+        }
+        if (node.querySelector('img[src], figure, iframe, video, .sv-embed-video, .image-row')) {
+            return false;
+        }
+        const clone = node.cloneNode(true);
+        Array.from(clone.querySelectorAll('br')).forEach((element) => element.remove());
+        return !hasMeaningfulText(clone.textContent || '');
+    };
+
+    const isSingleImageItem = (node) => {
+        if (!(node instanceof HTMLElement)) {
+            return false;
+        }
+        if (node.matches('img[src]')) {
+            return true;
+        }
+        if (node.matches('figure')) {
+            if (node.classList.contains('sv-embed-video-block')) {
+                return false;
+            }
+            const directImages = Array.from(node.querySelectorAll(':scope > img[src]'));
+            if (directImages.length !== 1) {
+                return false;
+            }
+            const clone = node.cloneNode(true);
+            Array.from(clone.querySelectorAll('img, br, figcaption')).forEach((element) => element.remove());
+            return !hasMeaningfulText(clone.textContent || '');
+        }
+        if (!node.matches('p, div') || node.classList.contains('image-row') || node.classList.contains('sv-embed-video')) {
+            return false;
+        }
+        let imageCount = 0;
+        for (const child of Array.from(node.childNodes)) {
+            if (child.nodeType === Node.TEXT_NODE) {
+                if (hasMeaningfulText(child.textContent || '')) {
+                    return false;
+                }
+                continue;
+            }
+            if (!(child instanceof HTMLElement)) {
+                continue;
+            }
+            if (child.tagName === 'BR') {
+                continue;
+            }
+            if (isEmptyImageSpacerElement(child)) {
+                continue;
+            }
+            if (child.matches('img[src]')) {
+                imageCount += 1;
+                continue;
+            }
+            if (child.matches('figure') && isSingleImageItem(child)) {
+                imageCount += 1;
+                continue;
+            }
+            return false;
+        }
+        return imageCount === 1;
+    };
+
+    const countDirectImageRowItems = (node) => {
+        if (!(node instanceof HTMLElement)) {
+            return 0;
+        }
+        let imageCount = 0;
+        for (const child of Array.from(node.childNodes)) {
+            if (child.nodeType === Node.TEXT_NODE) {
+                if (hasMeaningfulText(child.textContent || '')) {
+                    return 0;
+                }
+                continue;
+            }
+            if (!(child instanceof HTMLElement)) {
+                continue;
+            }
+            if (child.tagName === 'BR') {
+                continue;
+            }
+            if (isEmptyImageSpacerElement(child)) {
+                continue;
+            }
+            if (!isSingleImageItem(child)) {
+                return 0;
+            }
+            imageCount += 1;
+        }
+        return imageCount;
+    };
+
+    const getImageGroupItemCount = (node) => {
+        if (!(node instanceof HTMLElement)) {
+            return 0;
+        }
+        if (isSingleImageItem(node)) {
+            return 1;
+        }
+        if (!node.matches('figure, p, div')) {
+            return 0;
+        }
+        return countDirectImageRowItems(node);
     };
 
     const findLeadingElement = (root) => {
@@ -380,23 +493,14 @@
         if (!(node instanceof HTMLElement) || node.tagName.toLowerCase() !== 'div' || node.classList.contains('sv-embed-video')) {
             return false;
         }
-        if (node.querySelector('iframe,video')) {
-            return false;
-        }
-        const images = Array.from(node.querySelectorAll('img[src]'));
-        if (images.length < 2) {
-            return false;
-        }
-        const clone = node.cloneNode(true);
-        Array.from(clone.querySelectorAll('img,br')).forEach((element) => element.remove());
-        return !String(clone.textContent || '').replace(/\u00a0/g, ' ').trim();
+        return countDirectImageRowItems(node) >= 2;
     };
 
     const isImageRowElement = (node) => {
         if (!(node instanceof HTMLElement) || node.tagName.toLowerCase() !== 'div') {
             return false;
         }
-        return node.classList.contains('image-row') || isImplicitImageRowElement(node);
+        return countDirectImageRowItems(node) >= 2;
     };
 
     const extractLeadingImageRowUrls = (value, options = {}) => {
@@ -572,19 +676,7 @@
     };
 
     const hasOnlyImageGroupContent = (node) => {
-        if (!(node instanceof HTMLElement)) {
-            return false;
-        }
-        if (node.querySelector('iframe, video')) {
-            return false;
-        }
-        const images = Array.from(node.querySelectorAll('img[src]'));
-        if (!images.length) {
-            return false;
-        }
-        const clone = node.cloneNode(true);
-        Array.from(clone.querySelectorAll('img, br, figcaption')).forEach((element) => element.remove());
-        return !String(clone.textContent || '').replace(/\u00a0/g, ' ').trim();
+        return getImageGroupItemCount(node) > 0;
     };
 
     const getInlineImageRowCandidate = (node) => {
@@ -603,7 +695,7 @@
         if (node.matches('figure, p, div') && hasOnlyImageGroupContent(node)) {
             return {
                 block: node,
-                imageCount: node.querySelectorAll('img[src]').length
+                imageCount: getImageGroupItemCount(node)
             };
         }
         return null;
@@ -670,6 +762,15 @@
             return;
         }
         cleanupAutoImageRows(root);
+        Array.from(root.querySelectorAll('.image-row')).forEach((node) => {
+            if (!(node instanceof HTMLElement) || countDirectImageRowItems(node) >= 2) {
+                return;
+            }
+            node.classList.remove('image-row');
+            if (node.getAttribute(AUTO_IMAGE_ROW_ATTR) === 'block') {
+                node.removeAttribute(AUTO_IMAGE_ROW_ATTR);
+            }
+        });
         const visit = (container) => {
             if (!(container instanceof HTMLElement)) {
                 return;
@@ -693,19 +794,7 @@
     };
 
     const hasOnlyImageContent = (node) => {
-        if (!(node instanceof HTMLElement)) {
-            return false;
-        }
-        if (node.querySelector('iframe, video')) {
-            return false;
-        }
-        const images = Array.from(node.querySelectorAll('img[src]'));
-        if (images.length !== 1) {
-            return false;
-        }
-        const clone = node.cloneNode(true);
-        Array.from(clone.querySelectorAll('img')).forEach((image) => image.remove());
-        return !String(clone.textContent || '').replace(/\u00a0/g, ' ').trim();
+        return getImageGroupItemCount(node) === 1;
     };
 
     const getPortraitLayoutCandidate = (node) => {

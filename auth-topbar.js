@@ -475,6 +475,24 @@
         });
     };
 
+    const ensureTokenOnWake = async () => {
+        const accessToken = localStorage.getItem("accessToken") || "";
+        if (!accessToken && !localStorage.getItem("refreshToken")) {
+            return;
+        }
+        const payload = parseJwtPayload(accessToken) || {};
+        const exp = Number(payload.exp || 0);
+        const needsRefresh = !accessToken
+            || !Number.isFinite(exp)
+            || exp <= 0
+            || exp * 1000 <= Date.now() + REFRESH_SKEW_MS;
+        if (needsRefresh) {
+            await refreshAccessToken();
+        } else {
+            scheduleRefreshFromToken(accessToken);
+        }
+    };
+
     const bindInboxLifecycle = () => {
         if (inboxLifecycleBound) {
             return;
@@ -485,10 +503,18 @@
                 clearInboxTimers();
                 return;
             }
-            void refreshUnreadCount({ immediate: true });
+            void (async () => {
+                await ensureTokenOnWake();
+                renderTopbar(readFreshProfileCache());
+                void refreshUnreadCount({ immediate: true });
+            })();
         });
         window.addEventListener("focus", () => {
-            void refreshUnreadCount({ immediate: true });
+            void (async () => {
+                await ensureTokenOnWake();
+                renderTopbar(readFreshProfileCache());
+                void refreshUnreadCount({ immediate: true });
+            })();
         });
         window.addEventListener("storage", (event) => {
             if (!event || !event.key) {

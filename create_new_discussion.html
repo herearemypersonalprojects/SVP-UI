@@ -960,7 +960,7 @@
                     return;
                 }
                 const applyLayout = () => {
-                    richContent.arrangePortraitImageRows(editorBody, {
+                    richContent.applyImageLayouts(editorBody, {
                         sortable: true,
                         onSortChange: () => {
                             updatePreview();
@@ -1115,8 +1115,8 @@
             previewTitle.textContent = title || 'Tiêu đề chủ đề sẽ hiển thị tại đây';
             previewCategory.textContent = categoryText || 'Chưa chọn';
             previewSubject.innerHTML = subjectHtml || 'Nội dung Subject sẽ xuất hiện ở đây sau khi bạn nhập.';
-            if (subjectHtml && richContent && typeof richContent.arrangePortraitImageRows === 'function') {
-                richContent.arrangePortraitImageRows(previewSubject);
+            if (subjectHtml && richContent && typeof richContent.applyImageLayouts === 'function') {
+                richContent.applyImageLayouts(previewSubject);
             }
         };
 

@@ -273,7 +273,7 @@
         };
 
         const scheduleEditorPortraitLayout = () => {
-            if (!editor || !richContent || typeof richContent.arrangePortraitImageRows !== 'function') {
+            if (!editor || !richContent || typeof richContent.applyImageLayouts !== 'function') {
                 return;
             }
             const editorWindow = editor.getWin ? editor.getWin() : window;
@@ -293,7 +293,7 @@
                     return;
                 }
                 const applyLayout = () => {
-                    richContent.arrangePortraitImageRows(editorBody, {
+                    richContent.applyImageLayouts(editorBody, {
                         sortable: true,
                         onSortChange: () => {
                             syncTextareaFromEditor();

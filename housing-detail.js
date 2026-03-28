@@ -49,8 +49,8 @@
             ? editorLib.sanitizeHtml(raw)
             : shared.escapeHtml(raw);
         descriptionEl.innerHTML = sanitized || '<div class="sv-housing-empty">Chưa có mô tả chi tiết.</div>';
-        if (richContent && typeof richContent.arrangePortraitImageRows === 'function') {
-            richContent.arrangePortraitImageRows(descriptionEl);
+        if (richContent && typeof richContent.applyImageLayouts === 'function') {
+            richContent.applyImageLayouts(descriptionEl);
         }
     };
 

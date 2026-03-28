@@ -769,7 +769,7 @@
                 }
                 if (articleEditor.undoManager && typeof articleEditor.undoManager.ignore === 'function') {
                     articleEditor.undoManager.ignore(() => {
-                        richContent.arrangePortraitImageRows(editorBody, {
+                        richContent.applyImageLayouts(editorBody, {
                             sortable: true,
                             onSortChange: () => {
                                 updateDraft();
@@ -781,7 +781,7 @@
                     });
                     return;
                 }
-                richContent.arrangePortraitImageRows(editorBody, {
+                richContent.applyImageLayouts(editorBody, {
                     sortable: true,
                     onSortChange: () => {
                         updateDraft();

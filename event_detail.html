@@ -517,8 +517,8 @@
             priceEl.textContent = toPriceLabel(event.price, Boolean(event.online));
             hostEl.textContent = hostName;
             contentEl.innerHTML = contentHtml;
-            if (richContent && typeof richContent.arrangePortraitImageRows === 'function') {
-                richContent.arrangePortraitImageRows(contentEl);
+            if (richContent && typeof richContent.applyImageLayouts === 'function') {
+                richContent.applyImageLayouts(contentEl);
             }
 
             if (imageUrl) {

@@ -10,6 +10,7 @@
     const GOOGLE_DRIVE_IFRAME_TITLE = 'Google Drive video';
     const GOOGLE_DRIVE_IFRAME_ALLOW = 'autoplay; fullscreen; picture-in-picture';
     const GLOBAL_STYLE_ID = 'svp-rich-content-style';
+    const AUTO_IMAGE_ROW_ATTR = 'data-svp-auto-image-row';
     const PORTRAIT_ROW_CLASS = 'svp-portrait-row';
     const PORTRAIT_ROW_ITEM_CLASS = 'svp-portrait-row__item';
     const PORTRAIT_LAYOUT_OBSERVED_ATTR = 'data-svp-portrait-layout-observed';
@@ -35,7 +36,13 @@
             height: 100%;
             border: 0;
         }
-        .image-row,
+        .image-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(min(180px, 100%), 1fr));
+            align-items: flex-start;
+            gap: 14px;
+            margin: 1rem 0;
+        }
         .svp-portrait-row {
             display: flex;
             align-items: flex-start;
@@ -47,7 +54,6 @@
         .image-row > figure,
         .image-row > p,
         .image-row > div:not(.sv-embed-video) {
-            flex: 1 1 0;
             min-width: 0;
             margin: 0 !important;
         }
@@ -101,6 +107,7 @@
             .image-row > p,
             .image-row > div:not(.sv-embed-video),
             .svp-portrait-row > .svp-portrait-row__item {
+                grid-column: 1 / -1;
                 flex-basis: 100%;
             }
         }
@@ -536,8 +543,122 @@
         }
         const template = document.createElement('template');
         template.innerHTML = raw;
+        cleanupAutoImageRows(template.content);
         cleanupPortraitRows(template.content);
         return template.innerHTML.trim();
+    };
+
+    const cleanupAutoImageRows = (root) => {
+        if (!root || typeof root.querySelectorAll !== 'function') {
+            return;
+        }
+        Array.from(root.querySelectorAll(`[${AUTO_IMAGE_ROW_ATTR}="wrapper"]`)).forEach((wrapper) => {
+            const parent = wrapper.parentNode;
+            if (!parent) {
+                return;
+            }
+            while (wrapper.firstChild) {
+                parent.insertBefore(wrapper.firstChild, wrapper);
+            }
+            wrapper.remove();
+        });
+        Array.from(root.querySelectorAll(`[${AUTO_IMAGE_ROW_ATTR}="block"]`)).forEach((node) => {
+            if (!(node instanceof HTMLElement)) {
+                return;
+            }
+            node.removeAttribute(AUTO_IMAGE_ROW_ATTR);
+            node.classList.remove('image-row');
+        });
+    };
+
+    const hasOnlyImageGroupContent = (node) => {
+        if (!(node instanceof HTMLElement)) {
+            return false;
+        }
+        if (node.querySelector('iframe, video')) {
+            return false;
+        }
+        const images = Array.from(node.querySelectorAll('img[src]'));
+        if (!images.length) {
+            return false;
+        }
+        const clone = node.cloneNode(true);
+        Array.from(clone.querySelectorAll('img, br, figcaption')).forEach((element) => element.remove());
+        return !String(clone.textContent || '').replace(/\u00a0/g, ' ').trim();
+    };
+
+    const getInlineImageRowCandidate = (node) => {
+        if (!(node instanceof HTMLElement) || node.classList.contains(PORTRAIT_ROW_CLASS)) {
+            return null;
+        }
+        if (node.classList.contains('image-row')) {
+            return null;
+        }
+        if (node.matches('figure.sv-embed-video-block, .sv-embed-video')) {
+            return null;
+        }
+        if (node.matches('img[src]')) {
+            return { block: node, imageCount: 1 };
+        }
+        if (node.matches('figure, p, div') && hasOnlyImageGroupContent(node)) {
+            return {
+                block: node,
+                imageCount: node.querySelectorAll('img[src]').length
+            };
+        }
+        return null;
+    };
+
+    const flushConsecutiveImageRun = (run) => {
+        if (!Array.isArray(run) || run.length < 2) {
+            return;
+        }
+        const firstBlock = run[0];
+        const parent = firstBlock?.parentNode;
+        if (!(firstBlock instanceof HTMLElement) || !parent) {
+            return;
+        }
+        const wrapper = firstBlock.ownerDocument.createElement('div');
+        wrapper.className = 'image-row';
+        wrapper.setAttribute(AUTO_IMAGE_ROW_ATTR, 'wrapper');
+        parent.insertBefore(wrapper, firstBlock);
+        run.forEach((block) => {
+            wrapper.appendChild(block);
+        });
+    };
+
+    const arrangeConsecutiveImageRows = (root) => {
+        if (!(root instanceof HTMLElement)) {
+            return;
+        }
+        cleanupAutoImageRows(root);
+        const directChildren = Array.from(root.children);
+        let currentRun = [];
+        directChildren.forEach((child) => {
+            const candidate = getInlineImageRowCandidate(child);
+            if (!candidate) {
+                flushConsecutiveImageRun(currentRun);
+                currentRun = [];
+                return;
+            }
+            if (candidate.imageCount > 1) {
+                flushConsecutiveImageRun(currentRun);
+                currentRun = [];
+                candidate.block.classList.add('image-row');
+                candidate.block.setAttribute(AUTO_IMAGE_ROW_ATTR, 'block');
+                return;
+            }
+            currentRun.push(candidate.block);
+        });
+        flushConsecutiveImageRun(currentRun);
+    };
+
+    const applyImageLayouts = (root, options = {}) => {
+        if (!(root instanceof HTMLElement)) {
+            return;
+        }
+        arrangeConsecutiveImageRows(root);
+        arrangePortraitImageRows(root, options);
     };
 
     const hasOnlyImageContent = (node) => {
@@ -1059,6 +1180,8 @@
         buildGoogleDriveEmbedHtml,
         withGoogleDriveTinyMceConfig,
         cleanupPortraitLayoutHtml,
+        applyImageLayouts,
+        arrangeConsecutiveImageRows,
         arrangePortraitImageRows,
         extractLeadingImageRowUrls,
         buildImageRowCoverHtml,

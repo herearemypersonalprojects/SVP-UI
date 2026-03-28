@@ -1915,9 +1915,9 @@
             postsCountEl.textContent = `${orderedReplies.length + 1} bài`;
             statusEl.style.display = 'none';
             postsEl.innerHTML = postItems.map((item) => renderThreadPostItem(item, caller)).join('');
-            if (richContent && typeof richContent.arrangePortraitImageRows === 'function') {
+            if (richContent && typeof richContent.applyImageLayouts === 'function') {
                 Array.from(postsEl.querySelectorAll('.sv-thread-post__content')).forEach((contentEl) => {
-                    richContent.arrangePortraitImageRows(contentEl);
+                    richContent.applyImageLayouts(contentEl);
                 });
             }
             updateThreadReplyPaginationState(orderedReplies.length);

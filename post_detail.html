@@ -1728,14 +1728,14 @@
     const renderBody = (post) => {
         if (!bodyEl) return;
         bodyEl.innerHTML = sanitizePostContentHtml(post.contentHtml);
-        if (richContent && typeof richContent.arrangePortraitImageRows === 'function') {
-            richContent.arrangePortraitImageRows(bodyEl);
+        if (richContent && typeof richContent.applyImageLayouts === 'function') {
+            richContent.applyImageLayouts(bodyEl);
         }
     };
 
     const applyCommentPortraitLayout = (root) => {
-        if (richContent && typeof richContent.arrangePortraitImageRows === 'function' && root instanceof HTMLElement) {
-            richContent.arrangePortraitImageRows(root);
+        if (richContent && typeof richContent.applyImageLayouts === 'function' && root instanceof HTMLElement) {
+            richContent.applyImageLayouts(root);
         }
     };
 

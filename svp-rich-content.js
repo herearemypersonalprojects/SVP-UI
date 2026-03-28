@@ -627,11 +627,23 @@
         });
     };
 
-    const arrangeConsecutiveImageRows = (root) => {
+    const shouldTraverseNestedImageLayout = (node) => {
+        if (!(node instanceof HTMLElement)) {
+            return false;
+        }
+        if (node.classList.contains('image-row') || node.classList.contains(PORTRAIT_ROW_CLASS)) {
+            return false;
+        }
+        if (node.matches('img[src], figure, figure.sv-embed-video-block, .sv-embed-video, iframe, video')) {
+            return false;
+        }
+        return node.children.length > 0;
+    };
+
+    const arrangeConsecutiveImageRowsInContainer = (root) => {
         if (!(root instanceof HTMLElement)) {
             return;
         }
-        cleanupAutoImageRows(root);
         const directChildren = Array.from(root.children);
         let currentRun = [];
         directChildren.forEach((child) => {
@@ -651,6 +663,25 @@
             currentRun.push(candidate.block);
         });
         flushConsecutiveImageRun(currentRun);
+    };
+
+    const arrangeConsecutiveImageRows = (root) => {
+        if (!(root instanceof HTMLElement)) {
+            return;
+        }
+        cleanupAutoImageRows(root);
+        const visit = (container) => {
+            if (!(container instanceof HTMLElement)) {
+                return;
+            }
+            arrangeConsecutiveImageRowsInContainer(container);
+            Array.from(container.children).forEach((child) => {
+                if (shouldTraverseNestedImageLayout(child)) {
+                    visit(child);
+                }
+            });
+        };
+        visit(root);
     };
 
     const applyImageLayouts = (root, options = {}) => {

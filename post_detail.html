@@ -604,14 +604,11 @@
                     </ul>
                 </div>
 
-                <!-- Community rules -->
+                <!-- Related discussions -->
                 <div class="sv-card">
-                    <div class="sv-card__hd"><i class="fa-solid fa-shield-heart me-2 text-primary"></i>Quy tắc bình luận</div>
-                    <ul class="sv-list mb-0">
-                        <li><div><strong>Tôn trọng người khác</strong><div class="sv-meta">Không công kích cá nhân hay sử dụng ngôn ngữ thô tục.</div></div></li>
-                        <li><div><strong>Thông tin có căn cứ</strong><div class="sv-meta">Khuyến khích đính kèm nguồn tham khảo chính thức.</div></div></li>
-                        <li><div><strong>Bám sát chủ đề</strong><div class="sv-meta">Bình luận nên liên quan đến nội dung bài viết.</div></div></li>
-                        <li><div><strong>Không spam</strong><div class="sv-meta">Tránh đăng lặp nhiều lần cùng nội dung.</div></div></li>
+                    <div class="sv-card__hd"><i class="fa-solid fa-comments me-2 text-primary"></i>Các thảo luận liên quan</div>
+                    <ul id="pd-related-threads" class="sv-list mb-0">
+                        <li><div><span class="sv-meta">Đang tải...</span></div></li>
                     </ul>
                 </div>
             </div>
@@ -682,6 +679,9 @@
     const buildArticleHref = (postId, title) => urlHelpers
         ? urlHelpers.buildDetailPath('article', postId, title)
         : `post_detail.html?postId=${encodeURIComponent(postId)}`;
+    const buildThreadHref = (postId, title) => urlHelpers
+        ? urlHelpers.buildDetailPath('thread', postId, title)
+        : `thread.html?postId=${encodeURIComponent(postId)}`;
     const buildArticleCanonicalUrl = (postId, title) => urlHelpers
         ? urlHelpers.buildCanonicalUrl('article', postId, title)
         : window.location.href.split('#')[0];
@@ -733,7 +733,8 @@
     const commentListEl  = document.getElementById('pd-comment-list');
     const commentBadgeEl = document.getElementById('pd-comment-badge');
     const kpisEl         = document.getElementById('pd-kpis');
-    const relatedEl      = document.getElementById('pd-related');
+    const relatedArticlesEl = document.getElementById('pd-related');
+    const relatedThreadsEl = document.getElementById('pd-related-threads');
     const pageTitleEl    = document.getElementById('pd-page-title');
     let currentShareUrl = window.location.href.split('#')[0];
 
@@ -1917,7 +1918,7 @@
     };
 
     const renderRelated = async (postId, categoryId) => {
-        if (!relatedEl) return;
+        if (!relatedArticlesEl) return;
         try {
             const res = await fetch(`${API_BASE_URL}/posts/latest-articles?limit=6&categoryId=${encodeURIComponent(categoryId)}`,
                 { headers: { Accept: 'application/json' } });
@@ -1926,8 +1927,8 @@
             const items = (Array.isArray(data.items)?data.items:[])
                 .map(i=>({ postId:Number(i?.postId||0), title:String(i?.title||''), createdAt:String(i?.createdAt||'') }))
                 .filter(i=>i.postId>0 && i.postId!==postId).slice(0,5);
-            if (!items.length) { relatedEl.innerHTML='<li><div class="sv-meta">Chưa có bài liên quan.</div></li>'; return; }
-            relatedEl.innerHTML = items.map(i=>`
+            if (!items.length) { relatedArticlesEl.innerHTML='<li><div class="sv-meta">Chưa có bài liên quan.</div></li>'; return; }
+            relatedArticlesEl.innerHTML = items.map(i=>`
                 <li>
                     <div>
                         <a href="${buildArticleHref(i.postId, i.title)}">${escapeHtml(i.title)}</a>
@@ -1935,7 +1936,42 @@
                     </div>
                 </li>`).join('');
         } catch {
-            relatedEl.innerHTML='<li><div class="sv-meta">Không tải được bài viết liên quan.</div></li>';
+            relatedArticlesEl.innerHTML='<li><div class="sv-meta">Không tải được bài viết liên quan.</div></li>';
+        }
+    };
+
+    const renderRelatedThreads = async (postId, categoryId) => {
+        if (!relatedThreadsEl) return;
+        if (!(Number(categoryId) > 0)) {
+            relatedThreadsEl.innerHTML = '<li><div class="sv-meta">Chưa có thảo luận liên quan.</div></li>';
+            return;
+        }
+        try {
+            const res = await fetch(`${API_BASE_URL}/posts/latest-discussions?limit=8&categoryId=${encodeURIComponent(categoryId)}`,
+                { headers: { Accept: 'application/json' } });
+            const data = await res.json().catch(()=>({}));
+            if (!res.ok) throw new Error();
+            const items = (Array.isArray(data.items) ? data.items : [])
+                .map((item) => ({
+                    postId: Number(item?.postId || 0),
+                    title: String(item?.title || ''),
+                    createdAt: String(item?.createdAt || '')
+                }))
+                .filter((item) => item.postId > 0 && item.postId !== postId)
+                .slice(0, 5);
+            if (!items.length) {
+                relatedThreadsEl.innerHTML = '<li><div class="sv-meta">Chưa có thảo luận liên quan trong chuyên mục này.</div></li>';
+                return;
+            }
+            relatedThreadsEl.innerHTML = items.map((item) => `
+                <li>
+                    <div>
+                        <a href="${buildThreadHref(item.postId, item.title)}">${escapeHtml(item.title)}</a>
+                        <div class="sv-meta">${escapeHtml(timeAgo(item.createdAt))}</div>
+                    </div>
+                </li>`).join('');
+        } catch {
+            relatedThreadsEl.innerHTML = '<li><div class="sv-meta">Không tải được thảo luận liên quan.</div></li>';
         }
     };
 
@@ -2317,6 +2353,7 @@
         renderComments(comments);
         renderKpis(post, comments.length);
         renderRelated(postId, post.categoryId);
+        renderRelatedThreads(postId, post.categoryId);
         attachLikeHandler();
 
         // Form

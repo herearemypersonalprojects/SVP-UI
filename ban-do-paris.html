@@ -175,7 +175,9 @@
             grid-template-columns: 126px minmax(0, 1fr);
             gap: .86rem;
             padding: .72rem;
+            color: inherit;
             text-align: left;
+            text-decoration: none;
             border: 1px solid rgba(38, 64, 107, 0.08);
             border-radius: 22px;
             background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(255,248,241,0.94));
@@ -233,6 +235,14 @@
             color: var(--muted);
             font-size: .9rem;
             line-height: 1.55;
+        }
+        .sv-paris-poi__cta {
+            display: inline-flex;
+            align-items: center;
+            gap: .38rem;
+            color: var(--poi-accent);
+            font-size: .85rem;
+            font-weight: 800;
         }
         .sv-paris-poi__meta i,
         .sv-paris-chip i,
@@ -298,6 +308,16 @@
         .sv-paris-popup__eyebrow { color: var(--accent); font-size: .76rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase; }
         .sv-paris-popup__title { font-weight: 800; color: var(--ink); margin: .18rem 0; }
         .sv-paris-popup__meta, .sv-paris-popup__desc { color: var(--muted); font-size: .9rem; line-height: 1.5; }
+        .sv-paris-popup__link {
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+            margin-top: .7rem;
+            color: var(--accent);
+            font-size: .88rem;
+            font-weight: 800;
+            text-decoration: none;
+        }
         .sv-paris-empty {
             padding: 1.6rem 1.2rem;
             border-radius: 24px;
@@ -374,7 +394,7 @@
                 </div>
             </div>
             <div class="sv-paris-map__stage">
-                <div class="sv-paris-map__overlay">Kéo map để đổi list, nhấn marker để nhảy tới thẻ.</div>
+                <div class="sv-paris-map__overlay">Kéo map để đổi list, nhấn marker để preview và bấm thẻ để mở guide chi tiết.</div>
                 <div id="parisMap" aria-label="Bản đồ khám phá 10 điểm đẹp nhất Paris"></div>
             </div>
         </section>

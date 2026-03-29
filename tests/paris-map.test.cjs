@@ -4,7 +4,9 @@ const assert = require('node:assert/strict');
 const { createDom, makeJsonResponse } = require('./dom-test-helpers.cjs');
 const {
     FEATURED_BOOTSTRAP_ITEMS,
+    buildParisPlaceHref,
     createParisMapApp,
+    getParisPlaceDetailBySlug,
     pickViewportItems,
     prepareMonuments
 } = require('../paris-map.js');
@@ -183,7 +185,16 @@ test('pickViewportItems returns top visible items and total visible count', () =
     assert.equal(result.items[1].reference, 'PA00088804');
 });
 
-test('Paris map app renders featured list, list click moves map, and viewport move refreshes cards', async () => {
+test('buildParisPlaceHref and getParisPlaceDetailBySlug resolve Paris detail routes', () => {
+    assert.equal(buildParisPlaceHref('PA00088801'), 'ban-do-paris/thap-eiffel/');
+    assert.equal(buildParisPlaceHref('sainte-chapelle'), 'ban-do-paris/sainte-chapelle/');
+
+    const detail = getParisPlaceDetailBySlug('opera-garnier');
+    assert.equal(detail.reference, 'PA00089004');
+    assert.match(detail.shortName, /Opéra Garnier/i);
+});
+
+test('Paris map app renders featured list, exposes detail links, and viewport move refreshes cards', async () => {
     const dom = createParisDom();
     const extraViewportItems = [
         {
@@ -231,12 +242,9 @@ test('Paris map app renders featured list, list click moves map, and viewport mo
     const cards = dom.window.document.querySelectorAll('#parisPoiList [data-reference]');
     assert.equal(cards.length, 10);
     assert.match(dom.window.document.getElementById('parisModeTitle').textContent, /10 điểm đẹp nhất Paris/);
+    assert.equal(new URL(cards[1].href).pathname, '/ban-do-paris/khai-hoan-mon-etoile/');
+    assert.match(app.state.markersByReference.get('PA00088804')._popup, /Mở guide chi tiết/);
 
-    cards[1].dispatchEvent(new dom.window.MouseEvent('click', { bubbles: true }));
-    assert.deepEqual(map._lastFlyTo.center, [48.873780394850904, 2.29504124772799]);
-    assert.equal(app.state.activeReference, 'PA00088804');
-
-    map.emit('moveend');
     map.setBounds({
         south: 48.867,
         west: 2.384,

@@ -204,6 +204,220 @@
         })
     ]);
 
+    const PARIS_PLACE_DETAILS = Object.freeze({
+        PA00088801: {
+            slug: 'thap-eiffel',
+            shortName: 'Tháp Eiffel',
+            heroEyebrow: 'Biểu tượng Paris',
+            metaDescription: 'Tháp Eiffel là điểm ngắm Paris đẹp nhất lúc thành phố bắt đầu lên đèn, từ Champ-de-Mars đến những tầng quan sát nhìn trọn bờ Seine.',
+            intro: 'Không có nơi nào khiến bạn hiểu chữ "Paris" nhanh bằng đứng dưới chân Tháp Eiffel rồi nhìn bầu trời chuyển từ xanh nhạt sang vàng mật. Buổi chiều ở đây kéo dài như một màn dạo đầu: Champ-de-Mars đầy người picnic, cầu Bir-Hakeim bắt sáng và đến lúc tháp lên đèn, cả khu vực đổi sang một nhịp rất điện ảnh.',
+            overview: 'Được dựng cho Exposition Universelle năm 1889, Tháp Eiffel nay là biểu tượng dễ nhận ra nhất của nước Pháp. Ba tầng tham quan cho ba sắc thái khác nhau: tầng một thoáng đãng, tầng hai cho góc nhìn cân bằng nhất và đỉnh tháp mang lại cảm giác Paris mở ra như một tấm bản đồ sống.',
+            whyGo: 'Nếu bạn chỉ có một buổi tối ở Paris, đây là nơi đáng giữ lại. Từ Trocadéro nhìn sang, từ thang máy đi lên hay từ bờ Seine quay lại ngắm hệ khung thép phát sáng, Eiffel luôn cho cảm giác thành phố đang trình diễn phiên bản đẹp nhất của mình.',
+            bestMoment: 'Cuối chiều đến đầu tối là đẹp nhất, đặc biệt trong ngày trời quang hoặc ngay sau một cơn mưa nhẹ.',
+            routePlan: 'Đi bộ qua Champ-de-Mars, vòng sang Trocadéro để lấy góc nhìn đối diện rồi nối thêm một chuyến du thuyền Seine nếu muốn tối Paris trọn vẹn hơn.',
+            nearby: 'Trocadéro, cầu Bir-Hakeim và các bến du thuyền trên sông Seine.',
+            moods: ['Hoàng hôn', 'Toàn cảnh 360°', 'Biểu tượng Paris'],
+            highlights: [
+                { icon: 'fa-eye', title: 'Tầng 2 là điểm ngắm cân bằng nhất', text: 'Ở cao độ này bạn vẫn thấy rõ nhịp phố, mái nhà kẽm xám và các đại lộ mở ra từ trung tâm.' },
+                { icon: 'fa-lightbulb', title: 'Khoảnh khắc lên đèn rất đáng chờ', text: 'Paris chuyển từ một thành phố du lịch sang một thành phố điện ảnh rõ nhất quanh khu Eiffel.' },
+                { icon: 'fa-ship', title: 'Rất hợp để nối với bờ Seine', text: 'Chỉ vài phút đi bộ là đã có du thuyền, cầu đẹp và rất nhiều góc chụp mở về phía sông.' }
+            ],
+            sourceLinks: [
+                { label: 'Trang chính thức Tour Eiffel', url: 'https://www.toureiffel.paris/en' }
+            ]
+        },
+        PA00088804: {
+            slug: 'khai-hoan-mon-etoile',
+            shortName: "Khải Hoàn Môn de l'Etoile",
+            heroEyebrow: 'Paris hùng vĩ',
+            metaDescription: "Khải Hoàn Môn de l'Etoile cho một trong những góc nhìn 360 độ đẹp nhất Paris, nơi các đại lộ tỏa ra như hình ngôi sao.",
+            intro: 'Khải Hoàn Môn là nơi khiến Paris bỗng trở nên trật tự, hùng vĩ và rất điện ảnh. Đứng trên sân thượng, bạn nhìn thấy các đại lộ tỏa ra như hình ngôi sao, từ Champs-Elysées đến La Défense, và hiểu ngay vì sao đây là một trong những điểm ngắm đô thị đẹp nhất châu Âu.',
+            overview: 'Công trình được khởi công năm 1806 theo ý nguyện của Napoleon sau Austerlitz và hoàn thành năm 1836. Dưới vòm là Mộ Chiến sĩ Vô danh và ngọn lửa tưởng niệm, khiến nơi này vừa là một biểu tượng chiến thắng vừa là điểm neo của ký ức quốc gia.',
+            whyGo: 'Điểm hấp dẫn nhất ở đây là cảm giác quy mô. Từ mặt đất, bạn thấy những nhóm phù điêu và khối đá nặng nề; từ trên cao, Paris trở thành một màn sắp đặt hoàn hảo của đại lộ, cây xanh và ánh đèn xe.',
+            bestMoment: 'Chiều muộn hoặc đầu tối, khi trục Champs-Elysées sáng dần mà bầu trời vẫn còn màu lam.',
+            routePlan: 'Đi bộ dọc Champs-Elysées rồi lên sân thượng, sau đó nối tiếp về Place de la Concorde hoặc băng sang Trocadéro.',
+            nearby: 'Champs-Elysées, avenue de Friedland, Trocadéro và Parc Monceau.',
+            moods: ['View 360°', 'Trục đại lộ', 'Paris uy nghi'],
+            highlights: [
+                { icon: 'fa-road', title: 'Một trong những trục nhìn đẹp nhất Paris', text: 'Từ sân thượng, thành phố mở ra theo đúng logic quy hoạch cổ điển của các đại lộ tỏa sao.' },
+                { icon: 'fa-fire', title: 'Ký ức lịch sử hiện diện ngay dưới vòm', text: 'Mộ Chiến sĩ Vô danh và ngọn lửa tưởng niệm tạo chiều sâu cảm xúc hiếm có cho chuyến ghé thăm.' },
+                { icon: 'fa-camera', title: 'Rất hợp cho ảnh thành phố về đêm', text: 'Ánh xe trên Champs-Elysées và đường chân trời phía La Défense lên ảnh cực kỳ ấn tượng.' }
+            ],
+            sourceLinks: [
+                { label: 'Trang chính thức Arc de Triomphe', url: 'https://www.paris-arc-de-triomphe.fr/en/' }
+            ]
+        },
+        PA00086250: {
+            slug: 'nha-tho-duc-ba-paris',
+            shortName: 'Nhà thờ Đức Bà Paris',
+            heroEyebrow: 'Trái tim lịch sử',
+            metaDescription: 'Notre-Dame de Paris là trái tim Gothic của Ile de la Cite, nơi bờ Seine, quảng trường và lịch sử thành phố gặp nhau.',
+            intro: 'Dù bạn đến Paris lần đầu hay lần thứ năm, đứng trước Notre-Dame vẫn có cảm giác mình chạm vào nhịp tim của thành phố. Île de la Cité khiến mọi bước chân chậm lại: chuông nhà thờ, bờ Seine, những cây cầu đá và mặt tiền Gothic khiến cả khu vực giống như Paris nguyên bản.',
+            overview: 'Nhà thờ được khởi công từ thế kỷ 12 và là một kiệt tác Gothic của châu Âu. Sau vụ cháy ngày 15 tháng 4 năm 2019, công trình mở cửa trở lại vào tháng 12 năm 2024, khiến chuyến ghé thăm hôm nay mang theo cả cảm giác xúc động lẫn hy vọng.',
+            whyGo: 'Nơi này không chỉ đẹp ở mặt tiền. Nó đẹp ở toàn bộ bối cảnh: quảng trường phía trước, bờ sông, các cây cầu và những góc nhìn từ Pont Saint-Louis hay Pont de l’Archevêché. Nếu thích Paris kiểu thơ, đây là điểm gần như không thể thay thế.',
+            bestMoment: 'Buổi sáng sớm để cảm nhận sự tĩnh hơn, hoặc cuối ngày nếu muốn nối thẳng sang một vòng đi bộ ven Seine.',
+            routePlan: 'Bắt đầu từ parvis trước nhà thờ, vòng quanh đảo, ghé Sainte-Chapelle rồi kết thúc bằng một quán cà phê ở Khu Latin.',
+            nearby: 'Sainte-Chapelle, Conciergerie, Pont Saint-Louis và khu sách quanh Saint-Michel.',
+            moods: ['Gothic', 'Bờ Seine', 'Paris lịch sử'],
+            highlights: [
+                { icon: 'fa-church', title: 'Một mặt tiền Gothic kinh điển', text: 'Những tháp chuông, cửa vòm và phù điêu tạo nên một trong các hình ảnh biểu tượng nhất châu Âu.' },
+                { icon: 'fa-water', title: 'Cảnh đẹp nằm cả bên ngoài nhà thờ', text: 'Đi bộ quanh đảo giúp bạn cảm được trọn nhịp Paris với sông, cầu và các khối đá cổ.' },
+                { icon: 'fa-heart', title: 'Một chuyến ghé thăm rất giàu cảm xúc', text: 'Câu chuyện phục dựng sau vụ cháy khiến trải nghiệm ở đây sâu hơn một điểm check-in thông thường.' }
+            ],
+            sourceLinks: [
+                { label: 'Trang chính thức Notre-Dame de Paris', url: 'https://www.notredamedeparis.fr/en/' }
+            ]
+        },
+        PA00088420: {
+            slug: 'pantheon-paris',
+            shortName: 'Panthéon Paris',
+            heroEyebrow: 'Mái vòm tri thức',
+            metaDescription: 'Panthéon mang đến một Paris trang nghiêm và trí tuệ, từ hầm mộ các danh nhân đến mái vòm nhìn xuống Khu Latin.',
+            intro: 'Panthéon không phô trương như Eiffel hay sáng đèn như Opéra Garnier, nhưng lại cho một dạng Paris rất có chiều sâu: nghiêm trang, trí tuệ và đầy ký ức. Từ quảng trường phía trước nhìn xuống Khu Latin, bạn có cảm giác thành phố này được xây dựng không chỉ bằng đá mà còn bằng tư tưởng.',
+            overview: 'Ban đầu là nhà thờ Sainte-Geneviève, công trình dần trở thành nơi an nghỉ của những nhân vật làm nên lịch sử Pháp. Hầm mộ có Victor Hugo, Voltaire, Rousseau, Marie Curie; không gian trung tâm từng treo con lắc Foucault minh họa chuyển động của Trái Đất.',
+            whyGo: 'Panthéon hấp dẫn vì cho bạn hai trải nghiệm trong một: phần dưới là chiều sâu lịch sử, phần trên là mái vòm với một trong những góc nhìn đẹp và bớt ồn hơn về Paris.',
+            bestMoment: 'Đi buổi sáng hoặc đầu giờ chiều rồi tiếp tục lang thang trong Khu Latin.',
+            routePlan: 'Kết hợp cùng Luxembourg Gardens, Sorbonne, rue Mouffetard hoặc bờ Seine phía Saint-Michel.',
+            nearby: 'Vườn Luxembourg, Sorbonne, rue Mouffetard và Khu Latin.',
+            moods: ['Khu Latin', 'Lịch sử tư tưởng', 'Mái vòm'],
+            highlights: [
+                { icon: 'fa-book-open', title: 'Không khí của Paris trí thức', text: 'Panthéon đứng giữa một khu vực giàu trường học, thư viện và quán cà phê cổ điển.' },
+                { icon: 'fa-skull', title: 'Hầm mộ kể câu chuyện nước Pháp', text: 'Những tên tuổi lớn trong văn học, triết học và khoa học tạo cho nơi này trọng lượng rất riêng.' },
+                { icon: 'fa-dharmachakra', title: 'Con lắc Foucault làm công trình sống động hơn', text: 'Nó biến một tượng đài tưởng niệm thành nơi khoa học và lịch sử giao nhau.' }
+            ],
+            sourceLinks: [
+                { label: 'Trang chính thức Panthéon', url: 'https://www.paris-pantheon.fr/en/' }
+            ]
+        },
+        PA75180004: {
+            slug: 'sacre-coeur-montmartre',
+            shortName: 'Sacré-Coeur Montmartre',
+            heroEyebrow: 'Montmartre trên cao',
+            metaDescription: 'Sacré-Coeur trên đồi Montmartre cho toàn cảnh Paris rất thoáng, cộng thêm chất nghệ sĩ của các con dốc và ngõ nhỏ xung quanh.',
+            intro: 'Sacré-Coeur là nơi Paris bỗng trở nên vừa rộng vừa thân mật. Bạn leo lên đồi Montmartre qua những bậc thang dài, ngoảnh lại và thấy cả thành phố mở dần dưới chân. Màu trắng của vương cung thánh đường nổi bật ngay cả trong ngày xám, còn khu phố xung quanh giữ được chất nghệ sĩ mà du khách thường tìm ở Paris.',
+            overview: 'Nằm trên đỉnh đồi Montmartre, basilica nổi bật với đá travertine sáng màu và truyền thống cầu nguyện liên tục suốt ngày đêm từ cuối thế kỷ 19. Đây vừa là nơi hành hương, vừa là một ban công tự nhiên nhìn xuống Paris.',
+            whyGo: 'Điểm hấp dẫn lớn nhất không chỉ là nhà thờ mà là toàn bộ nhịp Montmartre: quảng trường, họa sĩ đường phố, quán cà phê nhỏ, ngõ dốc và tiếng đàn vọng xuống từ các bậc thang.',
+            bestMoment: 'Sáng sớm nếu muốn yên, hoặc cuối chiều nếu muốn ngắm Paris sáng dần từ trên cao.',
+            routePlan: 'Lên bằng funicular hoặc bậc thang Louise-Michel, ghé Place du Tertre rồi đi tiếp qua những con dốc nhỏ của Montmartre.',
+            nearby: 'Place du Tertre, các con ngõ Montmartre, rue de l’Abreuvoir và khu dưới chân đồi.',
+            moods: ['Montmartre', 'Toàn cảnh', 'Lang thang'],
+            highlights: [
+                { icon: 'fa-mountain-city', title: 'Một ban công tự nhiên nhìn ra Paris', text: 'Ít nơi nào cho cảm giác thành phố mở rộng nhanh và đẹp như khi đứng trên sườn Montmartre.' },
+                { icon: 'fa-place-of-worship', title: 'Kiến trúc trắng rất dễ nhận diện', text: 'Sacré-Coeur nổi bật cả trong ngày nắng lẫn ngày âm u nhờ chất đá sáng và hình khối vòm.' },
+                { icon: 'fa-palette', title: 'Khu phố xung quanh mới là nửa còn lại', text: 'Montmartre giữ được chất nghệ sĩ, rất hợp để đi chậm, rẽ ngẫu hứng và tìm các góc ảnh riêng.' }
+            ],
+            sourceLinks: [
+                { label: 'Trang chính thức Sacré-Coeur', url: 'https://www.sacre-coeur-montmartre.com/en/' }
+            ]
+        },
+        PA00085992: {
+            slug: 'louvre-va-vuon-tuileries',
+            shortName: 'Louvre và vườn Tuileries',
+            heroEyebrow: 'Paris của nghệ thuật',
+            metaDescription: 'Louvre và vườn Tuileries kết hợp cung điện, kim tự tháp kính và những lối dạo thanh lịch thành một buổi Paris rất trọn.',
+            intro: 'Louvre không chỉ là một bảo tàng mà là một trạng thái của Paris. Bạn đi từ Cour Napoléon dưới kim tự tháp kính, băng qua những sân trong đồ sộ rồi trôi ra vườn Tuileries nơi thành phố bỗng nhẹ lại với ghế xanh, hồ nước và các trục cây thẳng tắp.',
+            overview: 'Từ pháo đài trung cổ đến cung điện hoàng gia rồi bảo tàng lớn bậc nhất thế giới, Louvre là một lớp địa tầng lịch sử của Paris. Kim tự tháp của I.M. Pei đưa một nét đương đại rất sắc vào trung tâm quần thể cổ điển; còn Tuileries là phần thở của toàn bộ khu vực.',
+            whyGo: 'Ngay cả khi không vào hết các gallery, chỉ riêng việc đi giữa Cour Carrée, Cour Napoléon và Tuileries đã đủ tạo nên một buổi Paris rất sang mà vẫn dễ gần.',
+            bestMoment: 'Buổi sáng sớm trong museum hoặc cuối chiều ở Tuileries để ánh nắng quét ngang tượng đá và hàng cây.',
+            routePlan: 'Chọn vài tác phẩm nhất định trong Louvre, sau đó ra vườn Tuileries rồi đi tiếp đến Place de la Concorde hoặc men theo Seine về Orsay.',
+            nearby: 'Palais Royal, Musée de l’Orangerie, Place de la Concorde và bờ Seine.',
+            moods: ['Nghệ thuật', 'Cung điện', 'Tản bộ thanh lịch'],
+            highlights: [
+                { icon: 'fa-gem', title: 'Một quần thể vừa cổ điển vừa đương đại', text: 'Kim tự tháp kính làm cho toàn bộ Louvre có thêm nhịp điệu thị giác rất hiện đại.' },
+                { icon: 'fa-landmark', title: 'Sân trong và hành lang mang cảm giác điện ảnh', text: 'Ngay cả khi chưa bước vào gallery, khuôn viên Louvre đã đủ khiến chuyến đi đáng giá.' },
+                { icon: 'fa-tree', title: 'Tuileries giúp buổi tham quan dễ thở hơn', text: 'Sau phần nghệ thuật đậm đặc, bạn có ngay một không gian xanh để ngồi lại và ngắm người Paris.' }
+            ],
+            sourceLinks: [
+                { label: 'Trang chính thức Louvre', url: 'https://www.louvre.fr/en' }
+            ]
+        },
+        PA00088714: {
+            slug: 'invalides',
+            shortName: 'Invalides',
+            heroEyebrow: 'Mái vòm vàng',
+            metaDescription: 'Invalides kết hợp mái vòm dát vàng, lịch sử quân sự Pháp và các khoảng sân rất rộng thành một trong những silhouette đẹp nhất Paris.',
+            intro: 'Nếu Eiffel là Paris rực sáng, Invalides là Paris trang trọng. Mái vòm vàng của Dôme des Invalides bắt nắng rất mạnh, nhìn từ xa đã đủ kéo bạn đến gần. Đến nơi, quảng trường rộng và nhịp bước chậm khiến nơi này rất hợp cho những ai thích Paris uy nghi nhưng không ồn.',
+            overview: 'Quần thể do Louis XIV cho xây từ năm 1670 để chăm sóc thương binh và cựu binh, nay là nơi đặt Musée de l’Armée và lăng Napoleon. Sự kết hợp giữa lịch sử quân sự, sân danh dự và mái vòm dát vàng tạo ra một đường nét rất riêng trên chân trời Paris.',
+            whyGo: 'Invalides hấp dẫn vì cho bạn cả hình ảnh lẫn chiều sâu: bên ngoài là một trong những mái vòm đẹp nhất thành phố, bên trong là câu chuyện nước Pháp được kể qua chiến tranh, nghi lễ và ký ức.',
+            bestMoment: 'Ngày nắng nhẹ hoặc cuối chiều, khi mái vòm vàng phản sáng rõ và các khối sân đổ bóng đẹp.',
+            routePlan: 'Ghép cùng cầu Alexandre III, Musée Rodin hoặc một đoạn dạo ven Seine phía quận 7.',
+            nearby: 'Pont Alexandre III, Musée Rodin, Champ-de-Mars và các đại lộ rộng của quận 7.',
+            moods: ['Mái vòm vàng', 'Lịch sử Pháp', 'Paris cổ điển'],
+            highlights: [
+                { icon: 'fa-crown', title: 'Mái vòm vàng cực kỳ ăn nắng', text: 'Đây là một trong những điểm nhận diện đẹp nhất của đường chân trời Paris cổ điển.' },
+                { icon: 'fa-medal', title: 'Lịch sử được kể bằng không gian thật', text: 'Các sân, dãy nhà và phần mộ của Napoleon cho cảm giác quá khứ vẫn còn ở rất gần.' },
+                { icon: 'fa-columns', title: 'Rộng và trang trọng nhưng không nặng nề', text: 'Invalides giữ được vẻ uy nghi mà vẫn rất dễ kết hợp trong một buổi đi bộ dọc sông.' }
+            ],
+            sourceLinks: [
+                { label: 'Trang chính thức Musée de l’Armée - Invalides', url: 'https://www.musee-armee.fr/en/' }
+            ]
+        },
+        PA00089004: {
+            slug: 'opera-garnier',
+            shortName: 'Opéra Garnier',
+            heroEyebrow: 'Kịch tính Belle Epoque',
+            metaDescription: 'Opéra Garnier là điểm chạm của Paris Belle Epoque với Grand Staircase, Grand Foyer và ánh đèn của khu Opéra.',
+            intro: 'Có những nơi ở Paris khiến bạn muốn ăn mặc chỉnh tề hơn bình thường, và Opéra Garnier là một trong số đó. Mặt tiền dày tượng, đồng, đá và vàng lá đã rất kịch tính; bước vào bên trong, Grand Staircase và Grand Foyer đẩy cảm giác lộng lẫy lên thêm một nấc.',
+            overview: 'Khánh thành năm 1875, Palais Garnier do Charles Garnier thiết kế là đỉnh cao của phong cách Beaux-Arts. Auditorium kiểu Ý, trần vẽ của Marc Chagall và các sảnh dành cho khán giả biến cả tòa nhà thành một sân khấu xã hội đúng nghĩa.',
+            whyGo: 'Không cần xem một vở diễn, chỉ riêng việc đi qua các không gian công cộng của nhà hát đã đủ để hiểu Paris Belle Epoque từng mê ánh sáng, nhung đỏ và vàng óng như thế nào.',
+            bestMoment: 'Buổi chiều rồi ở lại khu Opéra đến tối, khi đại lộ và các mặt tiền thương mại bắt đầu lên đèn.',
+            routePlan: 'Kết hợp Galeries Lafayette rooftop, Place Vendôme, Madeleine hoặc một vòng qua Palais Royal.',
+            nearby: 'Galeries Lafayette, boulevard Haussmann, Place Vendôme và Madeleine.',
+            moods: ['Belle Epoque', 'Nội thất lộng lẫy', 'Paris đêm'],
+            highlights: [
+                { icon: 'fa-stairs', title: 'Grand Staircase đúng nghĩa sân khấu', text: 'Cầu thang lớn của Garnier khiến khoảnh khắc bước vào đã có cảm giác như đang tham gia một buổi trình diễn.' },
+                { icon: 'fa-masks-theater', title: 'Auditorium là trái tim của tòa nhà', text: 'Nhung đỏ, loge, đèn chùm và trần Chagall tạo nên một thứ xa hoa rất Paris.' },
+                { icon: 'fa-wand-magic-sparkles', title: 'Khu Opéra càng đẹp khi trời tối', text: 'Ánh đèn phố và nhịp thương mại quanh đó khiến trải nghiệm có thêm năng lượng đô thị.' }
+            ],
+            sourceLinks: [
+                { label: 'Trang tham quan Palais Garnier', url: 'https://www.operadeparis.fr/en/visits/palais-garnier' },
+                { label: 'Giới thiệu Palais Garnier - Opéra national de Paris', url: 'https://www.operadeparis.fr/en/about/theaters-and-workshops/palais-garnier' }
+            ]
+        },
+        PA00088689: {
+            slug: 'bao-tang-orsay',
+            shortName: 'Bảo tàng Orsay',
+            heroEyebrow: 'Bảo tàng bên sông',
+            metaDescription: 'Bảo tàng Orsay biến một nhà ga của Exposition Universelle 1900 thành nơi ngắm nghệ thuật và kiến trúc duyên dáng nhất bên bờ Seine.',
+            intro: 'Musée d’Orsay là kiểu nơi khiến người mê Paris cảm thấy thành phố này biết cách biến cái cũ thành cái rất quyến rũ. Từ một ga tàu của Exposition Universelle 1900 thành bảo tàng nghệ thuật, Orsay giữ lại đồng hồ lớn, không gian trần cao và nhịp nhìn ra bờ Seine rất đặc trưng.',
+            overview: 'Bảo tàng nổi tiếng với bộ sưu tập Impressionism và Post-Impressionism, nhưng điều làm trải nghiệm ở đây khác biệt là kiến trúc nhà ga cũ vẫn hiện diện trong từng nhịp dầm và ô cửa. Bạn vừa xem tranh vừa luôn cảm thấy mình đang đi trong một ga tàu đã được Paris hóa thành một nơi cực kỳ thanh lịch.',
+            whyGo: 'Nếu Louvre cho cảm giác hùng vĩ thì Orsay cho cảm giác gần hơn, mềm hơn và rất dễ yêu. Đây là nơi lý tưởng để ghé nửa ngày rồi tản bộ dọc Seine.',
+            bestMoment: 'Buổi sáng trong tuần hoặc cuối chiều để nối tiếp bằng một đoạn đi bộ sang Tuileries hay Saint-Germain.',
+            routePlan: 'Chọn vài gallery yêu thích, ghé khu đồng hồ lớn rồi băng qua cầu sang Tuileries hoặc men về Saint-Germain-des-Prés.',
+            nearby: 'Bờ Seine, Tuileries, Assemblée Nationale và khu Saint-Germain.',
+            moods: ['Impressionism', 'Bờ Seine', 'Nhà ga cũ'],
+            highlights: [
+                { icon: 'fa-train-subway', title: 'Kiến trúc nhà ga tạo bản sắc riêng', text: 'Không gian dài, cao và mềm làm cho việc xem nghệ thuật ở Orsay rất khác những bảo tàng khác.' },
+                { icon: 'fa-clock', title: 'Các ô đồng hồ là điểm nhìn rất đáng nhớ', text: 'Đây là nơi hiếm hoi bạn vừa nhìn ra Paris vừa cảm được lớp lịch sử công nghiệp của thành phố.' },
+                { icon: 'fa-paintbrush', title: 'Nhịp tham quan dễ chịu hơn Louvre', text: 'Orsay cho cảm giác gần gũi hơn, rất hợp nếu bạn muốn một buổi nghệ thuật không quá dày.' }
+            ],
+            sourceLinks: [
+                { label: 'Trang chính thức Musée d’Orsay', url: 'https://www.musee-orsay.fr/en' }
+            ]
+        },
+        PA00086001: {
+            slug: 'sainte-chapelle',
+            shortName: 'Sainte-Chapelle',
+            heroEyebrow: 'Kính màu huyền ảo',
+            metaDescription: 'Sainte-Chapelle là viên ngọc Gothic của Ile de la Cite, nổi bật với 15 ô kính màu thế kỷ 13 và ánh sáng gần như siêu thực.',
+            intro: 'Sainte-Chapelle không đồ sộ như Notre-Dame, nhưng hiệu ứng thị giác bên trong có thể khiến bạn lặng người nhanh hơn. Bước lên upper chapel, những bức tường gần như biến mất sau các mảng kính màu dựng thẳng lên trời, và ánh sáng trở thành nhân vật chính.',
+            overview: 'Được Louis IX xây dựng ở thế kỷ 13 để lưu giữ các thánh tích quý, Sainte-Chapelle là một viên ngọc Gothic Rayonnant. Bộ 15 ô kính màu thế kỷ 13 kể lại câu chuyện Kinh Thánh bằng hàng nghìn mảng màu, khiến không gian vừa thiêng liêng vừa gần như siêu thực.',
+            whyGo: 'Đây là nơi rất hợp cho những ai muốn thấy Paris tinh xảo thay vì chỉ hoành tráng. Chỉ cần chọn một ngày có nắng nhẹ, bạn sẽ hiểu vì sao nhiều người xem đây là không gian nội thất đẹp nhất thành phố.',
+            bestMoment: 'Cuối buổi sáng hoặc đầu chiều nắng, khi ánh sáng xuyên qua kính màu rõ và sâu nhất.',
+            routePlan: 'Ghép với Conciergerie, Notre-Dame và một vòng đi bộ quanh Île de la Cité để chuyến đi liền mạch.',
+            nearby: 'Conciergerie, Notre-Dame, Pont Neuf và Khu Latin.',
+            moods: ['Kính màu', 'Gothic', 'Île de la Cité'],
+            highlights: [
+                { icon: 'fa-sun', title: 'Ánh sáng là trải nghiệm chính', text: 'Sainte-Chapelle đẹp nhất khi mặt trời đủ mạnh để làm toàn bộ không gian đổi màu từng phút.' },
+                { icon: 'fa-gem', title: '15 ô kính màu thế kỷ 13 là một kho báu thật sự', text: 'Những bức tường gần như được thay bằng kính, tạo cảm giác kiến trúc đang tan vào ánh sáng.' },
+                { icon: 'fa-cross', title: 'Một công trình nhỏ nhưng độ choáng ngợp rất lớn', text: 'Chỉ cần vài phút trong upper chapel là đã đủ để thấy Paris có thể tinh xảo đến mức nào.' }
+            ],
+            sourceLinks: [
+                { label: 'Trang chính thức Sainte-Chapelle', url: 'https://www.sainte-chapelle.fr/en/' }
+            ]
+        }
+    });
+
     const DEFAULT_CENTER = Object.freeze([48.8566, 2.3522]);
     const DEFAULT_LIMIT = 10;
 
@@ -213,6 +427,31 @@
             .replace(/[\u0300-\u036f]/g, '')
             .replace(/đ/g, 'd')
             .toLowerCase();
+    }
+
+    function slugifyText(value, fallback) {
+        const normalized = normalizeText(value)
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        if (normalized) return normalized;
+        const fallbackValue = normalizeText(fallback || 'paris')
+            .replace(/[^a-z0-9]+/g, '-')
+            .replace(/-+/g, '-')
+            .replace(/^-+|-+$/g, '');
+        return fallbackValue || 'paris';
+    }
+
+    function isLocalUiContext(windowRef) {
+        const targetWindow = windowRef || (typeof window !== 'undefined' ? window : null);
+        if (!targetWindow || !targetWindow.location) return false;
+        const protocol = String(targetWindow.location.protocol || '').toLowerCase();
+        const hostname = String(targetWindow.location.hostname || '').toLowerCase();
+        return protocol === 'file:'
+            || hostname === 'localhost'
+            || hostname === '127.0.0.1'
+            || hostname === '::1'
+            || hostname === '[::1]';
     }
 
     function escapeHtml(value) {
@@ -462,6 +701,71 @@
         return (Array.isArray(items) ? items : []).find((item) => item.reference === reference) || null;
     }
 
+    function getParisPlaceSlug(reference) {
+        const detail = PARIS_PLACE_DETAILS[String(reference || '').trim()];
+        if (detail && detail.slug) return detail.slug;
+        const item = findItemByReference(FEATURED_BOOTSTRAP_ITEMS, reference);
+        if (!item) return '';
+        return slugifyText(item.name_vn || item.reference || 'paris');
+    }
+
+    function buildParisPlaceHref(value, options = {}) {
+        let slug = '';
+        if (value && typeof value === 'object') {
+            slug = String(value.slug || '').trim() || getParisPlaceSlug(value.reference) || slugifyText(value.name_vn || '');
+        } else {
+            const raw = String(value || '').trim();
+            slug = PARIS_PLACE_DETAILS[raw]
+                ? getParisPlaceSlug(raw)
+                : slugifyText(raw, '');
+        }
+        if (!slug) return '';
+
+        const routePrefix = `ban-do-paris/${slug}/`;
+        const windowRef = options.window || null;
+        return isLocalUiContext(windowRef) ? `${routePrefix}index.html` : routePrefix;
+    }
+
+    function getParisPlaceDetailByReference(reference, options = {}) {
+        const item = findItemByReference(FEATURED_BOOTSTRAP_ITEMS, reference);
+        const detail = PARIS_PLACE_DETAILS[String(reference || '').trim()];
+        if (!item || !detail) return null;
+
+        const editorial = FEATURED_EDITORIAL[item.reference] || null;
+        const theme = resolveTheme(item.category_vn, editorial);
+        const slug = getParisPlaceSlug(item.reference);
+
+        return {
+            ...item,
+            ...detail,
+            slug,
+            shortName: detail.shortName || item.name_vn || 'Điểm Paris',
+            routeHref: buildParisPlaceHref(slug, options),
+            imageSrc: toImagePath(item.reference),
+            theme,
+            editorial,
+            areaLabel: item.commune_forme_index || item.address_vn || 'Paris',
+            ratingLabel: formatRating(item.score)
+        };
+    }
+
+    function getParisPlaceDetailBySlug(slug, options = {}) {
+        const normalizedSlug = slugifyText(slug, '');
+        if (!normalizedSlug) return null;
+
+        const matchingReference = FEATURED_REFERENCE_ORDER.find((reference) => getParisPlaceSlug(reference) === normalizedSlug);
+        return matchingReference ? getParisPlaceDetailByReference(matchingReference, options) : null;
+    }
+
+    function getRelatedParisPlaces(reference, limit = 3, options = {}) {
+        const maxItems = Number.isFinite(Number(limit)) ? Math.max(0, Math.trunc(limit)) : 3;
+        return FEATURED_REFERENCE_ORDER
+            .filter((candidateReference) => candidateReference !== reference)
+            .slice(0, maxItems)
+            .map((candidateReference) => getParisPlaceDetailByReference(candidateReference, options))
+            .filter(Boolean);
+    }
+
     function buildMarkerHtml(item, index, active, mode) {
         const rank = mode === 'featured' && item.__featuredRank ? item.__featuredRank : index + 1;
         return `
@@ -472,21 +776,24 @@
         `;
     }
 
-    function buildPopupHtml(item) {
+    function buildPopupHtml(item, windowRef) {
+        const detailHref = buildParisPlaceHref(item, { window: windowRef });
         return `
             <div class="sv-paris-popup">
                 <div class="sv-paris-popup__eyebrow">${escapeHtml(item.__editorial ? item.__editorial.eyebrow : item.__theme.label)}</div>
                 <div class="sv-paris-popup__title">${escapeHtml(item.name_vn || 'Điểm Paris')}</div>
                 <div class="sv-paris-popup__meta">${escapeHtml(item.__areaLabel || item.address_vn || 'Paris')}</div>
                 <div class="sv-paris-popup__desc">${escapeHtml(item.__teaser || 'Chưa có mô tả')}</div>
+                <a class="sv-paris-popup__link" href="${escapeHtml(detailHref)}">Mở guide chi tiết <i class="fa-solid fa-arrow-right"></i></a>
             </div>
         `;
     }
 
-    function buildPoiCardHtml(item, index, active, mode) {
+    function buildPoiCardHtml(item, index, active, mode, windowRef) {
         const rank = mode === 'featured' && item.__featuredRank ? item.__featuredRank : index + 1;
+        const detailHref = buildParisPlaceHref(item, { window: windowRef });
         return `
-            <button type="button" class="sv-paris-poi${active ? ' sv-paris-poi--active' : ''}" data-reference="${escapeHtml(item.reference)}" style="--poi-accent:${escapeHtml(item.__theme.color)};" aria-pressed="${active ? 'true' : 'false'}">
+            <a class="sv-paris-poi${active ? ' sv-paris-poi--active' : ''}" href="${escapeHtml(detailHref)}" data-reference="${escapeHtml(item.reference)}" style="--poi-accent:${escapeHtml(item.__theme.color)};">
                 <span class="sv-paris-poi__media">
                     <img class="sv-paris-poi__image" src="${escapeHtml(item.__imageSrc || item.__fallbackImage)}" alt="${escapeHtml(item.name_vn || 'Ảnh Paris')}" loading="lazy" decoding="async" data-fallback-src="${escapeHtml(item.__fallbackImage)}" />
                     <span class="sv-paris-poi__rank">${String(rank).padStart(2, '0')}</span>
@@ -499,9 +806,10 @@
                     <span class="sv-paris-poi__footer">
                         <span class="sv-paris-chip"><i class="fa-solid ${escapeHtml(item.__theme.icon)}"></i>${escapeHtml(item.__theme.label)}</span>
                         <span class="sv-paris-rating"><i class="fa-solid fa-star"></i>${escapeHtml(formatRating(item.score))}</span>
+                        <span class="sv-paris-poi__cta">Đọc guide <i class="fa-solid fa-arrow-right"></i></span>
                     </span>
                 </span>
-            </button>
+            </a>
         `;
     }
 
@@ -559,7 +867,7 @@
             if (state.mode === 'featured') {
                 if (modeEyebrowElement) modeEyebrowElement.textContent = 'Mở màn tự động';
                 if (modeTitleElement) modeTitleElement.textContent = '10 điểm đẹp nhất Paris';
-                if (modeSubtitleElement) modeSubtitleElement.textContent = 'Bản đồ bên phải đang zoom đúng 10 biểu tượng mở màn. Nhấn marker để nhảy tới thẻ bên trái, hoặc nhấn thẻ để camera chạy tới điểm đó.';
+                if (modeSubtitleElement) modeSubtitleElement.textContent = 'Bản đồ bên phải đang zoom đúng 10 biểu tượng mở màn. Nhấn marker để preview nhanh, hoặc nhấn thẻ bên trái để mở guide chi tiết của từng địa điểm.';
                 if (summaryElement) summaryElement.innerHTML = `<strong>${state.viewItems.length}</strong> điểm đang được spotlight. ${escapeHtml(getDatasetNote())}`;
                 mapMetaElement.textContent = 'Spotlight hiện tại: Top 10 biểu tượng';
                 return;
@@ -621,7 +929,7 @@
                 title: item.name_vn || 'Paris'
             });
 
-            if (typeof marker.bindPopup === 'function') marker.bindPopup(buildPopupHtml(item));
+            if (typeof marker.bindPopup === 'function') marker.bindPopup(buildPopupHtml(item, windowRef));
             if (typeof marker.on === 'function') {
                 marker.on('click', () => {
                     setActiveReference(item.reference, {
@@ -659,7 +967,7 @@
             }
 
             poiListElement.innerHTML = state.viewItems
-                .map((item, index) => buildPoiCardHtml(item, index, item.reference === state.activeReference, state.mode))
+                .map((item, index) => buildPoiCardHtml(item, index, item.reference === state.activeReference, state.mode, windowRef))
                 .join('');
 
             installImageFallbacks();
@@ -763,30 +1071,6 @@
                 });
             });
 
-            poiListElement.addEventListener('click', (event) => {
-                const trigger = event.target.closest('[data-reference]');
-                if (!trigger) return;
-                const reference = trigger.getAttribute('data-reference');
-                if (!reference) return;
-                setActiveReference(reference, {
-                    centerMap: true,
-                    openPopup: true
-                });
-            });
-
-            poiListElement.addEventListener('keydown', (event) => {
-                if (event.key !== 'Enter' && event.key !== ' ') return;
-                const trigger = event.target.closest('[data-reference]');
-                if (!trigger) return;
-                event.preventDefault();
-                const reference = trigger.getAttribute('data-reference');
-                if (!reference) return;
-                setActiveReference(reference, {
-                    centerMap: true,
-                    openPopup: true
-                });
-            });
-
             state.map.on('moveend', () => {
                 if (state.pendingProgrammaticMoves > 0) {
                     state.pendingProgrammaticMoves -= 1;
@@ -837,8 +1121,13 @@
         FEATURED_BOOTSTRAP_ITEMS,
         FEATURED_EDITORIAL,
         FEATURED_REFERENCE_ORDER,
+        PARIS_PLACE_DETAILS,
         buildDistrictSummary,
+        buildParisPlaceHref,
         createParisMapApp,
+        getParisPlaceDetailByReference,
+        getParisPlaceDetailBySlug,
+        getRelatedParisPlaces,
         getFeaturedItems,
         pickViewportItems,
         prepareMonuments

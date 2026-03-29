@@ -194,9 +194,17 @@
                     <div class="sv-kpi__label">Sự kiện</div>
                     <div class="sv-kpi__value" id="kpi-events">--</div>
                 </div>
-                <div class="sv-kpi sv-kpi--clickable" data-detail="newsletters" tabindex="0" role="button">
-                    <div class="sv-kpi__label">Đăng ký Newsletter</div>
-                    <div class="sv-kpi__value" id="kpi-newsletters">--</div>
+                <div class="sv-kpi sv-kpi--clickable" data-detail="discussion_newsletters" tabindex="0" role="button">
+                    <div class="sv-kpi__label">ĐK thread / comment</div>
+                    <div class="sv-kpi__value" id="kpi-discussion-newsletters">--</div>
+                </div>
+                <div class="sv-kpi sv-kpi--clickable" data-detail="event_newsletters" tabindex="0" role="button">
+                    <div class="sv-kpi__label">ĐK sự kiện</div>
+                    <div class="sv-kpi__value" id="kpi-event-newsletters">--</div>
+                </div>
+                <div class="sv-kpi sv-kpi--clickable" data-detail="housing_newsletters" tabindex="0" role="button">
+                    <div class="sv-kpi__label">ĐK thuê nhà</div>
+                    <div class="sv-kpi__value" id="kpi-housing-newsletters">--</div>
                 </div>
             </div>
         </div>
@@ -440,7 +448,9 @@
         const postsPendingEl = document.getElementById('kpi-posts-pending');
         const commentsEl = document.getElementById('kpi-comments');
         const eventsEl = document.getElementById('kpi-events');
-        const newslettersEl = document.getElementById('kpi-newsletters');
+        const discussionNewslettersEl = document.getElementById('kpi-discussion-newsletters');
+        const eventNewslettersEl = document.getElementById('kpi-event-newsletters');
+        const housingNewslettersEl = document.getElementById('kpi-housing-newsletters');
         const totalEl = document.getElementById('kpi-total');
         const uniqueEl = document.getElementById('kpi-unique');
         const cityEl = document.getElementById('kpi-city');
@@ -756,6 +766,11 @@
             roleStatus.className = isError ? 'sv-admin-error' : 'sv-admin-muted';
         };
 
+        const hasNewsletterBreakdown = (payload) => payload
+            && Number.isFinite(payload.activeDiscussionNewsletters)
+            && Number.isFinite(payload.activeEventNewsletters)
+            && Number.isFinite(payload.activeHousingNewsletters);
+
         const renderOverview = (payload) => {
             setOverviewValue(usersEl, payload.totalUsers);
             setOverviewValue(adminsEl, payload.totalAdmins);
@@ -764,7 +779,12 @@
             setOverviewValue(postsPendingEl, payload.pendingPosts);
             setOverviewValue(commentsEl, payload.totalComments);
             setOverviewValue(eventsEl, payload.totalEvents);
-            setOverviewValue(newslettersEl, payload.activeNewsletters);
+            setOverviewValue(
+                discussionNewslettersEl,
+                Number.isFinite(payload.activeDiscussionNewsletters) ? payload.activeDiscussionNewsletters : payload.activeNewsletters
+            );
+            setOverviewValue(eventNewslettersEl, payload.activeEventNewsletters);
+            setOverviewValue(housingNewslettersEl, payload.activeHousingNewsletters);
         };
 
         const resolveTrackedPathHref = (rawPath) => {
@@ -1133,12 +1153,37 @@
                     `).join('');
                     return { headers, rows };
                 }
-                case 'newsletters': {
+                case 'newsletters':
+                case 'discussion_newsletters': {
                     const headers = ['Email', 'Chuyên mục', 'Trạng thái', 'Ngày tạo'];
                     const rows = items.map((item) => `
                         <tr>
                             <td>${escapeHtml(item.email || '')}</td>
-                            <td>${escapeHtml(Array.isArray(item.categoryIds) ? item.categoryIds.join(', ') : '')}</td>
+                            <td>${escapeHtml(Array.isArray(item.categoryIds) && item.categoryIds.length ? item.categoryIds.join(', ') : 'Tất cả')}</td>
+                            <td>${item.active ? 'Active' : 'Inactive'}</td>
+                            <td>${escapeHtml(item.createdAt || '')}</td>
+                        </tr>
+                    `).join('');
+                    return { headers, rows };
+                }
+                case 'event_newsletters': {
+                    const headers = ['Email', 'Loại sự kiện', 'Trạng thái', 'Ngày tạo'];
+                    const rows = items.map((item) => `
+                        <tr>
+                            <td>${escapeHtml(item.email || '')}</td>
+                            <td>${escapeHtml(Array.isArray(item.eventTypeIds) && item.eventTypeIds.length ? item.eventTypeIds.join(', ') : 'Tất cả')}</td>
+                            <td>${item.active ? 'Active' : 'Inactive'}</td>
+                            <td>${escapeHtml(item.createdAt || '')}</td>
+                        </tr>
+                    `).join('');
+                    return { headers, rows };
+                }
+                case 'housing_newsletters': {
+                    const headers = ['Email', 'Phạm vi', 'Trạng thái', 'Ngày tạo'];
+                    const rows = items.map((item) => `
+                        <tr>
+                            <td>${escapeHtml(item.email || '')}</td>
+                            <td>Tất cả tin thuê nhà mới</td>
                             <td>${item.active ? 'Active' : 'Inactive'}</td>
                             <td>${escapeHtml(item.createdAt || '')}</td>
                         </tr>
@@ -1248,7 +1293,10 @@
                     posts: 'Danh sách bài viết',
                     comments: 'Danh sách bình luận',
                     events: 'Danh sách sự kiện',
-                    newsletters: 'Danh sách newsletter',
+                    newsletters: 'Danh sách đăng ký thread / comment',
+                    discussion_newsletters: 'Danh sách đăng ký thread / comment',
+                    event_newsletters: 'Danh sách đăng ký sự kiện',
+                    housing_newsletters: 'Danh sách đăng ký thuê nhà',
                     visits_total: 'Chi tiết lượt truy cập theo ngày',
                     visits_unique: 'Chi tiết IP truy cập',
                     visits_city: 'Chi tiết vị trí'
@@ -1341,7 +1389,7 @@
             try {
                 if (!forceRefresh) {
                     const cached = dashboardCache.get('overview');
-                    if (cached) {
+                    if (hasNewsletterBreakdown(cached)) {
                         renderOverview(cached);
                         setOverviewStatus('Dữ liệu từ cache (tối đa 5 phút).', false);
                         return;

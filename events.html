@@ -265,6 +265,30 @@
     </div>
 </div>
 <main class="container my-4">
+    <div class="sv-card mb-3 sv-newsletter">
+        <div class="sv-card__hd">
+            <i class="fa-solid fa-bell text-primary"></i>
+            Nhận Tin Sự Kiện Mới
+        </div>
+        <div class="p-3">
+            <p class="sv-meta mb-2">Nhập email để nhận thông báo khi có sự kiện mới theo loại sự kiện bạn quan tâm.</p>
+            <div class="mb-2">
+                <input id="events-subscribe-email" class="form-control sv-newsletter__input" type="email" placeholder="Email của bạn" />
+                <div id="events-subscribe-email-error" class="small text-danger mt-1 d-none"></div>
+            </div>
+            <div id="events-subscribe-types" class="sv-newsletter__categories" aria-hidden="true">
+                <div class="sv-newsletter__head">
+                    <span class="sv-meta" style="font-weight:700;">Chọn loại sự kiện:</span>
+                    <button id="events-subscribe-toggle" class="sv-newsletter__all" type="button">Chọn tất cả</button>
+                </div>
+                <div id="events-subscribe-type-grid" class="sv-newsletter__grid"></div>
+            </div>
+            <button id="events-subscribe-submit" class="btn btn-primary w-100 mt-3" type="button">Đăng Ký Nhận Tin</button>
+            <div id="events-subscribe-status" class="small mt-2" aria-live="polite"></div>
+            <div class="sv-newsletter__note">Để trống loại sự kiện nếu bạn muốn nhận tất cả sự kiện mới.</div>
+        </div>
+    </div>
+
     <div class="sv-card mb-3">
         <div class="sv-card__hd d-flex flex-wrap justify-content-between align-items-center gap-2">
             <span><i class="fa-solid fa-calendar-days me-2 text-primary"></i>Tất cả sự kiện</span>
@@ -335,11 +359,20 @@
         const pastPagination = document.getElementById('sv-events-past-pagination');
         const pastPageInfo = document.getElementById('sv-events-past-page-info');
         const pastLoadMoreBtn = document.getElementById('sv-events-past-load-more');
+        const subscribeEmailEl = document.getElementById('events-subscribe-email');
+        const subscribeEmailErrorEl = document.getElementById('events-subscribe-email-error');
+        const subscribeTypesEl = document.getElementById('events-subscribe-types');
+        const subscribeTypeGridEl = document.getElementById('events-subscribe-type-grid');
+        const subscribeToggleBtn = document.getElementById('events-subscribe-toggle');
+        const subscribeSubmitBtn = document.getElementById('events-subscribe-submit');
+        const subscribeStatusEl = document.getElementById('events-subscribe-status');
         if (!upcomingList || !pastList || !upcomingPagination || !upcomingPageInfo || !upcomingLoadMoreBtn || !pastPagination || !pastPageInfo || !pastLoadMoreBtn) {
             return;
         }
+        const EVENT_SUBSCRIPTION_STORAGE_KEY = 'svp.events.subscription';
         let upcomingEvents = [];
         let pastEvents = [];
+        let eventTypes = [];
         let upcomingVisibleCount = EVENTS_PAGE_SIZE;
         let pastVisibleCount = EVENTS_PAGE_SIZE;
 
@@ -349,6 +382,27 @@
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+
+        const decodeBase64Url = (value) => {
+            if (!value) return '';
+            let base = String(value).replace(/-/g, '+').replace(/_/g, '/');
+            const pad = base.length % 4;
+            if (pad) {
+                base += '='.repeat(4 - pad);
+            }
+            return base;
+        };
+
+        const parseJwtPayload = (token) => {
+            if (!token || String(token).split('.').length !== 3) {
+                return null;
+            }
+            try {
+                return JSON.parse(atob(decodeBase64Url(String(token).split('.')[1])));
+            } catch (_) {
+                return null;
+            }
+        };
 
         const normalizeSafeHref = (href) => {
             const raw = String(href || '').trim();
@@ -472,6 +526,252 @@
         const buildEventHref = (eventId, title) => urlHelpers
             ? urlHelpers.buildDetailPath('event', eventId, title)
             : `event_detail.html?eventId=${encodeURIComponent(eventId)}`;
+
+        const toPositiveInteger = (value) => {
+            const numeric = Number(value);
+            return Number.isInteger(numeric) && numeric > 0 ? numeric : 0;
+        };
+
+        const getSubscriptionCheckboxes = () => subscribeTypeGridEl
+            ? Array.from(subscribeTypeGridEl.querySelectorAll('input[type="checkbox"]'))
+            : [];
+
+        const setSubscriptionStatus = (text, type) => {
+            if (!subscribeStatusEl) return;
+            subscribeStatusEl.textContent = text || '';
+            subscribeStatusEl.className = 'small mt-2';
+            if (type === 'success') {
+                subscribeStatusEl.classList.add('text-success');
+            } else if (type === 'error') {
+                subscribeStatusEl.classList.add('text-danger');
+            }
+        };
+
+        const clearSubscriptionEmailError = () => {
+            if (!subscribeEmailEl) return;
+            subscribeEmailEl.classList.remove('is-invalid');
+            if (subscribeEmailErrorEl) {
+                subscribeEmailErrorEl.textContent = '';
+                subscribeEmailErrorEl.classList.add('d-none');
+            }
+        };
+
+        const showSubscriptionEmailError = (message) => {
+            if (!subscribeEmailEl) return;
+            subscribeEmailEl.classList.add('is-invalid');
+            if (subscribeEmailErrorEl) {
+                subscribeEmailErrorEl.textContent = message;
+                subscribeEmailErrorEl.classList.remove('d-none');
+            }
+        };
+
+        const readSavedSubscription = () => {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(EVENT_SUBSCRIPTION_STORAGE_KEY) || 'null');
+                return parsed && typeof parsed === 'object' ? parsed : null;
+            } catch (_) {
+                return null;
+            }
+        };
+
+        const getKnownSessionEmail = () => {
+            const storedEmail = String(localStorage.getItem('userEmail') || '').trim();
+            if (storedEmail) {
+                return storedEmail;
+            }
+            const token = String(localStorage.getItem('accessToken') || '').trim();
+            const payload = parseJwtPayload(token) || {};
+            return String(payload.email || '').trim();
+        };
+
+        const toggleSubscriptionTypes = () => {
+            if (!subscribeEmailEl || !subscribeTypesEl) {
+                return;
+            }
+            const isOpen = subscribeEmailEl.value.trim().length > 0;
+            subscribeTypesEl.classList.toggle('is-open', isOpen);
+            subscribeTypesEl.setAttribute('aria-hidden', (!isOpen).toString());
+        };
+
+        const updateSubscriptionToggleLabel = () => {
+            if (!subscribeToggleBtn) return;
+            const checkboxes = getSubscriptionCheckboxes();
+            const allChecked = checkboxes.length > 0 && checkboxes.every((checkbox) => checkbox.checked);
+            subscribeToggleBtn.textContent = allChecked ? 'Bỏ chọn tất cả' : 'Chọn tất cả';
+        };
+
+        const getSelectedEventTypeIds = () => getSubscriptionCheckboxes()
+            .filter((checkbox) => checkbox.checked)
+            .map((checkbox) => toPositiveInteger(checkbox.getAttribute('data-event-type-id')))
+            .filter((value) => value > 0);
+
+        const setSelectedEventTypeIds = (ids) => {
+            const selected = new Set(Array.isArray(ids) ? ids.map((value) => toPositiveInteger(value)) : []);
+            getSubscriptionCheckboxes().forEach((checkbox) => {
+                const eventTypeId = toPositiveInteger(checkbox.getAttribute('data-event-type-id'));
+                checkbox.checked = selected.has(eventTypeId);
+            });
+        };
+
+        const renderEventTypeGrid = (items) => {
+            if (!subscribeTypeGridEl) {
+                return;
+            }
+            if (!Array.isArray(items) || items.length === 0) {
+                subscribeTypeGridEl.innerHTML = '<div class="sv-meta">Không tải được loại sự kiện. Bạn vẫn có thể đăng ký nhận tất cả sự kiện mới.</div>';
+                updateSubscriptionToggleLabel();
+                return;
+            }
+            subscribeTypeGridEl.innerHTML = items.map((item) => `
+                <label class="sv-newsletter__item">
+                    <input class="form-check-input" type="checkbox" data-event-type-id="${item.eventTypeId}">
+                    ${escapeHtml(item.name)}
+                </label>
+            `).join('');
+
+            const saved = readSavedSubscription();
+            if (saved && Array.isArray(saved.eventTypeIds)) {
+                setSelectedEventTypeIds(saved.eventTypeIds);
+            }
+            getSubscriptionCheckboxes().forEach((checkbox) => {
+                checkbox.addEventListener('change', () => {
+                    updateSubscriptionToggleLabel();
+                    setSubscriptionStatus('', null);
+                });
+            });
+            updateSubscriptionToggleLabel();
+        };
+
+        const fetchEventTypes = async () => {
+            const response = await fetch(`${API_BASE_URL}/event-types`, {
+                method: 'GET',
+                headers: { Accept: 'application/json' }
+            });
+            const payload = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(payload.error || 'Không thể tải loại sự kiện.');
+            }
+            return (Array.isArray(payload.items) ? payload.items : [])
+                .map((item) => ({
+                    eventTypeId: toPositiveInteger(item?.eventTypeId),
+                    name: String(item?.name || '').trim()
+                }))
+                .filter((item) => item.eventTypeId > 0 && item.name);
+        };
+
+        const loadEventTypesForSubscription = async () => {
+            try {
+                eventTypes = await fetchEventTypes();
+            } catch (error) {
+                console.error('Cannot load event types for subscription:', error);
+                eventTypes = [];
+            }
+            renderEventTypeGrid(eventTypes);
+        };
+
+        const initSubscriptionForm = () => {
+            if (!subscribeEmailEl || !subscribeTypesEl || !subscribeTypeGridEl || !subscribeSubmitBtn) {
+                return;
+            }
+
+            const saved = readSavedSubscription();
+            const savedEmail = String(saved?.email || '').trim();
+            const sessionEmail = getKnownSessionEmail();
+            subscribeEmailEl.value = savedEmail || sessionEmail;
+            toggleSubscriptionTypes();
+            updateSubscriptionToggleLabel();
+
+            if (subscribeToggleBtn) {
+                subscribeToggleBtn.addEventListener('click', () => {
+                    const checkboxes = getSubscriptionCheckboxes();
+                    const allChecked = checkboxes.length > 0 && checkboxes.every((checkbox) => checkbox.checked);
+                    checkboxes.forEach((checkbox) => {
+                        checkbox.checked = !allChecked;
+                    });
+                    updateSubscriptionToggleLabel();
+                    setSubscriptionStatus('', null);
+                });
+            }
+
+            subscribeEmailEl.addEventListener('input', () => {
+                toggleSubscriptionTypes();
+                clearSubscriptionEmailError();
+                setSubscriptionStatus('', null);
+            });
+
+            subscribeSubmitBtn.addEventListener('click', async () => {
+                const email = subscribeEmailEl.value.trim();
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+                if (!email) {
+                    showSubscriptionEmailError('Vui lòng nhập email để nhận tin sự kiện mới.');
+                    setSubscriptionStatus('', null);
+                    subscribeEmailEl.focus();
+                    return;
+                }
+                if (!emailPattern.test(email)) {
+                    showSubscriptionEmailError('Email không đúng định dạng.');
+                    setSubscriptionStatus('', null);
+                    subscribeEmailEl.focus();
+                    return;
+                }
+
+                clearSubscriptionEmailError();
+
+                const eventTypeIds = getSelectedEventTypeIds();
+                const savedPayload = {
+                    email,
+                    eventTypeIds,
+                    savedAt: new Date().toISOString()
+                };
+
+                subscribeSubmitBtn.disabled = true;
+                subscribeSubmitBtn.textContent = 'Đang đăng ký...';
+                setSubscriptionStatus('Đang lưu đăng ký nhận tin sự kiện...', null);
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/events/subscribe`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json'
+                        },
+                        body: JSON.stringify({
+                            email,
+                            eventTypeIds
+                        })
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(payload.error || 'Không thể đăng ký nhận tin lúc này.');
+                    }
+
+                    try {
+                        localStorage.setItem(EVENT_SUBSCRIPTION_STORAGE_KEY, JSON.stringify(savedPayload));
+                    } catch (error) {
+                        console.warn('Cannot save event subscription locally:', error);
+                    }
+
+                    setSubscriptionStatus(
+                        'Đăng ký thành công. Bạn sẽ nhận email khi có sự kiện mới phù hợp.',
+                        'success'
+                    );
+                    subscribeSubmitBtn.textContent = 'Đã đăng ký';
+                    setTimeout(() => {
+                        subscribeSubmitBtn.textContent = 'Đăng Ký Nhận Tin';
+                        subscribeSubmitBtn.disabled = false;
+                    }, 1200);
+                } catch (error) {
+                    console.error('Cannot subscribe to event notifications:', error);
+                    setSubscriptionStatus(
+                        error && error.message ? error.message : 'Không thể kết nối máy chủ.',
+                        'error'
+                    );
+                    subscribeSubmitBtn.textContent = 'Đăng Ký Nhận Tin';
+                    subscribeSubmitBtn.disabled = false;
+                }
+            });
+        };
 
         const toBadge = (event, isPast) => {
             if (isPast) {
@@ -695,6 +995,8 @@
             renderPastEvents();
         });
 
+        initSubscriptionForm();
+        loadEventTypesForSubscription();
         loadEvents();
     })();
 </script>
@@ -702,11 +1004,6 @@
 <script src="auth-topbar.js"></script>
 </body>
 </html>
-
-
-
-
-
 
 
 

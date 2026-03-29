@@ -20,6 +20,7 @@ function buildHousingPayload(overrides = {}) {
         city: 'Choisy-le-Roi',
         arrondissement: '94',
         areaM2: 14,
+        viewCount: 27,
         propertyType: 'ROOM',
         propertyTypeLabel: 'Chambre',
         cafEligible: true,
@@ -103,4 +104,5 @@ test('housing detail falls back to the first description image when no gallery e
         'https://cdn.svp.test/housing/single-preview.jpg'
     );
     assert.equal(dom.window.document.getElementById('housing-detail-share').classList.contains('d-none'), false);
+    assert.match(dom.window.document.getElementById('housing-detail-meta').textContent, /27 lượt xem/);
 });

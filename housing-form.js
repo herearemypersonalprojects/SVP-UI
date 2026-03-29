@@ -459,7 +459,7 @@
     };
 
     const loadExistingListing = async () => {
-        const payload = await shared.requestWithAuth(`${shared.API_BASE_URL}/api/housing/${encodeURIComponent(editingId)}`, {
+        const payload = await shared.requestWithAuth(`${shared.API_BASE_URL}/api/housing/${encodeURIComponent(editingId)}?trackView=false`, {
             headers: { Accept: 'application/json' }
         });
         if (!payload.viewerCanEdit) {

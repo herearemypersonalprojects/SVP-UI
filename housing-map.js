@@ -23,7 +23,7 @@
     const INITIAL_VISIBLE_COUNT = 10;
     const LOAD_MORE_STEP = 5;
     const DATASET_LIMIT = 1000;
-    const SESSION_CACHE_KEY_PREFIX = 'svp-housing-map-dataset-v2';
+    const SESSION_CACHE_KEY_PREFIX = 'svp-housing-map-dataset-v3';
     const SESSION_CACHE_TTL_MS = 5 * 60 * 1000;
 
     if (!form || !listEl || !metaEl || !mapStatusEl || !mapEl || !applyBtn || !resetBtn || !loadMoreBtn || !loadMoreWrap || !filterToggleBtn || !filterControlsEl || !statusInput || !typeInput || !transportTypeInput) {
@@ -204,6 +204,8 @@
         return `${transit.transportIcon || '🚏'}${line} ${transit.stationName}${walk}`;
     };
 
+    const formatViewCountLabel = (value) => `${(Number.isFinite(Number(value)) ? Number(value) : 0).toLocaleString('vi-VN')} lượt xem`;
+
     const updateLoadMoreButton = () => {
         const remaining = Math.max(0, state.filteredItems.length - state.visibleCount);
         if (remaining <= 0) {
@@ -249,7 +251,7 @@
                         </div>
                         <div>
                             <strong>${shared.escapeHtml(item.title || 'Tin thuê nhà')}</strong>
-                            <div class="sv-housing-meta mt-1">${shared.escapeHtml(item.city || '')}${item.arrondissement ? ` • ${shared.escapeHtml(item.arrondissement)}` : ''}${item.areaM2 ? ` • ${shared.escapeHtml(String(item.areaM2))}m²` : ''}</div>
+                            <div class="sv-housing-meta mt-1">${shared.escapeHtml(item.city || '')}${item.arrondissement ? ` • ${shared.escapeHtml(item.arrondissement)}` : ''}${item.areaM2 ? ` • ${shared.escapeHtml(String(item.areaM2))}m²` : ''} • ${shared.escapeHtml(formatViewCountLabel(item.viewCount))}</div>
                         </div>
                         <div class="sv-housing-meta">${shared.escapeHtml(buildTransitText(item.primaryTransit))}</div>
                         <div class="sv-housing-tags">

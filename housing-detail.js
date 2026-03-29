@@ -176,6 +176,8 @@
         `;
     };
 
+    const formatViewCountLabel = (value) => `${(Number.isFinite(Number(value)) ? Number(value) : 0).toLocaleString('vi-VN')} lượt xem`;
+
     const renderActions = (payload) => {
         const baseActions = [
             `<a class="btn btn-outline-secondary" href="ban-do-thue-nha.html">Quay lại bản đồ</a>`
@@ -294,7 +296,8 @@
                 payload.city || '',
                 payload.arrondissement || '',
                 payload.areaM2 ? `${payload.areaM2}m²` : '',
-                payload.propertyTypeLabel || shared.propertyTypeLabel(payload.propertyType)
+                payload.propertyTypeLabel || shared.propertyTypeLabel(payload.propertyType),
+                formatViewCountLabel(payload.viewCount)
             ].filter(Boolean).join(' • ');
             tagsEl.innerHTML = [
                 payload.cafEligible ? '<span class="sv-housing-tag">CAF</span>' : '',

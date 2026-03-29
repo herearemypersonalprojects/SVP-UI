@@ -379,7 +379,9 @@
             mapStatusEl.textContent = `Đã tải ${loadedCount} tin ${scopeLabel}. Bộ lọc hiện tại chưa khớp tin nào.`;
             return;
         }
-        const limitNote = state.datasetHasMore ? ' Dữ liệu đang dùng giới hạn tải an toàn cho map.' : '';
+        const limitNote = state.isSuperadmin && state.datasetHasMore
+            ? ' Dữ liệu đang dùng giới hạn tải an toàn cho map.'
+            : '';
         mapStatusEl.textContent = `Đang hiển thị ${filteredCount} pin từ ${loadedCount} tin ${scopeLabel}.${limitNote}`;
     };
 
@@ -437,7 +439,9 @@
             state.datasetHasMore = Boolean(cachedPayload.hasMore);
             applyClientFilters();
             fitMapToInitialPins();
-            mapStatusEl.textContent = `Đang hiển thị ${state.filteredItems.length} pin từ ${formatLoadedCount(state.items.length)} tin đã tải. Dữ liệu lấy từ bộ nhớ phiên nên không cần gọi backend lại.`;
+            if (state.isSuperadmin) {
+                mapStatusEl.textContent = `Đang hiển thị ${state.filteredItems.length} pin từ ${formatLoadedCount(state.items.length)} tin đã tải. Dữ liệu lấy từ bộ nhớ phiên nên không cần gọi backend lại.`;
+            }
             return;
         }
 
@@ -478,7 +482,9 @@
             renderList();
             renderMarkers();
             metaEl.textContent = 'Không tải được dữ liệu';
-            mapStatusEl.textContent = error && error.message ? error.message : 'Không thể tải danh sách nhà.';
+            mapStatusEl.textContent = state.isSuperadmin && error && error.message
+                ? error.message
+                : 'Không thể tải danh sách nhà.';
         }
     };
 

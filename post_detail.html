@@ -580,7 +580,7 @@
                 </div>
                 <div class="pd-login-gate__actions">
                     <a id="pd-login-gate-link" class="btn btn-primary" href="login.html">Đăng nhập để đọc tiếp</a>
-                    <a class="btn btn-outline-primary" href="signup.html">Tạo tài khoản</a>
+
                 </div>
             </div>
 
@@ -841,7 +841,7 @@
     let currentCommentCount = 0;
     let likeInFlight = false;
     let likeHandlerAttached = false;
-    const ARTICLE_PREVIEW_RATIO = 0.5;
+    const ARTICLE_PREVIEW_RATIO = 0.7;
     const ARTICLE_PREVIEW_MIN_HEIGHT = 120;
     const ARTICLE_PREVIEW_HIDDEN_OFFSET = 48;
 
@@ -895,8 +895,8 @@
             return 0;
         }
         const maxVisibleHeight = Math.max(80, totalHeight - ARTICLE_PREVIEW_HIDDEN_OFFSET);
-        const halfHeight = Math.floor(totalHeight * ARTICLE_PREVIEW_RATIO);
-        return Math.min(Math.max(ARTICLE_PREVIEW_MIN_HEIGHT, halfHeight), maxVisibleHeight);
+        const visibleHeightByRatio = Math.floor(totalHeight * ARTICLE_PREVIEW_RATIO);
+        return Math.min(Math.max(ARTICLE_PREVIEW_MIN_HEIGHT, visibleHeightByRatio), maxVisibleHeight);
     };
 
     const applyArticleLoginGate = () => {

@@ -18,11 +18,12 @@
     const statusInput = document.getElementById('filter-status');
     const typeInput = document.getElementById('filter-type');
     const transportTypeInput = document.getElementById('filter-transport-type');
-    const DEFAULT_STATUS_FILTER = 'AVAILABLE,RENTED';
+    const PUBLIC_STATUS_FILTER = 'AVAILABLE,RENTED';
+    const SUPERADMIN_STATUS_FILTER = 'AVAILABLE,RENTED,HIDDEN';
     const INITIAL_VISIBLE_COUNT = 10;
     const LOAD_MORE_STEP = 5;
     const DATASET_LIMIT = 1000;
-    const SESSION_CACHE_KEY = 'svp-housing-map-dataset-v1';
+    const SESSION_CACHE_KEY_PREFIX = 'svp-housing-map-dataset-v2';
     const SESSION_CACHE_TTL_MS = 5 * 60 * 1000;
 
     if (!form || !listEl || !metaEl || !mapStatusEl || !mapEl || !applyBtn || !resetBtn || !loadMoreBtn || !loadMoreWrap || !filterToggleBtn || !filterControlsEl || !statusInput || !typeInput || !transportTypeInput) {
@@ -64,7 +65,11 @@
         datasetHasMore: false,
         hasAutoFocusedInitialPins: false,
         isAutoFittingMap: false,
-        userMovedMap: false
+        userMovedMap: false,
+        viewerScope: 'public',
+        isSuperadmin: false,
+        accessToken: '',
+        defaultStatusFilter: PUBLIC_STATUS_FILTER
     };
 
     const hasValidCoordinates = (item) => Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude));
@@ -72,6 +77,24 @@
     const normalizeText = (value) => String(value || '')
         .trim()
         .toLowerCase();
+
+    const parseJwtPayload = (token) => {
+        const value = String(token || '').trim();
+        if (!value) {
+            return null;
+        }
+        const segments = value.split('.');
+        if (segments.length < 2 || !segments[1]) {
+            return null;
+        }
+        try {
+            const normalized = segments[1].replace(/-/g, '+').replace(/_/g, '/');
+            const padded = normalized + '='.repeat((4 - (normalized.length % 4)) % 4);
+            return JSON.parse(window.atob(padded));
+        } catch (_) {
+            return null;
+        }
+    };
 
     const parseOptionalNumber = (value) => {
         const raw = String(value || '').trim();
@@ -83,6 +106,43 @@
     };
 
     const formatLoadedCount = (count) => `${count}${state.datasetHasMore ? '+' : ''}`;
+
+    const getSessionCacheKey = () => `${SESSION_CACHE_KEY_PREFIX}:${state.viewerScope}`;
+
+    const configureStatusOptions = () => {
+        statusInput.innerHTML = '';
+        const options = state.isSuperadmin
+            ? [
+                { value: SUPERADMIN_STATUS_FILTER, label: 'Tất cả: Trống + Đã thuê + Ẩn' },
+                { value: PUBLIC_STATUS_FILTER, label: 'Còn trống + Đã thuê' },
+                { value: 'AVAILABLE', label: 'Còn trống' },
+                { value: 'RENTED', label: 'Đã thuê' },
+                { value: 'HIDDEN', label: 'Ẩn' }
+            ]
+            : [
+                { value: PUBLIC_STATUS_FILTER, label: 'Còn trống + Đã thuê' },
+                { value: 'AVAILABLE', label: 'Còn trống' },
+                { value: 'RENTED', label: 'Đã thuê' }
+            ];
+        options.forEach((item) => {
+            const option = document.createElement('option');
+            option.value = item.value;
+            option.textContent = item.label;
+            statusInput.appendChild(option);
+        });
+        statusInput.value = state.defaultStatusFilter;
+    };
+
+    const initializeViewerAccess = async () => {
+        const token = await shared.getAccessToken();
+        const payload = parseJwtPayload(token);
+        const role = String(payload && payload.role || '').trim().toUpperCase();
+        state.isSuperadmin = role === 'SUPERADMIN';
+        state.viewerScope = state.isSuperadmin ? 'superadmin' : 'public';
+        state.accessToken = state.isSuperadmin ? token : '';
+        state.defaultStatusFilter = state.isSuperadmin ? SUPERADMIN_STATUS_FILTER : PUBLIC_STATUS_FILTER;
+        configureStatusOptions();
+    };
 
     const buildItemsBounds = (items) => {
         const points = items
@@ -305,17 +365,20 @@
 
     const updateMapStatus = () => {
         if (!state.items.length) {
-            mapStatusEl.textContent = 'Chưa có pin công khai để hiển thị.';
+            mapStatusEl.textContent = state.isSuperadmin
+                ? 'Chưa có pin nào để hiển thị.'
+                : 'Chưa có pin công khai để hiển thị.';
             return;
         }
         const filteredCount = state.filteredItems.length;
         const loadedCount = formatLoadedCount(state.items.length);
+        const scopeLabel = state.isSuperadmin ? 'toàn bộ' : 'công khai';
         if (!filteredCount) {
-            mapStatusEl.textContent = `Đã tải ${loadedCount} tin công khai. Bộ lọc hiện tại chưa khớp tin nào.`;
+            mapStatusEl.textContent = `Đã tải ${loadedCount} tin ${scopeLabel}. Bộ lọc hiện tại chưa khớp tin nào.`;
             return;
         }
         const limitNote = state.datasetHasMore ? ' Dữ liệu đang dùng giới hạn tải an toàn cho map.' : '';
-        mapStatusEl.textContent = ``;
+        mapStatusEl.textContent = `Đang hiển thị ${filteredCount} pin từ ${loadedCount} tin ${scopeLabel}.${limitNote}`;
     };
 
     const applyClientFilters = ({ resetVisibleCount = true } = {}) => {
@@ -333,7 +396,7 @@
 
     const readCachedDataset = () => {
         try {
-            const raw = window.sessionStorage.getItem(SESSION_CACHE_KEY);
+            const raw = window.sessionStorage.getItem(getSessionCacheKey());
             if (!raw) {
                 return null;
             }
@@ -356,7 +419,7 @@
 
     const writeCachedDataset = (payload) => {
         try {
-            window.sessionStorage.setItem(SESSION_CACHE_KEY, JSON.stringify({
+            window.sessionStorage.setItem(getSessionCacheKey(), JSON.stringify({
                 cachedAt: Date.now(),
                 payload
             }));
@@ -378,11 +441,23 @@
 
         const requestToken = ++state.requestToken;
         metaEl.textContent = 'Đang tải...';
-        mapStatusEl.textContent = 'Đang tải toàn bộ pin công khai cho bản đồ...';
+        mapStatusEl.textContent = state.isSuperadmin
+            ? 'Đang tải toàn bộ pin cho superadmin...'
+            : 'Đang tải pin công khai cho bản đồ...';
         try {
-            const payload = await shared.fetchJson(`${shared.API_BASE_URL}/api/housing?limit=${DATASET_LIMIT}`, {
-                headers: { Accept: 'application/json' }
+            const params = new URLSearchParams({
+                limit: String(DATASET_LIMIT),
+                status: state.defaultStatusFilter
             });
+            const headers = { Accept: 'application/json' };
+            if (state.accessToken) {
+                headers.Authorization = `Bearer ${state.accessToken}`;
+            }
+            const requestOptions = { headers };
+            if (state.accessToken) {
+                requestOptions.cache = 'no-store';
+            }
+            const payload = await shared.fetchJson(`${shared.API_BASE_URL}/api/housing?${params.toString()}`, requestOptions);
             if (requestToken !== state.requestToken) {
                 return;
             }
@@ -437,7 +512,7 @@
 
     resetBtn.addEventListener('click', () => {
         form.reset();
-        statusInput.value = DEFAULT_STATUS_FILTER;
+        statusInput.value = state.defaultStatusFilter;
         applyClientFilters();
     });
 
@@ -456,6 +531,13 @@
         });
     });
 
-    setFilterPanelExpanded(false);
-    void loadHousingDataset();
+    const initializePage = async () => {
+        await initializeViewerAccess();
+        setFilterPanelExpanded(false);
+        await loadHousingDataset();
+    };
+
+    window.setTimeout(() => {
+        void initializePage();
+    }, 0);
 })();

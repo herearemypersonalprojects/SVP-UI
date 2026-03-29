@@ -75,6 +75,23 @@
         </p>
     </section>
 
+    <section class="sv-card mb-3 sv-newsletter">
+        <div class="sv-card__hd">
+            <i class="fa-solid fa-house-circle-check text-primary"></i>
+            Nhận Tin Thuê Nhà Mới
+        </div>
+        <div class="p-3">
+            <p class="sv-meta mb-2">Nhập email để nhận thông báo khi có bất kỳ tin cho thuê nhà mới nào trên SVP.</p>
+            <div class="mb-2">
+                <input id="housing-subscribe-email" class="form-control sv-newsletter__input" type="email" placeholder="Email của bạn">
+                <div id="housing-subscribe-email-error" class="small text-danger mt-1 d-none"></div>
+            </div>
+            <button id="housing-subscribe-submit" class="btn btn-primary w-100" type="button">Đăng Ký Nhận Tin</button>
+            <div id="housing-subscribe-status" class="small mt-2" aria-live="polite"></div>
+            <div class="sv-newsletter__note">Bạn sẽ nhận mọi tin cho thuê nhà mới, không cần chọn thêm tiêu chí.</div>
+        </div>
+    </section>
+
     <div class="sv-housing-shell">
         <aside class="sv-housing-panel sv-housing-panel--filters">
             <div class="sv-housing-panel__head">
@@ -207,6 +224,157 @@
 <script src="https://unpkg.com/leaflet.markercluster@1.5.3/dist/leaflet.markercluster.js"></script>
 <script src="config.js"></script>
 <script src="housing-shared.js"></script>
+<script>
+    (function () {
+        const shared = window.SVPHousing;
+        if (!shared) {
+            return;
+        }
+
+        const emailInput = document.getElementById('housing-subscribe-email');
+        const emailErrorEl = document.getElementById('housing-subscribe-email-error');
+        const submitBtn = document.getElementById('housing-subscribe-submit');
+        const statusEl = document.getElementById('housing-subscribe-status');
+        if (!emailInput || !submitBtn || !statusEl) {
+            return;
+        }
+
+        const STORAGE_KEY = 'svp.housing.subscription';
+
+        const decodeBase64Url = (value) => {
+            if (!value) return '';
+            let base = String(value).replace(/-/g, '+').replace(/_/g, '/');
+            const pad = base.length % 4;
+            if (pad) {
+                base += '='.repeat(4 - pad);
+            }
+            return base;
+        };
+
+        const parseJwtPayload = (token) => {
+            if (!token || String(token).split('.').length !== 3) {
+                return null;
+            }
+            try {
+                return JSON.parse(atob(decodeBase64Url(String(token).split('.')[1])));
+            } catch (_) {
+                return null;
+            }
+        };
+
+        const setStatus = (text, type) => {
+            statusEl.textContent = text || '';
+            statusEl.className = 'small mt-2';
+            if (type === 'success') {
+                statusEl.classList.add('text-success');
+            } else if (type === 'error') {
+                statusEl.classList.add('text-danger');
+            }
+        };
+
+        const clearEmailError = () => {
+            emailInput.classList.remove('is-invalid');
+            if (emailErrorEl) {
+                emailErrorEl.textContent = '';
+                emailErrorEl.classList.add('d-none');
+            }
+        };
+
+        const showEmailError = (message) => {
+            emailInput.classList.add('is-invalid');
+            if (emailErrorEl) {
+                emailErrorEl.textContent = message;
+                emailErrorEl.classList.remove('d-none');
+            }
+        };
+
+        const readSavedSubscription = () => {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
+                return parsed && typeof parsed === 'object' ? parsed : null;
+            } catch (_) {
+                return null;
+            }
+        };
+
+        const getKnownSessionEmail = () => {
+            const storedEmail = String(localStorage.getItem('userEmail') || '').trim();
+            if (storedEmail) {
+                return storedEmail;
+            }
+            const token = String(localStorage.getItem('accessToken') || '').trim();
+            const payload = parseJwtPayload(token) || {};
+            return String(payload.email || '').trim();
+        };
+
+        const saved = readSavedSubscription();
+        emailInput.value = String(saved?.email || '').trim() || getKnownSessionEmail();
+
+        emailInput.addEventListener('input', () => {
+            clearEmailError();
+            setStatus('', null);
+        });
+
+        submitBtn.addEventListener('click', async () => {
+            const email = emailInput.value.trim();
+            const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+            if (!email) {
+                showEmailError('Vui lòng nhập email để nhận tin thuê nhà mới.');
+                setStatus('', null);
+                emailInput.focus();
+                return;
+            }
+            if (!emailPattern.test(email)) {
+                showEmailError('Email không đúng định dạng.');
+                setStatus('', null);
+                emailInput.focus();
+                return;
+            }
+
+            clearEmailError();
+            submitBtn.disabled = true;
+            submitBtn.textContent = 'Đang đăng ký...';
+            setStatus('Đang lưu đăng ký nhận tin thuê nhà...', null);
+
+            try {
+                const response = await fetch(`${shared.API_BASE_URL}/housing/subscribe`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json'
+                    },
+                    body: JSON.stringify({ email })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Không thể đăng ký nhận tin lúc này.');
+                }
+
+                try {
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify({
+                        email,
+                        savedAt: new Date().toISOString()
+                    }));
+                } catch (error) {
+                    console.warn('Cannot save housing subscription locally:', error);
+                }
+
+                setStatus('Đăng ký thành công. Bạn sẽ nhận email khi có tin thuê nhà mới.', 'success');
+                submitBtn.textContent = 'Đã đăng ký';
+                setTimeout(() => {
+                    submitBtn.textContent = 'Đăng Ký Nhận Tin';
+                    submitBtn.disabled = false;
+                }, 1200);
+            } catch (error) {
+                console.error('Cannot subscribe to housing notifications:', error);
+                setStatus(error && error.message ? error.message : 'Không thể kết nối máy chủ.', 'error');
+                submitBtn.textContent = 'Đăng Ký Nhận Tin';
+                submitBtn.disabled = false;
+            }
+        });
+    })();
+</script>
 <script src="housing-map.js"></script>
 <script src="avatar-utils.js"></script>
 <script src="auth-topbar.js"></script>

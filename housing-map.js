@@ -315,7 +315,7 @@
             return;
         }
         const limitNote = state.datasetHasMore ? ' Dữ liệu đang dùng giới hạn tải an toàn cho map.' : '';
-        mapStatusEl.textContent = `Đang hiển thị ${filteredCount} pin từ ${loadedCount} tin đã tải. Kéo hoặc zoom chỉ thay đổi góc nhìn, không gọi backend lại.${limitNote}`;
+        mapStatusEl.textContent = ``;
     };
 
     const applyClientFilters = ({ resetVisibleCount = true } = {}) => {

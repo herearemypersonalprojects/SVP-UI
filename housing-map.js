@@ -382,7 +382,9 @@
         const limitNote = state.isSuperadmin && state.datasetHasMore
             ? ' Dữ liệu đang dùng giới hạn tải an toàn cho map.'
             : '';
-        mapStatusEl.textContent = `Đang hiển thị ${filteredCount} pin từ ${loadedCount} tin ${scopeLabel}.${limitNote}`;
+        if (state.isSuperadmin) {
+            mapStatusEl.textContent = `Đang hiển thị ${filteredCount} pin từ ${loadedCount} tin ${scopeLabel}.${limitNote}`;
+        };
     };
 
     const applyClientFilters = ({ resetVisibleCount = true } = {}) => {

@@ -347,6 +347,53 @@
             <div class="sv-meta mt-3">Lưu ý: dữ liệu dựa trên IP, có thể bị ảnh hưởng bởi proxy/VPN.</div>
         </div>
     </div>
+
+    <div class="sv-card mb-3 d-none" id="engagement-card">
+        <div class="sv-card__hd"><i class="fa-solid fa-stopwatch me-2 text-primary"></i>Thời gian ở lại và quay lại của user đã đăng nhập</div>
+        <div class="p-3">
+            <div class="sv-admin-grid mb-3">
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">Tổng thời gian ở lại</div>
+                    <div class="sv-kpi__value" id="engagement-total-stay">--</div>
+                </div>
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">TB mỗi phiên</div>
+                    <div class="sv-kpi__value" id="engagement-avg-stay">--</div>
+                </div>
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">TG user đã login</div>
+                    <div class="sv-kpi__value" id="engagement-logged-stay">--</div>
+                </div>
+                <div class="sv-kpi">
+                    <div class="sv-kpi__label">Lượt quay lại user login</div>
+                    <div class="sv-kpi__value" id="engagement-return-visits">--</div>
+                </div>
+            </div>
+
+            <div class="sv-soft-card">
+                <div class="fw-bold mb-2">Top user đã login theo mức độ quay lại</div>
+                <div class="table-responsive">
+                    <table class="sv-admin-table">
+                        <thead>
+                            <tr>
+                                <th>Thành viên</th>
+                                <th>Email</th>
+                                <th>Phiên</th>
+                                <th>Quay lại</th>
+                                <th>Tổng ở lại</th>
+                                <th>TB / phiên</th>
+                                <th>Page views</th>
+                                <th>Lần cuối</th>
+                            </tr>
+                        </thead>
+                        <tbody id="engagement-user-list"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="sv-meta mt-3">Thời gian ở lại được tính theo session hoạt động của tab/site, không dùng heartbeat liên tục để tránh tăng chi phí backend.</div>
+        </div>
+    </div>
 </main>
 
 <footer class="container py-4">
@@ -408,6 +455,12 @@
         const ipList = document.getElementById('ip-list');
         const visitsIpSection = document.getElementById('visits-ip-section');
         const visitsUniqueCard = document.getElementById('kpi-unique-card');
+        const engagementCard = document.getElementById('engagement-card');
+        const engagementTotalStayEl = document.getElementById('engagement-total-stay');
+        const engagementAvgStayEl = document.getElementById('engagement-avg-stay');
+        const engagementLoggedStayEl = document.getElementById('engagement-logged-stay');
+        const engagementReturnVisitsEl = document.getElementById('engagement-return-visits');
+        const engagementUserList = document.getElementById('engagement-user-list');
         const roleIdentity = document.getElementById('role-identity');
         const roleSelect = document.getElementById('role-select');
         const roleApplyBtn = document.getElementById('role-apply');
@@ -471,6 +524,22 @@
                 return String(value);
             }
             return `${pad2(date.getDate())}/${pad2(date.getMonth() + 1)}/${date.getFullYear()} ${pad2(date.getHours())}:${pad2(date.getMinutes())}`;
+        };
+        const formatDuration = (value) => {
+            const totalSeconds = Math.max(0, Number(value || 0));
+            if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) {
+                return '0s';
+            }
+            const days = Math.floor(totalSeconds / 86400);
+            const hours = Math.floor((totalSeconds % 86400) / 3600);
+            const minutes = Math.floor((totalSeconds % 3600) / 60);
+            const seconds = Math.floor(totalSeconds % 60);
+            const parts = [];
+            if (days) parts.push(`${days}d`);
+            if (hours) parts.push(`${hours}h`);
+            if (minutes) parts.push(`${minutes}m`);
+            if (!parts.length || (!days && !hours && seconds)) parts.push(`${seconds}s`);
+            return parts.slice(0, 3).join(' ');
         };
         const parseVisitDay = (value) => {
             const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || '').trim());
@@ -861,6 +930,60 @@
             } else {
                 ipList.innerHTML = '<tr><td colspan="3" class="sv-admin-muted">Chưa có dữ liệu.</td></tr>';
             }
+
+            renderEngagement(payload);
+        };
+
+        const renderEngagement = (payload) => {
+            if (!engagementCard) {
+                return;
+            }
+            if (!canViewIpDetails()) {
+                engagementCard.classList.add('d-none');
+                return;
+            }
+            engagementCard.classList.remove('d-none');
+            const summary = payload?.engagementSummary || null;
+            const users = Array.isArray(payload?.loggedInUsers) ? payload.loggedInUsers : [];
+
+            if (engagementTotalStayEl) {
+                engagementTotalStayEl.textContent = formatDuration(summary?.totalEngagedSeconds || 0);
+            }
+            if (engagementAvgStayEl) {
+                engagementAvgStayEl.textContent = formatDuration(summary?.avgEngagedSeconds || 0);
+            }
+            if (engagementLoggedStayEl) {
+                engagementLoggedStayEl.textContent = formatDuration(summary?.loggedInEngagedSeconds || 0);
+            }
+            if (engagementReturnVisitsEl) {
+                engagementReturnVisitsEl.textContent = Number(summary?.loggedInReturnVisits || 0).toLocaleString('vi-VN');
+            }
+            if (!engagementUserList) {
+                return;
+            }
+            if (!users.length) {
+                engagementUserList.innerHTML = '<tr><td colspan="8" class="sv-admin-muted">Chưa có dữ liệu user đã đăng nhập.</td></tr>';
+                return;
+            }
+            engagementUserList.innerHTML = users.map((item) => {
+                const displayName = item?.displayName || item?.nickname || `User #${item?.authUserId || '--'}`;
+                const nickname = item?.nickname ? `@${item.nickname}` : '';
+                return `
+                    <tr>
+                        <td>
+                            <div><strong>${escapeHtml(displayName)}</strong></div>
+                            ${nickname ? `<div class="sv-admin-muted">${escapeHtml(nickname)}</div>` : ''}
+                        </td>
+                        <td>${escapeHtml(item?.email || '')}</td>
+                        <td>${Number(item?.sessionCount || 0).toLocaleString('vi-VN')}</td>
+                        <td>${Number(item?.returnVisits || 0).toLocaleString('vi-VN')}</td>
+                        <td>${escapeHtml(formatDuration(item?.totalEngagedSeconds || 0))}</td>
+                        <td>${escapeHtml(formatDuration(item?.avgEngagedSeconds || 0))}</td>
+                        <td>${Number(item?.totalPageViews || 0).toLocaleString('vi-VN')}</td>
+                        <td>${escapeHtml(formatVisitDateTime(item?.lastSeenAt || ''))}</td>
+                    </tr>
+                `;
+            }).join('');
         };
 
         const escapeHtml = (value) => String(value ?? '')
@@ -1249,6 +1372,10 @@
                 setStatus('Bạn cần đăng nhập bằng tài khoản admin.', true);
                 setOverviewStatus('Bạn cần đăng nhập bằng tài khoản admin.', true);
                 if (roleCard) roleCard.style.display = 'none';
+                if (engagementCard) {
+                    engagementCard.style.display = 'none';
+                    engagementCard.classList.add('d-none');
+                }
                 return;
             }
             const resolveRole = async () => {
@@ -1277,6 +1404,10 @@
             if (visitsCard) {
                 visitsCard.style.display = role === 'SUPERADMIN' || role === 'ADMIN' ? '' : 'none';
             }
+            if (engagementCard) {
+                engagementCard.style.display = role === 'SUPERADMIN' ? '' : 'none';
+                engagementCard.classList.toggle('d-none', role !== 'SUPERADMIN');
+            }
             if (visitsIpSection) {
                 visitsIpSection.style.display = canViewIpDetails() ? '' : 'none';
             }
@@ -1286,6 +1417,10 @@
             if (role !== 'SUPERADMIN' && role !== 'ADMIN') {
                 setStatus('Bạn không có quyền truy cập dashboard.', true);
                 setOverviewStatus('Bạn không có quyền truy cập dashboard.', true);
+                if (engagementCard) {
+                    engagementCard.style.display = 'none';
+                    engagementCard.classList.add('d-none');
+                }
                 return;
             }
             if (role === 'SUPERADMIN' || role === 'ADMIN') {

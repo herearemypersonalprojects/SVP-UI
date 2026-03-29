@@ -21,6 +21,10 @@
     const NON_CRITICAL_IDLE_TIMEOUT_MS = 1500;
     const INBOX_POLL_INTERVAL_MS = 30 * 1000;
     const INBOX_REFRESH_DEBOUNCE_MS = 250;
+    const VISIT_SESSION_STORAGE_KEY = "svp.visit.session.v1";
+    const VISIT_SESSION_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
+    const VISIT_SESSION_MAX_ENGAGED_MS = 12 * 60 * 60 * 1000;
+    const VISIT_SESSION_MIN_FLUSH_INTERVAL_MS = 1000;
     const authBox = document.querySelector(".sv-auth");
     const guestAuthMarkup = authBox ? authBox.innerHTML : "";
     let refreshTimer = null;
@@ -30,6 +34,10 @@
     let unreadRefreshInFlight = null;
     let unreadCount = 0;
     let inboxLifecycleBound = false;
+    let visitLifecycleBound = false;
+    let visitSessionState = null;
+    let visitVisibleSinceMs = 0;
+    let lastVisitSessionFlushAt = 0;
 
     const scheduleNonCritical = (task, timeoutMs = NON_CRITICAL_IDLE_TIMEOUT_MS) => {
         if (typeof task !== "function") {
@@ -696,24 +704,251 @@
         }
     };
 
+    const createTrackingId = (prefix) => {
+        const value = (window.crypto && typeof window.crypto.randomUUID === "function")
+            ? window.crypto.randomUUID()
+            : (Date.now() + "-" + Math.random().toString(36).slice(2));
+        return prefix ? `${prefix}-${value}` : value;
+    };
+
+    const toIsoString = (value) => {
+        const date = new Date(value);
+        return Number.isNaN(date.getTime()) ? new Date().toISOString() : date.toISOString();
+    };
+
+    const readVisitSessionState = () => {
+        try {
+            const raw = window.sessionStorage.getItem(VISIT_SESSION_STORAGE_KEY);
+            if (!raw) {
+                return null;
+            }
+            const parsed = JSON.parse(raw);
+            if (!parsed || typeof parsed !== "object") {
+                return null;
+            }
+            const sessionId = asText(parsed.sessionId);
+            const sessionStartedAt = asText(parsed.sessionStartedAt);
+            if (!sessionId || !sessionStartedAt) {
+                return null;
+            }
+            const lastActivityAtMs = Number(parsed.lastActivityAtMs || 0);
+            const engagedMs = Number(parsed.engagedMs || 0);
+            const pageViewCount = Number(parsed.pageViewCount || 0);
+            return {
+                sessionId,
+                sessionStartedAt,
+                lastSeenAt: asText(parsed.lastSeenAt) || sessionStartedAt,
+                lastActivityAtMs: Number.isFinite(lastActivityAtMs) && lastActivityAtMs > 0 ? lastActivityAtMs : Date.now(),
+                engagedMs: Number.isFinite(engagedMs) && engagedMs > 0 ? engagedMs : 0,
+                pageViewCount: Number.isFinite(pageViewCount) && pageViewCount > 0 ? Math.floor(pageViewCount) : 0,
+                firstPath: asText(parsed.firstPath),
+                lastPath: asText(parsed.lastPath),
+                authUserId: resolveAuthUserId(parsed.authUserId)
+            };
+        } catch (_) {
+            return null;
+        }
+    };
+
+    const writeVisitSessionState = (state) => {
+        if (!state || typeof state !== "object") {
+            return;
+        }
+        try {
+            window.sessionStorage.setItem(VISIT_SESSION_STORAGE_KEY, JSON.stringify(state));
+        } catch (_) {
+        }
+    };
+
+    const resolveTrackingAuthUserId = () => {
+        const payload = parseJwtPayload(localStorage.getItem("accessToken") || "") || {};
+        return resolveAuthUserId(
+            payload.sub,
+            payload.authUserId,
+            payload.auth_user_id,
+            localStorage.getItem("authUserId")
+        );
+    };
+
+    const buildNewVisitSessionState = (path, authUserId, nowMs) => ({
+        sessionId: createTrackingId("session"),
+        sessionStartedAt: toIsoString(nowMs),
+        lastSeenAt: toIsoString(nowMs),
+        lastActivityAtMs: nowMs,
+        engagedMs: 0,
+        pageViewCount: 0,
+        firstPath: path,
+        lastPath: path,
+        authUserId: authUserId || ""
+    });
+
+    const shouldRotateVisitSession = (state, authUserId, nowMs) => {
+        if (!state || !state.sessionId || !state.sessionStartedAt) {
+            return true;
+        }
+        const lastActivityAtMs = Number(state.lastActivityAtMs || 0);
+        if (!Number.isFinite(lastActivityAtMs) || lastActivityAtMs <= 0) {
+            return true;
+        }
+        if ((nowMs - lastActivityAtMs) > VISIT_SESSION_IDLE_TIMEOUT_MS) {
+            return true;
+        }
+        return asText(state.authUserId) !== asText(authUserId);
+    };
+
+    const ensureVisitSessionState = (path) => {
+        const nowMs = Date.now();
+        const authUserId = resolveTrackingAuthUserId();
+        let state = readVisitSessionState();
+        if (shouldRotateVisitSession(state, authUserId, nowMs)) {
+            state = buildNewVisitSessionState(path, authUserId, nowMs);
+        }
+        state.lastSeenAt = toIsoString(nowMs);
+        state.lastActivityAtMs = nowMs;
+        state.lastPath = path;
+        state.firstPath = state.firstPath || path;
+        if (authUserId) {
+            state.authUserId = authUserId;
+        }
+        state.pageViewCount = Math.max(0, Number(state.pageViewCount || 0)) + 1;
+        visitSessionState = state;
+        visitVisibleSinceMs = document.visibilityState === "hidden" ? 0 : nowMs;
+        writeVisitSessionState(state);
+        return state;
+    };
+
+    const buildTrackingHeaders = () => {
+        const headers = { "Content-Type": "application/json" };
+        const accessToken = localStorage.getItem("accessToken") || "";
+        if (accessToken) {
+            headers.Authorization = `Bearer ${accessToken}`;
+        }
+        return headers;
+    };
+
+    const postTracking = (url, payload) => {
+        fetch(url, {
+            method: "POST",
+            headers: buildTrackingHeaders(),
+            body: JSON.stringify(payload),
+            keepalive: true
+        }).catch(() => {});
+    };
+
+    const persistVisitSessionState = (nowMs) => {
+        if (!visitSessionState) {
+            return;
+        }
+        visitSessionState.lastSeenAt = toIsoString(nowMs);
+        visitSessionState.lastActivityAtMs = nowMs;
+        const authUserId = resolveTrackingAuthUserId();
+        if (authUserId) {
+            visitSessionState.authUserId = authUserId;
+        }
+        writeVisitSessionState(visitSessionState);
+    };
+
+    const accumulateVisitEngagement = (nowMs = Date.now()) => {
+        if (!visitSessionState) {
+            return;
+        }
+        if (visitVisibleSinceMs > 0) {
+            const delta = Math.max(0, nowMs - visitVisibleSinceMs);
+            visitSessionState.engagedMs = Math.min(
+                VISIT_SESSION_MAX_ENGAGED_MS,
+                Math.max(0, Number(visitSessionState.engagedMs || 0)) + delta
+            );
+            visitVisibleSinceMs = 0;
+        }
+        persistVisitSessionState(nowMs);
+    };
+
+    const buildVisitSessionPayload = () => {
+        if (!visitSessionState || !visitSessionState.sessionId) {
+            return null;
+        }
+        const authUserId = resolveAuthUserId(visitSessionState.authUserId);
+        return {
+            sessionId: visitSessionState.sessionId,
+            authUserId: authUserId ? Number(authUserId) : undefined,
+            sessionStartedAt: visitSessionState.sessionStartedAt,
+            lastSeenAt: visitSessionState.lastSeenAt,
+            engagedSeconds: Math.max(0, Math.round(Number(visitSessionState.engagedMs || 0) / 1000)),
+            pageViewCount: Math.max(0, Number(visitSessionState.pageViewCount || 0)),
+            firstPath: visitSessionState.firstPath || "",
+            lastPath: visitSessionState.lastPath || ""
+        };
+    };
+
+    const flushVisitSession = () => {
+        try {
+            const nowMs = Date.now();
+            if (!visitSessionState || (nowMs - lastVisitSessionFlushAt) < VISIT_SESSION_MIN_FLUSH_INTERVAL_MS) {
+                return;
+            }
+            accumulateVisitEngagement(nowMs);
+            const payload = buildVisitSessionPayload();
+            if (!payload) {
+                return;
+            }
+            lastVisitSessionFlushAt = nowMs;
+            postTracking(API_BASE_URL + "/stats/visit-session", payload);
+        } catch (_) {
+        }
+    };
+
+    const resumeVisitSession = () => {
+        const nowMs = Date.now();
+        const path = window.location.pathname + window.location.search;
+        const authUserId = resolveTrackingAuthUserId();
+        if (shouldRotateVisitSession(visitSessionState, authUserId, nowMs)) {
+            visitSessionState = buildNewVisitSessionState(path, authUserId, nowMs);
+            visitSessionState.pageViewCount = 1;
+            writeVisitSessionState(visitSessionState);
+        }
+        if (!visitSessionState) {
+            return;
+        }
+        if (visitVisibleSinceMs <= 0) {
+            visitVisibleSinceMs = nowMs;
+        }
+        persistVisitSessionState(nowMs);
+    };
+
+    const bindVisitTrackingLifecycle = () => {
+        if (visitLifecycleBound) {
+            return;
+        }
+        visitLifecycleBound = true;
+        document.addEventListener("visibilitychange", () => {
+            if (document.visibilityState === "hidden") {
+                flushVisitSession();
+            } else {
+                resumeVisitSession();
+            }
+        });
+        window.addEventListener("pagehide", () => {
+            flushVisitSession();
+        });
+        window.addEventListener("beforeunload", () => {
+            flushVisitSession();
+        });
+        window.addEventListener("focus", () => {
+            resumeVisitSession();
+        });
+    };
+
     const trackVisit = () => {
         try {
             const path = window.location.pathname + window.location.search;
-            const clientVisitId = (window.crypto && typeof window.crypto.randomUUID === "function")
-                ? window.crypto.randomUUID()
-                : ("visit-" + Date.now() + "-" + Math.random().toString(36).slice(2));
+            ensureVisitSessionState(path);
             const payload = {
                 path,
                 referrer: document.referrer || "",
-                clientVisitId
+                clientVisitId: createTrackingId("visit"),
+                ...(buildVisitSessionPayload() || {})
             };
-            const url = API_BASE_URL + "/stats/visit";
-            fetch(url, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(payload),
-                keepalive: true
-            }).catch(() => {});
+            postTracking(API_BASE_URL + "/stats/visit", payload);
         } catch (_) {
         }
     };
@@ -734,5 +969,6 @@
         })();
     }, 1200);
 
+    bindVisitTrackingLifecycle();
     trackVisit();
 })();

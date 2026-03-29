@@ -254,6 +254,33 @@
         </div>
 
         <div class="col-lg-4">
+            <section class="sv-card mb-3 sv-newsletter">
+                <div class="sv-card__hd">
+                    <i class="fa-solid fa-bell text-primary"></i>
+                    Nhận Tin Thảo Luận
+                </div>
+                <div class="p-3">
+                    <p class="sv-meta mb-2">Nhập email để nhận chủ đề mới và bình luận mới theo chuyên mục bạn quan tâm.</p>
+                    <div class="mb-2">
+                        <input id="forum-subscribe-email" class="form-control sv-newsletter__input" type="email" placeholder="Email của bạn" />
+                        <div id="forum-subscribe-email-error" class="small text-danger mt-1 d-none"></div>
+                    </div>
+                    <div id="forum-subscribe-categories" class="sv-newsletter__categories" aria-hidden="true">
+                        <div class="sv-newsletter__head">
+                            <span class="sv-meta" style="font-weight:700;">Chọn chuyên mục:</span>
+                            <div class="d-flex flex-wrap justify-content-end gap-2">
+                                <button id="forum-subscribe-use-filter" class="sv-newsletter__all" type="button">Dùng bộ lọc đang xem</button>
+                                <button id="forum-subscribe-toggle" class="sv-newsletter__all" type="button">Chọn tất cả</button>
+                            </div>
+                        </div>
+                        <div id="forum-subscribe-category-grid" class="sv-newsletter__grid"></div>
+                    </div>
+                    <button id="forum-subscribe-submit" class="btn btn-primary w-100 mt-3" type="button">Đăng Ký Nhận Tin</button>
+                    <div id="forum-subscribe-status" class="small mt-2" aria-live="polite"></div>
+                    <div class="sv-newsletter__note">Để trống chuyên mục nếu bạn muốn nhận tất cả thảo luận trên diễn đàn.</div>
+                </div>
+            </section>
+
             <section class="sv-card mb-3">
                 <div class="sv-card__hd"><i class="fa-solid fa-chart-simple me-2 text-primary"></i>Tổng quan diễn đàn</div>
                 <div class="p-3">
@@ -328,6 +355,14 @@
         const kpisEl = document.getElementById('forum-kpis');
         const trendingEl = document.getElementById('forum-trending');
         const categoryStatsEl = document.getElementById('forum-category-stats');
+        const subscribeEmailEl = document.getElementById('forum-subscribe-email');
+        const subscribeEmailErrorEl = document.getElementById('forum-subscribe-email-error');
+        const subscribeCategoriesEl = document.getElementById('forum-subscribe-categories');
+        const subscribeCategoryGridEl = document.getElementById('forum-subscribe-category-grid');
+        const subscribeToggleBtn = document.getElementById('forum-subscribe-toggle');
+        const subscribeUseFilterBtn = document.getElementById('forum-subscribe-use-filter');
+        const subscribeSubmitBtn = document.getElementById('forum-subscribe-submit');
+        const subscribeStatusEl = document.getElementById('forum-subscribe-status');
 
         if (!listEl || !paginationEl || !countEl || !searchEl || !categoryEl || !sortEl || !kpisEl || !trendingEl || !categoryStatsEl) {
             return;
@@ -335,6 +370,7 @@
 
         const params = new URLSearchParams(window.location.search);
         const VALID_SORTS = new Set(['newest', 'oldest', 'popular', 'title']);
+        const NEWSLETTER_STORAGE_KEY = 'svp.newsletter.subscription';
         const state = {
             threads: [],
             sourceLabel: 'API',
@@ -362,6 +398,27 @@
             const textarea = document.createElement('textarea');
             textarea.innerHTML = String(value || '');
             return textarea.value;
+        };
+
+        const decodeBase64Url = (value) => {
+            if (!value) return '';
+            let base = String(value).replace(/-/g, '+').replace(/_/g, '/');
+            const pad = base.length % 4;
+            if (pad) {
+                base += '='.repeat(4 - pad);
+            }
+            return base;
+        };
+
+        const parseJwtPayload = (token) => {
+            if (!token || String(token).split('.').length !== 3) {
+                return null;
+            }
+            try {
+                return JSON.parse(atob(decodeBase64Url(String(token).split('.')[1])));
+            } catch (_) {
+                return null;
+            }
         };
 
         const stripHtml = (html) => {
@@ -495,6 +552,21 @@
                     options.push(`<option value="${id}">${id}. ${escapeHtml(label)}</option>`);
                 });
             categoryEl.innerHTML = options.join('');
+        };
+
+        const buildSubscriptionCategoryGrid = () => {
+            if (!subscribeCategoryGridEl) {
+                return;
+            }
+            subscribeCategoryGridEl.innerHTML = Array.from(CATEGORY_MAP.entries())
+                .sort((a, b) => a[0] - b[0])
+                .map(([id, label]) => `
+                    <label class="sv-newsletter__item">
+                        <input class="form-check-input" type="checkbox" data-category-id="${id}">
+                        ${escapeHtml(label)}
+                    </label>
+                `)
+                .join('');
         };
 
         const FORUM_FETCH_LIMIT = 20;
@@ -859,6 +931,230 @@
             });
         };
 
+        const getSubscriptionCheckboxes = () => subscribeCategoryGridEl
+            ? Array.from(subscribeCategoryGridEl.querySelectorAll('input[type="checkbox"]'))
+            : [];
+
+        const setSubscriptionStatus = (text, type) => {
+            if (!subscribeStatusEl) return;
+            subscribeStatusEl.textContent = text || '';
+            subscribeStatusEl.className = 'small mt-2';
+            if (type === 'success') {
+                subscribeStatusEl.classList.add('text-success');
+            } else if (type === 'error') {
+                subscribeStatusEl.classList.add('text-danger');
+            }
+        };
+
+        const clearSubscriptionEmailError = () => {
+            if (!subscribeEmailEl) return;
+            subscribeEmailEl.classList.remove('is-invalid');
+            if (subscribeEmailErrorEl) {
+                subscribeEmailErrorEl.textContent = '';
+                subscribeEmailErrorEl.classList.add('d-none');
+            }
+        };
+
+        const showSubscriptionEmailError = (message) => {
+            if (!subscribeEmailEl) return;
+            subscribeEmailEl.classList.add('is-invalid');
+            if (subscribeEmailErrorEl) {
+                subscribeEmailErrorEl.textContent = message;
+                subscribeEmailErrorEl.classList.remove('d-none');
+            }
+        };
+
+        const getSelectedSubscriptionCategoryIds = () => getSubscriptionCheckboxes()
+            .filter((checkbox) => checkbox.checked)
+            .map((checkbox) => Number(checkbox.getAttribute('data-category-id')))
+            .filter((value) => Number.isInteger(value) && value > 0);
+
+        const setSelectedSubscriptionCategoryIds = (ids) => {
+            const selected = new Set(Array.isArray(ids) ? ids.map((value) => Number(value)) : []);
+            getSubscriptionCheckboxes().forEach((checkbox) => {
+                const categoryId = Number(checkbox.getAttribute('data-category-id'));
+                checkbox.checked = selected.has(categoryId);
+            });
+        };
+
+        const toggleSubscriptionCategories = () => {
+            if (!subscribeEmailEl || !subscribeCategoriesEl) {
+                return;
+            }
+            const isOpen = subscribeEmailEl.value.trim().length > 0;
+            subscribeCategoriesEl.classList.toggle('is-open', isOpen);
+            subscribeCategoriesEl.setAttribute('aria-hidden', (!isOpen).toString());
+        };
+
+        const updateSubscriptionToggleLabel = () => {
+            if (!subscribeToggleBtn) return;
+            const checkboxes = getSubscriptionCheckboxes();
+            const allChecked = checkboxes.length > 0 && checkboxes.every((checkbox) => checkbox.checked);
+            subscribeToggleBtn.textContent = allChecked ? 'Bỏ chọn tất cả' : 'Chọn tất cả';
+        };
+
+        const readSavedSubscription = () => {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(NEWSLETTER_STORAGE_KEY) || 'null');
+                return parsed && typeof parsed === 'object' ? parsed : null;
+            } catch (_) {
+                return null;
+            }
+        };
+
+        const getKnownSessionEmail = () => {
+            const storedEmail = String(localStorage.getItem('userEmail') || '').trim();
+            if (storedEmail) {
+                return storedEmail;
+            }
+            const token = String(localStorage.getItem('accessToken') || '').trim();
+            const payload = parseJwtPayload(token) || {};
+            return String(payload.email || '').trim();
+        };
+
+        const applyCurrentForumFilterToSubscription = () => {
+            if (state.category !== 'all') {
+                const categoryId = Number(state.category);
+                if (CATEGORY_MAP.has(categoryId)) {
+                    setSelectedSubscriptionCategoryIds([categoryId]);
+                    updateSubscriptionToggleLabel();
+                    return;
+                }
+            }
+            setSelectedSubscriptionCategoryIds([]);
+            updateSubscriptionToggleLabel();
+        };
+
+        const initSubscriptionForm = () => {
+            if (!subscribeEmailEl || !subscribeCategoriesEl || !subscribeCategoryGridEl || !subscribeSubmitBtn) {
+                return;
+            }
+
+            buildSubscriptionCategoryGrid();
+            const saved = readSavedSubscription();
+            const savedEmail = String(saved?.email || '').trim();
+            const sessionEmail = getKnownSessionEmail();
+            subscribeEmailEl.value = savedEmail || sessionEmail;
+
+            if (saved && Array.isArray(saved.categoryIds)) {
+                setSelectedSubscriptionCategoryIds(saved.categoryIds);
+            } else {
+                applyCurrentForumFilterToSubscription();
+            }
+
+            toggleSubscriptionCategories();
+            updateSubscriptionToggleLabel();
+
+            getSubscriptionCheckboxes().forEach((checkbox) => {
+                checkbox.addEventListener('change', () => {
+                    updateSubscriptionToggleLabel();
+                    setSubscriptionStatus('', null);
+                });
+            });
+
+            if (subscribeToggleBtn) {
+                subscribeToggleBtn.addEventListener('click', () => {
+                    const checkboxes = getSubscriptionCheckboxes();
+                    const allChecked = checkboxes.length > 0 && checkboxes.every((checkbox) => checkbox.checked);
+                    checkboxes.forEach((checkbox) => {
+                        checkbox.checked = !allChecked;
+                    });
+                    updateSubscriptionToggleLabel();
+                    setSubscriptionStatus('', null);
+                });
+            }
+
+            if (subscribeUseFilterBtn) {
+                subscribeUseFilterBtn.addEventListener('click', () => {
+                    applyCurrentForumFilterToSubscription();
+                    if (state.category !== 'all') {
+                        setSubscriptionStatus(`Đã chọn ${CATEGORY_MAP.get(Number(state.category))}.`, null);
+                    } else {
+                        setSubscriptionStatus('Bộ lọc hiện tại đang là tất cả chuyên mục.', null);
+                    }
+                });
+            }
+
+            subscribeEmailEl.addEventListener('input', () => {
+                toggleSubscriptionCategories();
+                clearSubscriptionEmailError();
+                setSubscriptionStatus('', null);
+            });
+
+            subscribeSubmitBtn.addEventListener('click', async () => {
+                const email = subscribeEmailEl.value.trim();
+                const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+                if (!email) {
+                    showSubscriptionEmailError('Vui lòng nhập email để nhận tin thảo luận.');
+                    setSubscriptionStatus('', null);
+                    subscribeEmailEl.focus();
+                    return;
+                }
+                if (!emailPattern.test(email)) {
+                    showSubscriptionEmailError('Email không đúng định dạng.');
+                    setSubscriptionStatus('', null);
+                    subscribeEmailEl.focus();
+                    return;
+                }
+
+                clearSubscriptionEmailError();
+
+                const selectedIds = getSelectedSubscriptionCategoryIds();
+                const savedPayload = {
+                    email,
+                    categoryIds: selectedIds,
+                    savedAt: new Date().toISOString()
+                };
+
+                subscribeSubmitBtn.disabled = true;
+                subscribeSubmitBtn.textContent = 'Đang đăng ký...';
+                setSubscriptionStatus('Đang lưu đăng ký nhận tin thảo luận...', null);
+
+                try {
+                    const response = await fetch(`${API_BASE_URL}/newsletter/subscribe`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            Accept: 'application/json'
+                        },
+                        body: JSON.stringify({
+                            email,
+                            categoryIds: selectedIds
+                        })
+                    });
+                    const payload = await response.json().catch(() => ({}));
+                    if (!response.ok) {
+                        throw new Error(payload.error || 'Không thể đăng ký nhận tin lúc này.');
+                    }
+
+                    try {
+                        localStorage.setItem(NEWSLETTER_STORAGE_KEY, JSON.stringify(savedPayload));
+                    } catch (error) {
+                        console.warn('Cannot save discussion subscription locally:', error);
+                    }
+
+                    setSubscriptionStatus(
+                        'Đăng ký thành công. Bạn sẽ nhận email khi có chủ đề mới hoặc bình luận mới phù hợp.',
+                        'success'
+                    );
+                    subscribeSubmitBtn.textContent = 'Đã đăng ký';
+                    setTimeout(() => {
+                        subscribeSubmitBtn.textContent = 'Đăng Ký Nhận Tin';
+                        subscribeSubmitBtn.disabled = false;
+                    }, 1200);
+                } catch (error) {
+                    console.error('Cannot subscribe to discussion notifications:', error);
+                    setSubscriptionStatus(
+                        error && error.message ? error.message : 'Không thể kết nối máy chủ.',
+                        'error'
+                    );
+                    subscribeSubmitBtn.textContent = 'Đăng Ký Nhận Tin';
+                    subscribeSubmitBtn.disabled = false;
+                }
+            });
+        };
+
         const loadMoreFromApi = async () => {
             if (!hasMoreFromApi) return;
             try {
@@ -880,6 +1176,7 @@
             buildCategorySelect();
             syncControls();
             bindEvents();
+            initSubscriptionForm();
             const cachedPayload = readForumCache();
             const hasCachedThreads = restoreForumCache(cachedPayload);
             if (hasCachedThreads) {

@@ -389,10 +389,10 @@
             ? ' Dữ liệu đang dùng giới hạn tải an toàn cho map.'
             : '';
         if (state.isSuperadmin) {
-            setMapStatus(`Đang hiển thị ${filteredCount} pin từ ${loadedCount} tin ${scopeLabel}.${limitNote}`);
+            setMapStatus(`Đang hiển thị ${filteredCount} tin`);
             return;
         }
-        setMapStatus(`Đang hiển thị ${filteredCount} pin từ ${loadedCount} tin ${scopeLabel}.`);
+        setMapStatus(`Đang hiển thị ${filteredCount} pin.`);
     };
 
     const applyClientFilters = ({ resetVisibleCount = true } = {}) => {

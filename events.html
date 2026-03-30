@@ -184,6 +184,40 @@
         .sv-events-pagination__action {
             min-width: 170px;
         }
+        .sv-events-toolbar {
+            gap: .75rem;
+        }
+        .sv-events-toolbar__group {
+            display: flex;
+            align-items: center;
+            flex: 1 1 auto;
+            flex-wrap: nowrap;
+            gap: .75rem;
+            min-width: 0;
+        }
+        .sv-events-filter {
+            flex: 0 1 220px;
+            min-width: 180px;
+            width: auto;
+        }
+        .sv-events-filter .form-select {
+            width: 100%;
+            min-width: 0;
+            font: inherit;
+            font-weight: inherit;
+            line-height: inherit;
+            color: inherit;
+        }
+        @media (max-width: 767.98px) {
+            .sv-events-toolbar__group {
+                flex-wrap: wrap;
+            }
+            .sv-events-filter {
+                flex: 1 1 100%;
+                min-width: 0;
+                width: 100%;
+            }
+        }
         @media (max-width: 575.98px) {
             .sv-events-list li {
                 align-items: stretch;
@@ -203,6 +237,11 @@
             }
             .sv-event-item__meta .sv-event-item__link {
                 margin-left: 0;
+            }
+            .sv-events-filter,
+            .sv-events-filter .form-select {
+                width: 100%;
+                min-width: 0;
             }
         }
     </style>
@@ -270,8 +309,15 @@
     </div>
 
     <div class="sv-card mb-3">
-        <div class="sv-card__hd d-flex flex-wrap justify-content-between align-items-center gap-2">
-            <span><i class="fa-solid fa-calendar-days me-2 text-primary"></i>Tất cả sự kiện</span>
+        <div class="sv-card__hd d-flex flex-wrap justify-content-between align-items-center sv-events-toolbar">
+            <div class="sv-events-toolbar__group">
+                <div class="sv-events-filter">
+                    <label class="visually-hidden" for="sv-events-type-filter">Lọc theo loại sự kiện</label>
+                    <select id="sv-events-type-filter" class="form-select form-select-sm" aria-label="Lọc theo loại sự kiện">
+                        <option value="">Tất cả sự kiện</option>
+                    </select>
+                </div>
+            </div>
             <a class="btn btn-sm btn-primary" href="create_new_event.html">
                 <i class="fa-solid fa-plus me-1"></i>Tạo sự kiện mới
             </a>
@@ -346,6 +392,7 @@
         const subscribeToggleBtn = document.getElementById('events-subscribe-toggle');
         const subscribeSubmitBtn = document.getElementById('events-subscribe-submit');
         const subscribeStatusEl = document.getElementById('events-subscribe-status');
+        const filterTypeSelectEl = document.getElementById('sv-events-type-filter');
         if (!upcomingList || !pastList || !upcomingPagination || !upcomingPageInfo || !upcomingLoadMoreBtn || !pastPagination || !pastPageInfo || !pastLoadMoreBtn) {
             return;
         }
@@ -353,6 +400,7 @@
         let upcomingEvents = [];
         let pastEvents = [];
         let eventTypes = [];
+        let selectedEventTypeFilterKey = '';
         let upcomingVisibleCount = EVENTS_PAGE_SIZE;
         let pastVisibleCount = EVENTS_PAGE_SIZE;
 
@@ -512,6 +560,68 @@
             return Number.isInteger(numeric) && numeric > 0 ? numeric : 0;
         };
 
+        const normalizeEventTypeKey = (value) => String(value || '')
+            .trim()
+            .replace(/\s+/g, ' ')
+            .toLocaleLowerCase('vi-VN');
+
+        const getEventTypeName = (event) => {
+            const directName = String(event?.eventTypeName || event?.event_type_name || '').trim();
+            if (directName) {
+                return directName;
+            }
+            const eventTypeId = toPositiveInteger(event?.eventTypeId || event?.event_type_id);
+            if (!eventTypeId) {
+                return '';
+            }
+            const matchedType = eventTypes.find((item) => item.eventTypeId === eventTypeId);
+            return matchedType ? String(matchedType.name || '').trim() : '';
+        };
+
+        const renderEventTypeFilterOptions = () => {
+            if (!filterTypeSelectEl) {
+                return;
+            }
+            const optionMap = new Map();
+            const registerOption = (label) => {
+                const safeLabel = String(label || '').trim();
+                if (!safeLabel) {
+                    return;
+                }
+                const key = normalizeEventTypeKey(safeLabel);
+                if (!key || optionMap.has(key)) {
+                    return;
+                }
+                optionMap.set(key, safeLabel);
+            };
+
+            eventTypes.forEach((item) => registerOption(item?.name));
+            upcomingEvents.forEach((event) => registerOption(getEventTypeName(event)));
+            pastEvents.forEach((event) => registerOption(getEventTypeName(event)));
+
+            const optionMarkup = ['<option value="">Tất cả sự kiện</option>'];
+            Array.from(optionMap.entries())
+                .sort((left, right) => left[1].localeCompare(right[1], 'vi'))
+                .forEach(([key, label]) => {
+                    optionMarkup.push(`<option value="${escapeHtml(key)}">${escapeHtml(label)}</option>`);
+                });
+
+            if (selectedEventTypeFilterKey && !optionMap.has(selectedEventTypeFilterKey)) {
+                selectedEventTypeFilterKey = '';
+            }
+            filterTypeSelectEl.innerHTML = optionMarkup.join('');
+            filterTypeSelectEl.value = selectedEventTypeFilterKey;
+        };
+
+        const getFilteredEvents = (items) => {
+            if (!selectedEventTypeFilterKey) {
+                return Array.isArray(items) ? items : [];
+            }
+            return (Array.isArray(items) ? items : []).filter((event) => {
+                return normalizeEventTypeKey(getEventTypeName(event)) === selectedEventTypeFilterKey;
+            });
+        };
+
         const getSubscriptionCheckboxes = () => subscribeTypeGridEl
             ? Array.from(subscribeTypeGridEl.querySelectorAll('input[type="checkbox"]'))
             : [];
@@ -647,6 +757,7 @@
                 eventTypes = [];
             }
             renderEventTypeGrid(eventTypes);
+            renderEventTypeFilterOptions();
         };
 
         const initSubscriptionForm = () => {
@@ -868,10 +979,13 @@
             return safeVisibleCount;
         };
         const renderUpcomingEvents = () => {
+            const filteredUpcomingEvents = getFilteredEvents(upcomingEvents);
             upcomingVisibleCount = renderPaginatedList({
-                items: upcomingEvents,
+                items: filteredUpcomingEvents,
                 isPast: false,
-                emptyMessage: 'Chưa có sự kiện sắp diễn ra.',
+                emptyMessage: selectedEventTypeFilterKey
+                    ? 'Chưa có sự kiện sắp diễn ra thuộc loại đã chọn.'
+                    : 'Chưa có sự kiện sắp diễn ra.',
                 listEl: upcomingList,
                 paginationEl: upcomingPagination,
                 loadMoreBtn: upcomingLoadMoreBtn,
@@ -880,10 +994,13 @@
             });
         };
         const renderPastEvents = () => {
+            const filteredPastEvents = getFilteredEvents(pastEvents);
             pastVisibleCount = renderPaginatedList({
-                items: pastEvents,
+                items: filteredPastEvents,
                 isPast: true,
-                emptyMessage: 'Chưa có sự kiện đã qua.',
+                emptyMessage: selectedEventTypeFilterKey
+                    ? 'Chưa có sự kiện đã qua thuộc loại đã chọn.'
+                    : 'Chưa có sự kiện đã qua.',
                 listEl: pastList,
                 paginationEl: pastPagination,
                 loadMoreBtn: pastLoadMoreBtn,
@@ -925,6 +1042,7 @@
                     .sort((left, right) => getEventEndTime(right) - getEventEndTime(left));
                 upcomingVisibleCount = EVENTS_PAGE_SIZE;
                 pastVisibleCount = EVENTS_PAGE_SIZE;
+                renderEventTypeFilterOptions();
                 renderUpcomingEvents();
                 renderPastEvents();
             } catch (error) {
@@ -939,15 +1057,25 @@
             }
         };
 
+        if (filterTypeSelectEl) {
+            filterTypeSelectEl.addEventListener('change', () => {
+                selectedEventTypeFilterKey = normalizeEventTypeKey(filterTypeSelectEl.value);
+                upcomingVisibleCount = EVENTS_PAGE_SIZE;
+                pastVisibleCount = EVENTS_PAGE_SIZE;
+                renderUpcomingEvents();
+                renderPastEvents();
+            });
+        }
+
         upcomingLoadMoreBtn.addEventListener('click', () => {
-            if (upcomingVisibleCount >= upcomingEvents.length) {
+            if (upcomingVisibleCount >= getFilteredEvents(upcomingEvents).length) {
                 return;
             }
             upcomingVisibleCount += EVENTS_PAGE_SIZE;
             renderUpcomingEvents();
         });
         pastLoadMoreBtn.addEventListener('click', () => {
-            if (pastVisibleCount >= pastEvents.length) {
+            if (pastVisibleCount >= getFilteredEvents(pastEvents).length) {
                 return;
             }
             pastVisibleCount += EVENTS_PAGE_SIZE;

@@ -19,23 +19,23 @@ function extractEventsInlineScript() {
         .replace(/\s*<\/script>$/, '');
 }
 
-function makeEventsFetch(items) {
+function makeEventsFetch(items, eventTypes = []) {
     return async (targetUrl) => {
         const url = new URL(String(targetUrl));
         if (url.pathname.endsWith('/events')) {
             return makeJsonResponse({ items });
         }
         if (url.pathname.endsWith('/event-types')) {
-            return makeJsonResponse({ items: [] });
+            return makeJsonResponse({ items: eventTypes });
         }
         throw new Error(`Unexpected fetch: ${targetUrl}`);
     };
 }
 
-async function loadEventsPage(items) {
+async function loadEventsPage(items, options = {}) {
     const dom = createDomFromHtml('events.html', {
         url: 'https://svpforum.fr/events.html',
-        fetch: makeEventsFetch(items)
+        fetch: makeEventsFetch(items, options.eventTypes)
     });
     const { window } = dom;
     window.SVP_API_BASE_URL = 'https://api.svp.test';
@@ -115,4 +115,47 @@ test('events page omits repetitive status copy from event cards', async () => {
     assert.match(cardText, /Xem chi tiết/);
     assert.ok(dom.window.document.querySelector('#sv-events-upcoming-list .sv-event-item__meta .sv-event-item__link'));
     assert.equal(dom.window.document.querySelector('#sv-events-upcoming-list .sv-event-item__footer'), null);
+});
+
+test('events page filters listed events by selected event type', async () => {
+    const dom = await loadEventsPage([
+        {
+            eventId: 74,
+            title: 'Hoi thao du hoc',
+            coverImageUrl: 'https://cdn.svp.test/events/study.jpg',
+            eventTime: '2026-05-18T09:00:00Z',
+            address: 'Paris 13e',
+            price: 0,
+            online: false,
+            eventTypeName: 'Giao lưu'
+        },
+        {
+            eventId: 75,
+            title: 'Dem nhac ngoai troi',
+            coverImageUrl: 'https://cdn.svp.test/events/music.jpg',
+            eventTime: '2026-05-19T20:00:00Z',
+            address: 'Paris 11e',
+            price: 15,
+            online: false,
+            eventTypeName: 'Âm nhạc'
+        }
+    ], {
+        eventTypes: [
+            { eventTypeId: 1, name: 'Giao lưu' },
+            { eventTypeId: 2, name: 'Âm nhạc' }
+        ]
+    });
+
+    const filterSelect = dom.window.document.getElementById('sv-events-type-filter');
+    assert.ok(filterSelect);
+    assert.match(filterSelect.textContent || '', /Tất cả sự kiện/);
+    assert.match(filterSelect.textContent || '', /Âm nhạc/);
+
+    filterSelect.value = 'âm nhạc';
+    filterSelect.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+
+    const upcomingListText = dom.window.document.getElementById('sv-events-upcoming-list').textContent || '';
+    assert.match(upcomingListText, /Dem nhac ngoai troi/);
+    assert.doesNotMatch(upcomingListText, /Hoi thao du hoc/);
+    assert.match(dom.window.document.getElementById('sv-events-upcoming-page-info').textContent || '', /1 \/ 1 sự kiện/);
 });

@@ -26,9 +26,15 @@
     const SESSION_CACHE_KEY_PREFIX = 'svp-housing-map-dataset-v3';
     const SESSION_CACHE_TTL_MS = 5 * 60 * 1000;
 
-    if (!form || !listEl || !metaEl || !mapStatusEl || !mapEl || !applyBtn || !resetBtn || !loadMoreBtn || !loadMoreWrap || !filterToggleBtn || !filterControlsEl || !statusInput || !typeInput || !transportTypeInput) {
+    if (!form || !listEl || !metaEl || !mapEl || !applyBtn || !resetBtn || !loadMoreBtn || !loadMoreWrap || !filterToggleBtn || !filterControlsEl || !statusInput || !typeInput || !transportTypeInput) {
         return;
     }
+
+    const setMapStatus = (message) => {
+        if (mapStatusEl) {
+            mapStatusEl.textContent = message || '';
+        }
+    };
 
     shared.PROPERTY_TYPES.forEach((item) => {
         const option = document.createElement('option');
@@ -367,24 +373,26 @@
 
     const updateMapStatus = () => {
         if (!state.items.length) {
-            mapStatusEl.textContent = state.isSuperadmin
+            setMapStatus(state.isSuperadmin
                 ? 'Chưa có pin nào để hiển thị.'
-                : 'Chưa có pin công khai để hiển thị.';
+                : 'Chưa có pin công khai để hiển thị.');
             return;
         }
         const filteredCount = state.filteredItems.length;
         const loadedCount = formatLoadedCount(state.items.length);
         const scopeLabel = state.isSuperadmin ? 'toàn bộ' : 'công khai';
         if (!filteredCount) {
-            mapStatusEl.textContent = `Đã tải ${loadedCount} tin ${scopeLabel}. Bộ lọc hiện tại chưa khớp tin nào.`;
+            setMapStatus(`Đã tải ${loadedCount} tin ${scopeLabel}. Bộ lọc hiện tại chưa khớp tin nào.`);
             return;
         }
         const limitNote = state.isSuperadmin && state.datasetHasMore
             ? ' Dữ liệu đang dùng giới hạn tải an toàn cho map.'
             : '';
         if (state.isSuperadmin) {
-            mapStatusEl.textContent = `Đang hiển thị ${filteredCount} pin từ ${loadedCount} tin ${scopeLabel}.${limitNote}`;
-        };
+            setMapStatus(`Đang hiển thị ${filteredCount} pin từ ${loadedCount} tin ${scopeLabel}.${limitNote}`);
+            return;
+        }
+        setMapStatus(`Đang hiển thị ${filteredCount} pin từ ${loadedCount} tin ${scopeLabel}.`);
     };
 
     const applyClientFilters = ({ resetVisibleCount = true } = {}) => {
@@ -442,16 +450,16 @@
             applyClientFilters();
             fitMapToInitialPins();
             if (state.isSuperadmin) {
-                mapStatusEl.textContent = `Đang hiển thị ${state.filteredItems.length} pin từ ${formatLoadedCount(state.items.length)} tin đã tải. Dữ liệu lấy từ bộ nhớ phiên nên không cần gọi backend lại.`;
+                setMapStatus(`Đang hiển thị ${state.filteredItems.length} pin từ ${formatLoadedCount(state.items.length)} tin đã tải. Dữ liệu lấy từ bộ nhớ phiên nên không cần gọi backend lại.`);
             }
             return;
         }
 
         const requestToken = ++state.requestToken;
         metaEl.textContent = 'Đang tải...';
-        mapStatusEl.textContent = state.isSuperadmin
+        setMapStatus(state.isSuperadmin
             ? 'Đang tải toàn bộ pin cho superadmin...'
-            : 'Đang tải pin công khai cho bản đồ...';
+            : 'Đang tải pin công khai cho bản đồ...');
         try {
             const params = new URLSearchParams({
                 limit: String(DATASET_LIMIT),
@@ -484,9 +492,9 @@
             renderList();
             renderMarkers();
             metaEl.textContent = 'Không tải được dữ liệu';
-            mapStatusEl.textContent = state.isSuperadmin && error && error.message
+            setMapStatus(state.isSuperadmin && error && error.message
                 ? error.message
-                : 'Không thể tải danh sách nhà.';
+                : 'Không thể tải danh sách nhà.');
         }
     };
 

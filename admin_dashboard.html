@@ -357,28 +357,69 @@
     </div>
 
     <div class="sv-card mb-3 d-none" id="engagement-card">
-        <div class="sv-card__hd"><i class="fa-solid fa-stopwatch me-2 text-primary"></i>Thời gian ở lại và quay lại của user đã đăng nhập</div>
+        <div class="sv-card__hd"><i class="fa-solid fa-stopwatch me-2 text-primary"></i>Thời gian hoạt động: visitor và user đã đăng nhập</div>
         <div class="p-3">
-            <div class="sv-admin-grid mb-3">
-                <div class="sv-kpi">
-                    <div class="sv-kpi__label">Tổng thời gian ở lại</div>
-                    <div class="sv-kpi__value" id="engagement-total-stay">--</div>
+            <div class="sv-soft-card mb-3">
+                <div class="fw-bold mb-3">Báo cáo visitor</div>
+                <div class="sv-admin-grid mb-3">
+                    <div class="sv-kpi">
+                        <div class="sv-kpi__label">Tổng thời gian hoạt động</div>
+                        <div class="sv-kpi__value" id="engagement-visitor-total-stay">--</div>
+                    </div>
+                    <div class="sv-kpi">
+                        <div class="sv-kpi__label">TB mỗi phiên</div>
+                        <div class="sv-kpi__value" id="engagement-visitor-avg-stay">--</div>
+                    </div>
+                    <div class="sv-kpi">
+                        <div class="sv-kpi__label">Tổng phiên</div>
+                        <div class="sv-kpi__value" id="engagement-visitor-total-sessions">--</div>
+                    </div>
+                    <div class="sv-kpi">
+                        <div class="sv-kpi__label">Tổng page views</div>
+                        <div class="sv-kpi__value" id="engagement-visitor-page-views">--</div>
+                    </div>
+                    <div class="sv-kpi">
+                        <div class="sv-kpi__label">Giờ cao điểm</div>
+                        <div class="sv-kpi__value" id="engagement-visitor-peak-hour">--</div>
+                    </div>
                 </div>
-                <div class="sv-kpi">
-                    <div class="sv-kpi__label">TB mỗi phiên</div>
-                    <div class="sv-kpi__value" id="engagement-avg-stay">--</div>
-                </div>
-                <div class="sv-kpi">
-                    <div class="sv-kpi__label">TG user đã login</div>
-                    <div class="sv-kpi__value" id="engagement-logged-stay">--</div>
-                </div>
-                <div class="sv-kpi">
-                    <div class="sv-kpi__label">Lượt quay lại user login</div>
-                    <div class="sv-kpi__value" id="engagement-return-visits">--</div>
-                </div>
+
+                <div class="fw-bold mb-2">Top khung giờ visitor hoạt động</div>
+                <div id="engagement-visitor-hour-list" class="sv-list-rows"></div>
             </div>
 
             <div class="sv-soft-card">
+                <div class="fw-bold mb-3">Báo cáo user đã đăng nhập</div>
+                <div class="sv-admin-grid mb-3">
+                    <div class="sv-kpi">
+                        <div class="sv-kpi__label">Tổng thời gian hoạt động</div>
+                        <div class="sv-kpi__value" id="engagement-logged-total-stay">--</div>
+                    </div>
+                    <div class="sv-kpi">
+                        <div class="sv-kpi__label">TB mỗi phiên</div>
+                        <div class="sv-kpi__value" id="engagement-logged-avg-stay">--</div>
+                    </div>
+                    <div class="sv-kpi">
+                        <div class="sv-kpi__label">Tổng phiên</div>
+                        <div class="sv-kpi__value" id="engagement-logged-total-sessions">--</div>
+                    </div>
+                    <div class="sv-kpi">
+                        <div class="sv-kpi__label">Số user hoạt động</div>
+                        <div class="sv-kpi__value" id="engagement-logged-user-count">--</div>
+                    </div>
+                    <div class="sv-kpi">
+                        <div class="sv-kpi__label">Lượt quay lại</div>
+                        <div class="sv-kpi__value" id="engagement-logged-return-visits">--</div>
+                    </div>
+                    <div class="sv-kpi">
+                        <div class="sv-kpi__label">Giờ cao điểm</div>
+                        <div class="sv-kpi__value" id="engagement-logged-peak-hour">--</div>
+                    </div>
+                </div>
+
+                <div class="fw-bold mb-2">Top khung giờ user đã đăng nhập hoạt động</div>
+                <div id="engagement-logged-hour-list" class="sv-list-rows mb-3"></div>
+
                 <div class="fw-bold mb-2">Top user đã login theo mức độ quay lại</div>
                 <div class="table-responsive">
                     <table class="sv-admin-table">
@@ -399,7 +440,7 @@
                 </div>
             </div>
 
-            <div class="sv-meta mt-3">Thời gian ở lại được tính theo session hoạt động của tab/site, không dùng heartbeat liên tục để tránh tăng chi phí backend.</div>
+            <div class="sv-meta mt-3">Visitor được tổng hợp từ toàn bộ truy cập theo giờ Paris. User đã đăng nhập được tổng hợp riêng từ session đã xác thực để tách rõ 2 báo cáo.</div>
         </div>
     </div>
 </main>
@@ -466,10 +507,19 @@
         const visitsIpSection = document.getElementById('visits-ip-section');
         const visitsUniqueCard = document.getElementById('kpi-unique-card');
         const engagementCard = document.getElementById('engagement-card');
-        const engagementTotalStayEl = document.getElementById('engagement-total-stay');
-        const engagementAvgStayEl = document.getElementById('engagement-avg-stay');
-        const engagementLoggedStayEl = document.getElementById('engagement-logged-stay');
-        const engagementReturnVisitsEl = document.getElementById('engagement-return-visits');
+        const engagementVisitorTotalStayEl = document.getElementById('engagement-visitor-total-stay');
+        const engagementVisitorAvgStayEl = document.getElementById('engagement-visitor-avg-stay');
+        const engagementVisitorTotalSessionsEl = document.getElementById('engagement-visitor-total-sessions');
+        const engagementVisitorPageViewsEl = document.getElementById('engagement-visitor-page-views');
+        const engagementVisitorPeakHourEl = document.getElementById('engagement-visitor-peak-hour');
+        const engagementVisitorHourList = document.getElementById('engagement-visitor-hour-list');
+        const engagementLoggedTotalStayEl = document.getElementById('engagement-logged-total-stay');
+        const engagementLoggedAvgStayEl = document.getElementById('engagement-logged-avg-stay');
+        const engagementLoggedTotalSessionsEl = document.getElementById('engagement-logged-total-sessions');
+        const engagementLoggedUserCountEl = document.getElementById('engagement-logged-user-count');
+        const engagementLoggedReturnVisitsEl = document.getElementById('engagement-logged-return-visits');
+        const engagementLoggedPeakHourEl = document.getElementById('engagement-logged-peak-hour');
+        const engagementLoggedHourList = document.getElementById('engagement-logged-hour-list');
         const engagementUserList = document.getElementById('engagement-user-list');
         const roleIdentity = document.getElementById('role-identity');
         const roleSelect = document.getElementById('role-select');
@@ -550,6 +600,14 @@
             if (minutes) parts.push(`${minutes}m`);
             if (!parts.length || (!days && !hours && seconds)) parts.push(`${seconds}s`);
             return parts.slice(0, 3).join(' ');
+        };
+        const formatHourRange = (value) => {
+            const hour = Number(value);
+            if (!Number.isFinite(hour)) {
+                return '--';
+            }
+            const safeHour = Math.max(0, Math.min(23, Math.trunc(hour)));
+            return `${pad2(safeHour)}:00 - ${pad2((safeHour + 1) % 24)}:00`;
         };
         const parseVisitDay = (value) => {
             const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(value || '').trim());
@@ -842,6 +900,52 @@
             `;
         };
 
+        const renderActivityHourRow = (item, max, labels) => {
+            const visits = Number(item?.visits || 0);
+            const uniqueIps = Number(item?.uniqueIps || 0);
+            const pct = max > 0 ? Math.round((visits / max) * 100) : 0;
+            const primaryLabel = labels?.primary || 'lượt';
+            const secondaryLabel = labels?.secondary || 'IP';
+            return `
+                <div class="sv-list-row">
+                    <div>
+                        <div class="fw-semibold">${escapeHtml(formatHourRange(item?.hour))}</div>
+                        <div class="sv-admin-muted">${visits.toLocaleString('vi-VN')} ${escapeHtml(primaryLabel)} • ${uniqueIps.toLocaleString('vi-VN')} ${escapeHtml(secondaryLabel)}</div>
+                    </div>
+                    <div style="width:45%;">
+                        <div class="sv-bar"><div class="sv-bar__fill" style="width:${pct}%;"></div></div>
+                    </div>
+                </div>
+            `;
+        };
+
+        const normalizeActivityHours = (items) => (Array.isArray(items) ? items : [])
+            .map((item) => ({
+                hour: Number(item?.hour),
+                visits: Number(item?.visits || 0),
+                uniqueIps: Number(item?.uniqueIps || 0)
+            }))
+            .filter((item) => Number.isFinite(item.hour) && item.hour >= 0 && item.hour <= 23 && item.visits > 0)
+            .sort((left, right) => {
+                if (right.visits !== left.visits) {
+                    return right.visits - left.visits;
+                }
+                if (right.uniqueIps !== left.uniqueIps) {
+                    return right.uniqueIps - left.uniqueIps;
+                }
+                return left.hour - right.hour;
+            });
+
+        const renderActivityHourList = (target, items, emptyText, labels) => {
+            if (!target) {
+                return;
+            }
+            const maxVisits = items.reduce((max, item) => Math.max(max, Number(item?.visits || 0)), 0);
+            target.innerHTML = items.length
+                ? items.slice(0, 6).map((item) => renderActivityHourRow(item, maxVisits, labels)).join('')
+                : `<div class="sv-admin-muted">${escapeHtml(emptyText)}</div>`;
+        };
+
         const buildDailyVisitTable = (items, days) => {
             const headers = ['Ngày', 'Lượt truy cập', 'Unique IP'];
             const byDay = new Map();
@@ -965,19 +1069,57 @@
             engagementCard.classList.remove('d-none');
             const summary = payload?.engagementSummary || null;
             const users = Array.isArray(payload?.loggedInUsers) ? payload.loggedInUsers : [];
+            const visitorActivityHours = normalizeActivityHours(payload?.activityHours);
+            const loggedInActivityHours = normalizeActivityHours(payload?.loggedInActivityHours);
+            const visitorPeakHour = visitorActivityHours[0] || null;
+            const loggedInPeakHour = loggedInActivityHours[0] || null;
 
-            if (engagementTotalStayEl) {
-                engagementTotalStayEl.textContent = formatDuration(summary?.totalEngagedSeconds || 0);
+            if (engagementVisitorTotalStayEl) {
+                engagementVisitorTotalStayEl.textContent = formatDuration(summary?.totalEngagedSeconds || 0);
             }
-            if (engagementAvgStayEl) {
-                engagementAvgStayEl.textContent = formatDuration(summary?.avgEngagedSeconds || 0);
+            if (engagementVisitorAvgStayEl) {
+                engagementVisitorAvgStayEl.textContent = formatDuration(summary?.avgEngagedSeconds || 0);
             }
-            if (engagementLoggedStayEl) {
-                engagementLoggedStayEl.textContent = formatDuration(summary?.loggedInEngagedSeconds || 0);
+            if (engagementVisitorTotalSessionsEl) {
+                engagementVisitorTotalSessionsEl.textContent = Number(summary?.totalSessions || 0).toLocaleString('vi-VN');
             }
-            if (engagementReturnVisitsEl) {
-                engagementReturnVisitsEl.textContent = Number(summary?.loggedInReturnVisits || 0).toLocaleString('vi-VN');
+            if (engagementVisitorPageViewsEl) {
+                engagementVisitorPageViewsEl.textContent = Number(summary?.totalPageViews || 0).toLocaleString('vi-VN');
             }
+            if (engagementVisitorPeakHourEl) {
+                engagementVisitorPeakHourEl.textContent = visitorPeakHour ? formatHourRange(visitorPeakHour.hour) : '--';
+            }
+            renderActivityHourList(
+                engagementVisitorHourList,
+                visitorActivityHours,
+                'Chưa có dữ liệu khung giờ visitor hoạt động.',
+                { primary: 'lượt', secondary: 'IP' }
+            );
+
+            if (engagementLoggedTotalStayEl) {
+                engagementLoggedTotalStayEl.textContent = formatDuration(summary?.loggedInEngagedSeconds || 0);
+            }
+            if (engagementLoggedAvgStayEl) {
+                engagementLoggedAvgStayEl.textContent = formatDuration(summary?.avgLoggedInEngagedSeconds || 0);
+            }
+            if (engagementLoggedTotalSessionsEl) {
+                engagementLoggedTotalSessionsEl.textContent = Number(summary?.loggedInSessions || 0).toLocaleString('vi-VN');
+            }
+            if (engagementLoggedUserCountEl) {
+                engagementLoggedUserCountEl.textContent = Number(summary?.loggedInUsers || 0).toLocaleString('vi-VN');
+            }
+            if (engagementLoggedReturnVisitsEl) {
+                engagementLoggedReturnVisitsEl.textContent = Number(summary?.loggedInReturnVisits || 0).toLocaleString('vi-VN');
+            }
+            if (engagementLoggedPeakHourEl) {
+                engagementLoggedPeakHourEl.textContent = loggedInPeakHour ? formatHourRange(loggedInPeakHour.hour) : '--';
+            }
+            renderActivityHourList(
+                engagementLoggedHourList,
+                loggedInActivityHours,
+                'Chưa có dữ liệu khung giờ user đã đăng nhập hoạt động.',
+                { primary: 'phiên', secondary: 'user' }
+            );
             if (!engagementUserList) {
                 return;
             }

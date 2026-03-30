@@ -786,6 +786,42 @@
             return dt ? dt.getTime() : NaN;
         };
 
+        const addMinutes = (value, minutes) => {
+            const dt = value instanceof Date ? new Date(value.getTime()) : parseDatetimeValue(value);
+            if (!dt || !Number.isFinite(minutes)) return null;
+            dt.setMinutes(dt.getMinutes() + Number(minutes));
+            return dt;
+        };
+
+        const getMinimumEndDatetimeValue = () => {
+            const minEndDate = addMinutes(startDatetimeInput.value, 1);
+            return minEndDate ? toDatetimeLocalValue(minEndDate) : '';
+        };
+
+        const syncEndDatetimeConstraint = (options) => {
+            const autofillIfNeeded = Boolean(options && options.autofillIfNeeded);
+            const minEndValue = getMinimumEndDatetimeValue();
+            endDatetimeInput.min = minEndValue;
+
+            if (!hasVisibleEndDatetime() || !minEndValue) {
+                return false;
+            }
+
+            const currentEndTimestamp = toTimestamp(endDatetimeInput.value);
+            const minimumEndTimestamp = toTimestamp(minEndValue);
+            if (!Number.isFinite(minimumEndTimestamp)) {
+                return false;
+            }
+
+            const needsUpdate = !Number.isFinite(currentEndTimestamp) || currentEndTimestamp < minimumEndTimestamp;
+            if (!autofillIfNeeded || !needsUpdate) {
+                return false;
+            }
+
+            endDatetimeInput.value = minEndValue;
+            return true;
+        };
+
         const hasVisibleEndDatetime = () => !endDatetimeWrap.classList.contains('d-none');
 
         const setEndDatetimeVisibility = (visible, options) => {
@@ -800,6 +836,7 @@
             if (!visible && !preserveValue) {
                 endDatetimeInput.value = '';
             }
+            syncEndDatetimeConstraint({ autofillIfNeeded: visible });
             if (visible && shouldFocus) {
                 endDatetimeInput.focus();
             }
@@ -1164,6 +1201,22 @@
             el.addEventListener('input', preview);
             el.addEventListener('change', preview);
         });
+        startDatetimeInput.addEventListener('input', () => {
+            syncEndDatetimeConstraint({ autofillIfNeeded: true });
+        });
+        startDatetimeInput.addEventListener('change', () => {
+            syncEndDatetimeConstraint({ autofillIfNeeded: true });
+        });
+        endDatetimeInput.addEventListener('focus', () => {
+            if (syncEndDatetimeConstraint({ autofillIfNeeded: true })) {
+                preview();
+            }
+        });
+        endDatetimeInput.addEventListener('click', () => {
+            if (syncEndDatetimeConstraint({ autofillIfNeeded: true })) {
+                preview();
+            }
+        });
         typeInput.addEventListener('change', () => {
             currentEventTypeSelection = getSelectedEventType();
         });
@@ -1314,8 +1367,8 @@
             if (title.length < 5) return setFeedback('Tên sự kiện cần tối thiểu 5 ký tự.', 'error');
             if (!startTime) return setFeedback('Ngày giờ bắt đầu sự kiện không hợp lệ.', 'error');
             if (hasVisibleEndDatetime() && !endTime) return setFeedback('Ngày giờ kết thúc sự kiện không hợp lệ.', 'error');
-            if (endTime && toTimestamp(endTime) < toTimestamp(startTime)) {
-                return setFeedback('Ngày giờ kết thúc phải sau hoặc bằng ngày giờ bắt đầu.', 'error');
+            if (endTime && toTimestamp(endTime) <= toTimestamp(startTime)) {
+                return setFeedback('Ngày giờ kết thúc phải lớn hơn ngày giờ bắt đầu.', 'error');
             }
             if (descriptionText.length < 10) {
                 setFeedback('Mô tả sự kiện cần tối thiểu 10 ký tự.', 'error');

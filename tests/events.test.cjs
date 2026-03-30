@@ -25,6 +25,9 @@ function makeEventsFetch(items) {
         if (url.pathname.endsWith('/events')) {
             return makeJsonResponse({ items });
         }
+        if (url.pathname.endsWith('/event-types')) {
+            return makeJsonResponse({ items: [] });
+        }
         throw new Error(`Unexpected fetch: ${targetUrl}`);
     };
 }
@@ -88,4 +91,28 @@ test('events page falls back to the first image URL found in event content when 
     assert.ok(image);
     assert.match(image.getAttribute('src') || '', /outdoor-night-cover\.webp/);
     assert.match(dom.window.document.getElementById('sv-events-upcoming-list').textContent, /Dem nhac ngoai troi/);
+});
+
+test('events page omits repetitive status copy from event cards', async () => {
+    const dom = await loadEventsPage([
+        {
+            eventId: 73,
+            title: 'Hoi cho viec lam',
+            coverImageUrl: 'https://cdn.svp.test/events/career-fair.jpg',
+            eventTime: '2026-05-15T09:00:00Z',
+            address: 'Paris 5e',
+            price: 0,
+            online: false,
+            eventTypeName: 'Huong nghiep'
+        }
+    ]);
+
+    const cardText = dom.window.document.getElementById('sv-events-upcoming-list').textContent || '';
+    assert.doesNotMatch(cardText, /Sự kiện sắp diễn ra/i);
+    assert.doesNotMatch(cardText, /Hãy mở ra để xem chi tiết/i);
+    assert.doesNotMatch(cardText, /Lưu lại để xem chi tiết/i);
+    assert.match(cardText, /Miễn phí/);
+    assert.match(cardText, /Xem chi tiết/);
+    assert.ok(dom.window.document.querySelector('#sv-events-upcoming-list .sv-event-item__meta .sv-event-item__link'));
+    assert.equal(dom.window.document.querySelector('#sv-events-upcoming-list .sv-event-item__footer'), null);
 });

@@ -491,6 +491,13 @@
     background: #f7fbff;
 }
 
+#housing-form .btn,
+#housing-form .form-check-input,
+.sv-housing-geocode-results button {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+}
+
 .sv-housing-note {
     font-size: .88rem;
     color: var(--housing-muted);
@@ -589,6 +596,12 @@
     .sv-housing-filters {
         grid-template-columns: 1fr;
     }
+    #housing-geocode-btn,
+    #housing-submit-btn,
+    #housing-add-transit-btn,
+    .sv-housing-geocode-results button {
+        min-height: 44px;
+    }
     .sv-housing-section--detail-hero .sv-housing-section__body {
         padding: 1rem;
     }
@@ -602,5 +615,21 @@
     .sv-housing-map {
         min-height: 420px;
         height: 58vh;
+    }
+}
+
+@media (max-width: 575px) {
+    #housing-form .input-group {
+        display: grid;
+        gap: .65rem;
+    }
+    #housing-form .input-group > .form-control,
+    #housing-form .input-group > .btn {
+        width: 100%;
+        border-radius: 12px !important;
+    }
+    #housing-form .d-flex.flex-wrap.gap-2.align-items-center > .btn {
+        width: 100%;
+        justify-content: center;
     }
 }

@@ -78,6 +78,76 @@
         geocodeSuggestions: []
     };
     let descriptionComposer = null;
+    let isGeocoding = false;
+    let isSubmitting = false;
+    const TOUCH_ACTIVATION_DEDUP_MS = 900;
+    const touchActivationTimes = new WeakMap();
+
+    const markTouchActivation = (element) => {
+        if (element && typeof element === 'object') {
+            touchActivationTimes.set(element, Date.now());
+        }
+    };
+
+    const shouldIgnoreSyntheticClick = (element) => {
+        if (!element || typeof element !== 'object') {
+            return false;
+        }
+        const activatedAt = Number(touchActivationTimes.get(element) || 0);
+        return activatedAt > 0 && (Date.now() - activatedAt) < TOUCH_ACTIVATION_DEDUP_MS;
+    };
+
+    const blurActiveInteractiveElement = () => {
+        const active = document.activeElement;
+        if (!(active instanceof HTMLElement) || active === document.body) {
+            return;
+        }
+        const tagName = String(active.tagName || '').toLowerCase();
+        const isTextLikeControl = tagName === 'input'
+            || tagName === 'textarea'
+            || tagName === 'select'
+            || tagName === 'iframe'
+            || active.isContentEditable
+            || active.getAttribute('role') === 'textbox';
+        if (!isTextLikeControl || typeof active.blur !== 'function') {
+            return;
+        }
+        active.blur();
+    };
+
+    const bindTouchFallback = (element, handler) => {
+        if (!(element instanceof HTMLElement) || typeof handler !== 'function') {
+            return;
+        }
+        element.addEventListener('touchend', (event) => {
+            markTouchActivation(element);
+            blurActiveInteractiveElement();
+            if (event.cancelable) {
+                event.preventDefault();
+            }
+            handler(event, element);
+        }, { passive: false });
+    };
+
+    const bindDelegatedTouchFallback = (container, selector, handler) => {
+        if (!(container instanceof HTMLElement) || typeof handler !== 'function') {
+            return;
+        }
+        container.addEventListener('touchend', (event) => {
+            const activator = event.target instanceof Element
+                ? event.target.closest(selector)
+                : null;
+            if (!(activator instanceof HTMLElement)) {
+                return;
+            }
+            markTouchActivation(activator);
+            blurActiveInteractiveElement();
+            if (event.cancelable) {
+                event.preventDefault();
+            }
+            handler(event, activator);
+        }, { passive: false });
+    };
 
     const setFeedback = (text, type) => {
         feedbackEl.textContent = text || '';
@@ -225,6 +295,14 @@
             return;
         }
         descriptionEl.focus();
+    };
+
+    const requestFormSubmit = () => {
+        if (typeof form.requestSubmit === 'function') {
+            form.requestSubmit(submitBtn);
+            return;
+        }
+        form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
     };
 
     const applyCoordinates = (lat, lng, keepZoom) => {
@@ -398,6 +476,12 @@
         updatePreview();
     };
 
+    const refreshMapLayout = () => {
+        if (map && typeof map.invalidateSize === 'function') {
+            window.requestAnimationFrame(() => map.invalidateSize());
+        }
+    };
+
     const loadTransitSuggestions = shared.debounce(async (query) => {
         const value = String(query || '').trim();
         if (value.length < 2) {
@@ -502,12 +586,17 @@
         updatePreview();
     };
 
-    geocodeBtn.addEventListener('click', async () => {
+    const handleGeocodeRequest = async () => {
+        if (isGeocoding) {
+            return;
+        }
         const query = addressTextEl.value.trim();
         if (!query) {
             setGeocodeStatus('Nhập khu vực gần đúng trước khi tìm.', 'error');
             return;
         }
+        isGeocoding = true;
+        geocodeBtn.disabled = true;
         try {
             await ensureAuth();
             setGeocodeStatus('Đang tìm khu vực trên bản đồ...', 'info');
@@ -537,12 +626,21 @@
             setGeocodeStatus(payload.cached ? 'Đã tải gợi ý từ cache geocode.' : 'Đã tải gợi ý geocode.', 'success');
         } catch (error) {
             setGeocodeStatus(error && error.message ? error.message : 'Không thể geocode khu vực.', 'error');
+        } finally {
+            isGeocoding = false;
+            geocodeBtn.disabled = false;
         }
-    });
+    };
 
-    geocodeResultsEl.addEventListener('click', (event) => {
-        const button = event.target.closest('button[data-suggestion-index]');
+    const handleGeocodeSuggestionSelect = (event, sourceButton) => {
+        const button = sourceButton || (event.target instanceof Element
+            ? event.target.closest('button[data-suggestion-index]')
+            : null);
         if (!button) {
+            return;
+        }
+        if (!sourceButton && shouldIgnoreSyntheticClick(button)) {
+            event.preventDefault();
             return;
         }
         const index = Number(button.getAttribute('data-suggestion-index') || -1);
@@ -560,7 +658,7 @@
         }
         applyCoordinates(suggestion.latitude, suggestion.longitude, false);
         setGeocodeStatus('Đã đặt pin gần đúng. Bạn có thể kéo pin để làm mờ vị trí thực tế hơn.', 'success');
-    });
+    };
 
     [latEl, lngEl].forEach((input) => {
         input.addEventListener('change', () => {
@@ -568,7 +666,7 @@
         });
     });
 
-    addTransitBtn.addEventListener('click', () => addTransitPoint());
+    const handleAddTransit = () => addTransitPoint();
 
     transitListEl.addEventListener('input', (event) => {
         const row = event.target.closest('[data-transit-id]');
@@ -613,9 +711,15 @@
         }
     });
 
-    transitListEl.addEventListener('click', (event) => {
-        const button = event.target.closest('button[data-action]');
+    const handleTransitAction = (event, sourceButton) => {
+        const button = sourceButton || (event.target instanceof Element
+            ? event.target.closest('button[data-action]')
+            : null);
         if (!button) {
+            return;
+        }
+        if (!sourceButton && shouldIgnoreSyntheticClick(button)) {
+            event.preventDefault();
             return;
         }
         const row = button.closest('[data-transit-id]');
@@ -640,7 +744,7 @@
         }
         renderTransitList();
         updatePreview();
-    });
+    };
 
     imageFilesEl.addEventListener('change', () => {
         const files = Array.from(imageFilesEl.files || []);
@@ -668,9 +772,15 @@
         }
     });
 
-    imageListEl.addEventListener('click', (event) => {
-        const button = event.target.closest('button[data-action]');
+    const handleImageAction = (event, sourceButton) => {
+        const button = sourceButton || (event.target instanceof Element
+            ? event.target.closest('button[data-action]')
+            : null);
         if (!button) {
+            return;
+        }
+        if (!sourceButton && shouldIgnoreSyntheticClick(button)) {
+            event.preventDefault();
             return;
         }
         const row = button.closest('[data-image-id]');
@@ -699,15 +809,19 @@
         }
         renderImageList();
         updatePreview();
-    });
+    };
 
     [titleEl, priceEl, areaEl, typeEl, cityEl, arrondissementEl, cafEl, tagsEl, descriptionEl, addressTextEl, contactNameEl, contactPhoneEl, contactEmailEl, contactNoteEl].forEach((element) => {
         element.addEventListener('input', updatePreview);
         element.addEventListener('change', updatePreview);
     });
 
-    form.addEventListener('submit', async (event) => {
+    const handleSubmit = async (event) => {
         event.preventDefault();
+        if (isSubmitting) {
+            return;
+        }
+        isSubmitting = true;
         try {
             await ensureAuth();
             if (descriptionComposer && descriptionComposer.whenReady) {
@@ -756,9 +870,49 @@
         } catch (error) {
             setFeedback(error && error.message ? error.message : 'Không thể lưu tin thuê nhà.', 'error');
         } finally {
+            isSubmitting = false;
             submitBtn.disabled = false;
         }
+    };
+
+    geocodeBtn.addEventListener('click', (event) => {
+        if (shouldIgnoreSyntheticClick(geocodeBtn)) {
+            event.preventDefault();
+            return;
+        }
+        void handleGeocodeRequest();
     });
+    bindTouchFallback(geocodeBtn, () => {
+        void handleGeocodeRequest();
+    });
+
+    geocodeResultsEl.addEventListener('click', handleGeocodeSuggestionSelect);
+    bindDelegatedTouchFallback(geocodeResultsEl, 'button[data-suggestion-index]', handleGeocodeSuggestionSelect);
+
+    addTransitBtn.addEventListener('click', (event) => {
+        if (shouldIgnoreSyntheticClick(addTransitBtn)) {
+            event.preventDefault();
+            return;
+        }
+        handleAddTransit();
+    });
+    bindTouchFallback(addTransitBtn, () => handleAddTransit());
+
+    transitListEl.addEventListener('click', handleTransitAction);
+    bindDelegatedTouchFallback(transitListEl, 'button[data-action]', handleTransitAction);
+
+    imageListEl.addEventListener('click', handleImageAction);
+    bindDelegatedTouchFallback(imageListEl, 'button[data-action]', handleImageAction);
+
+    submitBtn.addEventListener('click', (event) => {
+        if (shouldIgnoreSyntheticClick(submitBtn)) {
+            event.preventDefault();
+            event.stopPropagation();
+        }
+    });
+    bindTouchFallback(submitBtn, () => requestFormSubmit());
+
+    form.addEventListener('submit', handleSubmit);
 
     const init = async () => {
         try {
@@ -791,6 +945,10 @@
             }
         }
     };
+
+    window.addEventListener('resize', refreshMapLayout);
+    window.addEventListener('orientationchange', refreshMapLayout);
+    window.addEventListener('pageshow', refreshMapLayout);
 
     void init();
 })();

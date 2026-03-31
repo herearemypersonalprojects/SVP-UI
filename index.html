@@ -307,6 +307,39 @@
             gap: .35rem;
         }
 
+        .sv-members #sv-featured-members {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: .6rem;
+            padding: 1rem;
+        }
+
+        .sv-members .sv-member-link {
+            display: block;
+            width: 100%;
+            aspect-ratio: 1 / 1;
+        }
+
+        .sv-members .avatar {
+            width: 100%;
+            height: 100%;
+            border-radius: 50%;
+            background-position: center;
+            background-repeat: no-repeat;
+            background-size: cover;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.45rem;
+            font-weight: 700;
+            border: 2px solid #e5e7eb;
+            box-shadow: 0 1px 3px rgba(15, 23, 42, 0.12);
+        }
+
+        .sv-members .sv-meta {
+            grid-column: 1 / -1;
+        }
+
         @media (max-width: 991.98px) {
             .sv-home-news {
                 grid-template-columns: 1fr;
@@ -347,6 +380,15 @@
 
             .sv-hot-thumb {
                 width: 88px;
+            }
+
+            .sv-members #sv-featured-members {
+                gap: .5rem;
+                padding: .85rem;
+            }
+
+            .sv-members .avatar {
+                font-size: 1.15rem;
             }
         }
     </style>
@@ -432,46 +474,11 @@
         </div>
 
         <div class="col-lg-4">
-            <div class="sv-card mb-3">
-                <div class="sv-card__hd d-flex align-items-center justify-content-between gap-2">
-                    <span><i class="fa-solid fa-calendar-days me-2 text-primary"></i>Sự Kiện Sắp Tới</span>
-                    <a class="btn btn-sm btn-outline-primary" href="events.html">Tất cả</a>
+            <div class="sv-card sv-members mb-3">
+                <div class="sv-card__hd"><i class="fa-solid fa-user-group me-2 text-primary"></i>Thành Viên Tiêu Biểu</div>
+                <div id="sv-featured-members">
+                    <div class="p-3 sv-meta">Đang tải thành viên...</div>
                 </div>
-                <ul id="sv-upcoming-events" class="sv-list" aria-live="polite">
-                    <li>
-                        <div>
-                            <a href="events.html"><i class="fa fa-calendar-day me-2 text-primary"></i>Hội Thảo Du Học Pháp 2026</a>
-                            <div class="sv-meta">15/03/2026 • Paris</div>
-                        </div>
-                        <span class="sv-badge">Free</span>
-                    </li>
-                    <li>
-                        <div>
-                            <a href="events.html"><i class="fa fa-briefcase me-2 text-primary"></i>Gặp Gỡ Doanh Nghiệp</a>
-                            <div class="sv-meta">28/03/2026 • Lyon</div>
-                        </div>
-                        <span class="sv-badge">60 chỗ</span>
-                    </li>
-                    <li>
-                        <div>
-                            <a href="events.html"><i class="fa fa-users me-2 text-primary"></i>Kết Nối Tân Sinh Viên</a>
-                            <div class="sv-meta">07/04/2026 • Toulouse</div>
-                        </div>
-                        <span class="sv-badge">Mới</span>
-                    </li>
-                </ul>
-            </div>
-
-            <div class="sv-card mb-3">
-                <div class="sv-card__hd d-flex align-items-center justify-content-between gap-2">
-                    <span><i class="fa-solid fa-fire-flame-curved me-2 text-primary"></i>Hot nhất</span>
-                    <a class="btn btn-sm btn-outline-primary" href="forum.html">Vào diễn đàn</a>
-                </div>
-                <ul id="sv-hot-posts" class="sv-hot-list" aria-live="polite">
-                    <li class="sv-hot-item">
-                        <div class="px-3 py-3 sv-meta">Đang tải bài viết hot...</div>
-                    </li>
-                </ul>
             </div>
 
             <div class="sv-card mb-3">
@@ -480,7 +487,7 @@
                     Nhận Tin Mới
                 </div>
                 <div class="p-3">
-                    <p class="sv-meta mb-2">Nhập email để nhận tin mới từ SVP theo chủ đề bạn quan tâm.</p>
+                    <p class="sv-meta mb-2">Nhập email để nhận tin bài mới.</p>
                     <div class="mb-2">
                         <input id="sv-newsletter-email" class="form-control sv-newsletter__input" type="email" placeholder="Email của bạn" />
                         <div id="sv-newsletter-email-error" class="small text-danger mt-1 d-none"></div>
@@ -550,11 +557,46 @@
                 </div>
             </div>
 
-            <div class="sv-card sv-members mb-3">
-                <div class="sv-card__hd"><i class="fa-solid fa-user-group me-2 text-primary"></i>Thành Viên Tiêu Biểu</div>
-                <div id="sv-featured-members">
-                    <div class="p-3 sv-meta">Đang tải thành viên...</div>
+            <div class="sv-card mb-3">
+                <div class="sv-card__hd d-flex align-items-center justify-content-between gap-2">
+                    <span><i class="fa-solid fa-calendar-days me-2 text-primary"></i>Sự Kiện Sắp Tới</span>
+                    <a class="btn btn-sm btn-outline-primary" href="events.html">Tất cả</a>
                 </div>
+                <ul id="sv-upcoming-events" class="sv-list" aria-live="polite">
+                    <li>
+                        <div>
+                            <a href="events.html"><i class="fa fa-calendar-day me-2 text-primary"></i>Hội Thảo Du Học Pháp 2026</a>
+                            <div class="sv-meta">15/03/2026 • Paris</div>
+                        </div>
+                        <span class="sv-badge">Free</span>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="events.html"><i class="fa fa-briefcase me-2 text-primary"></i>Gặp Gỡ Doanh Nghiệp</a>
+                            <div class="sv-meta">28/03/2026 • Lyon</div>
+                        </div>
+                        <span class="sv-badge">60 chỗ</span>
+                    </li>
+                    <li>
+                        <div>
+                            <a href="events.html"><i class="fa fa-users me-2 text-primary"></i>Kết Nối Tân Sinh Viên</a>
+                            <div class="sv-meta">07/04/2026 • Toulouse</div>
+                        </div>
+                        <span class="sv-badge">Mới</span>
+                    </li>
+                </ul>
+            </div>
+
+            <div class="sv-card mb-3">
+                <div class="sv-card__hd d-flex align-items-center justify-content-between gap-2">
+                    <span><i class="fa-solid fa-fire-flame-curved me-2 text-primary"></i>Hot nhất</span>
+                    <a class="btn btn-sm btn-outline-primary" href="forum.html">Vào diễn đàn</a>
+                </div>
+                <ul id="sv-hot-posts" class="sv-hot-list" aria-live="polite">
+                    <li class="sv-hot-item">
+                        <div class="px-3 py-3 sv-meta">Đang tải bài viết hot...</div>
+                    </li>
+                </ul>
             </div>
         </div>
     </div>
@@ -1025,7 +1067,7 @@
         const HOME_PAGE_SIZE = 20;
         const HOME_SOURCE_POSTS_LIMIT = 20;
         const HOME_FETCH_BATCH_SIZE = 20;
-        const FEATURED_MEMBERS_LIMIT = 10;
+        const FEATURED_MEMBERS_LIMIT = 16;
         const homeCacheKey = `${HOME_CACHE_KEY_PREFIX}${Number.isFinite(activeCategoryId) ? activeCategoryId : 'all'}`;
 
         let loadedPosts = [];
@@ -1250,14 +1292,6 @@
             const author = member.author || {};
             const displayName = author.displayName || author.nickname || 'Ẩn danh';
             const safeName = escapeHtml(displayName);
-            const categoryLabels = Array.from(member.categoryIds)
-                .map((categoryId) => getCategoryName(categoryId))
-                .slice(0, 2);
-            const safeRole = escapeHtml(
-                categoryLabels.length > 0
-                    ? categoryLabels.join(', ')
-                    : 'Đang cập nhật chủ đề'
-            );
             const profileHref = buildProfileHref(author.nickname, author.userId, author.authUserId, 'profile.html');
 
             let avatarHtml;
@@ -1273,17 +1307,8 @@
                     : { bg: '#e2e8f0', fg: '#475569' };
                 avatarHtml = `<div class="avatar avatar--initial" style="background:${escapeHtml(palette.bg)};color:${escapeHtml(palette.fg)};">${initial}</div>`;
             }
-            const avatarLink = `<a class="sv-member-link" href="${profileHref}" aria-label="Hồ sơ ${safeName}">${avatarHtml}</a>`;
 
-            return `
-                <div class="member">
-                    ${avatarLink}
-                    <div>
-                        <div class="name"><a href="${profileHref}">${safeName}</a></div>
-                        <div class="role">${safeRole}</div>
-                    </div>
-                </div>
-            `;
+            return `<a class="sv-member-link" href="${profileHref}" aria-label="Hồ sơ ${safeName}">${avatarHtml}</a>`;
         };
 
         const renderEventItem = (event) => {

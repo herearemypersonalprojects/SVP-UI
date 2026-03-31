@@ -1521,7 +1521,7 @@
         const renderCategoryLatestPosts = (entries = categoryLatestPosts) => {
             categoryLatestEl.innerHTML = entries.length === 0
                 ? `<div class="sv-meta">Chưa có bài viết theo chuyên mục để hiển thị.</div>`
-                : `<div class="sv-card__hd px-0 pt-0"><span><i class="fa-solid fa-list-check me-2 text-primary"></i>Mỗi chuyên mục một bài mới nhất</span></div><div class="sv-category-latest__list">${entries.map((entry) => renderCategoryLatestItem(entry)).join('')}</div>`;
+                : `<div class="sv-card__hd px-0 pt-0"><span><i class="fa-solid fa-list-check me-2 text-primary"></i>Chuyên mục</span></div><div class="sv-category-latest__list">${entries.map((entry) => renderCategoryLatestItem(entry)).join('')}</div>`;
         };
 
         const selectCategoryLatestPosts = (posts, excludedPostIds) => {

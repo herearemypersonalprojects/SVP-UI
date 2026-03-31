@@ -255,6 +255,58 @@
             padding-bottom: .95rem;
         }
 
+        .sv-hot-list {
+            list-style: none;
+            margin: 0;
+            padding: 0;
+        }
+
+        .sv-hot-item + .sv-hot-item {
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .sv-hot-link {
+            display: grid;
+            grid-template-columns: 108px minmax(0, 1fr);
+            gap: .85rem;
+            padding: .95rem 1rem;
+            text-decoration: none;
+            color: inherit;
+            align-items: start;
+        }
+
+        .sv-hot-link:hover .sv-hot-title {
+            color: #0d6efd;
+        }
+
+        .sv-hot-thumb {
+            width: 108px;
+            aspect-ratio: 16 / 10;
+            border-radius: 0;
+            background: #e5e7eb center/cover no-repeat;
+            border: 1px solid #e5e7eb;
+        }
+
+        .sv-hot-title {
+            font-size: 1rem;
+            line-height: 1.4;
+            font-weight: 600;
+            color: #1f2937;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .sv-hot-meta {
+            margin-top: .45rem;
+            font-size: .9rem;
+            color: #6b7280;
+            display: inline-flex;
+            align-items: center;
+            gap: .35rem;
+        }
+
         @media (max-width: 991.98px) {
             .sv-home-news {
                 grid-template-columns: 1fr;
@@ -285,6 +337,16 @@
             .sv-subgrid,
             .sv-bottom-strip {
                 grid-template-columns: 1fr;
+            }
+
+            .sv-hot-link {
+                grid-template-columns: 88px minmax(0, 1fr);
+                padding-left: .85rem;
+                padding-right: .85rem;
+            }
+
+            .sv-hot-thumb {
+                width: 88px;
             }
         }
     </style>
@@ -402,59 +464,17 @@
 
             <div class="sv-card mb-3">
                 <div class="sv-card__hd d-flex align-items-center justify-content-between gap-2">
-                    <span><i class="fa-solid fa-layer-group me-2 text-primary"></i>Chuyên Mục</span>
-                    <a class="btn btn-sm btn-outline-primary" href="categories.html">Xem tất cả</a>
+                    <span><i class="fa-solid fa-fire-flame-curved me-2 text-primary"></i>Hot nhất</span>
+                    <a class="btn btn-sm btn-outline-primary" href="forum.html">Vào diễn đàn</a>
                 </div>
-                <ul class="sv-list sv-categories-list">
-                    <li data-category-id="1">
-                        <div>
-                            <a href="categories.html?categoryId=1"><i class="fa-solid fa-graduation-cap me-2 text-primary"></i>Học tập và nghiên cứu tại Pháp</a>
-                        </div>
-                    </li>
-                    <li data-category-id="2">
-                        <div>
-                            <a href="categories.html?categoryId=2"><i class="fa-solid fa-award me-2 text-primary"></i>Kinh nghiệm xin học bổng và du học</a>
-                        </div>
-                    </li>
-                    <li data-category-id="3">
-                        <div>
-                            <a href="categories.html?categoryId=3"><i class="fa-solid fa-map-location-dot me-2 text-primary"></i>Cuộc sống tại Pháp</a>
-                        </div>
-                    </li>
-                    <li data-category-id="4">
-                        <div>
-                            <a href="categories.html?categoryId=4"><i class="fa-solid fa-briefcase me-2 text-primary"></i>Cơ hội việc làm và thực tập</a>
-                        </div>
-                    </li>
-                    <li data-category-id="5">
-                        <div>
-                            <a href="categories.html?categoryId=5"><i class="fa-solid fa-scale-balanced me-2 text-primary"></i>Các vấn đề pháp lý, quốc tịch và thuế khóa</a>
-                        </div>
-                    </li>
-                    <li data-category-id="6">
-                        <div>
-                            <a href="categories.html?categoryId=6"><i class="fa-solid fa-language me-2 text-primary"></i>Văn hóa và ngôn ngữ Pháp</a>
-                        </div>
-                    </li>
-                    <li data-category-id="13">
-                        <div>
-                            <a href="categories.html?categoryId=13"><i class="fa-solid fa-gamepad me-2 text-primary"></i>Giải trí, du lịch</a>
-                        </div>
-                    </li>
-                    <li data-category-id="8">
-                        <div>
-                            <a href="categories.html?categoryId=8"><i class="fa-solid fa-house me-2 text-primary"></i>Nhà cửa</a>
-                        </div>
-                    </li>
-                    <li data-category-id="9">
-                        <div>
-                            <a href="categories.html?categoryId=9"><i class="fa-solid fa-cart-shopping me-2 text-primary"></i>Mua bán, rao vặt</a>
-                        </div>
+                <ul id="sv-hot-posts" class="sv-hot-list" aria-live="polite">
+                    <li class="sv-hot-item">
+                        <div class="px-3 py-3 sv-meta">Đang tải bài viết hot...</div>
                     </li>
                 </ul>
             </div>
 
-            <div class="sv-card mb-3 sv-newsletter">
+            <div class="sv-card mb-3">
                 <div class="sv-card__hd">
                     <i class="fa-solid fa-bell text-primary"></i>
                     Nhận Tin Mới
@@ -715,11 +735,12 @@
         const feedEl = document.getElementById('sv-article-feed');
         const eventsEl = document.getElementById('sv-upcoming-events');
         const membersEl = document.getElementById('sv-featured-members');
+        const hotPostsEl = document.getElementById('sv-hot-posts');
         const postPaginationEl = document.getElementById('sv-post-pagination');
         const postsPageInfoEl = document.getElementById('sv-posts-page-info');
         const postsLoadMoreBtn = document.getElementById('sv-posts-load-more');
         const categoryLinks = Array.from(document.querySelectorAll('.sv-cats .nav-link[data-category-id]'));
-        if (!feedEl || !eventsEl || !membersEl || !postPaginationEl || !postsPageInfoEl || !postsLoadMoreBtn) {
+        if (!feedEl || !eventsEl || !membersEl || !hotPostsEl || !postPaginationEl || !postsPageInfoEl || !postsLoadMoreBtn) {
             return;
         }
 
@@ -1286,6 +1307,44 @@
             `;
         };
 
+        const getTopViewedPosts = (posts, limit = 5) => getVisiblePosts(posts)
+            .slice()
+            .sort((left, right) => {
+                const viewDelta = Number(right?.viewCount ?? 0) - Number(left?.viewCount ?? 0);
+                if (viewDelta !== 0) {
+                    return viewDelta;
+                }
+                const rightTime = new Date(right?.createdAt || 0).getTime();
+                const leftTime = new Date(left?.createdAt || 0).getTime();
+                return rightTime - leftTime;
+            })
+            .slice(0, limit);
+
+        const renderHotPostItem = (post) => {
+            const href = buildPostHref(post);
+            const safeTitle = escapeHtml(post.title || 'Chưa có tiêu đề');
+            const safeCover = getSafeCover(post);
+            const safeViews = Number(post?.viewCount ?? 0).toLocaleString('vi-VN');
+            return `
+                <li class="sv-hot-item">
+                    <a class="sv-hot-link" href="${href}">
+                        <div class="sv-hot-thumb" ${safeCover ? `style="background-image:url('${safeCover}')"` : ''}></div>
+                        <div>
+                            <div class="sv-hot-title">${safeTitle}</div>
+                            <div class="sv-hot-meta"><i class="fa-regular fa-eye"></i>${safeViews} lượt xem</div>
+                        </div>
+                    </a>
+                </li>
+            `;
+        };
+
+        const renderHotPosts = (posts) => {
+            const hotPosts = getTopViewedPosts(posts);
+            hotPostsEl.innerHTML = hotPosts.length === 0
+                ? `<li class="sv-hot-item"><div class="px-3 py-3 sv-meta">Chưa có bài viết nổi bật để hiển thị.</div></li>`
+                : hotPosts.map((post) => renderHotPostItem(post)).join('');
+        };
+
         const renderFeedAndMembers = () => {
             const displayPosts = getDisplayPosts();
             const visiblePosts = getVisiblePosts(displayPosts);
@@ -1297,6 +1356,7 @@
 
             const visibleFeedPosts = visiblePosts.slice(0, safeVisibleCount);
             feedEl.innerHTML = renderMagazineFeed(visibleFeedPosts);
+            renderHotPosts(displayPosts);
 
             const topMembers = collectTopMembers(displayPosts);
             membersEl.innerHTML = topMembers.length === 0
@@ -1335,6 +1395,7 @@
             beforePostId = null;
             feedEl.innerHTML = `<div class="sv-meta">Không thể tải bài viết từ backend. Vui lòng thử lại sau.</div>`;
             eventsEl.innerHTML = `<li><div class="sv-meta">Không thể tải sự kiện từ backend.</div></li>`;
+            hotPostsEl.innerHTML = `<li class="sv-hot-item"><div class="px-3 py-3 sv-meta">Không thể tải danh sách bài viết hot.</div></li>`;
             membersEl.innerHTML = `<div class="p-3 sv-meta">Không thể tải danh sách thành viên nổi bật.</div>`;
             postPaginationEl.style.display = 'none';
             postsLoadMoreBtn.disabled = true;
@@ -1404,6 +1465,7 @@
             } else {
                 feedEl.innerHTML = `<div class="sv-meta">Đang tải bài viết mới nhất...</div>`;
                 eventsEl.innerHTML = `<li><div class="sv-meta">Đang tải sự kiện...</div></li>`;
+                hotPostsEl.innerHTML = `<li class="sv-hot-item"><div class="px-3 py-3 sv-meta">Đang tải bài viết hot...</div></li>`;
                 membersEl.innerHTML = `<div class="p-3 sv-meta">Đang tải thành viên...</div>`;
                 postPaginationEl.style.display = 'none';
             }
@@ -1433,4 +1495,6 @@
 </script>
 </body>
 </html>
+
+
 

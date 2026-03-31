@@ -1257,8 +1257,9 @@
                 postsPageInfoEl.textContent = `Hiển thị ${safeVisibleCount}${hasUnloadedMore ? '+' : ''} / ${visibleLoadedCount}${hasUnloadedMore ? '+' : ''} bài viết`;
             }
 
-            const hasMoreVisibleItems = visibleLoadedCount > visiblePostCount;
-            const canLoadMore = hasMoreVisibleItems || hasMoreBackendPosts;
+            // Correction : afficher le bouton si on a au moins HOME_PAGE_SIZE posts ou s'il y a plus à charger
+            const hasEnoughPosts = loadedPosts.length >= HOME_PAGE_SIZE;
+            const canLoadMore = hasEnoughPosts || hasMoreBackendPosts;
             postsLoadMoreBtn.disabled = !canLoadMore || isLoadingMore;
             postsLoadMoreBtn.textContent = isLoadingMore ? 'Đang tải...' : 'Xem thêm...';
             postPaginationEl.style.display = canLoadMore ? 'flex' : 'none';

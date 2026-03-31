@@ -55,56 +55,184 @@
         ]
     </script>
 
-    <!-- Bootstrap 5 -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <!-- Custom Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="svp.css">
     <link rel="stylesheet" href="dropdown-hover.css">
+
     <style>
         .sv-article-feed {
             padding: 1rem;
         }
-        .sv-article-feed > .sv-article {
-            margin-bottom: 1rem;
+
+        .sv-home-news {
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            gap: 1rem;
+            align-items: start;
         }
-        .sv-article-feed > .sv-article:last-child {
-            margin-bottom: 0;
+
+        .sv-home-news__left {
+            border-right: 1px solid #e5e7eb;
+            padding-right: 1rem;
         }
-        .sv-article--clickable {
-            border-radius: 14px;
-            padding: .85rem;
-            cursor: pointer;
-            transition: background-color .2s ease, box-shadow .2s ease, transform .2s ease;
+
+        .sv-home-news__main {
+            min-width: 0;
         }
-        .sv-article--clickable:hover,
-        .sv-article--clickable:focus-visible {
-            background: #eef2ff;
-            box-shadow: 0 8px 20px rgba(15, 23, 42, .12);
-            transform: translateY(-1px);
-            outline: none;
+
+        .sv-headline-list {
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
         }
-        .sv-article--clickable .sv-article__cover {
-            transition: transform .25s ease, filter .25s ease;
+
+        .sv-headline {
+            display: grid;
+            grid-template-columns: 96px minmax(0, 1fr);
+            gap: .75rem;
+            text-decoration: none;
+            color: inherit;
+            align-items: start;
         }
-        .sv-article--clickable:hover .sv-article__cover,
-        .sv-article--clickable:focus-visible .sv-article__cover {
-            transform: scale(1.03);
-            filter: brightness(.9);
+
+        .sv-headline:hover .sv-headline__title {
+            color: #0d6efd;
         }
-        .sv-article__cover {
-            width: 100%;
-            aspect-ratio: 16 / 7;
-            border-radius: 12px;
-            margin-bottom: 1rem;
-            background: #e2e8f0 center/cover no-repeat;
+
+        .sv-headline__thumb {
+            width: 96px;
+            height: 72px;
+            border-radius: 0;
+            background: #e5e7eb center/cover no-repeat;
             border: 1px solid #e5e7eb;
+            flex: none;
         }
+
+        .sv-headline__title {
+            font-size: 1.05rem;
+            line-height: 1.35;
+            font-weight: 500;
+            color: #1f2937;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .sv-featured-main {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .sv-featured-main__cover {
+            width: 100%;
+            aspect-ratio: 16 / 8.5;
+            border-radius: 0;
+            background: #e5e7eb center/cover no-repeat;
+            border: 1px solid #e5e7eb;
+            margin-bottom: .9rem;
+        }
+
+        .sv-featured-main__title {
+            font-size: 2rem;
+            line-height: 1.2;
+            font-weight: 800;
+            color: #1f2937;
+            margin-bottom: .8rem;
+        }
+
+        .sv-featured-main__bullets {
+            margin: 0;
+            padding-left: 1.2rem;
+        }
+
+        .sv-featured-main__bullets li {
+            margin-bottom: .5rem;
+            color: #374151;
+            line-height: 1.45;
+        }
+
+        .sv-featured-main__bullets a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .sv-featured-main__bullets a:hover {
+            color: #0d6efd;
+        }
+
+        .sv-subgrid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .9rem;
+            margin-top: 1rem;
+        }
+
+        .sv-subcard {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .sv-subcard__thumb {
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            border-radius: 0;
+            background: #e5e7eb center/cover no-repeat;
+            border: 1px solid #e5e7eb;
+            margin-bottom: .45rem;
+        }
+
+        .sv-subcard__title {
+            font-size: 1.08rem;
+            line-height: 1.35;
+            font-weight: 500;
+            color: #1f2937;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .sv-bottom-strip {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: .9rem;
+            margin-top: 1rem;
+        }
+
+        .sv-bottom-card {
+            text-decoration: none;
+            color: inherit;
+            display: block;
+        }
+
+        .sv-bottom-card__thumb {
+            width: 100%;
+            aspect-ratio: 16 / 10;
+            border-radius: 0;
+            background: #e5e7eb center/cover no-repeat;
+            border: 1px solid #e5e7eb;
+            margin-bottom: .4rem;
+        }
+
+        .sv-bottom-card__title {
+            font-size: 1rem;
+            line-height: 1.35;
+            font-weight: 500;
+            color: #1f2937;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
         .sv-feed-pagination {
             display: flex;
             align-items: center;
@@ -112,19 +240,57 @@
             flex-direction: column;
             gap: .75rem;
         }
+
         .sv-feed-pagination__info {
             text-align: center;
             font-weight: 600;
         }
+
         .sv-feed-pagination__action {
             min-width: 170px;
+        }
+
+        .sv-categories-list li {
+            padding-top: .95rem;
+            padding-bottom: .95rem;
+        }
+
+        @media (max-width: 991.98px) {
+            .sv-home-news {
+                grid-template-columns: 1fr;
+            }
+
+            .sv-home-news__left {
+                border-right: none;
+                padding-right: 0;
+                border-bottom: 1px solid #e5e7eb;
+                padding-bottom: 1rem;
+                margin-bottom: .25rem;
+            }
+
+            .sv-bottom-strip {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .sv-featured-main__title {
+                font-size: 1.5rem;
+            }
+        }
+
+        @media (max-width: 575.98px) {
+            .sv-headline {
+                grid-template-columns: 88px minmax(0, 1fr);
+            }
+
+            .sv-subgrid,
+            .sv-bottom-strip {
+                grid-template-columns: 1fr;
+            }
         }
     </style>
 </head>
 <body>
 
-<!-- Top brand + auth -->
-<!-- Top brand + auth -->
 <div class="sv-topbar pt-2 pb-1">
     <div class="container d-flex align-items-center justify-content-between">
         <div class="sv-brand">
@@ -143,7 +309,6 @@
     </div>
 </div>
 
-<!-- Main nav -->
 <div class="sv-nav">
     <div class="container d-flex align-items-center justify-content-between">
         <ul class="nav">
@@ -161,8 +326,8 @@
         </div>
     </div>
 </div>
+
 <main class="container my-3 my-md-4">
-    <!-- Hero -->
     <section class="sv-hero">
         <div class="sv-hero__image"></div>
         <div class="sv-hero__actions">
@@ -177,24 +342,18 @@
         </div>
     </section>
 
-    <!-- Category tabs -->
     <section class="sv-cats mt-3">
         <ul class="nav">
             <li class="nav-item"><a class="nav-link active" href="index.html?categoryId=1" data-category-id="1"><img class="sv-cat__icon" src="assets/icons/icon_kinh_nghiem_du_hoc.png" alt=""> Học Tập & Nghiên Cứu</a></li>
             <li class="nav-item"><a class="nav-link sv-cats__primary" href="index.html?categoryId=4" data-category-id="4"><img class="sv-cat__icon" src="assets/icons/icon_viec_lam_thuc_tap.png" alt=""> Việc Làm</a></li>
             <li class="nav-item"><a class="nav-link sv-cats__primary" href="index.html?categoryId=6" data-category-id="6"><img class="sv-cat__icon" src="assets/icons/icon_hoc_tap_nghien_cuu.png" alt=""> Ngôn Ngữ & Văn Hóa</a></li>
-
             <li class="nav-item"><a class="nav-link sv-cats__primary" href="index.html?categoryId=3" data-category-id="3"><img class="sv-cat__icon sv-cat__icon--event" src="assets/icons/icon_cuoc_song_tai_phap.png" alt=""> Cuộc Sống Tại Pháp</a></li>
             <li class="nav-item"><a class="nav-link sv-cats__primary" href="index.html?categoryId=13" data-category-id="13"><img class="sv-cat__icon" src="assets/icons/icon_du_lich_giai_tri.png" alt=""> Du Lịch, Giải Trí</a></li>
         </ul>
     </section>
 
-    <!-- Main grid -->
     <div class="row g-3 mt-1">
-        <!-- Left col -->
         <div class="col-lg-8">
-
-            <!-- Bài viết mới nhất (toàn bài + ảnh) -->
             <div class="sv-card mb-3">
                 <div class="sv-card__hd d-flex flex-wrap justify-content-between align-items-center gap-2">
                     <span><i class="fa-regular fa-newspaper me-2 text-primary"></i>Bài Viết Mới Nhất</span>
@@ -210,15 +369,12 @@
             </div>
         </div>
 
-        <!-- Right col (sidebar) -->
         <div class="col-lg-4">
-
-            <!-- Sự kiện sắp tới -->
             <div class="sv-card mb-3">
                 <div class="sv-card__hd d-flex align-items-center justify-content-between gap-2">
-    <span><i class="fa-solid fa-calendar-days me-2 text-primary"></i>Sự Kiện Sắp Tới</span>
-    <a class="btn btn-sm btn-outline-primary" href="events.html">Tất cả</a>
-</div>
+                    <span><i class="fa-solid fa-calendar-days me-2 text-primary"></i>Sự Kiện Sắp Tới</span>
+                    <a class="btn btn-sm btn-outline-primary" href="events.html">Tất cả</a>
+                </div>
                 <ul id="sv-upcoming-events" class="sv-list" aria-live="polite">
                     <li>
                         <div>
@@ -244,13 +400,12 @@
                 </ul>
             </div>
 
-            <!-- Chuyên mục -->
             <div class="sv-card mb-3">
                 <div class="sv-card__hd d-flex align-items-center justify-content-between gap-2">
                     <span><i class="fa-solid fa-layer-group me-2 text-primary"></i>Chuyên Mục</span>
                     <a class="btn btn-sm btn-outline-primary" href="categories.html">Xem tất cả</a>
                 </div>
-                <ul class="sv-list">
+                <ul class="sv-list sv-categories-list">
                     <li data-category-id="1">
                         <div>
                             <a href="categories.html?categoryId=1"><i class="fa-solid fa-graduation-cap me-2 text-primary"></i>Học tập và nghiên cứu tại Pháp</a>
@@ -299,7 +454,6 @@
                 </ul>
             </div>
 
-            <!-- Nhận tin mới -->
             <div class="sv-card mb-3 sv-newsletter">
                 <div class="sv-card__hd">
                     <i class="fa-solid fa-bell text-primary"></i>
@@ -371,19 +525,17 @@
                         </div>
                     </div>
                     <button id="sv-newsletter-submit" class="btn btn-primary w-100 mt-3" type="button">Đăng Ký Nhận Tin</button>
-                                        <div id="sv-newsletter-status" class="small mt-2" aria-live="polite"></div>
+                    <div id="sv-newsletter-status" class="small mt-2" aria-live="polite"></div>
                     <div class="sv-newsletter__note">Bạn có thể hủy đăng ký bất cứ lúc nào.</div>
                 </div>
             </div>
 
-            <!-- Thành viên tiêu biểu -->
             <div class="sv-card sv-members mb-3">
                 <div class="sv-card__hd"><i class="fa-solid fa-user-group me-2 text-primary"></i>Thành Viên Tiêu Biểu</div>
                 <div id="sv-featured-members">
                     <div class="p-3 sv-meta">Đang tải thành viên...</div>
                 </div>
             </div>
-
         </div>
     </div>
 </main>
@@ -410,6 +562,7 @@
 <script src="svp-rich-content.js"></script>
 <script src="avatar-utils.js"></script>
 <script src="auth-topbar.js"></script>
+
 <script>
     (function () {
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
@@ -612,18 +765,21 @@
             const parsed = Number(raw);
             return Number.isInteger(parsed) && parsed > 0 ? parsed : null;
         })();
+
         categoryLinks.forEach((link, index) => {
             const raw = link.getAttribute('data-category-id');
             const categoryId = raw ? Number(raw) : null;
             const isActive = Number.isFinite(activeCategoryId) ? categoryId === activeCategoryId : index === 0;
             link.classList.toggle('active', isActive);
         });
+
         const escapeHtml = (value) => String(value ?? '')
             .replace(/&/g, '&amp;')
             .replace(/</g, '&lt;')
             .replace(/>/g, '&gt;')
             .replace(/"/g, '&quot;')
             .replace(/'/g, '&#039;');
+
         const htmlEntityDecoder = document.createElement('textarea');
         const decodeHtmlEntities = (value) => {
             let text = String(value ?? '');
@@ -652,6 +808,7 @@
                 year: 'numeric'
             }).format(parsed);
         };
+
         const fetchJson = async (url) => {
             const controller = new AbortController();
             const timeoutId = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
@@ -672,19 +829,15 @@
         const resolveAvatarUrl = (rawUrl) => {
             const value = String(rawUrl ?? '').trim();
             if (!value) return '';
-            // Allow safe "inline" and browser-generated schemes.
             if (/^(data:|blob:)/i.test(value)) {
                 return value;
             }
-            // Support protocol-relative URLs.
             if (value.startsWith('//')) {
                 return `${window.location.protocol}${value}`;
             }
-            // Allow absolute http(s) URLs.
             if (/^https?:\/\//i.test(value)) {
                 return value;
             }
-            // Block other schemes (e.g. javascript:, file:).
             if (/^[a-z][a-z0-9+.-]*:/i.test(value)) {
                 return '';
             }
@@ -694,9 +847,12 @@
             if (value.startsWith('/')) return `${base}${value}`;
             return `${base}/${value}`;
         };
+
         const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
             .test(String(value ?? '').trim());
+
         const isPositiveIntegerLike = (value) => /^[1-9]\d*$/.test(String(value ?? '').trim());
+
         const buildProfileHref = (nickname, userId, authUserId, fallback = '') => {
             if (window.SVPAuth?.buildProfileHref) {
                 return window.SVPAuth.buildProfileHref({ nickname, userId, authUserId }, fallback);
@@ -731,7 +887,6 @@
                 .trim();
         };
 
-
         const estimateReadTimeFromPlainText = (plainText) => {
             if (!plainText) {
                 return '1 phút đọc';
@@ -746,7 +901,6 @@
                 return '';
             }
             let text = plainText.slice(0, PREVIEW_LEAD_MAX_CHARS).trim();
-            // Remove any trailing incomplete HTML tag fragment (e.g. "<a hre")
             text = text.replace(/<[^>]*$/, '').trim();
             return text;
         };
@@ -781,23 +935,11 @@
             }
             return extractFirstImageSrc(contentHtml);
         };
+
         const extractLeadingImageRowUrls = (contentHtml) => (
             richContent && typeof richContent.extractLeadingImageRowUrls === 'function'
                 ? richContent.extractLeadingImageRowUrls(contentHtml, { maxItems: 3 })
                 : []
-        );
-        const renderLeadingImageRowCover = (detailHref, title, imageUrls) => (
-            richContent && typeof richContent.buildImageRowCoverHtml === 'function'
-                ? richContent.buildImageRowCoverHtml({
-                    href: detailHref,
-                    imageUrls,
-                    className: 'sv-article__cover d-block',
-                    tabIndex: -1,
-                    ariaHidden: true,
-                    altPrefix: title || 'Ảnh cover bài viết',
-                    maxItems: 3
-                })
-                : ''
         );
 
         const normalizePost = (post) => {
@@ -840,6 +982,7 @@
                 likeCount: Number(post?.likeCount ?? post?.likes ?? post?.totalLikes ?? 0)
             };
         };
+
         const normalizeEvent = (event) => ({
             eventId: Number(event?.eventId ?? event?.id ?? 0),
             title: event?.title || 'Sự kiện mới',
@@ -850,17 +993,20 @@
         });
 
         const getCategoryName = (categoryId) => CATEGORY_NAMES[categoryId] || `Chuyên mục #${categoryId ?? 'N/A'}`;
+
         const getVisiblePosts = (posts) => posts.filter((post) => {
             const isArticle = Boolean(post?.isArticle ?? true);
             const isBlog = Boolean(post?.isBlog ?? false);
             const matchesCategory = !Number.isFinite(activeCategoryId) || Number(post?.categoryId) === activeCategoryId;
             return isArticle && !isBlog && matchesCategory;
         });
-        const HOME_PAGE_SIZE = 10;
-        const HOME_SOURCE_POSTS_LIMIT = 10;
-        const HOME_FETCH_BATCH_SIZE = 10;
+
+        const HOME_PAGE_SIZE = 20;
+        const HOME_SOURCE_POSTS_LIMIT = 20;
+        const HOME_FETCH_BATCH_SIZE = 20;
         const FEATURED_MEMBERS_LIMIT = 10;
         const homeCacheKey = `${HOME_CACHE_KEY_PREFIX}${Number.isFinite(activeCategoryId) ? activeCategoryId : 'all'}`;
+
         let loadedPosts = [];
         let visiblePostCount = HOME_PAGE_SIZE;
         let hasMoreBackendPosts = false;
@@ -890,8 +1036,7 @@
                     ts: Date.now(),
                     payload
                 }));
-            } catch (_) {
-            }
+            } catch (_) {}
         };
 
         const readPendingLocalArticle = () => {
@@ -927,6 +1072,7 @@
 
         const getDisplayPosts = () => mergePendingLocalArticle(loadedPosts);
         const getVisibleDisplayPosts = () => getVisiblePosts(getDisplayPosts());
+
         const updatePostPaginationState = () => {
             const visibleLoadedCount = getVisibleDisplayPosts().length;
             if (visibleLoadedCount === 0) {
@@ -943,85 +1089,115 @@
             postsLoadMoreBtn.textContent = isLoadingMore ? 'Đang tải...' : 'Xem thêm...';
             postPaginationEl.style.display = canLoadMore ? 'flex' : 'none';
         };
-        const renderFeedAndMembers = () => {
-            const displayPosts = getDisplayPosts();
-            const visiblePosts = getVisiblePosts(displayPosts);
-            const safeVisibleCount = Math.min(Math.max(visiblePostCount, HOME_PAGE_SIZE), visiblePosts.length || HOME_PAGE_SIZE);
-            visiblePostCount = safeVisibleCount;
-            const visibleFeedPosts = visiblePosts.slice(0, safeVisibleCount);
-            feedEl.innerHTML = visibleFeedPosts.length === 0
-                ? `<div class="sv-meta">Chưa có bài viết phù hợp để hiển thị.</div>`
-                : visibleFeedPosts.map((post) => renderArticleCard(post)).join('');
 
-            const topMembers = collectTopMembers(displayPosts);
-            membersEl.innerHTML = topMembers.length === 0
-                ? `<div class="p-3 sv-meta">Chưa có thành viên nổi bật.</div>`
-                : topMembers.map((member) => renderMember(member)).join('');
-            updatePostPaginationState();
-        };
+        const buildPostHref = (post) => buildArticleHref(post.postId, post.title);
 
-        const renderArticleCard = (post) => {
-            const author = post.author || {};
-            const safeCategory = escapeHtml(getCategoryName(post.categoryId));
-            const safeReadTime = escapeHtml(post.readTimeLabel || '1 phút đọc');
+        const getSafeCover = (post) => escapeHtml(post.resolvedCoverImageUrl || '');
+
+        const renderCompactHeadline = (post) => {
+            const href = buildPostHref(post);
             const safeTitle = escapeHtml(post.title || 'Chưa có tiêu đề');
-            const safeAuthor = escapeHtml(author.displayName || author.nickname || 'Ẩn danh');
-            const safeDate = escapeHtml(formatDate(post.createdAt));
-            const safeLead = escapeHtml(post.leadText || 'Bài viết đang được cập nhật nội dung.');
-            const safeCover = escapeHtml(post.resolvedCoverImageUrl || '');
-            const authorProfileHref = buildProfileHref(author.nickname, author.userId, author.authUserId);
-            const authorLabel = authorProfileHref
-                ? `<a class="sv-author-link" href="${authorProfileHref}">${safeAuthor}</a>`
-                : safeAuthor;
-            const status = String(post.status || '').toUpperCase();
-            const pendingNote = status === 'PENDING'
-                ? `<div class="sv-meta text-danger mt-2">Hãy kiểm tra hòm thư và xác nhận đăng bài này.</div>`
-                : '';
-            const detailHref = buildArticleHref(post.postId, post.title);
-            const imageRowCover = Array.isArray(post.leadingImageRowUrls) && post.leadingImageRowUrls.length >= 2
-                ? renderLeadingImageRowCover(detailHref, post.title, post.leadingImageRowUrls)
-                : '';
+            const safeCover = getSafeCover(post);
 
-            const coverNode = imageRowCover || (safeCover
-                ? `<a class="sv-article__cover d-block" href="${detailHref}" style="background-image:url('${safeCover}')" tabindex="-1" aria-hidden="true"></a>`
-                : '');
             return `
-                <article class="sv-article sv-article--clickable" data-post-id="${post.postId}" data-post-title="${safeTitle}" role="button" tabindex="0" aria-label="Xem chi tiết bài viết ${safeTitle}">
-                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-2">
-                        <span class="sv-pill"><i class="fa-regular fa-folder-open"></i>${safeCategory}</span>
-                        <span class="sv-meta">${safeReadTime}</span>
-                    </div>
-                    <h2 class="sv-article__title">${safeTitle}</h2>
-                    <div class="sv-article__meta">Bởi ${authorLabel} • Cập nhật ${safeDate}</div>
-                    <p class="sv-article__lead">${safeLead}</p>
-                    ${pendingNote}
-                    ${coverNode}
-                    <div class="d-flex justify-content-end mt-2">
-                        <a class="btn btn-sm btn-outline-primary" href="${detailHref}"><i class="fa-solid fa-book-open me-1"></i>Đọc tiếp</a>
-                    </div>
-                </article>
+                <a class="sv-headline" href="${href}">
+                    <div class="sv-headline__thumb" ${safeCover ? `style="background-image:url('${safeCover}')"` : ''}></div>
+                    <div class="sv-headline__title">${safeTitle}</div>
+                </a>
             `;
         };
 
+        const renderFeaturedMain = (post, bulletPosts = []) => {
+            const href = buildPostHref(post);
+            const safeTitle = escapeHtml(post.title || 'Chưa có tiêu đề');
+            const safeCover = getSafeCover(post);
 
-        const renderEventItem = (event) => {
-            const safeTitle = escapeHtml(event.title || 'Sự kiện mới');
-            const safeAddress = escapeHtml(event.address || (event.online ? 'Online' : 'Địa điểm cập nhật sau'));
-            const rawPrice = Number(event.price);
-            const badge = Number.isFinite(rawPrice) && rawPrice > 0
-                ? `${rawPrice.toLocaleString('vi-VN')}€`
-                : (event.online ? 'Online' : 'Gratuit');
-            const safeDate = escapeHtml(formatDate(event.eventTime));
-            const safeBadge = escapeHtml(badge);
-            const safeHref = buildEventHref(event.eventId, event.title);
+            const bulletsHtml = bulletPosts.length
+                ? `
+                    <ul class="sv-featured-main__bullets">
+                        ${bulletPosts.map((item) => {
+                            const itemHref = buildPostHref(item);
+                            const itemTitle = escapeHtml(item.title || 'Bài viết');
+                            return `<li><a href="${itemHref}">${itemTitle}</a></li>`;
+                        }).join('')}
+                    </ul>
+                `
+                : '';
+
             return `
-                <li>
-                    <div>
-                        <a href="${safeHref}"><i class="fa fa-calendar-day me-2 text-primary"></i>${safeTitle}</a>
-                        <div class="sv-meta">${safeDate} • ${safeAddress}</div>
+                <div class="sv-featured-main">
+                    <a href="${href}" class="sv-featured-main">
+                        <div class="sv-featured-main__cover" ${safeCover ? `style="background-image:url('${safeCover}')"` : ''}></div>
+                    </a>
+                    <div class="sv-featured-main__title">
+                        <a href="${href}" style="text-decoration:none;color:inherit;">${safeTitle}</a>
                     </div>
-                    <span class="sv-badge">${safeBadge}</span>
-                </li>
+                    ${bulletsHtml}
+                </div>
+            `;
+        };
+
+        const renderSubCard = (post) => {
+            const href = buildPostHref(post);
+            const safeTitle = escapeHtml(post.title || 'Chưa có tiêu đề');
+            const safeCover = getSafeCover(post);
+
+            return `
+                <a class="sv-subcard" href="${href}">
+                    <div class="sv-subcard__thumb" ${safeCover ? `style="background-image:url('${safeCover}')"` : ''}></div>
+                    <div class="sv-subcard__title">${safeTitle}</div>
+                </a>
+            `;
+        };
+
+        const renderBottomCard = (post) => {
+            const href = buildPostHref(post);
+            const safeTitle = escapeHtml(post.title || 'Chưa có tiêu đề');
+            const safeCover = getSafeCover(post);
+
+            return `
+                <a class="sv-bottom-card" href="${href}">
+                    <div class="sv-bottom-card__thumb" ${safeCover ? `style="background-image:url('${safeCover}')"` : ''}></div>
+                    <div class="sv-bottom-card__title">${safeTitle}</div>
+                </a>
+            `;
+        };
+
+        const renderMagazineFeed = (posts) => {
+            if (!posts || posts.length === 0) {
+                return `<div class="sv-meta">Chưa có bài viết phù hợp để hiển thị.</div>`;
+            }
+
+            const featured = posts[0] || null;
+            const subgridItems = posts.slice(1, 3);
+            const leftItems = posts.slice(3, 9);
+            const bulletItems = posts.slice(9, 11);
+            const bottomItems = posts.slice(11, 15);
+
+            return `
+                <div class="sv-home-news">
+                    <aside class="sv-home-news__left">
+                        <div class="sv-headline-list">
+                            ${leftItems.map(renderCompactHeadline).join('')}
+                        </div>
+                    </aside>
+
+                    <section class="sv-home-news__main">
+                        ${featured ? renderFeaturedMain(featured, bulletItems) : ''}
+
+                        ${subgridItems.length ? `
+                            <div class="sv-subgrid">
+                                ${subgridItems.map(renderSubCard).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${bottomItems.length ? `
+                            <div class="sv-bottom-strip">
+                                ${bottomItems.map(renderBottomCard).join('')}
+                            </div>
+                        ` : ''}
+                    </section>
+                </div>
             `;
         };
 
@@ -1089,6 +1265,47 @@
             `;
         };
 
+        const renderEventItem = (event) => {
+            const safeTitle = escapeHtml(event.title || 'Sự kiện mới');
+            const safeAddress = escapeHtml(event.address || (event.online ? 'Online' : 'Địa điểm cập nhật sau'));
+            const rawPrice = Number(event.price);
+            const badge = Number.isFinite(rawPrice) && rawPrice > 0
+                ? `${rawPrice.toLocaleString('vi-VN')}€`
+                : (event.online ? 'Online' : 'Gratuit');
+            const safeDate = escapeHtml(formatDate(event.eventTime));
+            const safeBadge = escapeHtml(badge);
+            const safeHref = buildEventHref(event.eventId, event.title);
+            return `
+                <li>
+                    <div>
+                        <a href="${safeHref}"><i class="fa fa-calendar-day me-2 text-primary"></i>${safeTitle}</a>
+                        <div class="sv-meta">${safeDate} • ${safeAddress}</div>
+                    </div>
+                    <span class="sv-badge">${safeBadge}</span>
+                </li>
+            `;
+        };
+
+        const renderFeedAndMembers = () => {
+            const displayPosts = getDisplayPosts();
+            const visiblePosts = getVisiblePosts(displayPosts);
+            const safeVisibleCount = Math.min(
+                Math.max(visiblePostCount, HOME_PAGE_SIZE),
+                visiblePosts.length || HOME_PAGE_SIZE
+            );
+            visiblePostCount = safeVisibleCount;
+
+            const visibleFeedPosts = visiblePosts.slice(0, safeVisibleCount);
+            feedEl.innerHTML = renderMagazineFeed(visibleFeedPosts);
+
+            const topMembers = collectTopMembers(displayPosts);
+            membersEl.innerHTML = topMembers.length === 0
+                ? `<div class="p-3 sv-meta">Chưa có thành viên nổi bật.</div>`
+                : topMembers.map((member) => renderMember(member)).join('');
+
+            updatePostPaginationState();
+        };
+
         const renderHomeData = (payload) => {
             const latestPosts = Array.isArray(payload.latestPosts) ? payload.latestPosts.map(normalizePost) : [];
             const upcomingEvents = Array.isArray(payload.upcomingEvents) ? payload.upcomingEvents.map(normalizeEvent) : [];
@@ -1123,6 +1340,7 @@
             postsLoadMoreBtn.disabled = true;
             postsPageInfoEl.textContent = '0 bài viết';
         };
+
         const loadOlderPostsBatch = async () => {
             if (!beforeCreatedAt || !beforePostId) {
                 hasMoreBackendPosts = false;
@@ -1149,6 +1367,7 @@
             hasMoreBackendPosts = newItems.length >= HOME_FETCH_BATCH_SIZE;
             return newItems;
         };
+
         const loadMoreHomePosts = async () => {
             if (isLoadingMore) {
                 return;
@@ -1208,55 +1427,10 @@
         postsLoadMoreBtn.addEventListener('click', async () => {
             await loadMoreHomePosts();
         });
-        feedEl.addEventListener('click', (event) => {
-            const clickable = event.target.closest('.sv-article--clickable[data-post-id]');
-            if (!clickable || !feedEl.contains(clickable)) {
-                return;
-            }
-            // Allow native link navigation (cover image link, "Đọc tiếp" button)
-            if (event.target.closest('a') || event.target.closest('button')) {
-                return;
-            }
-            const postId = Number(clickable.getAttribute('data-post-id'));
-            const postTitle = clickable.getAttribute('data-post-title') || '';
-            if (Number.isFinite(postId) && postId > 0) {
-                window.location.href = buildArticleHref(postId, postTitle);
-            }
-        });
-        feedEl.addEventListener('keydown', (event) => {
-            if (event.key !== 'Enter' && event.key !== ' ') {
-                return;
-            }
-            const clickable = event.target.closest('.sv-article--clickable[data-post-id]');
-            if (!clickable || !feedEl.contains(clickable)) {
-                return;
-            }
-            event.preventDefault();
-            const postId = Number(clickable.getAttribute('data-post-id'));
-            const postTitle = clickable.getAttribute('data-post-title') || '';
-            if (Number.isFinite(postId) && postId > 0) {
-                window.location.href = buildArticleHref(postId, postTitle);
-            }
-        });
+
         loadHome();
     })();
 </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 

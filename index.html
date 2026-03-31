@@ -233,6 +233,43 @@
             overflow: hidden;
         }
 
+        .sv-tail-list {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .9rem;
+            margin-top: 1rem;
+            padding-top: 1rem;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .sv-tail-card {
+            text-decoration: none;
+            color: inherit;
+            display: grid;
+            grid-template-columns: 108px minmax(0, 1fr);
+            gap: .8rem;
+            align-items: start;
+        }
+
+        .sv-tail-card__thumb {
+            width: 108px;
+            aspect-ratio: 16 / 10;
+            border-radius: 0;
+            background: #e5e7eb center/cover no-repeat;
+            border: 1px solid #e5e7eb;
+        }
+
+        .sv-tail-card__title {
+            font-size: 1rem;
+            line-height: 1.4;
+            font-weight: 600;
+            color: #1f2937;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
         .sv-feed-pagination {
             display: flex;
             align-items: center;
@@ -338,6 +375,60 @@
 
         .sv-members .sv-meta {
             grid-column: 1 / -1;
+        }
+
+        .sv-category-latest {
+            margin-top: 1.25rem;
+            border-top: 1px solid #e5e7eb;
+            padding-top: 1rem;
+        }
+
+        .sv-category-latest__list {
+            display: flex;
+            flex-direction: column;
+            gap: .9rem;
+        }
+
+        .sv-category-latest__item {
+            display: grid;
+            grid-template-columns: 108px minmax(0, 1fr);
+            gap: .8rem;
+            text-decoration: none;
+            color: inherit;
+            align-items: start;
+        }
+
+        .sv-category-latest__item:hover .sv-category-latest__title {
+            color: #0d6efd;
+        }
+
+        .sv-category-latest__thumb {
+            width: 108px;
+            aspect-ratio: 16 / 10;
+            border-radius: 0;
+            background: #e5e7eb center/cover no-repeat;
+            border: 1px solid #e5e7eb;
+        }
+
+        .sv-category-latest__name {
+            font-size: .82rem;
+            line-height: 1.35;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: #0d6efd;
+            margin-bottom: .25rem;
+        }
+
+        .sv-category-latest__title {
+            font-size: 1rem;
+            line-height: 1.4;
+            font-weight: 600;
+            color: #1f2937;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
         }
 
         @media (max-width: 991.98px) {
@@ -466,6 +557,9 @@
                     </a>
                 </div>
                 <div id="sv-article-feed" class="sv-article-feed" aria-live="polite"></div>
+                <div id="sv-category-latest-block" class="sv-category-latest px-3 pb-3" aria-live="polite">
+                    <div class="sv-meta">Đang tải bài viết theo chuyên mục...</div>
+                </div>
                 <div id="sv-post-pagination" class="sv-feed-pagination px-3 pb-3" aria-label="Phân trang bài viết">
                     <div id="sv-posts-page-info" class="sv-feed-pagination__info sv-meta">0 bài viết</div>
                     <button id="sv-posts-load-more" class="btn btn-outline-primary sv-feed-pagination__action" type="button">Xem thêm...</button>
@@ -778,11 +872,12 @@
         const eventsEl = document.getElementById('sv-upcoming-events');
         const membersEl = document.getElementById('sv-featured-members');
         const hotPostsEl = document.getElementById('sv-hot-posts');
+        const categoryLatestEl = document.getElementById('sv-category-latest-block');
         const postPaginationEl = document.getElementById('sv-post-pagination');
         const postsPageInfoEl = document.getElementById('sv-posts-page-info');
         const postsLoadMoreBtn = document.getElementById('sv-posts-load-more');
         const categoryLinks = Array.from(document.querySelectorAll('.sv-cats .nav-link[data-category-id]'));
-        if (!feedEl || !eventsEl || !membersEl || !hotPostsEl || !postPaginationEl || !postsPageInfoEl || !postsLoadMoreBtn) {
+        if (!feedEl || !eventsEl || !membersEl || !hotPostsEl || !categoryLatestEl || !postPaginationEl || !postsPageInfoEl || !postsLoadMoreBtn) {
             return;
         }
 
@@ -1078,6 +1173,10 @@
         const HOME_FETCH_BATCH_SIZE = 20;
         const FEATURED_MEMBERS_LIMIT = 16;
         const HOT_POSTS_LIMIT = 10;
+        const CATEGORY_LATEST_LIMIT = 1;
+        const CATEGORY_LATEST_CATEGORY_IDS = Object.keys(CATEGORY_NAMES)
+            .map((value) => Number(value))
+            .filter((value) => Number.isInteger(value) && value > 0);
         const homeCacheKey = `${HOME_CACHE_KEY_PREFIX}${Number.isFinite(activeCategoryId) ? activeCategoryId : 'all'}`;
 
         let loadedPosts = [];
@@ -1087,6 +1186,7 @@
         let beforePostId = null;
         let isLoadingMore = false;
         let loadedHotPosts = [];
+        let categoryLatestPosts = [];
 
         const readHomeCache = () => {
             try {
@@ -1237,6 +1337,19 @@
             `;
         };
 
+        const renderTailCard = (post) => {
+            const href = buildPostHref(post);
+            const safeTitle = escapeHtml(post.title || 'Chưa có tiêu đề');
+            const safeCover = getSafeCover(post);
+
+            return `
+                <a class="sv-tail-card" href="${href}">
+                    <div class="sv-tail-card__thumb" ${safeCover ? `style="background-image:url('${safeCover}')"` : ''}></div>
+                    <div class="sv-tail-card__title">${safeTitle}</div>
+                </a>
+            `;
+        };
+
         const renderMagazineFeed = (posts) => {
             if (!posts || posts.length === 0) {
                 return `<div class="sv-meta">Chưa có bài viết phù hợp để hiển thị.</div>`;
@@ -1247,6 +1360,7 @@
             const leftItems = posts.slice(3, 9);
             const bulletItems = posts.slice(9, 11);
             const bottomItems = posts.slice(11, 15);
+            const tailItems = posts.slice(15);
 
             return `
                 <div class="sv-home-news">
@@ -1268,6 +1382,12 @@
                         ${bottomItems.length ? `
                             <div class="sv-bottom-strip">
                                 ${bottomItems.map(renderBottomCard).join('')}
+                            </div>
+                        ` : ''}
+
+                        ${tailItems.length ? `
+                            <div class="sv-tail-list">
+                                ${tailItems.map(renderTailCard).join('')}
                             </div>
                         ` : ''}
                     </section>
@@ -1367,6 +1487,117 @@
                 : posts.map((post) => renderHotPostItem(post)).join('');
         };
 
+        const getFeaturedFeedPostIds = (posts) => {
+            const visiblePosts = getVisiblePosts(posts);
+            const safeVisibleCount = Math.min(
+                Math.max(visiblePostCount, HOME_PAGE_SIZE),
+                visiblePosts.length || HOME_PAGE_SIZE
+            );
+            return new Set(
+                visiblePosts
+                    .slice(0, safeVisibleCount)
+                    .map((post) => Number(post?.postId ?? 0))
+                    .filter((postId) => Number.isInteger(postId) && postId > 0)
+            );
+        };
+
+        const renderCategoryLatestItem = (entry) => {
+            const post = entry?.post;
+            const href = buildPostHref(post);
+            const safeTitle = escapeHtml(post?.title || 'Chưa có tiêu đề');
+            const safeCover = getSafeCover(post || {});
+            const safeCategoryName = escapeHtml(getCategoryName(entry?.categoryId));
+            return `
+                <a class="sv-category-latest__item" href="${href}">
+                    <div class="sv-category-latest__thumb" ${safeCover ? `style="background-image:url('${safeCover}')"` : ''}></div>
+                    <div>
+                        <div class="sv-category-latest__name">${safeCategoryName}</div>
+                        <div class="sv-category-latest__title">${safeTitle}</div>
+                    </div>
+                </a>
+            `;
+        };
+
+        const renderCategoryLatestPosts = (entries = categoryLatestPosts) => {
+            categoryLatestEl.innerHTML = entries.length === 0
+                ? `<div class="sv-meta">Chưa có bài viết theo chuyên mục để hiển thị.</div>`
+                : `<div class="sv-card__hd px-0 pt-0"><span><i class="fa-solid fa-list-check me-2 text-primary"></i>Mỗi chuyên mục một bài mới nhất</span></div><div class="sv-category-latest__list">${entries.map((entry) => renderCategoryLatestItem(entry)).join('')}</div>`;
+        };
+
+        const selectCategoryLatestPosts = (posts, excludedPostIds) => {
+            const byCategory = new Map();
+            const candidates = getVisiblePosts(posts).slice().sort((left, right) => {
+                const rightTime = new Date(right?.createdAt || 0).getTime();
+                const leftTime = new Date(left?.createdAt || 0).getTime();
+                if (rightTime !== leftTime) {
+                    return rightTime - leftTime;
+                }
+                return Number(right?.postId ?? 0) - Number(left?.postId ?? 0);
+            });
+
+            candidates.forEach((post) => {
+                const postId = Number(post?.postId ?? 0);
+                const categoryId = Number(post?.categoryId ?? 0);
+                if (!Number.isInteger(postId) || postId <= 0 || excludedPostIds.has(postId)) {
+                    return;
+                }
+                if (!Number.isInteger(categoryId) || categoryId <= 0 || byCategory.has(categoryId)) {
+                    return;
+                }
+                byCategory.set(categoryId, { categoryId, post });
+            });
+
+            return CATEGORY_LATEST_CATEGORY_IDS
+                .map((categoryId) => byCategory.get(categoryId))
+                .filter(Boolean);
+        };
+
+        const loadMissingCategoryLatestPosts = async (excludedPostIds) => {
+            const existingEntries = selectCategoryLatestPosts(getDisplayPosts(), excludedPostIds);
+            const existingCategoryIds = new Set(existingEntries.map((entry) => entry.categoryId));
+            const missingCategoryIds = CATEGORY_LATEST_CATEGORY_IDS.filter((categoryId) => !existingCategoryIds.has(categoryId));
+            if (missingCategoryIds.length === 0) {
+                categoryLatestPosts = existingEntries;
+                renderCategoryLatestPosts();
+                return;
+            }
+
+            const fetchedEntries = [];
+            for (const categoryId of missingCategoryIds) {
+                try {
+                    const params = new URLSearchParams({
+                        limit: String(CATEGORY_LATEST_LIMIT),
+                        categoryId: String(categoryId)
+                    });
+                    const payload = await fetchJson(`${API_BASE_URL}/posts/latest-articles?${params.toString()}`);
+                    const items = Array.isArray(payload.items) ? payload.items.map(normalizePost) : [];
+                    const candidate = items.find((post) => {
+                        const postId = Number(post?.postId ?? 0);
+                        return Number.isInteger(postId) && postId > 0 && !excludedPostIds.has(postId);
+                    });
+                    if (candidate) {
+                        fetchedEntries.push({ categoryId, post: candidate });
+                    }
+                } catch (error) {
+                    console.error(`Cannot load latest category post for category ${categoryId}:`, error);
+                }
+            }
+
+            categoryLatestPosts = CATEGORY_LATEST_CATEGORY_IDS
+                .map((categoryId) => existingEntries.find((entry) => entry.categoryId === categoryId)
+                    || fetchedEntries.find((entry) => entry.categoryId === categoryId))
+                .filter(Boolean);
+            renderCategoryLatestPosts();
+        };
+
+        const updateCategoryLatestPosts = () => {
+            const excludedPostIds = getFeaturedFeedPostIds(getDisplayPosts());
+            const initialEntries = selectCategoryLatestPosts(getDisplayPosts(), excludedPostIds);
+            categoryLatestPosts = initialEntries;
+            renderCategoryLatestPosts();
+            void loadMissingCategoryLatestPosts(excludedPostIds);
+        };
+
         const renderFeedAndMembers = () => {
             const displayPosts = getDisplayPosts();
             const visiblePosts = getVisiblePosts(displayPosts);
@@ -1378,6 +1609,7 @@
 
             const visibleFeedPosts = visiblePosts.slice(0, safeVisibleCount);
             feedEl.innerHTML = renderMagazineFeed(visibleFeedPosts);
+            updateCategoryLatestPosts();
 
             const topMembers = collectTopMembers(displayPosts);
             membersEl.innerHTML = topMembers.length === 0
@@ -1427,6 +1659,7 @@
             beforeCreatedAt = null;
             beforePostId = null;
             feedEl.innerHTML = `<div class="sv-meta">Không thể tải bài viết từ backend. Vui lòng thử lại sau.</div>`;
+            categoryLatestEl.innerHTML = `<div class="sv-meta">Không thể tải bài viết theo chuyên mục.</div>`;
             eventsEl.innerHTML = `<li><div class="sv-meta">Không thể tải sự kiện từ backend.</div></li>`;
             if (loadedHotPosts.length === 0) {
                 hotPostsEl.innerHTML = `<li class="sv-hot-item"><div class="px-3 py-3 sv-meta">Không thể tải danh sách bài viết hot.</div></li>`;

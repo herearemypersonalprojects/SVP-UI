@@ -9,6 +9,9 @@
     const metaEl = document.getElementById('housing-results-meta');
     const mapStatusEl = document.getElementById('housing-map-status');
     const mapEl = document.getElementById('housing-map');
+    const searchForm = document.getElementById('housing-map-search-form');
+    const searchInput = document.getElementById('housing-map-search-input');
+    const searchBtn = document.getElementById('housing-map-search-btn');
     const applyBtn = document.getElementById('filter-apply-btn');
     const resetBtn = document.getElementById('filter-reset-btn');
     const loadMoreBtn = document.getElementById('housing-load-more-btn');
@@ -25,14 +28,25 @@
     const DATASET_LIMIT = 1000;
     const SESSION_CACHE_KEY_PREFIX = 'svp-housing-map-dataset-v3';
     const SESSION_CACHE_TTL_MS = 5 * 60 * 1000;
+    const SEARCH_FIELD_WEIGHTS = Object.freeze({
+        title: 700,
+        price: 600,
+        description: 500,
+        city: 400,
+        arrondissement: 300,
+        region: 200,
+        other: 100
+    });
 
-    if (!form || !listEl || !metaEl || !mapEl || !applyBtn || !resetBtn || !loadMoreBtn || !loadMoreWrap || !filterToggleBtn || !filterControlsEl || !statusInput || !typeInput || !transportTypeInput) {
+    if (!form || !listEl || !metaEl || !mapEl || !searchForm || !searchInput || !searchBtn || !applyBtn || !resetBtn || !loadMoreBtn || !loadMoreWrap || !filterToggleBtn || !filterControlsEl || !statusInput || !typeInput || !transportTypeInput) {
         return;
     }
 
     const setMapStatus = (message) => {
         if (mapStatusEl) {
-            mapStatusEl.textContent = message || '';
+            const safeMessage = String(message || '').trim();
+            mapStatusEl.textContent = safeMessage;
+            mapStatusEl.hidden = !safeMessage;
         }
     };
 
@@ -67,6 +81,7 @@
         items: [],
         filteredItems: [],
         visibleCount: INITIAL_VISIBLE_COUNT,
+        activeSearchQuery: '',
         requestToken: 0,
         datasetHasMore: false,
         hasAutoFocusedInitialPins: false,
@@ -83,6 +98,193 @@
     const normalizeText = (value) => String(value || '')
         .trim()
         .toLowerCase();
+
+    const normalizeSearchText = (value) => String(value || '')
+        .replace(/[đĐ]/g, (char) => (char === 'Đ' ? 'D' : 'd'))
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .replace(/[^a-z0-9€/\s.-]/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim();
+
+    const stripHtmlToText = (value) => {
+        const template = document.createElement('template');
+        template.innerHTML = String(value || '');
+        return String(template.content.textContent || '')
+            .replace(/\s+/g, ' ')
+            .trim();
+    };
+
+    const statusPriority = (value) => {
+        switch (String(value || '').trim().toUpperCase()) {
+            case 'AVAILABLE':
+                return 0;
+            case 'RENTED':
+                return 1;
+            default:
+                return 2;
+        }
+    };
+
+    const buildSearchDescriptor = (value) => {
+        const raw = String(value || '').trim();
+        const normalized = normalizeSearchText(raw);
+        const terms = Array.from(new Set(normalized.split(' ').filter(Boolean)));
+        return { raw, normalized, terms };
+    };
+
+    const normalizeSearchFieldValues = (values) => values
+        .map((value) => normalizeSearchText(value))
+        .filter(Boolean);
+
+    const buildSearchIndex = (item) => {
+        const transitPoints = Array.isArray(item.transitPoints) ? item.transitPoints : [];
+        const transitBlob = transitPoints.map((point) => [
+            point.stationName,
+            point.transportType,
+            point.transportLabel,
+            point.transportIcon,
+            point.lineLabel,
+            point.walkingMinutes
+        ].filter(Boolean).join(' ')).join(' ');
+        const priceValues = [];
+        const numericPrice = Number(item.price);
+        if (Number.isFinite(numericPrice)) {
+            priceValues.push(String(numericPrice));
+        }
+        if (item.priceLabel) {
+            priceValues.push(item.priceLabel);
+        }
+        const formattedPrice = shared.formatPrice(item.price);
+        if (formattedPrice) {
+            priceValues.push(formattedPrice);
+        }
+        return {
+            title: normalizeSearchFieldValues([item.title]),
+            price: normalizeSearchFieldValues(priceValues),
+            description: normalizeSearchFieldValues([stripHtmlToText(item.description)]),
+            city: normalizeSearchFieldValues([item.city]),
+            arrondissement: normalizeSearchFieldValues([item.arrondissement]),
+            region: normalizeSearchFieldValues([item.addressText]),
+            other: normalizeSearchFieldValues([
+                item.propertyType,
+                item.propertyTypeLabel || shared.propertyTypeLabel(item.propertyType),
+                item.status,
+                item.cafEligible ? 'caf' : '',
+                item.cafEligible ? 'co caf' : '',
+                ...(Array.isArray(item.tags) ? item.tags : []),
+                item.primaryTransit && item.primaryTransit.stationName,
+                item.primaryTransit && item.primaryTransit.transportType,
+                item.primaryTransit && item.primaryTransit.lineLabel,
+                transitBlob
+            ])
+        };
+    };
+
+    const buildSearchableItems = (items) => (Array.isArray(items) ? items : []).map((item) => ({
+        ...item,
+        __searchIndex: buildSearchIndex(item)
+    }));
+
+    const matchTermScore = (term, fieldValues, weight) => {
+        if (!term || !Array.isArray(fieldValues) || !fieldValues.length) {
+            return 0;
+        }
+        let best = 0;
+        for (const fieldValue of fieldValues) {
+            const value = String(fieldValue || '').trim();
+            if (!value) {
+                continue;
+            }
+            const padded = ` ${value} `;
+            if (value === term) {
+                best = Math.max(best, weight + 120);
+                continue;
+            }
+            if (value.startsWith(term)) {
+                best = Math.max(best, weight + 80);
+                continue;
+            }
+            if (padded.includes(` ${term} `)) {
+                best = Math.max(best, weight + 60);
+                continue;
+            }
+            if (value.includes(term)) {
+                best = Math.max(best, weight + 30);
+            }
+        }
+        return best;
+    };
+
+    const computePhraseBonus = (descriptor, searchIndex) => {
+        const query = descriptor && descriptor.normalized ? descriptor.normalized : '';
+        if (!query) {
+            return 0;
+        }
+        const checks = [
+            { values: searchIndex.title, bonus: 180 },
+            { values: searchIndex.price, bonus: 155 },
+            { values: searchIndex.description, bonus: 130 },
+            { values: searchIndex.city, bonus: 105 },
+            { values: searchIndex.arrondissement, bonus: 90 },
+            { values: searchIndex.region, bonus: 75 },
+            { values: searchIndex.other, bonus: 45 }
+        ];
+        for (const check of checks) {
+            if (check.values.some((value) => value.includes(query))) {
+                return check.bonus;
+            }
+        }
+        return 0;
+    };
+
+    const computeSearchScore = (item, descriptor) => {
+        if (!descriptor || !descriptor.terms.length) {
+            return 0;
+        }
+        const searchIndex = item && item.__searchIndex ? item.__searchIndex : buildSearchIndex(item || {});
+        let total = 0;
+        for (const term of descriptor.terms) {
+            const best = Math.max(
+                matchTermScore(term, searchIndex.title, SEARCH_FIELD_WEIGHTS.title),
+                matchTermScore(term, searchIndex.price, SEARCH_FIELD_WEIGHTS.price),
+                matchTermScore(term, searchIndex.description, SEARCH_FIELD_WEIGHTS.description),
+                matchTermScore(term, searchIndex.city, SEARCH_FIELD_WEIGHTS.city),
+                matchTermScore(term, searchIndex.arrondissement, SEARCH_FIELD_WEIGHTS.arrondissement),
+                matchTermScore(term, searchIndex.region, SEARCH_FIELD_WEIGHTS.region),
+                matchTermScore(term, searchIndex.other, SEARCH_FIELD_WEIGHTS.other)
+            );
+            if (!best) {
+                return 0;
+            }
+            total += best;
+        }
+        return total + computePhraseBonus(descriptor, searchIndex);
+    };
+
+    const compareRankedResults = (left, right) => {
+        if (right.searchScore !== left.searchScore) {
+            return right.searchScore - left.searchScore;
+        }
+        const statusDiff = statusPriority(left.item.status) - statusPriority(right.item.status);
+        if (statusDiff !== 0) {
+            return statusDiff;
+        }
+        const createdDiff = String(right.item.createdAt || '').localeCompare(String(left.item.createdAt || ''));
+        if (createdDiff !== 0) {
+            return createdDiff;
+        }
+        return String(left.item.id || '').localeCompare(String(right.item.id || ''));
+    };
+
+    const activateSearchQuery = () => {
+        state.activeSearchQuery = String(searchInput.value || '').trim();
+    };
+
+    const hasActiveSearchQuery = () => Boolean(String(state.activeSearchQuery || '').trim());
+
+    const getActiveSearchQuery = () => String(state.activeSearchQuery || '').trim();
 
     const parseJwtPayload = (token) => {
         const value = String(token || '').trim();
@@ -231,12 +433,20 @@
         const total = state.filteredItems.length;
         const visible = Math.min(total, state.visibleCount);
         const totalLabel = total === state.items.length ? formatLoadedCount(total) : String(total);
+        if (hasActiveSearchQuery()) {
+            metaEl.textContent = `${totalLabel} tin khớp "${getActiveSearchQuery()}" • đang hiện ${visible} bên trái`;
+            return;
+        }
         metaEl.textContent = `${totalLabel} tin phù hợp • đang hiện ${visible} bên trái`;
     };
 
     const renderList = () => {
         if (!state.filteredItems.length) {
-            listEl.innerHTML = '<div class="sv-housing-empty">Chưa có tin phù hợp với bộ lọc hiện tại.</div>';
+            listEl.innerHTML = `<div class="sv-housing-empty">${
+                hasActiveSearchQuery()
+                    ? 'Chưa có tin phù hợp với từ khóa hoặc bộ lọc hiện tại.'
+                    : 'Chưa có tin phù hợp với bộ lọc hiện tại.'
+            }</div>`;
             updateLoadMoreButton();
             renderMeta();
             return;
@@ -382,22 +592,36 @@
         const loadedCount = formatLoadedCount(state.items.length);
         const scopeLabel = state.isSuperadmin ? 'toàn bộ' : 'công khai';
         if (!filteredCount) {
+            if (hasActiveSearchQuery()) {
+                setMapStatus(`Đã tải ${loadedCount} tin ${scopeLabel}. Từ khóa "${getActiveSearchQuery()}" chưa khớp tin nào với bộ lọc hiện tại.`);
+                return;
+            }
             setMapStatus(`Đã tải ${loadedCount} tin ${scopeLabel}. Bộ lọc hiện tại chưa khớp tin nào.`);
             return;
         }
-        const limitNote = state.isSuperadmin && state.datasetHasMore
-            ? ' Dữ liệu đang dùng giới hạn tải an toàn cho map.'
-            : '';
-        if (state.isSuperadmin) {
-            setMapStatus(`Đang hiển thị ${filteredCount} tin`);
-            return;
-        }
-        setMapStatus(`Đang hiển thị ${filteredCount} pin.`);
+        setMapStatus('');
     };
 
     const applyClientFilters = ({ resetVisibleCount = true } = {}) => {
         const filters = buildFilterState();
-        state.filteredItems = state.items.filter((item) => matchesFilters(item, filters));
+        const searchDescriptor = buildSearchDescriptor(state.activeSearchQuery);
+        const rankedItems = [];
+        state.items.forEach((item) => {
+            if (!matchesFilters(item, filters)) {
+                return;
+            }
+            const searchScore = searchDescriptor.terms.length
+                ? computeSearchScore(item, searchDescriptor)
+                : 0;
+            if (searchDescriptor.terms.length && searchScore <= 0) {
+                return;
+            }
+            rankedItems.push({ item, searchScore });
+        });
+        if (searchDescriptor.terms.length) {
+            rankedItems.sort(compareRankedResults);
+        }
+        state.filteredItems = rankedItems.map((entry) => entry.item);
         if (resetVisibleCount) {
             state.visibleCount = INITIAL_VISIBLE_COUNT;
         } else {
@@ -445,13 +669,10 @@
     const loadHousingDataset = async () => {
         const cachedPayload = readCachedDataset();
         if (cachedPayload) {
-            state.items = Array.isArray(cachedPayload.items) ? cachedPayload.items : [];
+            state.items = buildSearchableItems(cachedPayload.items);
             state.datasetHasMore = Boolean(cachedPayload.hasMore);
             applyClientFilters();
             fitMapToInitialPins();
-            if (state.isSuperadmin) {
-                setMapStatus(`Đang hiển thị ${state.filteredItems.length} pin từ ${formatLoadedCount(state.items.length)} tin đã tải. Dữ liệu lấy từ bộ nhớ phiên nên không cần gọi backend lại.`);
-            }
             return;
         }
 
@@ -477,7 +698,7 @@
             if (requestToken !== state.requestToken) {
                 return;
             }
-            state.items = Array.isArray(payload.items) ? payload.items : [];
+            state.items = buildSearchableItems(payload.items);
             state.datasetHasMore = Boolean(payload.hasMore);
             writeCachedDataset(payload);
             applyClientFilters();
@@ -525,17 +746,26 @@
     });
 
     applyBtn.addEventListener('click', () => {
+        activateSearchQuery();
         applyClientFilters();
     });
 
     resetBtn.addEventListener('click', () => {
         form.reset();
+        searchInput.value = '';
+        state.activeSearchQuery = '';
         statusInput.value = state.defaultStatusFilter;
         applyClientFilters();
     });
 
     form.addEventListener('submit', (event) => {
         event.preventDefault();
+        applyClientFilters();
+    });
+
+    searchForm.addEventListener('submit', (event) => {
+        event.preventDefault();
+        activateSearchQuery();
         applyClientFilters();
     });
 

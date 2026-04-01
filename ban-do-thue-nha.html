@@ -196,6 +196,16 @@
                     <strong><i class="fa-solid fa-map-location-dot me-2 text-primary"></i>Bản đồ</strong>
                     <div id="housing-map-status" class="sv-housing-note mt-1" aria-live="polite">Đang tải dữ liệu cho bản đồ...</div>
                 </div>
+                <form id="housing-map-search-form" class="sv-housing-panel__search" role="search">
+                    <label class="visually-hidden" for="housing-map-search-input">Tìm kiếm tin thuê nhà</label>
+                    <input
+                        id="housing-map-search-input"
+                        class="form-control"
+                        type="search"
+                        placeholder="Tìm theo từ khóa, giá, thành phố, quận..."
+                        autocomplete="off">
+                    <button id="housing-map-search-btn" class="btn btn-primary" type="submit">Tìm</button>
+                </form>
             </div>
             <div id="housing-map" class="sv-housing-map" aria-label="Bản đồ thuê nhà SVP"></div>
         </section>

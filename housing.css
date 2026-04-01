@@ -78,6 +78,33 @@
     background: linear-gradient(180deg, #fff, #f9fbfe);
 }
 
+.sv-housing-panel__search {
+    display: flex;
+    align-items: center;
+    gap: .55rem;
+    width: min(100%, 460px);
+    margin-left: auto;
+}
+
+.sv-housing-panel__search .form-control {
+    min-width: 0;
+    border-radius: 999px;
+    border-color: #cdd8e7;
+    box-shadow: none;
+}
+
+.sv-housing-panel__search .form-control:focus {
+    border-color: rgba(15, 95, 174, .45);
+    box-shadow: 0 0 0 .18rem rgba(15, 95, 174, .14);
+}
+
+.sv-housing-panel__search .btn {
+    flex: 0 0 auto;
+    min-width: 88px;
+    border-radius: 999px;
+    font-weight: 800;
+}
+
 .sv-housing-panel__body {
     padding: 1rem;
 }
@@ -832,6 +859,10 @@
     }
     .sv-housing-list {
         max-height: none;
+    }
+    .sv-housing-panel__search {
+        width: 100%;
+        margin-left: 0;
     }
 }
 

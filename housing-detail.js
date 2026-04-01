@@ -404,9 +404,7 @@
     };
 
     const extractShareImageUrl = (payload) => {
-        const images = Array.isArray(payload?.images) ? payload.images : [];
-        const primaryImage = images.find((item) => item && item.primary && item.imageUrl) || images.find((item) => item && item.imageUrl);
-        return String((primaryImage && primaryImage.imageUrl) || shared.extractFirstImageUrlFromHtml(payload?.description) || '/assets/icons/og_housing_map.png').trim();
+        return String(payload?.imageUrl || '/assets/icons/og_housing_map.png').trim();
     };
 
     const normalizeHttpUrl = (value) => {
@@ -544,6 +542,7 @@
             cafEligible: Boolean(payload?.cafEligible ?? payload?.caf_eligible),
             tags: (Array.isArray(payload?.tags) ? payload.tags : []).map((item) => String(item || '').trim()).filter(Boolean),
             description: String(payload?.description || '').trim(),
+            imageUrl: normalizeHttpUrl(payload?.imageUrl || payload?.image_url || ''),
             images,
             transitPoints,
             contact: payload?.contact || {},
@@ -630,32 +629,12 @@
             return;
         }
 
-        const rowUrls = richContent && typeof richContent.extractLeadingImageRowUrls === 'function'
-            ? richContent.extractLeadingImageRowUrls(currentDetail.description, { maxItems: 4 })
-            : [];
-        if (rowUrls.length >= 2) {
-            const coverHtml = richContent.buildImageRowCoverHtml({
-                imageUrls: rowUrls,
-                tagName: 'div',
-                altPrefix: currentDetail.title,
-                className: 'mb-2'
-            });
-            galleryEl.innerHTML = `
-                <div class="sv-housing-image-item">
-                    ${coverHtml}
-                    <div class="sv-housing-note mt-2">Ảnh cover đang được lấy từ cụm ảnh đầu bài để người xem thấy nhanh hơn.</div>
-                </div>
-            `;
-            return;
-        }
-
-        const fallbackImage = normalizeHttpUrl(shared.extractFirstImageUrlFromHtml(currentDetail.description));
-        if (fallbackImage) {
+        if (currentDetail.imageUrl) {
             galleryEl.innerHTML = `
                 <div class="sv-housing-image-list">
                     <figure class="sv-housing-image-item">
-                        <img class="sv-housing-image-thumb" src="${escapeHtml(fallbackImage)}" alt="${escapeHtml(currentDetail.title)}" loading="lazy" decoding="async" referrerpolicy="no-referrer">
-                        <figcaption class="sv-housing-note mt-2">Ảnh đang được lấy từ mô tả chi tiết của tin để giữ trải nghiệm xem liền mạch.</figcaption>
+                        <img class="sv-housing-image-thumb" src="${escapeHtml(currentDetail.imageUrl)}" alt="${escapeHtml(currentDetail.title)}" loading="lazy" decoding="async" referrerpolicy="no-referrer">
+                        <figcaption class="sv-housing-note mt-2">Ảnh chính của tin thuê nhà.</figcaption>
                     </figure>
                 </div>
             `;

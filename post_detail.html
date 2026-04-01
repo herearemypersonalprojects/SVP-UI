@@ -1007,13 +1007,6 @@
         return `<blockquote>${headerHtml}${bodyHtml}</blockquote><p></p>`;
     };
 
-    const extractFirstImageSrc = (html) => {
-        const template = document.createElement('template');
-        template.innerHTML = String(html || '');
-        const image = template.content.querySelector('img[src]');
-        return image ? toSafeHttpUrl(image.getAttribute('src') || '') : '';
-    };
-
     const estimateReadTime = (html) => {
         const words = toPlainText(html).split(/\s+/).length;
         return `${Math.max(1, Math.ceil(words/WORDS_PER_MINUTE))} phút đọc`;
@@ -1652,7 +1645,7 @@
 
     /* ── Render functions ── */
     const renderHero = (post) => {
-        const coverUrl = toSafeHttpUrl(post?.coverImageUrl || '') || extractFirstImageSrc(post?.contentHtml || '');
+        const coverUrl = toSafeHttpUrl(post?.coverImageUrl || '');
         heroCover.classList.remove('pd-skeleton');
         if (!coverUrl) {
             heroCover.classList.add('is-hidden');
@@ -1772,7 +1765,7 @@
         const articleText = seo.htmlToText(post.contentHtml || '');
         const description = seo.excerpt(articleText || post.title || '', 170)
             || 'Đọc bài viết và chia sẻ từ cộng đồng SVP Forum.';
-        const coverImage = toSafeHttpUrl(post.coverImageUrl || '') || extractFirstImageSrc(post.contentHtml || '') || seo.defaultImage;
+        const coverImage = toSafeHttpUrl(post.coverImageUrl || '') || seo.defaultImage;
         const canonicalUrl = buildArticleCanonicalUrl(post.postId, post.title);
         const wordCount = articleText ? articleText.split(/\s+/).filter(Boolean).length : 0;
         const noindex = String(post.status || '').toUpperCase() !== 'PUBLISHED';

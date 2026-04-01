@@ -309,19 +309,6 @@
             if (!blocks.length) return '';
             return blocks.map((block) => `<p>${escapeHtml(block).replace(/\n/g, '<br>')}</p>`).join('');
         };
-        const extractFirstImageUrl = (html) => {
-            const template = document.createElement('template');
-            template.innerHTML = String(html || '').trim();
-            const image = template.content.querySelector('img[src]');
-            if (image) {
-                const safeSrc = normalizeSafeHref(image.getAttribute('src'));
-                if (safeSrc) {
-                    return safeSrc;
-                }
-            }
-            const directUrlMatch = String(html || '').match(/https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?[^\s<>"']*)?/i);
-            return directUrlMatch ? normalizeSafeHref(directUrlMatch[0]) : '';
-        };
         const sanitizeEventContentHtml = (html) => {
             if (richContent && typeof richContent.sanitizeHtml === 'function') {
                 return richContent.sanitizeHtml(html, eventSanitizeOptions);
@@ -445,9 +432,7 @@
             const description = seo.excerpt(seo.htmlToText(String(contentHtml || '')), 170)
                 || 'Thông tin chi tiết về sự kiện và cách tham gia cùng cộng đồng SVP.';
             const canonicalUrl = buildEventCanonicalUrl(event.eventId, title);
-            const imageUrl = normalizeSafeHref(event.imageUrl || event.image_url)
-                || extractFirstImageUrl(contentHtml)
-                || seo.defaultImage;
+            const imageUrl = normalizeSafeHref(event.imageUrl || event.image_url) || seo.defaultImage;
             const organizer = event.organizer || {};
             const organizerName = String(organizer.displayName || organizer.nickname || 'SVP Forum');
             const address = String(event.address || '').trim();
@@ -507,8 +492,7 @@
             const organizer = event.organizer || {};
             const hostName = String(organizer.displayName || organizer.nickname || 'Ban tổ chức SVP');
             const contentHtml = toContentHtml(event.content);
-            const imageUrl = normalizeSafeHref(event.imageUrl || event.image_url)
-                || extractFirstImageUrl(contentHtml);
+            const imageUrl = normalizeSafeHref(event.imageUrl || event.image_url);
 
             titleEl.textContent = title;
             timeEl.textContent = formatDateTime(event.eventTime);

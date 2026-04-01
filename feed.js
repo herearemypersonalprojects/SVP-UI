@@ -352,8 +352,8 @@
             createdAt: item.createdAt,
             sortTime: toTimeValue(item.createdAt),
             author,
-            coverImageUrl: resolveCoverImageUrl(item.coverImageUrl, item.contentHtml),
-            coverImageRowUrls: extractLeadingImageRowUrls(item.contentHtml),
+            coverImageUrl: normalizeCoverUrl(item.coverImageUrl || item.cover_image_url || ''),
+            coverImageRowUrls: [],
             excerpt: excerptText(item.contentHtml, 280) || 'Nội dung bài viết đang được cập nhật.',
             footer: [
                 getCategoryName(item.categoryId),
@@ -375,8 +375,8 @@
             createdAt: item.createdAt,
             sortTime: toTimeValue(item.createdAt),
             author,
-            coverImageUrl: resolveCoverImageUrl(item.coverImageUrl, item.contentHtml),
-            coverImageRowUrls: extractLeadingImageRowUrls(item.contentHtml),
+            coverImageUrl: normalizeCoverUrl(item.coverImageUrl || item.cover_image_url || ''),
+            coverImageRowUrls: [],
             excerpt: excerptText(item.contentHtml, 260) || 'Nội dung chủ đề đang được cập nhật.',
             footer: [
                 getCategoryName(item.categoryId),
@@ -391,7 +391,6 @@
         const title = decodeHtmlEntities(item.title || 'Sự kiện mới').trim();
         const address = decodeHtmlEntities(item.address || '').trim();
         const eventTypeName = decodeHtmlEntities(item.eventTypeName || '').trim();
-        const contentHtml = item.contentHtml || item.content || '';
         const priceValue = Number(item.price);
         const priceLabel = Number.isFinite(priceValue) && priceValue > 0
             ? `${priceValue.toLocaleString('vi-VN')}€`
@@ -404,11 +403,10 @@
             createdAt: item.createdAt,
             sortTime: toTimeValue(item.createdAt),
             author: null,
-            coverImageUrl: resolveCoverImageUrl(
-                item.coverImageUrl || item.cover_image_url || item.imageUrl || item.image_url,
-                contentHtml
+            coverImageUrl: normalizeCoverUrl(
+                item.coverImageUrl || item.cover_image_url || item.imageUrl || item.image_url
             ),
-            coverImageRowUrls: extractLeadingImageRowUrls(contentHtml),
+            coverImageRowUrls: [],
             excerpt: `Được thêm ngày ${formatDateTime(item.createdAt)}. Sự kiện diễn ra vào ${formatDateTime(item.eventTime)}${address ? ` tại ${address}` : ''}.`,
             footer: [
                 eventTypeName ? `Loại: ${eventTypeName}` : 'Sự kiện cộng đồng',

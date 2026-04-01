@@ -94,8 +94,9 @@ async function loadHousingDetailPage(payload, options = {}) {
     return dom;
 }
 
-test('housing detail falls back to a leading image row from the description when gallery is empty', async () => {
+test('housing detail uses persisted imageUrl when gallery is empty', async () => {
     const dom = await loadHousingDetailPage(buildHousingPayload({
+        imageUrl: 'https://cdn.svp.test/housing/persisted-cover.jpg',
         description: `
             <div>
                 <img src="https://cdn.svp.test/housing/row-1.jpg" alt="1">
@@ -106,15 +107,17 @@ test('housing detail falls back to a leading image row from the description when
     }));
 
     const gallery = dom.window.document.getElementById('housing-detail-gallery');
-    assert.ok(gallery.querySelector('.svp-image-row-cover'));
-    assert.match(gallery.textContent, /Ảnh cover đang được lấy từ cụm ảnh đầu bài/);
+    const image = gallery.querySelector('img.sv-housing-image-thumb');
+    assert.ok(image);
+    assert.match(image.getAttribute('src') || '', /persisted-cover\.jpg/);
+    assert.match(gallery.textContent, /Ảnh chính của tin thuê nhà/);
     assert.equal(
         dom.window.document.querySelector('meta[property="og:image"]').getAttribute('content'),
-        'https://cdn.svp.test/housing/row-1.jpg'
+        'https://cdn.svp.test/housing/persisted-cover.jpg'
     );
 });
 
-test('housing detail falls back to the first description image when no gallery exists', async () => {
+test('housing detail does not scan description images when imageUrl is missing', async () => {
     const dom = await loadHousingDetailPage(buildHousingPayload({
         description: `
             <p>Colocation proche T9.</p>
@@ -123,13 +126,12 @@ test('housing detail falls back to the first description image when no gallery e
     }));
 
     const gallery = dom.window.document.getElementById('housing-detail-gallery');
-    const image = gallery.querySelector('img.sv-housing-image-thumb');
-    assert.ok(image);
-    assert.match(image.getAttribute('src') || '', /single-preview\.jpg/);
-    assert.match(gallery.textContent, /Ảnh đang được lấy từ mô tả chi tiết của tin/);
+    assert.equal(gallery.querySelector('img.sv-housing-image-thumb'), null);
+    assert.equal(gallery.querySelector('.svp-image-row-cover'), null);
+    assert.match(gallery.textContent, /Tin này chưa có gallery ảnh riêng/);
     assert.equal(
         dom.window.document.querySelector('meta[property="og:image"]').getAttribute('content'),
-        'https://cdn.svp.test/housing/single-preview.jpg'
+        'https://svpforum.fr/assets/icons/og_housing_map.png'
     );
     assert.equal(dom.window.document.getElementById('housing-detail-share').classList.contains('d-none'), false);
     assert.match(dom.window.document.getElementById('housing-detail-meta').textContent, /27 lượt xem/);

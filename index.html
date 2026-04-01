@@ -1385,7 +1385,6 @@
             return `<a class="sv-member-link" href="${profileHref}" aria-label="Hồ sơ ${safeName}">${avatarHtml}</a>`;
         };
 
-        // Utilise la même logique que events.html pour extraire l'image cover
         const normalizeSafeHref = (href) => {
             const raw = String(href || '').trim();
             if (!raw) {
@@ -1400,39 +1399,12 @@
                 return '';
             }
         };
-        const extractFirstImageUrl = (value) => {
-            const raw = String(value || '').trim();
-            if (!raw) {
-                return '';
-            }
-            const template = document.createElement('template');
-            template.innerHTML = raw;
-            const image = template.content.querySelector('img[src]');
-            if (image) {
-                const safeSrc = normalizeSafeHref(image.getAttribute('src'));
-                if (safeSrc) {
-                    return safeSrc;
-                }
-            }
-            const directMatch = raw.match(/https?:\/\/[^\s<>"]+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?[^\s<>"]*)?/i);
-            return directMatch ? normalizeSafeHref(directMatch[0]) : '';
-        };
         const resolveEventPreviewImageUrl = (event) => {
-            const explicitImageUrl = normalizeSafeHref(
+            return normalizeSafeHref(
                 event?.coverImageUrl
                 || event?.cover_image_url
                 || event?.imageUrl
                 || event?.image_url
-            );
-            if (explicitImageUrl) {
-                return explicitImageUrl;
-            }
-            return extractFirstImageUrl(
-                event?.contentHtml
-                || event?.content_html
-                || event?.description
-                || event?.content
-                || ''
             );
         };
         const renderEventItem = (event) => {

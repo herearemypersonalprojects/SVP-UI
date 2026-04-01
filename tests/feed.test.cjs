@@ -44,12 +44,13 @@ async function loadFeedPage(eventItems) {
     return dom;
 }
 
-test('feed renders event cover from the first fallback description image when coverImageUrl is missing', async () => {
+test('feed renders event cover from persisted coverImageUrl', async () => {
     const dom = await loadFeedPage([
         {
             eventId: 23,
             title: 'Forum logement étudiant',
-            contentHtml: '<p><img src=https://cdn.svp.test/events/forum-logement-cover.jpg alt="Forum logement"></p>',
+            coverImageUrl: 'https://cdn.svp.test/events/forum-logement-cover.jpg',
+            contentHtml: '<p><img src=https://cdn.svp.test/events/embedded-content-image.jpg alt="Forum logement"></p>',
             createdAt: '2026-03-26T09:11:25Z',
             eventTime: '2026-04-12T14:00:00Z',
             address: 'Paris 5e',
@@ -65,7 +66,7 @@ test('feed renders event cover from the first fallback description image when co
     assert.match(dom.window.document.getElementById('feed-stream').textContent, /Forum logement étudiant/);
 });
 
-test('feed prefers a leading image row cover for new event entries', async () => {
+test('feed ignores description image rows when event coverImageUrl is missing', async () => {
     const dom = await loadFeedPage([
         {
             eventId: 24,
@@ -87,8 +88,7 @@ test('feed prefers a leading image row cover for new event entries', async () =>
         }
     ]);
 
-    const rowCover = dom.window.document.querySelector('.sv-feed-card .svp-image-row-cover');
-    assert.ok(rowCover);
-    assert.equal(rowCover.querySelectorAll('img').length, 3);
-    assert.ok(!dom.window.document.querySelector('.sv-feed-card__cover[style*="row-1.jpg"]'));
+    assert.equal(dom.window.document.querySelector('.sv-feed-card .svp-image-row-cover'), null);
+    assert.equal(dom.window.document.querySelector('.sv-feed-card__cover'), null);
+    assert.match(dom.window.document.getElementById('feed-stream').textContent, /Projection documentaire SVP/);
 });

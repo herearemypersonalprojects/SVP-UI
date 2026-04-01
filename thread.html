@@ -1727,6 +1727,9 @@
             const comments = Array.isArray(payload && payload.comments) ? payload.comments : [];
             const author = post?.author || {};
             const postContentHtml = String(post?.contentHtml || post?.content_html || '');
+            const coverImageUrl = normalizeSafeImageUrl(
+                post?.coverImageUrl || post?.cover_image_url || post?.imageUrl || post?.image_url || ''
+            );
             return {
                 threadId: Number(post?.postId || 0),
                 title: String(post?.title || 'Chủ đề'),
@@ -1742,6 +1745,7 @@
                 viewCount: normalizeCount(post?.viewCount ?? post?.view_count),
                 commentCount: normalizeCount(post?.commentCount ?? post?.comment_count),
                 contentHtml: postContentHtml,
+                coverImageUrl,
                 imageUrls: collectImageUrls(post?.imageUrl || post?.image_url || '', postContentHtml),
                 comments: comments.map((comment) => normalizeApiComment(comment))
             };
@@ -1951,9 +1955,7 @@
             const discussionText = seo.htmlToText(thread.contentHtml || '');
             const description = seo.excerpt(discussionText || thread.title || '', 170)
                 || 'Theo dõi và tham gia thảo luận trong cộng đồng SVP Forum.';
-            const imageUrl = Array.isArray(thread.imageUrls) && thread.imageUrls.length
-                ? thread.imageUrls[0]
-                : seo.defaultImage;
+            const imageUrl = normalizeSafeImageUrl(thread.coverImageUrl || '') || seo.defaultImage;
             const canonicalUrl = buildThreadCanonicalUrl(thread.threadId, thread.title);
             const wordCount = discussionText ? discussionText.split(/\s+/).filter(Boolean).length : 0;
 
@@ -2565,6 +2567,7 @@
                         createdAt: String(localDiscussion.createdAt || new Date().toISOString()),
                         updatedAt: String(localDiscussion.createdAt || new Date().toISOString()),
                         contentLines: htmlToLines(discussionContentHtml),
+                        coverImageUrl: normalizeSafeImageUrl(localDiscussion.imageUrl || localDiscussion.image_url || ''),
                         imageUrls: collectImageUrls(localDiscussion.imageUrl || localDiscussion.image_url || '', discussionContentHtml),
                         comments: [],
                         didTrackView: shouldTrackView
@@ -2589,6 +2592,7 @@
                         createdAt: String(localArticle.createdAt || new Date().toISOString()),
                         updatedAt: String(localArticle.createdAt || new Date().toISOString()),
                         contentLines: htmlToLines(articleContentHtml),
+                        coverImageUrl: normalizeSafeImageUrl(localArticle.imageUrl || localArticle.image_url || ''),
                         imageUrls: collectImageUrls(localArticle.imageUrl || localArticle.image_url || '', articleContentHtml),
                         comments: [],
                         didTrackView: shouldTrackView

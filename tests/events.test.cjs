@@ -72,7 +72,7 @@ test('events page renders uploaded preview image for listed events', async () =>
     assert.match(dom.window.document.getElementById('sv-events-upcoming-list').textContent, /Hoi thao du hoc/);
 });
 
-test('events page falls back to the first image URL found in event content when no uploaded preview exists', async () => {
+test('events page falls back to generated placeholder when coverImageUrl is missing', async () => {
     const dom = await loadEventsPage([
         {
             eventId: 72,
@@ -89,7 +89,7 @@ test('events page falls back to the first image URL found in event content when 
 
     const image = dom.window.document.querySelector('#sv-events-upcoming-list .sv-event-item__thumb');
     assert.ok(image);
-    assert.match(image.getAttribute('src') || '', /outdoor-night-cover\.webp/);
+    assert.match(image.getAttribute('src') || '', /^data:image\/svg\+xml;utf8,/);
     assert.match(dom.window.document.getElementById('sv-events-upcoming-list').textContent, /Dem nhac ngoai troi/);
 });
 

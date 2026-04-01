@@ -447,24 +447,6 @@
             }
         };
 
-        const extractFirstImageUrl = (value) => {
-            const raw = String(value || '').trim();
-            if (!raw) {
-                return '';
-            }
-            const template = document.createElement('template');
-            template.innerHTML = raw;
-            const image = template.content.querySelector('img[src]');
-            if (image) {
-                const safeSrc = normalizeSafeHref(image.getAttribute('src'));
-                if (safeSrc) {
-                    return safeSrc;
-                }
-            }
-            const directMatch = raw.match(/https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?[^\s<>"']*)?/i);
-            return directMatch ? normalizeSafeHref(directMatch[0]) : '';
-        };
-
         const buildEventFallbackImage = (title) => {
             const safeTitle = escapeHtml(String(title || 'SVP Event')).slice(0, 26);
             const svg = [
@@ -486,20 +468,11 @@
         };
 
         const resolveEventPreviewImageUrl = (event) => {
-            const explicitImageUrl = normalizeSafeHref(
+            return normalizeSafeHref(
                 event?.coverImageUrl
                 || event?.cover_image_url
                 || event?.imageUrl
                 || event?.image_url
-            );
-            if (explicitImageUrl) {
-                return explicitImageUrl;
-            }
-            return extractFirstImageUrl(
-                event?.contentHtml
-                || event?.content_html
-                || event?.content
-                || ''
             );
         };
 

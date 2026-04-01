@@ -414,6 +414,37 @@
         .pd-share__tw { background: #000; color: #fff; }
         .pd-share__copy { background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; cursor:pointer; }
 
+        .pd-side-list-link {
+            display: block;
+            color: inherit;
+            text-decoration: none;
+        }
+        .pd-side-list-link:hover .pd-side-list-title {
+            color: #2563eb;
+        }
+        .pd-side-list-thumb {
+            display: block;
+            width: 100%;
+            aspect-ratio: 16 / 9;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid #e2e8f0;
+            background: #e2e8f0;
+            margin-bottom: .7rem;
+        }
+        .pd-side-list-title {
+            color: #0f172a;
+            font-weight: 650;
+            line-height: 1.42;
+            margin-bottom: .3rem;
+            transition: color .16s ease;
+        }
+        .pd-side-list-meta {
+            color: #64748b;
+            font-size: .86rem;
+            line-height: 1.4;
+        }
+
         /* Loading / error states */
         .pd-skeleton {
             background: linear-gradient(90deg, #f1f5f9 25%, #e2e8f0 50%, #f1f5f9 75%);
@@ -910,8 +941,24 @@
         postId: Number(item?.postId || 0),
         title: String(item?.title || ''),
         createdAt: String(item?.createdAt || ''),
+        coverImageUrl: String(item?.coverImageUrl || item?.cover_image_url || item?.imageUrl || item?.image_url || ''),
         author: item?.author && typeof item.author === 'object' ? item.author : {}
     });
+
+    const renderSidebarPostListItems = (items, buildHref) => items.map((item) => {
+        const href = buildHref(item);
+        const safeTitle = escapeHtml(item.title || 'Bài viết');
+        const safeMeta = escapeHtml(timeAgo(item.createdAt) || formatDate(item.createdAt));
+        const safeCover = toSafeHttpUrl(item.coverImageUrl || '');
+        return `
+            <li>
+                <a class="pd-side-list-link" href="${href}">
+                    ${safeCover ? `<img class="pd-side-list-thumb" src="${escapeHtml(safeCover)}" alt="${safeTitle}" loading="lazy" decoding="async">` : ''}
+                    <div class="pd-side-list-title">${safeTitle}</div>
+                    <div class="pd-side-list-meta">${safeMeta}</div>
+                </a>
+            </li>`;
+    }).join('');
 
     const toSafeHttpUrl = (value) => {
         const raw = decodeHtmlEntities(value).trim();
@@ -1998,13 +2045,10 @@
                 return;
             }
 
-            authorArticlesEl.innerHTML = collected.slice(0, 5).map((item) => `
-                <li>
-                    <div>
-                        <a href="${buildArticleHref(item.postId, item.title)}">${escapeHtml(item.title || 'Bài viết')}</a>
-                        <div class="sv-meta">${escapeHtml(timeAgo(item.createdAt) || formatDate(item.createdAt))}</div>
-                    </div>
-                </li>`).join('');
+            authorArticlesEl.innerHTML = renderSidebarPostListItems(
+                collected.slice(0, 5),
+                (item) => buildArticleHref(item.postId, item.title)
+            );
             authorArticlesCardEl.hidden = false;
         } catch {
             authorArticlesCardEl.hidden = true;
@@ -2019,16 +2063,13 @@
             const data = await res.json().catch(()=>({}));
             if (!res.ok) throw new Error();
             const items = (Array.isArray(data.items)?data.items:[])
-                .map(i=>({ postId:Number(i?.postId||0), title:String(i?.title||''), createdAt:String(i?.createdAt||'') }))
+                .map(normalizeArticleSummary)
                 .filter(i=>i.postId>0 && i.postId!==postId).slice(0,5);
             if (!items.length) { relatedArticlesEl.innerHTML='<li><div class="sv-meta">Chưa có bài liên quan.</div></li>'; return; }
-            relatedArticlesEl.innerHTML = items.map(i=>`
-                <li>
-                    <div>
-                        <a href="${buildArticleHref(i.postId, i.title)}">${escapeHtml(i.title)}</a>
-                        <div class="sv-meta">${escapeHtml(timeAgo(i.createdAt))}</div>
-                    </div>
-                </li>`).join('');
+            relatedArticlesEl.innerHTML = renderSidebarPostListItems(
+                items,
+                (item) => buildArticleHref(item.postId, item.title)
+            );
         } catch {
             relatedArticlesEl.innerHTML='<li><div class="sv-meta">Không tải được bài viết liên quan.</div></li>';
         }
@@ -2046,24 +2087,17 @@
             const data = await res.json().catch(()=>({}));
             if (!res.ok) throw new Error();
             const items = (Array.isArray(data.items) ? data.items : [])
-                .map((item) => ({
-                    postId: Number(item?.postId || 0),
-                    title: String(item?.title || ''),
-                    createdAt: String(item?.createdAt || '')
-                }))
+                .map(normalizeArticleSummary)
                 .filter((item) => item.postId > 0 && item.postId !== postId)
                 .slice(0, 5);
             if (!items.length) {
                 relatedThreadsEl.innerHTML = '<li><div class="sv-meta">Chưa có thảo luận liên quan trong chuyên mục này.</div></li>';
                 return;
             }
-            relatedThreadsEl.innerHTML = items.map((item) => `
-                <li>
-                    <div>
-                        <a href="${buildThreadHref(item.postId, item.title)}">${escapeHtml(item.title)}</a>
-                        <div class="sv-meta">${escapeHtml(timeAgo(item.createdAt))}</div>
-                    </div>
-                </li>`).join('');
+            relatedThreadsEl.innerHTML = renderSidebarPostListItems(
+                items,
+                (item) => buildThreadHref(item.postId, item.title)
+            );
         } catch {
             relatedThreadsEl.innerHTML = '<li><div class="sv-meta">Không tải được thảo luận liên quan.</div></li>';
         }

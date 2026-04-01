@@ -2,7 +2,7 @@
     const SITE_URL = String(window.SVP_PUBLIC_SITE_URL || 'https://svpforum.fr').replace(/\/+$/g, '');
     const SHARE_SITE_URL = String(window.SVP_SHARE_BASE_URL || 'https://share.svpforum.fr').replace(/\/+$/g, '');
     const SITE_NAME = 'SVP Forum';
-    const DEFAULT_IMAGE = `${SITE_URL}/assets/icons/logo_svp.png`;
+    const DEFAULT_IMAGE = `${SITE_URL}/assets/icons/icon_svp.png`;
     const DEFAULT_DESCRIPTION = 'Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP) - nơi kết nối, chia sẻ kiến thức, sự kiện và cộng đồng người Việt tại Pháp.';
     const PUBLIC_ROBOTS = 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
     const PRIVATE_ROBOTS = 'noindex,nofollow,noarchive';
@@ -651,7 +651,7 @@
         const finalDescription = excerpt(merged.description || DEFAULT_DESCRIPTION, 180) || DEFAULT_DESCRIPTION;
         const finalImage = buildUrl(merged.image || DEFAULT_IMAGE);
         const finalImageType = cleanText(merged.imageType || (finalImage === DEFAULT_IMAGE ? 'image/png' : ''));
-        const finalImageWidth = cleanText(merged.imageWidth || (finalImage === DEFAULT_IMAGE ? '1536' : ''));
+        const finalImageWidth = cleanText(merged.imageWidth || (finalImage === DEFAULT_IMAGE ? '1024' : ''));
         const finalImageHeight = cleanText(merged.imageHeight || (finalImage === DEFAULT_IMAGE ? '1024' : ''));
         const finalRobots = merged.noindex ? PRIVATE_ROBOTS : cleanText(merged.robots || PUBLIC_ROBOTS);
         const ogType = cleanText(merged.type || 'website');

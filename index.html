@@ -4,28 +4,29 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="facebook-domain-verification" content="11qyalh10yucjx9dvsey1u2ihsk4xf" />
-    <title>Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP)</title>
-    <meta name="description" content="Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP) - nơi kết nối, chia sẻ kiến thức, sự kiện và cộng đồng người Việt tại Pháp.">
+    <title>Diễn đàn Sinh viên & Tri thức Việt tại Pháp</title>
+    <meta name="description" content="Diễn đàn Sinh viên & Tri thức Việt tại Pháp - nơi kết nối, chia sẻ kiến thức, sự kiện và cộng đồng người Việt tại Pháp.">
     <link rel="canonical" href="https://www.svpforum.fr/">
     <meta property="og:locale" content="vi_VN">
     <meta property="og:type" content="website">
     <meta property="og:site_name" content="SVP Forum">
-    <meta property="og:title" content="Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP)">
+    <meta property="og:title" content="Diễn đàn Sinh viên & Tri thức Việt tại Pháp">
     <meta property="og:description" content="Nơi kết nối, chia sẻ kiến thức, sự kiện và cộng đồng người Việt tại Pháp.">
     <meta property="og:url" content="https://www.svpforum.fr/">
-    <meta property="og:image" content="https://www.svpforum.fr/assets/icons/logo_svp.png">
-    <meta property="og:image:secure_url" content="https://www.svpforum.fr/assets/icons/logo_svp.png">
+    <meta property="og:image" content="https://www.svpforum.fr/assets/icons/icon_svp.png">
+    <meta property="og:image:url" content="https://www.svpforum.fr/assets/icons/icon_svp.png">
+    <meta property="og:image:secure_url" content="https://www.svpforum.fr/assets/icons/icon_svp.png">
     <meta property="og:image:type" content="image/png">
-    <meta property="og:image:width" content="1536">
+    <meta property="og:image:width" content="1024">
     <meta property="og:image:height" content="1024">
-    <meta property="og:image:alt" content="Logo SVP Forum">
+    <meta property="og:image:alt" content="Icon SVP Forum">
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:title" content="Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP)">
+    <meta name="twitter:title" content="Diễn đàn Sinh viên & Tri thức Việt tại Pháp">
     <meta name="twitter:description" content="Nơi kết nối, chia sẻ kiến thức, sự kiện và cộng đồng người Việt tại Pháp.">
-    <meta name="twitter:image" content="https://www.svpforum.fr/assets/icons/logo_svp.png">
+    <meta name="twitter:image" content="https://www.svpforum.fr/assets/icons/icon_svp.png">
+    <meta name="twitter:image:alt" content="Icon SVP Forum">
     <link rel="icon" type="image/svg+xml" href="assets/icons/favicon.svg">
     <link rel="shortcut icon" href="assets/icons/favicon.svg">
-    <script src="seo.js"></script>
     <script type="application/ld+json">
         [
             {
@@ -57,9 +58,6 @@
 
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Merriweather+Sans:ital,wght@1,700&family=Roboto+Condensed:wght@700;800&display=swap" rel="stylesheet">
 
     <link rel="stylesheet" href="svp.css">
     <link rel="stylesheet" href="dropdown-hover.css">
@@ -568,7 +566,7 @@
                     <div class="sv-meta">Đang tải bài viết theo chuyên mục...</div>
                 </div>
                 <div id="sv-post-pagination" class="sv-feed-pagination px-3 pb-3" aria-label="Phân trang bài viết">
-                    <div id="sv-posts-page-info" class="sv-feed-pagination__info sv-meta">0 bài viết</div>
+                    <div id="sv-posts-page-info" class="sv-feed-pagination__info sv-meta" style="display:none;" aria-hidden="true"></div>
                     <button id="sv-posts-load-more" class="btn btn-outline-primary sv-feed-pagination__action" type="button">Xem thêm...</button>
                 </div>
             </div>
@@ -721,9 +719,8 @@
     </div>
 </footer>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="config.js"></script>
-<script src="svp-rich-content.js"></script>
+<script src="seo.js"></script>
 <script src="avatar-utils.js"></script>
 <script src="auth-topbar.js"></script>
 
@@ -889,10 +886,7 @@
         }
 
         const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
-        const richContent = window.SVPRichContent || null;
-        const WORDS_PER_MINUTE = 220;
-        const PREVIEW_LEAD_MAX_CHARS = 220;
-        const HOME_CACHE_KEY_PREFIX = 'svp.home.payload.cache.v4.';
+        const HOME_CACHE_KEY_PREFIX = 'svp.home.payload.cache.v5.';
         const HOME_CACHE_TTL_MS = 2 * 60 * 1000;
         const LOCAL_ARTICLE_KEY = 'svp.latestSubmittedArticle';
         const CATEGORY_NAMES = {
@@ -1037,82 +1031,10 @@
             return fallback;
         };
 
-        const toPlainText = (html) => {
-            const decodedHtml = decodeHtmlEntities(html);
-            if (!decodedHtml) {
-                return '';
-            }
-
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(`<div data-root>${decodedHtml}</div>`, 'text/html');
-            const root = doc.body.querySelector('[data-root]');
-            return String(root?.textContent || decodedHtml)
-                .replace(/\u00a0/g, ' ')
-                .replace(/\s+/g, ' ')
-                .trim();
-        };
-
-        const estimateReadTimeFromPlainText = (plainText) => {
-            if (!plainText) {
-                return '1 phút đọc';
-            }
-            const wordCount = plainText.split(/\s+/).length;
-            const minutes = Math.max(1, Math.ceil(wordCount / WORDS_PER_MINUTE));
-            return `${minutes} phút đọc`;
-        };
-
-        const getLeadPreviewText = (plainText) => {
-            if (!plainText) {
-                return '';
-            }
-            let text = plainText.slice(0, PREVIEW_LEAD_MAX_CHARS).trim();
-            text = text.replace(/<[^>]*$/, '').trim();
-            return text;
-        };
-
-        const buildLeadFromPlainText = (plainText) => {
-            const previewText = getLeadPreviewText(plainText);
-            if (!previewText) {
-                return 'Bài viết đang được cập nhật nội dung.';
-            }
-            return plainText.length <= PREVIEW_LEAD_MAX_CHARS
-                ? previewText
-                : `${previewText}...`;
-        };
-
-        const extractFirstImageSrc = (contentHtml) => {
-            const html = String(contentHtml || '');
-            const match = html.match(/<img[^>]*src\s*=\s*['"]([^'"]+)['"][^>]*>/i);
-            if (match && match[1]) {
-                return String(match[1]).trim();
-            }
-            const directImageMatch = html.match(/https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?[^\s<>"']*)?/i);
-            if (directImageMatch && directImageMatch[0]) {
-                return String(directImageMatch[0]).trim();
-            }
-            return '';
-        };
-
-        const extractCoverFromContent = (explicitCover, contentHtml) => {
-            const safeExplicitCover = String(explicitCover || '').trim();
-            if (safeExplicitCover) {
-                return safeExplicitCover;
-            }
-            return extractFirstImageSrc(contentHtml);
-        };
-
-        const extractLeadingImageRowUrls = (contentHtml) => (
-            richContent && typeof richContent.extractLeadingImageRowUrls === 'function'
-                ? richContent.extractLeadingImageRowUrls(contentHtml, { maxItems: 3 })
-                : []
-        );
-
         const normalizePost = (post) => {
             const rawAuthor = post?.author || {};
             const title = decodeHtmlEntities(post?.title || '');
-            const contentHtml = decodeHtmlEntities(post?.contentHtml || post?.content_html || post?.content || '');
             const coverImageUrl = decodeHtmlEntities(post?.coverImageUrl || post?.cover_image_url || '');
-            const plainText = toPlainText(contentHtml);
             return {
                 postId: Number(post?.postId ?? post?.id ?? 0),
                 categoryId: Number(post?.categoryId ?? post?.category_id ?? 0),
@@ -1120,13 +1042,8 @@
                 isBlog: Boolean(post?.isBlog ?? post?.is_blog ?? false),
                 status: post?.status ?? post?.postStatus ?? null,
                 title,
-                contentHtml,
                 coverImageUrl,
-                plainText,
-                leadText: buildLeadFromPlainText(plainText),
-                readTimeLabel: estimateReadTimeFromPlainText(plainText),
-                leadingImageRowUrls: extractLeadingImageRowUrls(contentHtml),
-                resolvedCoverImageUrl: extractCoverFromContent(coverImageUrl, contentHtml),
+                resolvedCoverImageUrl: coverImageUrl,
                 createdAt: post?.createdAt || post?.created_at || new Date().toISOString(),
                 author: {
                     authUserId: rawAuthor.authUserId ?? rawAuthor.auth_user_id ?? post?.authorAuthUserId ?? post?.author_auth_user_id ?? null,
@@ -1182,12 +1099,11 @@
             return isArticle && !isBlog && matchesCategory;
         });
 
-        const HOME_PAGE_SIZE = 24;
-        const HOME_SOURCE_POSTS_LIMIT = 24;
-        const HOME_FETCH_BATCH_SIZE = 24;
+        const HOME_PAGE_SIZE = 16;
+        const HOME_SOURCE_POSTS_LIMIT = 16;
+        const HOME_FETCH_BATCH_SIZE = 16;
         const FEATURED_MEMBERS_LIMIT = 16;
         const SIDEBAR_UPCOMING_EVENTS_LIMIT = 5;
-        const CATEGORY_LATEST_LIMIT = 1;
         const CATEGORY_LATEST_CATEGORY_IDS = Object.keys(CATEGORY_NAMES)
             .map((value) => Number(value))
             .filter((value) => Number.isInteger(value) && value > 0);
@@ -1262,13 +1178,8 @@
 
         const updatePostPaginationState = () => {
             const visibleLoadedCount = getVisibleDisplayPosts().length;
-            if (visibleLoadedCount === 0) {
-                postsPageInfoEl.textContent = '0 bài viết';
-            } else {
-                const safeVisibleCount = Math.min(Math.max(visiblePostCount, HOME_PAGE_SIZE), visibleLoadedCount);
-                const hasUnloadedMore = hasMoreBackendPosts && safeVisibleCount >= visibleLoadedCount;
-                postsPageInfoEl.textContent = `Hiển thị ${safeVisibleCount}${hasUnloadedMore ? '+' : ''} / ${visibleLoadedCount}${hasUnloadedMore ? '+' : ''} bài viết`;
-            }
+            postsPageInfoEl.textContent = '';
+            postsPageInfoEl.style.display = 'none';
 
             // Correction : afficher le bouton si on a au moins HOME_PAGE_SIZE posts ou s'il y a plus à charger
             const hasEnoughPosts = loadedPosts.length >= HOME_PAGE_SIZE;
@@ -1369,10 +1280,10 @@
                 return `<div class="sv-meta">Chưa có bài viết phù hợp để hiển thị.</div>`;
             }
 
-            const LEFT_COLUMN_POST_COUNT = 12;
+            const LEFT_COLUMN_POST_COUNT = 8;
             const SUBGRID_POST_COUNT = 2;
             const FEATURED_BULLET_POST_COUNT = 1;
-            const BOTTOM_STRIP_POST_COUNT = 8;
+            const BOTTOM_STRIP_POST_COUNT = 4;
 
             const featured = posts[0] || null;
             const subgridStart = 1;
@@ -1583,9 +1494,13 @@
         };
 
         const renderCategoryLatestPosts = (entries = categoryLatestPosts) => {
-            categoryLatestEl.innerHTML = entries.length === 0
-                ? `<div class="sv-meta">Chưa có bài viết theo chuyên mục để hiển thị.</div>`
-                : `<div class="sv-card__hd px-0 pt-0"><span><i class="fa-solid fa-list-check me-2 text-primary"></i>Chuyên mục</span></div><div class="sv-category-latest__list">${entries.map((entry) => renderCategoryLatestItem(entry)).join('')}</div>`;
+            if (entries.length === 0) {
+                categoryLatestEl.innerHTML = '';
+                categoryLatestEl.style.display = 'none';
+                return;
+            }
+            categoryLatestEl.style.display = '';
+            categoryLatestEl.innerHTML = `<div class="sv-card__hd px-0 pt-0"><span><i class="fa-solid fa-list-check me-2 text-primary"></i>Chuyên mục</span></div><div class="sv-category-latest__list">${entries.map((entry) => renderCategoryLatestItem(entry)).join('')}</div>`;
         };
 
         const selectCategoryLatestPosts = (posts, excludedPostIds) => {
@@ -1616,50 +1531,10 @@
                 .filter(Boolean);
         };
 
-        const loadMissingCategoryLatestPosts = async (excludedPostIds) => {
-            const existingEntries = selectCategoryLatestPosts(getDisplayPosts(), excludedPostIds);
-            const existingCategoryIds = new Set(existingEntries.map((entry) => entry.categoryId));
-            const missingCategoryIds = CATEGORY_LATEST_CATEGORY_IDS.filter((categoryId) => !existingCategoryIds.has(categoryId));
-            if (missingCategoryIds.length === 0) {
-                categoryLatestPosts = existingEntries;
-                renderCategoryLatestPosts();
-                return;
-            }
-
-            const fetchedEntries = [];
-            for (const categoryId of missingCategoryIds) {
-                try {
-                    const params = new URLSearchParams({
-                        limit: String(CATEGORY_LATEST_LIMIT),
-                        categoryId: String(categoryId)
-                    });
-                    const payload = await fetchJson(`${API_BASE_URL}/posts/latest-articles?${params.toString()}`);
-                    const items = Array.isArray(payload.items) ? payload.items.map(normalizePost) : [];
-                    const candidate = items.find((post) => {
-                        const postId = Number(post?.postId ?? 0);
-                        return Number.isInteger(postId) && postId > 0 && !excludedPostIds.has(postId);
-                    });
-                    if (candidate) {
-                        fetchedEntries.push({ categoryId, post: candidate });
-                    }
-                } catch (error) {
-                    console.error(`Cannot load latest category post for category ${categoryId}:`, error);
-                }
-            }
-
-            categoryLatestPosts = CATEGORY_LATEST_CATEGORY_IDS
-                .map((categoryId) => existingEntries.find((entry) => entry.categoryId === categoryId)
-                    || fetchedEntries.find((entry) => entry.categoryId === categoryId))
-                .filter(Boolean);
-            renderCategoryLatestPosts();
-        };
-
         const updateCategoryLatestPosts = () => {
             const excludedPostIds = getFeaturedFeedPostIds(getDisplayPosts());
-            const initialEntries = selectCategoryLatestPosts(getDisplayPosts(), excludedPostIds);
-            categoryLatestPosts = initialEntries;
+            categoryLatestPosts = selectCategoryLatestPosts(getDisplayPosts(), excludedPostIds);
             renderCategoryLatestPosts();
-            void loadMissingCategoryLatestPosts(excludedPostIds);
         };
 
         const renderFeedAndMembers = () => {
@@ -1713,12 +1588,14 @@
             beforeCreatedAt = null;
             beforePostId = null;
             feedEl.innerHTML = `<div class="sv-meta">Không thể tải bài viết từ backend. Vui lòng thử lại sau.</div>`;
-            categoryLatestEl.innerHTML = `<div class="sv-meta">Không thể tải bài viết theo chuyên mục.</div>`;
+            categoryLatestEl.innerHTML = '';
+            categoryLatestEl.style.display = 'none';
             eventsEl.innerHTML = `<li><div class="sv-meta">Không thể tải sự kiện từ backend.</div></li>`;
             membersEl.innerHTML = `<div class="p-3 sv-meta">Không thể tải danh sách thành viên nổi bật.</div>`;
             postPaginationEl.style.display = 'none';
             postsLoadMoreBtn.disabled = true;
-            postsPageInfoEl.textContent = '0 bài viết';
+            postsPageInfoEl.textContent = '';
+            postsPageInfoEl.style.display = 'none';
         };
 
         const loadOlderPostsBatch = async () => {

@@ -404,6 +404,12 @@
             margin-bottom: 0;
         }
 
+        .sv-event-item__thumb-link {
+            display: block;
+            text-decoration: none;
+            color: inherit;
+        }
+
         .sv-event-list {
             padding: .35rem 0;
         }
@@ -676,6 +682,9 @@
                 <ul id="sv-upcoming-events" class="sv-list sv-event-list" aria-live="polite">
                     <li>
                         <article class="sv-event-item">
+                            <a class="sv-event-item__thumb-link" href="events.html">
+                                <img class="sv-event-item__thumb" src="assets/icons/og_housing_map.png" alt="Hội Thảo Du Học Pháp 2026" loading="lazy" decoding="async" />
+                            </a>
                             <div class="sv-event-item__body">
                                 <div class="sv-event-item__headline">
                                     <a class="sv-event-item__title" href="events.html"><i class="fa fa-calendar-day me-2 text-primary"></i>Hội Thảo Du Học Pháp 2026</a>
@@ -687,6 +696,9 @@
                     </li>
                     <li>
                         <article class="sv-event-item">
+                            <a class="sv-event-item__thumb-link" href="events.html">
+                                <img class="sv-event-item__thumb" src="assets/icons/og_housing_map.png" alt="Gặp Gỡ Doanh Nghiệp" loading="lazy" decoding="async" />
+                            </a>
                             <div class="sv-event-item__body">
                                 <div class="sv-event-item__headline">
                                     <a class="sv-event-item__title" href="events.html"><i class="fa fa-briefcase me-2 text-primary"></i>Gặp Gỡ Doanh Nghiệp</a>
@@ -698,6 +710,9 @@
                     </li>
                     <li>
                         <article class="sv-event-item">
+                            <a class="sv-event-item__thumb-link" href="events.html">
+                                <img class="sv-event-item__thumb" src="assets/icons/og_housing_map.png" alt="Kết Nối Tân Sinh Viên" loading="lazy" decoding="async" />
+                            </a>
                             <div class="sv-event-item__body">
                                 <div class="sv-event-item__headline">
                                     <a class="sv-event-item__title" href="events.html"><i class="fa fa-users me-2 text-primary"></i>Kết Nối Tân Sinh Viên</a>
@@ -1433,7 +1448,7 @@
             return `
                 <li>
                     <article class="sv-event-item">
-                        ${safeCover ? `<img class="sv-event-item__thumb" src="${safeCover}" alt="${safeTitle}" loading="lazy" decoding="async" />` : ''}
+                        ${safeCover ? `<a class="sv-event-item__thumb-link" href="${safeHref}"><img class="sv-event-item__thumb" src="${safeCover}" alt="${safeTitle}" loading="lazy" decoding="async" /></a>` : ''}
                         <div class="sv-event-item__body">
                             <div class="sv-event-item__headline">
                                 <a class="sv-event-item__title" href="${safeHref}"><i class="fa fa-calendar-day me-2 text-primary"></i>${safeTitle}</a>

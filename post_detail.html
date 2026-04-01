@@ -156,6 +156,20 @@
             opacity: .6;
             pointer-events: none;
         }
+        .pd-stat--fb {
+            background: #1877f2;
+            color: #fff;
+            border-color: #1877f2;
+            text-decoration: none;
+        }
+        .pd-stat--fb:hover { opacity: .85; color: #fff; }
+        .pd-stat--messenger {
+            background: linear-gradient(135deg, #00b2ff, #006aff);
+            color: #fff;
+            border-color: #006aff;
+            text-decoration: none;
+        }
+        .pd-stat--messenger:hover { opacity: .85; color: #fff; }
 
         /* Article body typography */
         .pd-body {
@@ -520,7 +534,6 @@
             <div class="pd-meta-bar">
                 <span class="sv-pill" id="pd-category"><i class="fa-regular fa-folder-open me-1"></i>Đang tải...</span>
                 <span><i class="fa-regular fa-clock me-1 text-primary"></i><span id="pd-date">--</span></span>
-                <span><i class="fa-regular fa-eye me-1 text-primary"></i><span id="pd-views">--</span> lượt xem</span>
                 <span><i class="fa-solid fa-book-open me-1 text-primary"></i><span id="pd-readtime">--</span></span>
             </div>
 
@@ -539,10 +552,12 @@
                     <div class="pd-author-meta" id="pd-author-meta"></div>
                 </div>
                 <div class="ms-auto d-flex gap-2 flex-wrap">
-                    <span class="pd-stat pd-stat--action" id="pd-likes" role="button" tabindex="0" aria-label="Thích bài viết"><i class="fa-regular fa-thumbs-up"></i>--</span>
-                    <button class="pd-stat pd-stat--button pd-stat--action" id="pd-share-copy-inline" type="button" data-copy-share-link aria-label="Sao chép link bài viết">
-                        <i class="fa-regular fa-copy"></i>Sao chép link
-                    </button>
+                    <a class="pd-stat pd-stat--action pd-stat--fb" id="pd-share-fb-inline" href="#" target="_blank" rel="noopener noreferrer" aria-label="Chia sẻ lên Facebook">
+                        <i class="fa-brands fa-facebook-f"></i>Chia sẻ
+                    </a>
+                    <a class="pd-stat pd-stat--action pd-stat--messenger" id="pd-share-messenger-inline" href="#" target="_blank" rel="noopener noreferrer" aria-label="Gửi qua Messenger">
+                        <i class="fa-brands fa-facebook-messenger"></i>Messenger
+                    </a>
                     <span class="pd-stat" id="pd-comment-count"><i class="fa-regular fa-comments"></i>--</span>
                 </div>
             </div>
@@ -703,7 +718,6 @@
     const MAX_REPLY_IMAGE_UPLOAD_BYTES = 88 * 1024;        // 88 KB
     const METRIC_KEY = 'svp.postDetail.metrics.v1';
     const LOCAL_COMMENT_PREFIX = 'svp.postDetail.localComments.v1.';
-    const LIKE_KEY_PREFIX = 'svp.postDetail.like.v1.';
     const VIEW_TRACK_KEY_PREFIX = 'svp.postDetail.viewTrack.v1.';
     const VIEW_TRACK_WINDOW_MS = 6 * 60 * 60 * 1000;
     const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
@@ -746,7 +760,6 @@
     const breadcrumbTit  = document.getElementById('pd-breadcrumb-title');
     const categoryEl     = document.getElementById('pd-category');
     const dateEl         = document.getElementById('pd-date');
-    const viewsEl        = document.getElementById('pd-views');
     const readtimeEl     = document.getElementById('pd-readtime');
     const titleEl        = document.getElementById('pd-title');
     const authorAvatarEl = document.getElementById('pd-author-avatar');
@@ -754,11 +767,12 @@
     const authorNameLinkEl = document.getElementById('pd-author-name-link');
     const authorNameEl   = document.getElementById('pd-author-name');
     const authorMetaEl   = document.getElementById('pd-author-meta');
-    const likesEl        = document.getElementById('pd-likes');
     const commentCountEl = document.getElementById('pd-comment-count');
     const bodyEl         = document.getElementById('pd-body');
     const shareSection   = document.getElementById('pd-share');
     const shareFbEl      = document.getElementById('pd-share-fb');
+    const shareFbInlineEl = document.getElementById('pd-share-fb-inline');
+    const shareMessengerInlineEl = document.getElementById('pd-share-messenger-inline');
     const shareTwEl      = document.getElementById('pd-share-tw');
     const shareCopyButtons = Array.from(document.querySelectorAll('[data-copy-share-link]'));
     const commentListEl  = document.getElementById('pd-comment-list');
@@ -804,10 +818,7 @@
     let editingCommentContext = null;
     let currentComments = [];
     let currentPostId = 0;
-    let currentLikeCount = 0;
     let currentPost = null;
-    let likeInFlight = false;
-    let likeHandlerAttached = false;
     /* ── Utilities ── */
     const escapeHtml = (v) => String(v ?? '')
         .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
@@ -848,58 +859,6 @@
         return `${Math.floor(h/24)} ngày trước`;
     };
 
-    const hasLiked = (postId) => {
-        try { return localStorage.getItem(`${LIKE_KEY_PREFIX}${postId}`) === '1'; }
-        catch { return false; }
-    };
-    const setLiked = (postId) => {
-        try { localStorage.setItem(`${LIKE_KEY_PREFIX}${postId}`, '1'); } catch {}
-    };
-    const renderLikeBadge = () => {
-        if (!likesEl) return;
-        const liked = currentPostId && hasLiked(currentPostId);
-        const iconClass = liked ? 'fa-solid' : 'fa-regular';
-        likesEl.innerHTML = `<i class="${iconClass} fa-thumbs-up"></i>${currentLikeCount.toLocaleString('vi-VN')} thích`;
-        likesEl.classList.toggle('pd-stat--active', Boolean(liked));
-        likesEl.setAttribute('aria-pressed', liked ? 'true' : 'false');
-    };
-    const attachLikeHandler = () => {
-        if (!likesEl || likeHandlerAttached) return;
-        likeHandlerAttached = true;
-        const trigger = async () => {
-            if (!currentPostId || likeInFlight || hasLiked(currentPostId)) return;
-            likeInFlight = true;
-            likesEl.classList.add('pd-stat--loading');
-            try {
-                const res = await fetch(`${API_BASE_URL}/posts/${encodeURIComponent(currentPostId)}/like`, {
-                    method: 'POST',
-                    headers: { Accept: 'application/json' }
-                });
-                const data = await res.json().catch(() => ({}));
-                if (!res.ok) {
-                    throw new Error(data.error || 'Không thể cập nhật lượt thích.');
-                }
-                currentLikeCount = Number(data.likeCount ?? (currentLikeCount + 1));
-                setLiked(currentPostId);
-                renderLikeBadge();
-                if (currentPost) {
-                    currentPost.likeCount = currentLikeCount;
-                }
-            } catch (err) {
-                console.warn(err);
-            } finally {
-                likeInFlight = false;
-                likesEl.classList.remove('pd-stat--loading');
-            }
-        };
-        likesEl.addEventListener('click', trigger);
-        likesEl.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                trigger();
-            }
-        });
-    };
 
     const getCategoryName = (id) => CATEGORY_NAMES[id] || `Chuyên mục #${id||'?'}`;
 
@@ -1766,7 +1725,6 @@
             categoryEl.innerHTML = `<i class="fa-regular fa-folder-open me-1"></i>${escapeHtml(categoryName)}`;
         }
         if (dateEl) dateEl.textContent = formatDateFull(post.createdAt);
-        if (viewsEl) viewsEl.textContent = post.viewCount.toLocaleString('vi-VN');
         if (readtimeEl) readtimeEl.textContent = estimateReadTime(post.contentHtml);
 
         // Title
@@ -1801,8 +1759,6 @@
 
         // Stats badges
         currentPostId = post.postId;
-        currentLikeCount = post.likeCount;
-        renderLikeBadge();
         if (commentCountEl) commentCountEl.innerHTML = `<i class="fa-regular fa-comments"></i>${commentCount.toLocaleString('vi-VN')} bình luận`;
 
         // Admin/owner action buttons
@@ -1837,13 +1793,16 @@
     };
 
     const renderShare = (post) => {
-        if (!shareSection) return;
         currentShareUrl = buildArticleShareUrl(post.postId, post.title);
         const url = encodeURIComponent(currentShareUrl);
         const text = encodeURIComponent(post.title||'Bài viết hay từ SVP');
-        if (shareFbEl) shareFbEl.href = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+        const fbHref = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
+        const messengerHref = `https://www.facebook.com/dialog/send?link=${url}&app_id=966242223397117&redirect_uri=${url}`;
+        if (shareFbEl) shareFbEl.href = fbHref;
+        if (shareFbInlineEl) shareFbInlineEl.href = fbHref;
+        if (shareMessengerInlineEl) shareMessengerInlineEl.href = messengerHref;
         if (shareTwEl) shareTwEl.href = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
-        shareSection.style.removeProperty('display');
+        if (shareSection) shareSection.style.removeProperty('display');
     };
 
     const syncSeo = (post, commentCount) => {
@@ -2482,7 +2441,6 @@
         renderAuthorArticles(post);
         renderRelated(postId, post.categoryId);
         renderRelatedThreads(postId, post.categoryId);
-        attachLikeHandler();
 
         // Form
         prefillForm();

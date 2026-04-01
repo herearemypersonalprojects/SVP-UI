@@ -55,15 +55,6 @@
             background: linear-gradient(to top, rgba(15,23,42,.55) 0%, transparent 55%);
             border-radius: 16px;
         }
-        .pd-meta-bar {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: .55rem 1rem;
-            margin-bottom: 1rem;
-            color: #64748b;
-            font-size: .875rem;
-        }
         .pd-title {
             font-family: 'Playfair Display', Georgia, serif;
             font-size: clamp(1.34rem, 1.08rem + 1.35vw, 1.9rem);
@@ -115,24 +106,19 @@
             color: #64748b;
             font-size: .84rem;
         }
-        /* Stats badges row */
-        .pd-stats-row {
-            display: flex;
-            flex-wrap: wrap;
-            gap: .55rem;
-            margin-bottom: 1.75rem;
-        }
         .pd-stat {
             display: inline-flex;
             align-items: center;
-            gap: .4rem;
-            padding: .35rem .75rem;
+            gap: .45rem;
+            padding: .4rem .8rem;
             border-radius: 999px;
             border: 1px solid #dbeafe;
             background: #eff6ff;
             color: #1e3a8a;
             font-size: .85rem;
             font-weight: 600;
+            line-height: 1;
+            text-decoration: none;
         }
         .pd-stat--button {
             appearance: none;
@@ -140,36 +126,52 @@
         }
         .pd-stat--action {
             cursor: pointer;
-            transition: transform .12s ease, background .12s ease, box-shadow .12s ease;
+            transition: transform .12s ease, background .12s ease, box-shadow .12s ease, border-color .12s ease;
         }
         .pd-stat--action:hover {
-            background: #dbeafe;
             box-shadow: 0 6px 16px rgba(30, 58, 138, 0.12);
             transform: translateY(-1px);
         }
-        .pd-stat--active {
-            background: #1e3a8a;
-            color: #fff;
-            border-color: #1e3a8a;
+        .pd-stat--icon {
+            justify-content: center;
+            width: 2.35rem;
+            height: 2.35rem;
+            padding: 0;
+            border-radius: 50%;
         }
-        .pd-stat--loading {
-            opacity: .6;
-            pointer-events: none;
+        .pd-stat--icon i {
+            font-size: 1rem;
         }
         .pd-stat--fb {
             background: #1877f2;
             color: #fff;
             border-color: #1877f2;
-            text-decoration: none;
         }
-        .pd-stat--fb:hover { opacity: .85; color: #fff; }
+        .pd-stat--fb:hover {
+            background: #166fe5;
+            border-color: #166fe5;
+            color: #fff;
+        }
         .pd-stat--messenger {
             background: linear-gradient(135deg, #00b2ff, #006aff);
             color: #fff;
             border-color: #006aff;
-            text-decoration: none;
         }
-        .pd-stat--messenger:hover { opacity: .85; color: #fff; }
+        .pd-stat--messenger:hover {
+            background: linear-gradient(135deg, #019ef2, #005ce6);
+            border-color: #005ce6;
+            color: #fff;
+        }
+        .pd-stat--copy {
+            background: #fff;
+            color: #0f172a;
+            border-color: #e2e8f0;
+        }
+        .pd-stat--copy:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+            color: #0f172a;
+        }
 
         /* Article body typography */
         .pd-body {
@@ -403,33 +405,6 @@
             top: 1rem;
         }
 
-        /* Share buttons */
-        .pd-share {
-            display: flex;
-            flex-wrap: wrap;
-            gap: .5rem;
-            margin-top: 1.5rem;
-        }
-        .pd-share a,
-        .pd-share button {
-            display: inline-flex;
-            align-items: center;
-            gap: .4rem;
-            padding: .4rem .85rem;
-            border-radius: 999px;
-            font-size: .85rem;
-            font-weight: 600;
-            text-decoration: none;
-            transition: opacity .15s;
-            appearance: none;
-            font: inherit;
-        }
-        .pd-share a:hover,
-        .pd-share button:hover { opacity: .85; }
-        .pd-share__fb { background: #1877f2; color: #fff; }
-        .pd-share__tw { background: #000; color: #fff; }
-        .pd-share__copy { background: #f1f5f9; color: #0f172a; border: 1px solid #e2e8f0; cursor:pointer; }
-
         .pd-side-list-link {
             display: block;
             color: inherit;
@@ -544,14 +519,18 @@
                     </a>
                     <div class="pd-author-meta" id="pd-author-meta"></div>
                 </div>
-                <div class="ms-auto d-flex gap-2 flex-wrap">
-                    <a class="pd-stat pd-stat--action pd-stat--fb" id="pd-share-fb-inline" href="#" target="_blank" rel="noopener noreferrer" aria-label="Chia sẻ lên Facebook">
-                        <i class="fa-brands fa-facebook-f"></i>Chia sẻ
+                <div class="ms-auto d-flex gap-2 flex-wrap align-items-center">
+                    <span class="pd-stat" id="pd-view-count"><i class="fa-regular fa-eye"></i>--</span>
+                    <a class="pd-stat pd-stat--action pd-stat--icon pd-stat--fb" id="pd-share-fb-inline" href="#" target="_blank" rel="noopener noreferrer" aria-label="Chia sẻ lên Facebook" title="Chia sẻ lên Facebook">
+                        <i class="fa-brands fa-facebook-f" aria-hidden="true"></i>
                     </a>
-                    <a class="pd-stat pd-stat--action pd-stat--messenger" id="pd-share-messenger-inline" href="#" target="_blank" rel="noopener noreferrer" aria-label="Gửi qua Messenger">
-                        <i class="fa-brands fa-facebook-messenger"></i>Messenger
+                    <a class="pd-stat pd-stat--action pd-stat--icon pd-stat--messenger" id="pd-share-messenger-inline" href="#" target="_blank" rel="noopener noreferrer" aria-label="Gửi qua Messenger" title="Gửi qua Messenger">
+                        <i class="fa-brands fa-facebook-messenger" aria-hidden="true"></i>
                     </a>
-                    <span class="pd-stat" id="pd-comment-count"><i class="fa-regular fa-comments"></i>--</span>
+                    <button class="pd-stat pd-stat--button pd-stat--action pd-stat--copy" id="pd-share-copy-inline" type="button" data-copy-share-link aria-label="Copy link">
+                        <i class="fa-regular fa-copy" aria-hidden="true"></i>
+                        <span>Copy link</span>
+                    </button>
                 </div>
             </div>
 
@@ -563,19 +542,6 @@
                 <div class="pd-skeleton" style="height:1.1rem;margin-bottom:.75rem;border-radius:6px;width:95%;"></div>
                 <div class="pd-skeleton" style="height:1.1rem;border-radius:6px;width:70%;"></div>
             </div>
-            <!-- Share buttons -->
-            <div class="pd-share mt-3" id="pd-share" style="display:none!important">
-                <a id="pd-share-fb" class="pd-share__fb" href="#" target="_blank" rel="noopener noreferrer">
-                    <i class="fa-brands fa-facebook-f"></i>Chia sẻ
-                </a>
-                <a id="pd-share-tw" class="pd-share__tw" href="#" target="_blank" rel="noopener noreferrer">
-                    <i class="fa-brands fa-x-twitter"></i>Tweet
-                </a>
-                <button class="pd-share__copy" id="pd-share-copy" type="button" data-copy-share-link>
-                    <i class="fa-regular fa-copy"></i>Sao chép link
-                </button>
-            </div>
-
             <hr class="pd-divider">
 
             <!-- Comments section -->
@@ -706,7 +672,6 @@
 
     /* ── Constants ── */
     const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
-    const WORDS_PER_MINUTE = 220;
     const MAX_REPLY_IMAGE_SOURCE_BYTES = 10 * 1024 * 1024; // 10 MB
     const MAX_REPLY_IMAGE_UPLOAD_BYTES = 88 * 1024;        // 88 KB
     const METRIC_KEY = 'svp.postDetail.metrics.v1';
@@ -751,22 +716,16 @@
     const heroCover      = document.getElementById('pd-hero');
     const breadcrumbCat  = document.getElementById('pd-breadcrumb-cat');
     const breadcrumbTit  = document.getElementById('pd-breadcrumb-title');
-    const categoryEl     = document.getElementById('pd-category');
-    const dateEl         = document.getElementById('pd-date');
-    const readtimeEl     = document.getElementById('pd-readtime');
     const titleEl        = document.getElementById('pd-title');
     const authorAvatarEl = document.getElementById('pd-author-avatar');
     const authorLinkEl = document.getElementById('pd-author-link');
     const authorNameLinkEl = document.getElementById('pd-author-name-link');
     const authorNameEl   = document.getElementById('pd-author-name');
     const authorMetaEl   = document.getElementById('pd-author-meta');
-    const commentCountEl = document.getElementById('pd-comment-count');
+    const viewCountEl    = document.getElementById('pd-view-count');
     const bodyEl         = document.getElementById('pd-body');
-    const shareSection   = document.getElementById('pd-share');
-    const shareFbEl      = document.getElementById('pd-share-fb');
     const shareFbInlineEl = document.getElementById('pd-share-fb-inline');
     const shareMessengerInlineEl = document.getElementById('pd-share-messenger-inline');
-    const shareTwEl      = document.getElementById('pd-share-tw');
     const shareCopyButtons = Array.from(document.querySelectorAll('[data-copy-share-link]'));
     const commentListEl  = document.getElementById('pd-comment-list');
     const commentBadgeEl = document.getElementById('pd-comment-badge');
@@ -833,12 +792,6 @@
         const d = new Date(iso);
         if (isNaN(d)) return 'N/A';
         return new Intl.DateTimeFormat('vi-VN',{day:'2-digit',month:'2-digit',year:'numeric'}).format(d);
-    };
-
-    const formatDateFull = (iso) => {
-        const d = new Date(iso);
-        if (isNaN(d)) return '';
-        return new Intl.DateTimeFormat('vi-VN',{dateStyle:'long'}).format(d);
     };
 
     const timeAgo = (iso) => {
@@ -1048,11 +1001,6 @@
             : '';
         const bodyHtml = lines.map((line) => `<p>${escapeHtml(line)}</p>`).join('');
         return `<blockquote>${headerHtml}${bodyHtml}</blockquote><p></p>`;
-    };
-
-    const estimateReadTime = (html) => {
-        const words = toPlainText(html).split(/\s+/).length;
-        return `${Math.max(1, Math.ceil(words/WORDS_PER_MINUTE))} phút đọc`;
     };
 
     const getInitial = (name) => String(name||'?').trim().charAt(0).toUpperCase()||'?';
@@ -1344,6 +1292,7 @@
         saveMetrics(metricStore);
         return metricStore[k];
     };
+    const getMetric = (postId) => metricStore[String(postId)] || { views: 0, comments: 0 };
 
     const viewTrackKey = (postId) => `${VIEW_TRACK_KEY_PREFIX}${postId}`;
     const shouldTrackPostView = (postId) => {
@@ -1699,7 +1648,19 @@
         heroCover.style.backgroundImage = `url('${escapeCssUrl(coverUrl)}')`;
     };
 
-    const renderPostHeader = (post, commentCount) => {
+    const renderViewCount = (post) => {
+        if (!viewCountEl) return;
+        const postViews = Number(post?.viewCount ?? 0);
+        const localViews = Number(getMetric(post?.postId).views || 0);
+        const totalViews = Math.max(
+            0,
+            Number.isFinite(postViews) ? postViews : 0,
+            Number.isFinite(localViews) ? localViews : 0
+        );
+        viewCountEl.innerHTML = `<i class="fa-regular fa-eye"></i>${totalViews.toLocaleString('vi-VN')} lượt xem`;
+    };
+
+    const renderPostHeader = (post) => {
         const author = post.author || {};
         const displayName = author.displayName || author.nickname || 'Ẩn danh';
         const categoryName = getCategoryName(post.categoryId);
@@ -1712,13 +1673,6 @@
             breadcrumbCat.textContent = categoryName;
             breadcrumbCat.href = `index.html?categoryId=${post.categoryId}`;
         }
-
-        // Meta bar
-        if (categoryEl) {
-            categoryEl.innerHTML = `<i class="fa-regular fa-folder-open me-1"></i>${escapeHtml(categoryName)}`;
-        }
-        if (dateEl) dateEl.textContent = formatDateFull(post.createdAt);
-        if (readtimeEl) readtimeEl.textContent = estimateReadTime(post.contentHtml);
 
         // Title
         if (titleEl) titleEl.textContent = post.title || 'Chưa có tiêu đề';
@@ -1752,7 +1706,7 @@
 
         // Stats badges
         currentPostId = post.postId;
-        if (commentCountEl) commentCountEl.innerHTML = `<i class="fa-regular fa-comments"></i>${commentCount.toLocaleString('vi-VN')} bình luận`;
+        renderViewCount(post);
 
         // Admin/owner action buttons
         renderPostActions(post);
@@ -1774,11 +1728,13 @@
 
     const copyShareLink = async (button) => {
         if (!(button instanceof HTMLElement)) return;
+        const defaultLabel = button.dataset.defaultLabel || button.innerHTML;
+        button.dataset.defaultLabel = defaultLabel;
         try {
             await navigator.clipboard.writeText(currentShareUrl);
-            button.innerHTML = '<i class="fa-solid fa-check"></i>Đã sao chép!';
+            button.innerHTML = '<i class="fa-solid fa-check" aria-hidden="true"></i><span>Đã copy</span>';
             window.setTimeout(() => {
-                button.innerHTML = '<i class="fa-regular fa-copy"></i>Sao chép link';
+                button.innerHTML = defaultLabel;
             }, 2000);
         } catch {
             alert(currentShareUrl);
@@ -1788,14 +1744,10 @@
     const renderShare = (post) => {
         currentShareUrl = buildArticleShareUrl(post.postId, post.title);
         const url = encodeURIComponent(currentShareUrl);
-        const text = encodeURIComponent(post.title||'Bài viết hay từ SVP');
         const fbHref = `https://www.facebook.com/sharer/sharer.php?u=${url}`;
         const messengerHref = `https://www.facebook.com/dialog/send?link=${url}&app_id=966242223397117&redirect_uri=${url}`;
-        if (shareFbEl) shareFbEl.href = fbHref;
         if (shareFbInlineEl) shareFbInlineEl.href = fbHref;
         if (shareMessengerInlineEl) shareMessengerInlineEl.href = messengerHref;
-        if (shareTwEl) shareTwEl.href = `https://twitter.com/intent/tweet?url=${url}&text=${text}`;
-        if (shareSection) shareSection.style.removeProperty('display');
     };
 
     const syncSeo = (post, commentCount) => {
@@ -2172,7 +2124,6 @@
                 localStorage.setItem('userDisplayName', name);
 
                 renderComments(commentsRef);
-                if (commentCountEl) commentCountEl.innerHTML = `<i class="fa-regular fa-comments"></i>${commentsRef.length.toLocaleString('vi-VN')} bình luận`;
                 updateMetric(post.postId, prev => ({ views: prev.views, comments: commentsRef.length }));
 
                 replyForm.reset();
@@ -2203,7 +2154,7 @@
                 saveLocalComment(post.postId, normalizedLocalComment);
                 commentsRef.push(normalizedLocalComment);
                 renderComments(commentsRef);
-                if (commentCountEl) commentCountEl.innerHTML = `<i class="fa-regular fa-comments"></i>${commentsRef.length.toLocaleString('vi-VN')} bình luận`;
+                updateMetric(post.postId, prev => ({ views: prev.views, comments: commentsRef.length }));
                 localStorage.setItem('userEmail', email);
                 localStorage.setItem('userDisplayName', name);
 
@@ -2372,6 +2323,7 @@
         }
 
         let post, apiComments = [];
+        let usedLocalFallback = false;
         const shouldTrackView = shouldTrackPostView(postId);
 
         try {
@@ -2398,6 +2350,7 @@
             if (localData && Number(localData.postId)===postId) {
                 post = normalizePost(localData);
                 apiComments = [];
+                usedLocalFallback = true;
             } else {
                 if (titleEl) titleEl.textContent = 'Không thể tải bài viết.';
                 if (bodyEl) bodyEl.innerHTML = `<p class="sv-meta">Không thể kết nối máy chủ. <a href="index.html">Quay lại trang chủ</a>.</p>`;
@@ -2418,7 +2371,10 @@
         if (shouldTrackView) {
             markPostViewTracked(postId);
         }
-        updateMetric(postId, prev => ({ views: prev.views + (shouldTrackView ? 1 : 0), comments: Math.max(prev.comments, comments.length) }));
+        updateMetric(postId, prev => ({
+            views: Math.max(prev.views, Number(post?.viewCount ?? 0) + (usedLocalFallback && shouldTrackView ? 1 : 0)),
+            comments: Math.max(prev.comments, comments.length)
+        }));
 
         // Render everything
         currentPost = post;
@@ -2426,7 +2382,7 @@
             urlHelpers.replaceDetailHistory('article', post.postId, post.title);
         }
         renderHero(post);
-        renderPostHeader(post, comments.length);
+        renderPostHeader(post);
         renderBody(post);
         renderShare(post);
         syncSeo(post, comments.length);

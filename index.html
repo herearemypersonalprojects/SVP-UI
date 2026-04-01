@@ -966,7 +966,7 @@
         const richContent = window.SVPRichContent || null;
         const WORDS_PER_MINUTE = 220;
         const PREVIEW_LEAD_MAX_CHARS = 220;
-        const HOME_CACHE_KEY_PREFIX = 'svp.home.payload.cache.v2.';
+        const HOME_CACHE_KEY_PREFIX = 'svp.home.payload.cache.v4.';
         const HOME_CACHE_TTL_MS = 2 * 60 * 1000;
         const LOCAL_ARTICLE_KEY = 'svp.latestSubmittedArticle';
         const CATEGORY_NAMES = {
@@ -1256,9 +1256,9 @@
             return isArticle && !isBlog && matchesCategory;
         });
 
-        const HOME_PAGE_SIZE = 20;
-        const HOME_SOURCE_POSTS_LIMIT = 20;
-        const HOME_FETCH_BATCH_SIZE = 20;
+        const HOME_PAGE_SIZE = 24;
+        const HOME_SOURCE_POSTS_LIMIT = 24;
+        const HOME_FETCH_BATCH_SIZE = 24;
         const FEATURED_MEMBERS_LIMIT = 16;
         const HOT_POSTS_LIMIT = 10;
         const CATEGORY_LATEST_LIMIT = 1;
@@ -1447,7 +1447,7 @@
             const LEFT_COLUMN_POST_COUNT = 12;
             const SUBGRID_POST_COUNT = 2;
             const FEATURED_BULLET_POST_COUNT = 1;
-            const BOTTOM_STRIP_POST_COUNT = 4;
+            const BOTTOM_STRIP_POST_COUNT = 8;
 
             const featured = posts[0] || null;
             const subgridStart = 1;

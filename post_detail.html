@@ -66,11 +66,13 @@
         }
         .pd-title {
             font-family: 'Merriweather', Georgia, serif;
-            font-size: clamp(1.5rem, 4vw, 2.4rem);
-            font-weight: 700;
-            line-height: 1.3;
-            color: #0f172a;
-            margin-bottom: 1rem;
+            font-size: clamp(1.34rem, 1.08rem + 1.35vw, 1.9rem);
+            font-weight: 400;
+            line-height: 1.42;
+            letter-spacing: .01em;
+            color: #26364d;
+            text-wrap: balance;
+            margin-bottom: .9rem;
         }
         .pd-author-bar {
             display: flex;
@@ -586,12 +588,10 @@
         <div class="col-lg-4">
             <div class="pd-sidebar-sticky">
 
-                <!-- Article stats card -->
-                <div class="sv-card mb-3">
-                    <div class="sv-card__hd"><i class="fa-solid fa-chart-simple me-2 text-primary"></i>Thống kê bài viết</div>
-                    <ul id="pd-kpis" class="sv-list mb-0">
-                        <li><div><span class="sv-meta">Đang tải...</span></div></li>
-                    </ul>
+                <!-- Other articles from same author -->
+                <div id="pd-author-articles-card" class="sv-card mb-3" hidden>
+                    <div class="sv-card__hd"><i class="fa-solid fa-pen-nib me-2 text-primary"></i>Bài viết khác của tác giả</div>
+                    <ul id="pd-author-articles" class="sv-list mb-0"></ul>
                 </div>
 
                 <!-- Related articles -->
@@ -730,7 +730,8 @@
     const shareCopyButtons = Array.from(document.querySelectorAll('[data-copy-share-link]'));
     const commentListEl  = document.getElementById('pd-comment-list');
     const commentBadgeEl = document.getElementById('pd-comment-badge');
-    const kpisEl         = document.getElementById('pd-kpis');
+    const authorArticlesCardEl = document.getElementById('pd-author-articles-card');
+    const authorArticlesEl = document.getElementById('pd-author-articles');
     const relatedArticlesEl = document.getElementById('pd-related');
     const relatedThreadsEl = document.getElementById('pd-related-threads');
     const pageTitleEl    = document.getElementById('pd-page-title');
@@ -772,7 +773,6 @@
     let currentPostId = 0;
     let currentLikeCount = 0;
     let currentPost = null;
-    let currentCommentCount = 0;
     let likeInFlight = false;
     let likeHandlerAttached = false;
     /* ── Utilities ── */
@@ -851,7 +851,6 @@
                 renderLikeBadge();
                 if (currentPost) {
                     currentPost.likeCount = currentLikeCount;
-                    renderKpis(currentPost, currentCommentCount);
                 }
             } catch (err) {
                 console.warn(err);
@@ -870,6 +869,49 @@
     };
 
     const getCategoryName = (id) => CATEGORY_NAMES[id] || `Chuyên mục #${id||'?'}`;
+
+    const normalizeLookupText = (value) => String(value || '')
+        .replace(/\u00a0/g, ' ')
+        .replace(/\s+/g, ' ')
+        .trim()
+        .toLowerCase();
+
+    const toAuthorIdentity = (author) => {
+        const source = author && typeof author === 'object' ? author : {};
+        return {
+            authUserId: String(source.authUserId || source.auth_user_id || '').trim(),
+            userId: String(source.userId || source.user_id || '').trim(),
+            nickname: normalizeLookupText(source.nickname),
+            displayName: normalizeLookupText(source.displayName || source.display_name)
+        };
+    };
+
+    const isSameAuthor = (leftAuthor, rightAuthor) => {
+        const left = toAuthorIdentity(leftAuthor);
+        const right = toAuthorIdentity(rightAuthor);
+        if (left.authUserId && right.authUserId) {
+            return left.authUserId === right.authUserId;
+        }
+        if (left.userId && right.userId) {
+            return left.userId === right.userId;
+        }
+        if (left.nickname && right.nickname) {
+            return left.nickname === right.nickname;
+        }
+        return Boolean(left.displayName && right.displayName && left.displayName === right.displayName);
+    };
+
+    const canMatchAuthor = (author) => {
+        const identity = toAuthorIdentity(author);
+        return Boolean(identity.authUserId || identity.userId || identity.nickname || identity.displayName);
+    };
+
+    const normalizeArticleSummary = (item) => ({
+        postId: Number(item?.postId || 0),
+        title: String(item?.title || ''),
+        createdAt: String(item?.createdAt || ''),
+        author: item?.author && typeof item.author === 'object' ? item.author : {}
+    });
 
     const toSafeHttpUrl = (value) => {
         const raw = decodeHtmlEntities(value).trim();
@@ -1895,16 +1937,78 @@
         });
     };
 
-    const renderKpis = (post, commentCount) => {
-        if (!kpisEl) return;
-        kpisEl.innerHTML = `
-            <li><div><strong>Chuyên mục</strong><div class="sv-meta">${escapeHtml(getCategoryName(post.categoryId))}</div></div></li>
-            <li><div><strong>Ngày đăng</strong><div class="sv-meta">${escapeHtml(formatDateFull(post.createdAt))}</div></div></li>
-            <li><div><strong>Lượt xem</strong><div class="sv-meta">${post.viewCount.toLocaleString('vi-VN')} lượt</div></div></li>
-            <li><div><strong>Lượt thích</strong><div class="sv-meta">${post.likeCount.toLocaleString('vi-VN')} lượt</div></div></li>
-            <li><div><strong>Bình luận</strong><div class="sv-meta">${commentCount.toLocaleString('vi-VN')} bình luận</div></div></li>
-            <li><div><strong>Thời gian đọc</strong><div class="sv-meta">${escapeHtml(estimateReadTime(post.contentHtml))}</div></div></li>
-        `;
+    const renderAuthorArticles = async (post) => {
+        if (!authorArticlesCardEl || !authorArticlesEl) return;
+        authorArticlesCardEl.hidden = true;
+        authorArticlesEl.innerHTML = '';
+        if (!post || !canMatchAuthor(post.author)) {
+            return;
+        }
+
+        const collected = [];
+        const seenPostIds = new Set([Number(post.postId || 0)]);
+        let beforeCreatedAt = '';
+        let beforePostId = 0;
+        const PAGE_LIMIT = 20;
+        const MAX_REQUESTS = 3;
+
+        try {
+            for (let requestIndex = 0; requestIndex < MAX_REQUESTS && collected.length < 5; requestIndex += 1) {
+                const params = new URLSearchParams({ limit: String(PAGE_LIMIT) });
+                if (beforeCreatedAt) {
+                    params.set('beforeCreatedAt', beforeCreatedAt);
+                }
+                if (beforePostId > 0) {
+                    params.set('beforePostId', String(beforePostId));
+                }
+                const res = await fetch(`${API_BASE_URL}/posts/latest-articles?${params.toString()}`, {
+                    headers: { Accept: 'application/json' }
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) {
+                    throw new Error();
+                }
+                const batch = (Array.isArray(data.items) ? data.items : [])
+                    .map(normalizeArticleSummary)
+                    .filter((item) => item.postId > 0);
+                if (!batch.length) {
+                    break;
+                }
+
+                batch.forEach((item) => {
+                    if (seenPostIds.has(item.postId) || !isSameAuthor(post.author, item.author)) {
+                        return;
+                    }
+                    seenPostIds.add(item.postId);
+                    collected.push(item);
+                });
+
+                if (batch.length < PAGE_LIMIT) {
+                    break;
+                }
+                const lastItem = batch[batch.length - 1];
+                beforeCreatedAt = String(lastItem.createdAt || '').trim();
+                beforePostId = Number(lastItem.postId || 0);
+                if (!beforeCreatedAt || beforePostId <= 0) {
+                    break;
+                }
+            }
+
+            if (!collected.length) {
+                return;
+            }
+
+            authorArticlesEl.innerHTML = collected.slice(0, 5).map((item) => `
+                <li>
+                    <div>
+                        <a href="${buildArticleHref(item.postId, item.title)}">${escapeHtml(item.title || 'Bài viết')}</a>
+                        <div class="sv-meta">${escapeHtml(timeAgo(item.createdAt) || formatDate(item.createdAt))}</div>
+                    </div>
+                </li>`).join('');
+            authorArticlesCardEl.hidden = false;
+        } catch {
+            authorArticlesCardEl.hidden = true;
+        }
     };
 
     const renderRelated = async (postId, categoryId) => {
@@ -2081,7 +2185,6 @@
 
                 renderComments(commentsRef);
                 if (commentCountEl) commentCountEl.innerHTML = `<i class="fa-regular fa-comments"></i>${commentsRef.length.toLocaleString('vi-VN')} bình luận`;
-                renderKpis(post, commentsRef.length);
                 updateMetric(post.postId, prev => ({ views: prev.views, comments: commentsRef.length }));
 
                 replyForm.reset();
@@ -2113,8 +2216,6 @@
                 commentsRef.push(normalizedLocalComment);
                 renderComments(commentsRef);
                 if (commentCountEl) commentCountEl.innerHTML = `<i class="fa-regular fa-comments"></i>${commentsRef.length.toLocaleString('vi-VN')} bình luận`;
-                renderKpis(post, commentsRef.length);
-
                 localStorage.setItem('userEmail', email);
                 localStorage.setItem('userDisplayName', name);
 
@@ -2333,7 +2434,6 @@
 
         // Render everything
         currentPost = post;
-        currentCommentCount = comments.length;
         if (urlHelpers) {
             urlHelpers.replaceDetailHistory('article', post.postId, post.title);
         }
@@ -2343,7 +2443,7 @@
         renderShare(post);
         syncSeo(post, comments.length);
         renderComments(comments);
-        renderKpis(post, comments.length);
+        renderAuthorArticles(post);
         renderRelated(postId, post.categoryId);
         renderRelatedThreads(postId, post.categoryId);
         attachLikeHandler();

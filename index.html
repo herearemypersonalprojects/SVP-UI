@@ -138,11 +138,24 @@
         }
 
         .sv-featured-main__title {
-            font-size: 2rem;
-            line-height: 1.2;
-            font-weight: 800;
-            color: #1f2937;
-            margin-bottom: .8rem;
+            font-family: Georgia, "Times New Roman", serif;
+            font-size: clamp(1.32rem, 1.08rem + 1.05vw, 1.58rem);
+            line-height: 1.34;
+            font-weight: 500;
+            letter-spacing: .012em;
+            color: #2a3650;
+            text-wrap: balance;
+            margin-bottom: .72rem;
+        }
+
+        .sv-featured-main__title a {
+            text-decoration: none;
+            color: inherit;
+            transition: color .18s ease;
+        }
+
+        .sv-featured-main__title a:hover {
+            color: #355c8a;
         }
 
         .sv-featured-main__bullets {
@@ -464,7 +477,7 @@
             }
 
             .sv-featured-main__title {
-                font-size: 1.5rem;
+                font-size: 1.28rem;
             }
         }
 

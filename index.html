@@ -1463,13 +1463,17 @@
             const leftItems = posts.slice(leftStart, leftEnd);
             const bulletItems = posts.slice(bulletStart, bulletEnd);
             const bottomItems = posts.slice(bottomStart, bottomEnd);
-            const tailItems = posts.slice(bottomEnd);
+            const overflowItems = posts.slice(bottomEnd);
+            const leftOverflowCount = Math.ceil(overflowItems.length / 2);
+            const leftOverflowItems = overflowItems.slice(0, leftOverflowCount);
+            const mainOverflowItems = overflowItems.slice(leftOverflowCount);
+            const allLeftItems = leftItems.concat(leftOverflowItems);
 
             return `
                 <div class="sv-home-news">
                     <aside class="sv-home-news__left">
                         <div class="sv-headline-list">
-                            ${leftItems.map(renderCompactHeadline).join('')}
+                            ${allLeftItems.map(renderCompactHeadline).join('')}
                         </div>
                     </aside>
 
@@ -1488,9 +1492,9 @@
                             </div>
                         ` : ''}
 
-                        ${tailItems.length ? `
+                        ${mainOverflowItems.length ? `
                             <div class="sv-tail-list">
-                                ${tailItems.map(renderTailCard).join('')}
+                                ${mainOverflowItems.map(renderTailCard).join('')}
                             </div>
                         ` : ''}
                     </section>

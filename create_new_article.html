@@ -1537,7 +1537,9 @@
             (async () => {
                 try {
                     const headers = { Accept: 'application/json' };
-                    const token = localStorage.getItem('accessToken') || '';
+                    const token = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
+                        ? await window.SVPAuth.getValidAccessToken()
+                        : (localStorage.getItem('accessToken') || '');
                     if (token) headers.Authorization = `Bearer ${token}`;
                     const res = await fetch(`${API_BASE_URL}/posts/${editPostId}`, { headers });
                     const data = await res.json().catch(() => ({}));

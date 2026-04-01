@@ -11,7 +11,7 @@ const {
 
 async function loadHousingFormPage(options = {}) {
     const dom = createDomFromHtml('housing_form.html', {
-        url: 'https://svpforum.fr/housing_form.html',
+        url: options.url || 'https://svpforum.fr/housing_form.html',
         fetch: options.fetch || (async (targetUrl) => {
             throw new Error(`Unexpected fetch: ${targetUrl}`);
         })
@@ -256,4 +256,67 @@ test('housing form submit sends imageUrl from the uploaded primary image when a 
     assert.equal(submitCalls, 1);
     assert.equal(submittedPayload.imageUrl, 'https://cdn.svp.test/housing/uploaded-primary.jpg');
     assert.equal(submittedPayload.images[0].imageUrl, 'https://cdn.svp.test/housing/uploaded-primary.jpg');
+});
+
+test('housing form update sends imageUrl when editing an existing listing', async () => {
+    let submittedPayload = null;
+    const listingId = 'listing-edit-123';
+    const dom = await loadHousingFormPage({
+        url: `https://svpforum.fr/housing_form.html?listingId=${listingId}`,
+        fetch: async (targetUrl, options = {}) => {
+            const url = String(targetUrl);
+            const method = String(options.method || 'GET').toUpperCase();
+            if (url === `http://localhost:8080/api/housing/${listingId}?trackView=false` && method === 'GET') {
+                return makeJsonResponse({
+                    id: listingId,
+                    viewerCanEdit: true,
+                    title: 'Studio cu',
+                    description: '<p>Mo ta cu hop le.</p>',
+                    price: 640,
+                    areaM2: 19,
+                    latitude: 48.8271,
+                    longitude: 2.3561,
+                    addressText: 'Tolbiac',
+                    city: 'Paris',
+                    arrondissement: '13',
+                    propertyType: 'STUDIO',
+                    cafEligible: true,
+                    tags: ['meublé'],
+                    contact: {
+                        contactName: 'A Nguyen',
+                        contactEmail: 'contact@example.com',
+                        contactPhone: '',
+                        contactNote: 'Nhắn email trước khi gọi'
+                    },
+                    images: [],
+                    transitPoints: [
+                        {
+                            stationName: 'Tolbiac',
+                            transportType: 'METRO',
+                            lineLabel: 'M7',
+                            walkingMinutes: 4,
+                            primary: true
+                        }
+                    ]
+                });
+            }
+            if (url === `http://localhost:8080/api/housing/${listingId}` && method === 'PUT') {
+                submittedPayload = JSON.parse(String(options.body || '{}'));
+                return makeJsonResponse({ listingId });
+            }
+            throw new Error(`Unexpected fetch: ${targetUrl}`);
+        }
+    });
+    const { document } = dom.window;
+
+    dispatchInput(
+        dom.window,
+        document.getElementById('housing-description-input'),
+        '<p>Studio da cap nhat du noi dung de hop le.</p><p><img src="https://cdn.svp.test/housing/edited-cover.jpg" alt="cover"></p>'
+    );
+
+    document.getElementById('housing-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+    await flushAsync(dom.window, 12);
+
+    assert.equal(submittedPayload.imageUrl, 'https://cdn.svp.test/housing/edited-cover.jpg');
 });

@@ -300,6 +300,23 @@
         }, delay);
     };
 
+    const adoptSessionRotatedInAnotherTab = (staleRefreshToken) => {
+        const latestRefreshToken = localStorage.getItem("refreshToken") || "";
+        const latestAccessToken = localStorage.getItem("accessToken") || "";
+        if (!latestRefreshToken || latestRefreshToken === staleRefreshToken || !latestAccessToken) {
+            return false;
+        }
+        const latestPayload = parseJwtPayload(latestAccessToken) || {};
+        const latestExp = Number(latestPayload.exp || 0);
+        if (Number.isFinite(latestExp) && latestExp > 0 && latestExp * 1000 > Date.now() + REFRESH_SKEW_MS) {
+            scheduleRefreshFromToken(latestAccessToken);
+        } else {
+            scheduleRefreshRetry();
+        }
+        renderTopbar(readFreshProfileCache());
+        return true;
+    };
+
     const refreshAccessToken = async () => {
         if (refreshInFlight) {
             return refreshInFlight;
@@ -329,6 +346,10 @@
                 }
 
                 if (response.status === 400 || response.status === 401 || response.status === 403) {
+                    // Another tab may already have rotated the refresh token and updated localStorage.
+                    if (adoptSessionRotatedInAnotherTab(refreshToken)) {
+                        return true;
+                    }
                     clearRefreshTimer();
                     resetInboxState();
                     removeSession();

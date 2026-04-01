@@ -17,7 +17,7 @@ function makeToken(payload) {
     return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode(payload)}.signature`;
 }
 
-function loadAuthTopbar({ localStorageEntries = {} } = {}) {
+function loadAuthTopbar({ localStorageEntries = {}, fetchImpl } = {}) {
     const store = new Map(
         Object.entries(localStorageEntries).map(([key, value]) => [key, String(value)])
     );
@@ -58,7 +58,12 @@ function loadAuthTopbar({ localStorageEntries = {} } = {}) {
             store.delete(key);
         }
     };
-    const fetch = async () => ({ ok: true, json: async () => ({}) });
+    const fetch = async (...args) => {
+        if (typeof fetchImpl === 'function') {
+            return fetchImpl(...args);
+        }
+        return { ok: true, status: 200, json: async () => ({}) };
+    };
     const context = {
         window,
         document,
@@ -156,4 +161,91 @@ test('topbar uses auth_user_id from JWT sub when only stale numeric userId exist
 
     assert.ok(env.authBox.innerHTML.includes('href="profile.html?auth_user_id=81"'));
     assert.ok(!env.authBox.innerHTML.includes('nickname=alice'));
+});
+
+test('refreshAccessToken keeps session when another tab already rotated refresh token', async () => {
+    const oldRefreshToken = 'refresh-old';
+    const rotatedRefreshToken = 'refresh-new';
+    const rotatedAccessToken = makeToken({
+        sub: '81',
+        email: 'alice@example.com',
+        nickname: 'alice',
+        displayName: 'Alice',
+        role: 'USER',
+        exp: Math.floor(Date.now() / 1000) + 3600
+    });
+
+    let env = null;
+    env = loadAuthTopbar({
+        localStorageEntries: {
+            accessToken: makeToken({
+                sub: '81',
+                email: 'alice@example.com',
+                nickname: 'alice',
+                displayName: 'Alice',
+                role: 'USER',
+                exp: Math.floor(Date.now() / 1000) - 60
+            }),
+            refreshToken: oldRefreshToken,
+            authUserId: '81',
+            userEmail: 'alice@example.com',
+            userDisplayName: 'Alice'
+        },
+        fetchImpl: async (targetUrl) => {
+            if (String(targetUrl).endsWith('/auth/refresh')) {
+                env.store.set('accessToken', rotatedAccessToken);
+                env.store.set('refreshToken', rotatedRefreshToken);
+                return {
+                    ok: false,
+                    status: 401,
+                    json: async () => ({ error: 'Refresh token revoked' })
+                };
+            }
+            return { ok: true, status: 200, json: async () => ({}) };
+        }
+    });
+
+    const refreshed = await env.window.SVPAuth.refreshAccessToken();
+
+    assert.equal(refreshed, true);
+    assert.equal(env.store.get('refreshToken'), rotatedRefreshToken);
+    assert.equal(env.store.get('accessToken'), rotatedAccessToken);
+    assert.equal(env.authBox.innerHTML.includes('Đăng xuất'), true);
+});
+
+test('refreshAccessToken clears session when refresh token is genuinely invalid', async () => {
+    const expiredAccessToken = makeToken({
+        sub: '81',
+        email: 'alice@example.com',
+        nickname: 'alice',
+        displayName: 'Alice',
+        role: 'USER',
+        exp: Math.floor(Date.now() / 1000) - 60
+    });
+    const env = loadAuthTopbar({
+        localStorageEntries: {
+            accessToken: expiredAccessToken,
+            refreshToken: 'refresh-old',
+            authUserId: '81',
+            userEmail: 'alice@example.com',
+            userDisplayName: 'Alice'
+        },
+        fetchImpl: async (targetUrl) => {
+            if (String(targetUrl).endsWith('/auth/refresh')) {
+                return {
+                    ok: false,
+                    status: 401,
+                    json: async () => ({ error: 'Refresh token revoked' })
+                };
+            }
+            return { ok: true, status: 200, json: async () => ({}) };
+        }
+    });
+
+    const refreshed = await env.window.SVPAuth.refreshAccessToken();
+
+    assert.equal(refreshed, false);
+    assert.equal(env.store.has('accessToken'), false);
+    assert.equal(env.store.has('refreshToken'), false);
+    assert.match(env.authBox.innerHTML, /login\.html/);
 });

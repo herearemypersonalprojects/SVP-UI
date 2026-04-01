@@ -373,8 +373,17 @@
         };
 
         const extractFirstImageSrc = (html) => {
-            const match = String(html || '').match(/<img[^>]*src\s*=\s*['"]([^'"]+)['"][^>]*>/i);
-            return match && match[1] ? sanitizeUrl(match[1]) : '';
+            const template = document.createElement('template');
+            template.innerHTML = String(html || '').trim();
+            const image = template.content.querySelector('img[src]');
+            if (image) {
+                const safeSrc = sanitizeUrl(image.getAttribute('src'));
+                if (safeSrc) {
+                    return safeSrc;
+                }
+            }
+            const directUrlMatch = String(html || '').match(/https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?[^\s<>"']*)?/i);
+            return directUrlMatch ? sanitizeUrl(directUrlMatch[0]) : '';
         };
 
         const splitDiscussionContentHtml = (html) => {
@@ -1106,6 +1115,10 @@
             return containsCover ? bodyHtml : `${coverHtml}\n${bodyHtml}`;
         };
 
+        const resolveSubmittedImageUrl = (contentHtml) => {
+            return sanitizeUrl(coverUrlInput.value) || extractFirstImageSrc(contentHtml);
+        };
+
         const updatePreview = () => {
             const title = titleInput.value.trim();
             const categoryText = categoryInput.options[categoryInput.selectedIndex]
@@ -1284,6 +1297,7 @@
                 }
 
                 const contentHtml = composeContentHtml();
+                const imageUrl = resolveSubmittedImageUrl(contentHtml);
                 if (editPostId) {
                     const response = await fetch(`${API_BASE_URL}/posts/${editPostId}`, {
                         method: 'PATCH',
@@ -1295,7 +1309,8 @@
                         body: JSON.stringify({
                             title,
                             categoryId,
-                            contentHtml
+                            contentHtml,
+                            imageUrl
                         })
                     });
                     const payload = await response.json().catch(() => ({}));
@@ -1321,7 +1336,8 @@
                         email,
                         categoryId,
                         title,
-                        contentHtml
+                        contentHtml,
+                        imageUrl
                     })
                 });
                 const payload = await response.json().catch(() => ({}));

@@ -488,8 +488,17 @@
         };
 
         const extractFirstImageSrc = (html) => {
-            const match = String(html || '').match(/<img[^>]*src\s*=\s*['"]([^'"]+)['"][^>]*>/i);
-            return match && match[1] ? sanitizeUrl(match[1]) : '';
+            const template = document.createElement('template');
+            template.innerHTML = String(html || '').trim();
+            const image = template.content.querySelector('img[src]');
+            if (image) {
+                const safeSrc = sanitizeUrl(image.getAttribute('src'));
+                if (safeSrc) {
+                    return safeSrc;
+                }
+            }
+            const directUrlMatch = String(html || '').match(/https?:\/\/[^\s<>"']+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?[^\s<>"']*)?/i);
+            return directUrlMatch ? sanitizeUrl(directUrlMatch[0]) : '';
         };
 
         const splitArticleContentHtml = (html) => {
@@ -856,6 +865,10 @@
             }
             const containsCover = editorHtml.includes(`src="${coverUrl}"`) || editorHtml.includes(`src='${coverUrl}'`);
             return containsCover ? editorHtml : `${coverHtml}\n${editorHtml}`;
+        };
+
+        const resolveSubmittedImageUrl = (contentHtml) => {
+            return sanitizeUrl(coverUrlInput.value) || extractFirstImageSrc(contentHtml);
         };
 
         const setFeedback = (text, type) => {
@@ -1383,6 +1396,7 @@
                 }
 
                 const contentHtml = composeContentHtml();
+                const imageUrl = resolveSubmittedImageUrl(contentHtml);
                 if (!contentHtml || contentHtml.replace(/<[^>]+>/g, ' ').trim().length < 20) {
                     setFeedback(`Nội dung ${isBlogMode() ? 'blog' : 'bài viết'} cần chi tiết hơn (ít nhất 20 ký tự).`, 'error');
                     focusEditor();
@@ -1398,7 +1412,7 @@
                             Accept: 'application/json',
                             ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
                         },
-                        body: JSON.stringify({ title, categoryId, contentHtml })
+                        body: JSON.stringify({ title, categoryId, contentHtml, imageUrl })
                     });
                     const payload = await res.json().catch(() => ({}));
                     if (!res.ok) {
@@ -1417,7 +1431,7 @@
                             Accept: 'application/json',
                             ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
                         },
-                        body: JSON.stringify({ email, categoryId, title, contentHtml, isBlog: isBlogMode() })
+                        body: JSON.stringify({ email, categoryId, title, contentHtml, imageUrl, isBlog: isBlogMode() })
                     });
                     const payload = await response.json().catch(() => ({}));
                     if (!response.ok) {

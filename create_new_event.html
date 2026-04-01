@@ -1197,6 +1197,10 @@
             return tagsHtml ? `${descriptionHtml}\n${tagsHtml}` : descriptionHtml;
         };
 
+        const resolveSubmittedImageUrl = (contentHtml, explicitImageUrl) => {
+            return sanitizeUrl(explicitImageUrl) || extractFirstImageUrl(contentHtml);
+        };
+
         [titleInput, startDatetimeInput, endDatetimeInput, locationInput, onlineInput, imageUrlInput, descriptionInput].forEach((el) => {
             el.addEventListener('input', preview);
             el.addEventListener('change', preview);
@@ -1400,6 +1404,7 @@
             try {
                 const accessToken = await getAccessToken();
                 const imageUrl = await uploadSelectedImageIfNeeded(accessToken);
+                const canonicalImageUrl = resolveSubmittedImageUrl(content, imageUrl);
 
                 if (editEventId) {
                     const res = await fetch(`${API_BASE_URL}/events/${editEventId}`, {
@@ -1417,7 +1422,7 @@
                             eventTime: startTime,
                             online,
                             address,
-                            imageUrl,
+                            imageUrl: canonicalImageUrl,
                             price: price > 0 ? price : 0,
                             eventTypeId: selectedEventType.eventTypeId,
                             eventTypeName: selectedEventType.eventTypeId ? '' : selectedEventType.eventTypeName
@@ -1445,7 +1450,7 @@
                             eventTime: startTime,
                             online,
                             address,
-                            imageUrl,
+                            imageUrl: canonicalImageUrl,
                             price: price > 0 ? price : 0,
                             eventTypeId: selectedEventType.eventTypeId,
                             eventTypeName: selectedEventType.eventTypeId ? '' : selectedEventType.eventTypeName

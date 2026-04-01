@@ -1260,7 +1260,8 @@
         const HOME_SOURCE_POSTS_LIMIT = 24;
         const HOME_FETCH_BATCH_SIZE = 24;
         const FEATURED_MEMBERS_LIMIT = 16;
-        const HOT_POSTS_LIMIT = 10;
+        const SIDEBAR_UPCOMING_EVENTS_LIMIT = 5;
+        const HOT_POSTS_LIMIT = 5;
         const CATEGORY_LATEST_LIMIT = 1;
         const CATEGORY_LATEST_CATEGORY_IDS = Object.keys(CATEGORY_NAMES)
             .map((value) => Number(value))
@@ -1645,9 +1646,10 @@
         };
 
         const renderHotPosts = (posts = loadedHotPosts) => {
-            hotPostsEl.innerHTML = posts.length === 0
+            const visibleHotPosts = posts.slice(0, HOT_POSTS_LIMIT);
+            hotPostsEl.innerHTML = visibleHotPosts.length === 0
                 ? `<li class="sv-hot-item"><div class="px-3 py-3 sv-meta">Chưa có bài viết nổi bật để hiển thị.</div></li>`
-                : posts.map((post) => renderHotPostItem(post)).join('');
+                : visibleHotPosts.map((post) => renderHotPostItem(post)).join('');
         };
 
         const getFeaturedFeedPostIds = (posts) => {
@@ -1796,7 +1798,9 @@
 
         const renderHomeData = (payload) => {
             const latestPosts = Array.isArray(payload.latestPosts) ? payload.latestPosts.map(normalizePost) : [];
-            const upcomingEvents = Array.isArray(payload.upcomingEvents) ? payload.upcomingEvents.map(normalizeEvent) : [];
+            const upcomingEvents = Array.isArray(payload.upcomingEvents)
+                ? payload.upcomingEvents.map(normalizeEvent).slice(0, SIDEBAR_UPCOMING_EVENTS_LIMIT)
+                : [];
 
             loadedPosts = latestPosts.slice();
             visiblePostCount = HOME_PAGE_SIZE;

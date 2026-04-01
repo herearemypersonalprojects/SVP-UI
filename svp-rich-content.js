@@ -119,6 +119,41 @@
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+    const htmlEntityDecoder = typeof document !== 'undefined'
+        ? document.createElement('textarea')
+        : null;
+    const POTENTIAL_HTML_TAG_PATTERN = /<(?:p|br|strong|b|em|i|u|s|ul|ol|li|blockquote|pre|code|a|div|img|figure|figcaption|iframe|h2|h3)\b/i;
+
+    const decodeHtmlEntities = (value) => {
+        let text = String(value || '');
+        if (!text || !htmlEntityDecoder) {
+            return text;
+        }
+        for (let index = 0; index < 3; index += 1) {
+            htmlEntityDecoder.innerHTML = text;
+            const decoded = htmlEntityDecoder.value;
+            if (decoded === text) {
+                break;
+            }
+            text = decoded;
+        }
+        return text;
+    };
+
+    // Some older content arrives as fully encoded HTML (&lt;p&gt;...&lt;/p&gt;).
+    const decodePotentialEncodedHtml = (value) => {
+        const raw = String(value || '').trim();
+        if (!raw || POTENTIAL_HTML_TAG_PATTERN.test(raw) || !/&(?:lt|gt|amp|quot|apos|#0*39);/i.test(raw)) {
+            return raw;
+        }
+        const decoded = decodeHtmlEntities(raw).trim();
+        if (!decoded || decoded === raw) {
+            return raw;
+        }
+        return decoded.startsWith('<') && POTENTIAL_HTML_TAG_PATTERN.test(decoded)
+            ? decoded
+            : raw;
+    };
 
     const injectGlobalStyles = () => {
         if (typeof document === 'undefined' || !document.head || document.getElementById(GLOBAL_STYLE_ID)) {
@@ -131,7 +166,7 @@
     };
 
     const normalizeHttpUrl = (value) => {
-        const raw = String(value || '').trim();
+        const raw = decodeHtmlEntities(value).trim();
         if (!raw) {
             return '';
         }
@@ -147,7 +182,7 @@
     };
 
     const normalizeSafeHref = (value) => {
-        const raw = String(value || '').trim();
+        const raw = decodeHtmlEntities(value).trim();
         if (!raw) {
             return '';
         }
@@ -254,7 +289,7 @@
     const withTagNames = (items = []) => new Set(items.map((item) => String(item || '').toLowerCase()).filter(Boolean));
 
     const sanitizeHtml = (value, options = {}) => {
-        const raw = String(value || '').trim();
+        const raw = decodePotentialEncodedHtml(value);
         if (!raw) {
             return '';
         }
@@ -353,7 +388,7 @@
 
     const htmlToPlainText = (value) => {
         const template = document.createElement('template');
-        template.innerHTML = String(value || '').trim();
+        template.innerHTML = decodePotentialEncodedHtml(value);
         return String(template.content.textContent || '')
             .replace(/\u00a0/g, ' ')
             .replace(/\s+/g, ' ')
@@ -504,7 +539,7 @@
     };
 
     const extractLeadingImageRowUrls = (value, options = {}) => {
-        const raw = String(value || '').trim();
+        const raw = decodePotentialEncodedHtml(value);
         if (!raw) {
             return [];
         }
@@ -641,7 +676,7 @@
     };
 
     const cleanupPortraitLayoutHtml = (value) => {
-        const raw = String(value || '').trim();
+        const raw = decodePotentialEncodedHtml(value);
         if (!raw) {
             return '';
         }

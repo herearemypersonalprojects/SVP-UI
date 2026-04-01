@@ -87,6 +87,14 @@
     const API_BASE_URL = shared.API_BASE_URL;
     const MAX_COMMENT_TEXT_LENGTH = 2000;
     const escapeHtml = shared.escapeHtml;
+    const richContentSanitizeOptions = {
+        allowedTags: [
+            'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
+            'ul', 'ol', 'li', 'blockquote', 'pre', 'code',
+            'h2', 'h3', 'a', 'div', 'span', 'img', 'figure', 'figcaption', 'iframe'
+        ],
+        allowGoogleDriveEmbeds: true
+    };
 
     let currentCanonicalUrl = shared.buildHousingCanonicalUrl(listingId);
     let currentShareUrl = shared.buildHousingShareUrl(listingId, '');
@@ -155,6 +163,9 @@
     const htmlToPlainText = (value) => {
         if (commentEditorApi && typeof commentEditorApi.htmlToPlainText === 'function') {
             return commentEditorApi.htmlToPlainText(value);
+        }
+        if (richContent && typeof richContent.htmlToPlainText === 'function') {
+            return richContent.htmlToPlainText(value);
         }
         const template = document.createElement('template');
         template.innerHTML = String(value || '');
@@ -433,14 +444,14 @@
 
     const hasRenderableRichContent = (value) => {
         if (richContent && typeof richContent.hasRenderableContent === 'function') {
-            return richContent.hasRenderableContent(value, { allowGoogleDriveEmbeds: true });
+            return richContent.hasRenderableContent(value, richContentSanitizeOptions);
         }
         return Boolean(htmlToPlainText(value));
     };
 
     const sanitizeRichHtml = (value) => {
         if (richContent && typeof richContent.sanitizeHtml === 'function') {
-            return richContent.sanitizeHtml(value, { allowGoogleDriveEmbeds: true });
+            return richContent.sanitizeHtml(value, richContentSanitizeOptions);
         }
         return String(value || '').trim();
     };
@@ -541,7 +552,7 @@
             propertyTypeLabel: String(payload?.propertyTypeLabel || payload?.property_type_label || shared.propertyTypeLabel(payload?.propertyType) || '').trim(),
             cafEligible: Boolean(payload?.cafEligible ?? payload?.caf_eligible),
             tags: (Array.isArray(payload?.tags) ? payload.tags : []).map((item) => String(item || '').trim()).filter(Boolean),
-            description: String(payload?.description || '').trim(),
+            description: String(payload?.description ?? payload?.descriptionHtml ?? payload?.description_html ?? '').trim(),
             imageUrl: normalizeHttpUrl(payload?.imageUrl || payload?.image_url || ''),
             images,
             transitPoints,

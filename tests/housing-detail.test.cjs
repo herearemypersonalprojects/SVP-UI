@@ -137,6 +137,26 @@ test('housing detail does not scan description images when imageUrl is missing',
     assert.match(dom.window.document.getElementById('housing-detail-meta').textContent, /27 lượt xem/);
 });
 
+test('housing detail decodes encoded description html and renders inline images', async () => {
+    const dom = await loadHousingDetailPage(buildHousingPayload({
+        description: [
+            '&lt;p&gt;Studio sáng, gần tram và fac.&lt;/p&gt;',
+            '&lt;p&gt;&lt;img src=&quot;https://cdn.svp.test/housing/inline-detail.jpg?size=1600&amp;amp;fit=cover&quot; alt=&quot;detail&quot;&gt;&lt;/p&gt;'
+        ].join('')
+    }));
+
+    const description = dom.window.document.getElementById('housing-detail-description');
+    const image = description.querySelector('img');
+
+    assert.ok(image);
+    assert.equal(
+        image.getAttribute('src'),
+        'https://cdn.svp.test/housing/inline-detail.jpg?size=1600&fit=cover'
+    );
+    assert.match(description.textContent, /Studio sáng, gần tram và fac/);
+    assert.equal(description.textContent.includes('<p>'), false);
+});
+
 test('housing detail submits a guest comment and updates the rendered view count', async () => {
     const payload = buildHousingPayload();
     const dom = await loadHousingDetailPage(payload, {

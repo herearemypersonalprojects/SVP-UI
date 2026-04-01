@@ -38,13 +38,40 @@ function buildHousingPayload(overrides = {}) {
     };
 }
 
-async function loadHousingDetailPage(payload) {
+async function loadHousingDetailPage(payload, options = {}) {
+    const requests = [];
+    const initialComments = Array.isArray(options.comments) ? options.comments : [];
     const dom = createDomFromHtml('housing_detail.html', {
         url: `https://svpforum.fr/housing_detail.html?listingId=${encodeURIComponent(payload.id)}`,
-        fetch: async (targetUrl) => {
+        fetch: async (targetUrl, requestOptions = {}) => {
+            requests.push({ url: String(targetUrl), options: requestOptions || {} });
             const url = new URL(String(targetUrl));
+            const method = String(requestOptions?.method || 'GET').toUpperCase();
             if (url.pathname.endsWith(`/api/housing/${payload.id}`)) {
                 return makeJsonResponse(payload);
+            }
+            if (url.pathname.endsWith(`/api/housing/${payload.id}/comments`)) {
+                if (method === 'POST') {
+                    return makeJsonResponse(options.createCommentResponse || {
+                        commentId: 999,
+                        listingId: payload.id,
+                        userId: '',
+                        contentHtml: '<p>Bình luận mới</p>',
+                        createdAt: '2026-04-01T12:00:00Z',
+                        modifiedAt: '',
+                        hidden: false,
+                        viewCount: 83,
+                        commentCount: 1,
+                        author: {
+                            userId: '',
+                            nickname: '',
+                            displayName: 'Khách',
+                            avatarUrl: '',
+                            authUserId: ''
+                        }
+                    });
+                }
+                return makeJsonResponse({ listingId: payload.id, commentCount: initialComments.length, items: initialComments });
             }
             if (url.pathname.endsWith('/auth/providers')) {
                 return makeJsonResponse({ facebook: { appId: '123456' } });
@@ -63,6 +90,7 @@ async function loadHousingDetailPage(payload) {
     runScript(dom, 'svp-rich-content.js');
     runScript(dom, 'housing-detail.js');
     await flushAsync(window);
+    dom.requests = requests;
     return dom;
 }
 
@@ -105,4 +133,48 @@ test('housing detail falls back to the first description image when no gallery e
     );
     assert.equal(dom.window.document.getElementById('housing-detail-share').classList.contains('d-none'), false);
     assert.match(dom.window.document.getElementById('housing-detail-meta').textContent, /27 lượt xem/);
+});
+
+test('housing detail submits a guest comment and updates the rendered view count', async () => {
+    const payload = buildHousingPayload();
+    const dom = await loadHousingDetailPage(payload, {
+        comments: [],
+        createCommentResponse: {
+            commentId: 42,
+            listingId: payload.id,
+            userId: '',
+            contentHtml: '<p>Đã inbox chủ nhà và nhận phản hồi nhanh.</p>',
+            createdAt: '2026-04-01T12:34:56Z',
+            modifiedAt: '',
+            hidden: false,
+            viewCount: 121,
+            commentCount: 1,
+            author: {
+                userId: '',
+                nickname: '',
+                displayName: 'Minh Duc',
+                avatarUrl: '',
+                authUserId: ''
+            }
+        }
+    });
+    const { window } = dom;
+    const document = window.document;
+
+    const captchaText = document.getElementById('housing-reply-captcha-q').textContent || '';
+    const captchaParts = captchaText.match(/\d+/g).map((item) => Number(item));
+    document.getElementById('housing-reply-name').value = 'Minh Duc';
+    document.getElementById('housing-reply-message').value = 'Đã inbox chủ nhà và nhận phản hồi nhanh.';
+    document.getElementById('housing-reply-captcha-a').value = String(captchaParts[0] + captchaParts[1]);
+    document.getElementById('housing-reply-form').dispatchEvent(new window.Event('submit', {
+        bubbles: true,
+        cancelable: true
+    }));
+
+    await flushAsync(window, 10);
+
+    assert.match(document.getElementById('housing-comments-list').textContent, /Đã inbox chủ nhà và nhận phản hồi nhanh/);
+    assert.match(document.getElementById('housing-detail-meta').textContent, /121 lượt xem/);
+    assert.match(document.getElementById('housing-comment-badge').textContent, /1 bình luận/);
+    assert.ok(dom.requests.some((entry) => String(entry.url).includes(`/api/housing/${payload.id}/comments`) && String(entry.options?.method || 'GET').toUpperCase() === 'POST'));
 });

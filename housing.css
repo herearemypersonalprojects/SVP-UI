@@ -573,6 +573,246 @@
     text-align: center;
 }
 
+.sv-housing-form-grid {
+    grid-template-columns: minmax(0, 1.55fr) minmax(300px, .82fr);
+    gap: .85rem;
+}
+
+.sv-housing-stack {
+    gap: .85rem;
+}
+
+.sv-housing-section {
+    box-shadow: 0 16px 32px rgba(15, 23, 42, .05);
+}
+
+.sv-housing-section__head {
+    padding: .8rem .95rem;
+}
+
+.sv-housing-section__body {
+    padding: .9rem;
+}
+
+.sv-housing-section--detail-hero .sv-housing-section__body {
+    padding: 1rem 1.05rem;
+}
+
+.sv-housing-detail-rail {
+    position: sticky;
+    top: 1rem;
+    align-self: start;
+}
+
+.sv-housing-detail-hero {
+    gap: 1rem 1.1rem;
+}
+
+.sv-housing-detail-hero__meta,
+.sv-housing-detail-hero__tags {
+    margin-top: .75rem !important;
+}
+
+.sv-housing-detail-share .btn {
+    min-height: 40px;
+    border-radius: 999px;
+    font-weight: 700;
+}
+
+.sv-housing-comment-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 110px;
+    padding: .3rem .7rem;
+    border-radius: 999px;
+    background: #eef4fb;
+    color: #17406b;
+    font-size: .82rem;
+    font-weight: 800;
+}
+
+.sv-housing-comments-list {
+    display: grid;
+    gap: .8rem;
+}
+
+.sv-housing-comment-item {
+    border: 1px solid #dbe5f3;
+    border-radius: 16px;
+    padding: .85rem .9rem;
+    background: linear-gradient(180deg, #ffffff, #fbfdff);
+}
+
+.sv-housing-comment-item.is-hidden {
+    border-style: dashed;
+    background: #fafbfc;
+}
+
+.sv-housing-comment-item__head {
+    display: flex;
+    align-items: center;
+    gap: .75rem;
+    margin-bottom: .7rem;
+}
+
+.sv-housing-comment-avatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 800;
+    font-size: 1rem;
+    border: 1px solid #d7dfec;
+    background: #edf2f7;
+    color: #0f172a;
+    flex: none;
+}
+
+.sv-housing-comment-author {
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.sv-housing-comment-author strong {
+    display: block;
+    color: var(--housing-ink);
+    line-height: 1.2;
+}
+
+.sv-housing-comment-author a {
+    color: inherit;
+    text-decoration: none;
+}
+
+.sv-housing-comment-author a:hover {
+    color: var(--housing-primary-dark);
+}
+
+.sv-housing-comment-date {
+    color: var(--housing-muted);
+    font-size: .83rem;
+}
+
+.sv-housing-comment-body {
+    color: #314155;
+    line-height: 1.72;
+}
+
+.sv-housing-comment-body > :last-child {
+    margin-bottom: 0;
+}
+
+.sv-housing-comment-body p {
+    margin: 0 0 .85rem;
+}
+
+.sv-housing-comment-body ul,
+.sv-housing-comment-body ol {
+    margin: 0 0 .85rem;
+    padding-left: 1.25rem;
+}
+
+.sv-housing-comment-body blockquote {
+    margin: .9rem 0;
+    padding: .75rem .9rem;
+    border-left: 4px solid #bfdbfe;
+    background: #eff6ff;
+    border-radius: 0 12px 12px 0;
+    color: #1e3a8a;
+}
+
+.sv-housing-comment-body pre {
+    margin: .9rem 0;
+    padding: .8rem .9rem;
+    border-radius: 12px;
+    background: #0f172a;
+    color: #e2e8f0;
+    white-space: pre-wrap;
+}
+
+.sv-housing-comment-body img {
+    display: block;
+    max-width: 100%;
+    height: auto;
+    margin: .85rem auto;
+    border-radius: 12px;
+    border: 1px solid #dbe7ff;
+    background: #fff;
+}
+
+.sv-housing-comment-body a {
+    color: #1d4ed8;
+}
+
+.sv-housing-comment-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: .85rem;
+    margin-top: .7rem;
+}
+
+.sv-housing-comment-actions button {
+    border: 0;
+    background: transparent;
+    color: var(--housing-primary-dark);
+    font-size: .83rem;
+    font-weight: 800;
+    padding: 0;
+    cursor: pointer;
+}
+
+.sv-housing-comment-actions button:hover {
+    text-decoration: underline;
+}
+
+.sv-housing-comment-status {
+    display: inline-flex;
+    align-items: center;
+    padding: .2rem .55rem;
+    border-radius: 999px;
+    background: #fff4df;
+    color: #92400e;
+    font-size: .74rem;
+    font-weight: 800;
+}
+
+.sv-housing-comment-composer {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #e8edf4;
+}
+
+.sv-housing-comment-composer__head {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: .6rem;
+    margin-bottom: .9rem;
+}
+
+.sv-housing-comment-captcha {
+    display: grid;
+    grid-template-columns: minmax(86px, auto) minmax(0, 1fr);
+    gap: .55rem;
+    align-items: center;
+}
+
+.sv-housing-comment-captcha__q {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 42px;
+    padding: 0 .7rem;
+    border-radius: 12px;
+    border: 1px solid #d7dfec;
+    background: #f8fafc;
+    font-weight: 800;
+    color: var(--housing-ink);
+}
+
 @media (max-width: 991px) {
     .sv-housing-shell,
     .sv-housing-form-grid {
@@ -586,6 +826,9 @@
     }
     .sv-housing-panel--filters {
         order: 2;
+    }
+    .sv-housing-detail-rail {
+        position: static;
     }
     .sv-housing-list {
         max-height: none;
@@ -615,6 +858,9 @@
     .sv-housing-map {
         min-height: 420px;
         height: 58vh;
+    }
+    .sv-housing-comment-captcha {
+        grid-template-columns: 1fr;
     }
 }
 

@@ -431,6 +431,75 @@
             overflow: hidden;
         }
 
+        .sv-event-item__thumb {
+            width: 100%;
+            aspect-ratio: 16 / 8.5;
+            display: block;
+            object-fit: cover;
+            border-radius: 0;
+            background: #e5e7eb center/cover no-repeat;
+            border: 1px solid #e5e7eb;
+            margin-bottom: 0;
+        }
+
+        .sv-event-list {
+            padding: .35rem 0;
+        }
+
+        .sv-event-list li {
+            display: block;
+            padding: .9rem 1rem 1rem;
+        }
+
+        .sv-event-item {
+            display: flex;
+            flex-direction: column;
+            gap: .7rem;
+            min-width: 0;
+        }
+
+        .sv-event-item__body {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            gap: .45rem;
+            min-width: 0;
+        }
+
+        .sv-event-item__headline {
+            display: flex;
+            align-items: flex-start;
+            gap: .55rem;
+            width: 100%;
+            min-width: 0;
+        }
+
+        .sv-event-item__title {
+            display: block;
+            color: #0f172a;
+            font-weight: 700;
+            line-height: 1.35;
+            flex: 1 1 auto;
+            min-width: 0;
+            overflow-wrap: anywhere;
+        }
+
+        .sv-event-item__title:hover {
+            color: #0d6efd;
+        }
+
+        .sv-event-item__meta {
+            line-height: 1.45;
+            overflow-wrap: anywhere;
+        }
+
+        .sv-event-item__badge {
+            align-self: flex-start;
+            max-width: 100%;
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
+
         @media (max-width: 991.98px) {
             .sv-home-news {
                 grid-template-columns: 1fr;
@@ -656,27 +725,39 @@
                     <span><i class="fa-solid fa-calendar-days me-2 text-primary"></i>Sự Kiện Sắp Tới</span>
                     <a class="btn btn-sm btn-outline-primary" href="events.html">Tất cả</a>
                 </div>
-                <ul id="sv-upcoming-events" class="sv-list" aria-live="polite">
+                <ul id="sv-upcoming-events" class="sv-list sv-event-list" aria-live="polite">
                     <li>
-                        <div>
-                            <a href="events.html"><i class="fa fa-calendar-day me-2 text-primary"></i>Hội Thảo Du Học Pháp 2026</a>
-                            <div class="sv-meta">15/03/2026 • Paris</div>
-                        </div>
-                        <span class="sv-badge">Free</span>
+                        <article class="sv-event-item">
+                            <div class="sv-event-item__body">
+                                <div class="sv-event-item__headline">
+                                    <a class="sv-event-item__title" href="events.html"><i class="fa fa-calendar-day me-2 text-primary"></i>Hội Thảo Du Học Pháp 2026</a>
+                                    <span class="sv-badge sv-event-item__badge">Free</span>
+                                </div>
+                                <div class="sv-meta sv-event-item__meta">15/03/2026 • Paris</div>
+                            </div>
+                        </article>
                     </li>
                     <li>
-                        <div>
-                            <a href="events.html"><i class="fa fa-briefcase me-2 text-primary"></i>Gặp Gỡ Doanh Nghiệp</a>
-                            <div class="sv-meta">28/03/2026 • Lyon</div>
-                        </div>
-                        <span class="sv-badge">60 chỗ</span>
+                        <article class="sv-event-item">
+                            <div class="sv-event-item__body">
+                                <div class="sv-event-item__headline">
+                                    <a class="sv-event-item__title" href="events.html"><i class="fa fa-briefcase me-2 text-primary"></i>Gặp Gỡ Doanh Nghiệp</a>
+                                    <span class="sv-badge sv-event-item__badge">60 chỗ</span>
+                                </div>
+                                <div class="sv-meta sv-event-item__meta">28/03/2026 • Lyon</div>
+                            </div>
+                        </article>
                     </li>
                     <li>
-                        <div>
-                            <a href="events.html"><i class="fa fa-users me-2 text-primary"></i>Kết Nối Tân Sinh Viên</a>
-                            <div class="sv-meta">07/04/2026 • Toulouse</div>
-                        </div>
-                        <span class="sv-badge">Mới</span>
+                        <article class="sv-event-item">
+                            <div class="sv-event-item__body">
+                                <div class="sv-event-item__headline">
+                                    <a class="sv-event-item__title" href="events.html"><i class="fa fa-users me-2 text-primary"></i>Kết Nối Tân Sinh Viên</a>
+                                    <span class="sv-badge sv-event-item__badge">Mới</span>
+                                </div>
+                                <div class="sv-meta sv-event-item__meta">07/04/2026 • Toulouse</div>
+                            </div>
+                        </article>
                     </li>
                 </ul>
             </div>
@@ -1156,7 +1237,14 @@
             eventTime: event?.eventTime || event?.event_time || event?.createdAt || new Date().toISOString(),
             address: event?.address || event?.location || '',
             price: Number(event?.price ?? 0),
-            online: Boolean(event?.online)
+            online: Boolean(event?.online),
+            coverImageUrl: decodeHtmlEntities(
+                event?.coverImageUrl
+                || event?.cover_image_url
+                || event?.imageUrl
+                || event?.image_url
+                || ''
+            )
         });
 
         const getCategoryName = (categoryId) => CATEGORY_NAMES[categoryId] || `Chuyên mục #${categoryId ?? 'N/A'}`;
@@ -1443,6 +1531,56 @@
             return `<a class="sv-member-link" href="${profileHref}" aria-label="Hồ sơ ${safeName}">${avatarHtml}</a>`;
         };
 
+        // Utilise la même logique que events.html pour extraire l'image cover
+        const normalizeSafeHref = (href) => {
+            const raw = String(href || '').trim();
+            if (!raw) {
+                return '';
+            }
+            try {
+                const parsed = new URL(raw, window.location.href);
+                return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+                    ? parsed.toString()
+                    : '';
+            } catch (_) {
+                return '';
+            }
+        };
+        const extractFirstImageUrl = (value) => {
+            const raw = String(value || '').trim();
+            if (!raw) {
+                return '';
+            }
+            const template = document.createElement('template');
+            template.innerHTML = raw;
+            const image = template.content.querySelector('img[src]');
+            if (image) {
+                const safeSrc = normalizeSafeHref(image.getAttribute('src'));
+                if (safeSrc) {
+                    return safeSrc;
+                }
+            }
+            const directMatch = raw.match(/https?:\/\/[^\s<>"]+\.(?:png|jpe?g|gif|webp|avif|svg)(?:\?[^\s<>"]*)?/i);
+            return directMatch ? normalizeSafeHref(directMatch[0]) : '';
+        };
+        const resolveEventPreviewImageUrl = (event) => {
+            const explicitImageUrl = normalizeSafeHref(
+                event?.coverImageUrl
+                || event?.cover_image_url
+                || event?.imageUrl
+                || event?.image_url
+            );
+            if (explicitImageUrl) {
+                return explicitImageUrl;
+            }
+            return extractFirstImageUrl(
+                event?.contentHtml
+                || event?.content_html
+                || event?.description
+                || event?.content
+                || ''
+            );
+        };
         const renderEventItem = (event) => {
             const safeTitle = escapeHtml(event.title || 'Sự kiện mới');
             const safeAddress = escapeHtml(event.address || (event.online ? 'Online' : 'Địa điểm cập nhật sau'));
@@ -1453,13 +1591,19 @@
             const safeDate = escapeHtml(formatDate(event.eventTime));
             const safeBadge = escapeHtml(badge);
             const safeHref = buildEventHref(event.eventId, event.title);
+            const safeCover = escapeHtml(resolveEventPreviewImageUrl(event));
             return `
                 <li>
-                    <div>
-                        <a href="${safeHref}"><i class="fa fa-calendar-day me-2 text-primary"></i>${safeTitle}</a>
-                        <div class="sv-meta">${safeDate} • ${safeAddress}</div>
-                    </div>
-                    <span class="sv-badge">${safeBadge}</span>
+                    <article class="sv-event-item">
+                        ${safeCover ? `<img class="sv-event-item__thumb" src="${safeCover}" alt="${safeTitle}" loading="lazy" decoding="async" />` : ''}
+                        <div class="sv-event-item__body">
+                            <div class="sv-event-item__headline">
+                                <a class="sv-event-item__title" href="${safeHref}"><i class="fa fa-calendar-day me-2 text-primary"></i>${safeTitle}</a>
+                                <span class="sv-badge sv-event-item__badge">${safeBadge}</span>
+                            </div>
+                            <div class="sv-meta sv-event-item__meta">${safeDate} • ${safeAddress}</div>
+                        </div>
+                    </article>
                 </li>
             `;
         };

@@ -172,7 +172,10 @@ test('housing form submit button supports touchend without double submit', async
     dispatchChange(dom.window, typeEl, 'STUDIO');
     dispatchInput(dom.window, document.getElementById('housing-city-input'), 'Paris');
     dispatchInput(dom.window, document.getElementById('housing-address-text-input'), 'Tolbiac');
-    dispatchInput(dom.window, document.getElementById('housing-description-input'), 'Studio meublé très calme, lumineux, disponible immédiatement.');
+    dispatchInput(dom.window, document.getElementById('housing-description-input'), `
+        <p>Studio meublé très calme, lumineux, disponible immédiatement.</p>
+        <p><img src="https://cdn.svp.test/housing/detail-submit.jpg" alt="detail"></p>
+    `);
 
     submitBtn.dispatchEvent(new dom.window.Event('touchend', { bubbles: true, cancelable: true }));
     submitBtn.dispatchEvent(new dom.window.Event('click', { bubbles: true, cancelable: true }));
@@ -182,6 +185,75 @@ test('housing form submit button supports touchend without double submit', async
     assert.equal(submittedPayload.title, 'Studio quai de Seine');
     assert.equal(submittedPayload.propertyType, 'STUDIO');
     assert.equal(submittedPayload.addressText, 'Tolbiac');
+    assert.equal(submittedPayload.imageUrl, 'https://cdn.svp.test/housing/detail-submit.jpg');
     assert.equal(submittedPayload.transitPoints.length, 1);
     assert.equal(document.getElementById('housing-submit-feedback').textContent, 'Đã đăng tin thuê nhà.');
+});
+
+test('housing form submit sends imageUrl from the uploaded primary image when a gallery image exists', async () => {
+    let submitCalls = 0;
+    let submittedPayload = null;
+    let presignCalls = 0;
+    const dom = await loadHousingFormPage({
+        fetch: async (targetUrl, options = {}) => {
+            const url = String(targetUrl);
+            const method = String(options.method || 'GET').toUpperCase();
+            if (url === 'http://localhost:8080/api/upload/post-image') {
+                presignCalls += 1;
+                return makeJsonResponse({
+                    uploadUrl: 'https://upload.svp.test/housing/image-1',
+                    publicUrl: 'https://cdn.svp.test/housing/uploaded-primary.jpg'
+                });
+            }
+            if (url === 'https://upload.svp.test/housing/image-1' && method === 'PUT') {
+                return { ok: true, status: 200 };
+            }
+            if (url === 'http://localhost:8080/api/housing' && method === 'POST') {
+                submitCalls += 1;
+                submittedPayload = JSON.parse(String(options.body || '{}'));
+                return makeJsonResponse({ listingId: 'listing-upload-123' });
+            }
+            throw new Error(`Unexpected fetch: ${targetUrl}`);
+        }
+    });
+    const { document, File } = dom.window;
+    const imageFilesEl = document.getElementById('housing-image-files');
+    const form = document.getElementById('housing-form');
+    const submitBtn = document.getElementById('housing-submit-btn');
+    const realSetTimeout = document.defaultView.setTimeout.bind(document.defaultView);
+
+    document.defaultView.setTimeout = (callback, delay = 0, ...args) => {
+        if (Number(delay) >= 400) {
+            return 1;
+        }
+        return realSetTimeout(callback, delay, ...args);
+    };
+    Object.defineProperty(form, 'requestSubmit', {
+        configurable: true,
+        value: function requestSubmit() {
+            this.dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+        }
+    });
+
+    Object.defineProperty(imageFilesEl, 'files', {
+        configurable: true,
+        value: [new File(['image-bytes'], 'primary.png', { type: 'image/png' })]
+    });
+    imageFilesEl.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+
+    dispatchInput(dom.window, document.getElementById('housing-title-input'), 'Studio Tolbiac');
+    dispatchInput(dom.window, document.getElementById('housing-price-input'), '640');
+    dispatchChange(dom.window, document.getElementById('housing-type-input'), 'STUDIO');
+    dispatchInput(dom.window, document.getElementById('housing-city-input'), 'Paris');
+    dispatchInput(dom.window, document.getElementById('housing-address-text-input'), 'Tolbiac');
+    dispatchInput(dom.window, document.getElementById('housing-description-input'), 'Studio meublé très calme, lumineux, disponible immédiatement.');
+
+    submitBtn.dispatchEvent(new dom.window.Event('touchend', { bubbles: true, cancelable: true }));
+    submitBtn.dispatchEvent(new dom.window.Event('click', { bubbles: true, cancelable: true }));
+    await flushAsync(dom.window, 12);
+
+    assert.equal(presignCalls, 1);
+    assert.equal(submitCalls, 1);
+    assert.equal(submittedPayload.imageUrl, 'https://cdn.svp.test/housing/uploaded-primary.jpg');
+    assert.equal(submittedPayload.images[0].imageUrl, 'https://cdn.svp.test/housing/uploaded-primary.jpg');
 });

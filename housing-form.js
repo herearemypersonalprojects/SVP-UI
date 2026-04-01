@@ -500,9 +500,19 @@
         }
     }, 220);
 
+    const collectPrimaryImageUrl = () => {
+        const primaryGalleryImage = state.imageEntries.find((item) => item.isPrimary && (item.uploadedUrl || item.existingUrl))
+            || state.imageEntries.find((item) => item.uploadedUrl || item.existingUrl);
+        if (primaryGalleryImage) {
+            return String(primaryGalleryImage.uploadedUrl || primaryGalleryImage.existingUrl || '').trim();
+        }
+        return String(shared.extractFirstImageUrlFromHtml(getDescriptionHtml()) || '').trim();
+    };
+
     const collectPayload = () => ({
         title: titleEl.value.trim(),
         description: getDescriptionHtml(),
+        imageUrl: collectPrimaryImageUrl(),
         price: priceEl.value ? Number(priceEl.value) : null,
         areaM2: areaEl.value ? Number(areaEl.value) : null,
         latitude: latEl.value ? Number(latEl.value) : null,

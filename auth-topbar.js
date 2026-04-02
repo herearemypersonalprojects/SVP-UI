@@ -38,6 +38,7 @@
     let visitSessionState = null;
     let visitVisibleSinceMs = 0;
     let lastVisitSessionFlushAt = 0;
+    let lastVisitSessionFlushKey = "";
 
     const scheduleNonCritical = (task, timeoutMs = NON_CRITICAL_IDLE_TIMEOUT_MS) => {
         if (typeof task !== "function") {
@@ -838,20 +839,28 @@
         return state;
     };
 
-    const buildTrackingHeaders = () => {
-        const headers = { "Content-Type": "application/json" };
-        const accessToken = localStorage.getItem("accessToken") || "";
-        if (accessToken) {
-            headers.Authorization = `Bearer ${accessToken}`;
-        }
-        return headers;
+    const buildTrackingRequest = (payload) => {
+        return {
+            body: JSON.stringify(payload),
+            contentType: "text/plain;charset=UTF-8"
+        };
     };
 
     const postTracking = (url, payload) => {
+        const request = buildTrackingRequest(payload);
+        if (window.navigator && typeof window.navigator.sendBeacon === "function") {
+            try {
+                const blob = new Blob([request.body], { type: request.contentType });
+                if (window.navigator.sendBeacon(url, blob)) {
+                    return;
+                }
+            } catch (_) {
+            }
+        }
         fetch(url, {
             method: "POST",
-            headers: buildTrackingHeaders(),
-            body: JSON.stringify(payload),
+            headers: { "Content-Type": request.contentType },
+            body: request.body,
             keepalive: true
         }).catch(() => {});
     };
@@ -901,6 +910,20 @@
         };
     };
 
+    const buildVisitSessionFlushKey = (payload) => {
+        if (!payload || !payload.sessionId) {
+            return "";
+        }
+        return JSON.stringify({
+            sessionId: payload.sessionId,
+            authUserId: payload.authUserId || 0,
+            engagedSeconds: payload.engagedSeconds || 0,
+            pageViewCount: payload.pageViewCount || 0,
+            firstPath: payload.firstPath || "",
+            lastPath: payload.lastPath || ""
+        });
+    };
+
     const flushVisitSession = () => {
         try {
             const nowMs = Date.now();
@@ -912,7 +935,12 @@
             if (!payload) {
                 return;
             }
+            const flushKey = buildVisitSessionFlushKey(payload);
+            if (flushKey && flushKey === lastVisitSessionFlushKey) {
+                return;
+            }
             lastVisitSessionFlushAt = nowMs;
+            lastVisitSessionFlushKey = flushKey;
             postTracking(API_BASE_URL + "/stats/visit-session", payload);
         } catch (_) {
         }
@@ -949,9 +977,6 @@
             }
         });
         window.addEventListener("pagehide", () => {
-            flushVisitSession();
-        });
-        window.addEventListener("beforeunload", () => {
             flushVisitSession();
         });
         window.addEventListener("focus", () => {

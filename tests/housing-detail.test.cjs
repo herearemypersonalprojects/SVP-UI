@@ -137,6 +137,22 @@ test('housing detail does not scan description images when imageUrl is missing',
     assert.match(dom.window.document.getElementById('housing-detail-meta').textContent, /27 lượt xem/);
 });
 
+test('housing detail defers auth provider fetch until messenger share is interacted with', async () => {
+    const payload = buildHousingPayload();
+    const dom = await loadHousingDetailPage(payload);
+    const { window } = dom;
+    const messengerLink = window.document.getElementById('housing-detail-share-messenger');
+
+    assert.equal(dom.requests.some((entry) => String(entry.url).endsWith('/auth/providers')), false);
+    assert.match(String(messengerLink.getAttribute('href') || ''), /^fb-messenger:\/\/share\/\?/);
+
+    messengerLink.dispatchEvent(new window.Event('mouseenter', { bubbles: true }));
+    await flushAsync(window);
+
+    assert.equal(dom.requests.some((entry) => String(entry.url).endsWith('/auth/providers')), true);
+    assert.match(String(messengerLink.getAttribute('href') || ''), /facebook\.com\/dialog\/send/);
+});
+
 test('housing detail decodes encoded description html and renders inline images', async () => {
     const dom = await loadHousingDetailPage(buildHousingPayload({
         description: [

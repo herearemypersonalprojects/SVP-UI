@@ -87,6 +87,8 @@
     const API_BASE_URL = shared.API_BASE_URL;
     const MAX_COMMENT_TEXT_LENGTH = 2000;
     const escapeHtml = shared.escapeHtml;
+    const AUTH_PROVIDERS_CACHE_KEY = 'svp.auth.providers.v1';
+    const AUTH_PROVIDERS_CACHE_TTL_MS = 60 * 60 * 1000;
     const richContentSanitizeOptions = {
         allowedTags: [
             'p', 'br', 'strong', 'b', 'em', 'i', 'u', 's',
@@ -99,6 +101,7 @@
     let currentCanonicalUrl = shared.buildHousingCanonicalUrl(listingId);
     let currentShareUrl = shared.buildHousingShareUrl(listingId, '');
     let facebookAppIdPromise = null;
+    let messengerSharePrimePromise = null;
     let currentDetail = null;
     let currentComments = [];
     let replyCaptchaAnswer = null;
@@ -399,12 +402,59 @@
         }
     };
 
-    const loadFacebookAppId = async () => {
+    const readProviderConfigCache = () => {
+        try {
+            const raw = window.localStorage.getItem(AUTH_PROVIDERS_CACHE_KEY);
+            if (!raw) return null;
+            const parsed = JSON.parse(raw);
+            const expiresAt = Number(parsed?.expiresAt || 0);
+            if (!parsed || typeof parsed !== 'object' || !Number.isFinite(expiresAt) || expiresAt <= Date.now()) {
+                window.localStorage.removeItem(AUTH_PROVIDERS_CACHE_KEY);
+                return null;
+            }
+            return parsed.value && typeof parsed.value === 'object' ? parsed.value : null;
+        } catch (_) {
+            return null;
+        }
+    };
+
+    const writeProviderConfigCache = (value) => {
+        try {
+            window.localStorage.setItem(AUTH_PROVIDERS_CACHE_KEY, JSON.stringify({
+                expiresAt: Date.now() + AUTH_PROVIDERS_CACHE_TTL_MS,
+                value: value && typeof value === 'object' ? value : {}
+            }));
+        } catch (_) {
+        }
+    };
+
+    const loadProviderConfig = async () => {
         if (facebookAppIdPromise) return facebookAppIdPromise;
+        const cached = readProviderConfigCache();
+        if (cached) {
+            facebookAppIdPromise = Promise.resolve(cached);
+            return facebookAppIdPromise;
+        }
         facebookAppIdPromise = shared.fetchJson(`${API_BASE_URL}/auth/providers`, {
             headers: { Accept: 'application/json' }
-        }).then((providers) => String(providers?.facebook?.appId || '').trim()).catch(() => '');
+        }).then((providers) => {
+            const normalized = providers && typeof providers === 'object' ? providers : {};
+            writeProviderConfigCache(normalized);
+            return normalized;
+        }).catch((error) => {
+            facebookAppIdPromise = null;
+            throw error;
+        });
         return facebookAppIdPromise;
+    };
+
+    const loadFacebookAppId = async () => {
+        try {
+            const providers = await loadProviderConfig();
+            return String(providers?.facebook?.appId || '').trim();
+        } catch (_) {
+            return '';
+        }
     };
 
     const buildMessengerShareUrl = async () => {
@@ -747,15 +797,31 @@
         }, 80);
     };
 
-    const setShareLinks = async () => {
+    const buildMessengerFallbackUrl = () => `fb-messenger://share/?link=${encodeURIComponent(currentShareUrl)}`;
+
+    const primeMessengerShareLink = async () => {
+        if (messengerSharePrimePromise) {
+            return messengerSharePrimePromise;
+        }
+        messengerSharePrimePromise = buildMessengerShareUrl()
+            .then((href) => {
+                shareMessengerEl.href = href || buildMessengerFallbackUrl();
+                return shareMessengerEl.href;
+            })
+            .catch(() => {
+                shareMessengerEl.href = buildMessengerFallbackUrl();
+                return shareMessengerEl.href;
+            })
+            .finally(() => {
+                messengerSharePrimePromise = null;
+            });
+        return messengerSharePrimePromise;
+    };
+
+    const setShareLinks = () => {
         shareSectionEl.classList.remove('d-none');
         shareFbEl.href = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(currentShareUrl)}`;
-        shareMessengerEl.href = '#';
-        try {
-            shareMessengerEl.href = await buildMessengerShareUrl();
-        } catch (_) {
-            shareMessengerEl.href = `fb-messenger://share/?link=${encodeURIComponent(currentShareUrl)}`;
-        }
+        shareMessengerEl.href = buildMessengerFallbackUrl();
     };
 
     const syncSeo = () => {
@@ -868,7 +934,7 @@
         renderOwner();
         updateMap();
         renderActions();
-        void setShareLinks();
+        setShareLinks();
         syncSeo();
         setPageFeedback('', 'info');
     };
@@ -1212,6 +1278,11 @@
             } catch (_) {
                 setPageFeedback('Không thể copy link chia sẻ.', 'error');
             }
+        });
+        ['mouseenter', 'focus', 'touchstart'].forEach((eventName) => {
+            shareMessengerEl.addEventListener(eventName, () => {
+                void primeMessengerShareLink();
+            }, { passive: true });
         });
         if (commentEditModalEl) {
             commentEditModalEl.addEventListener('hidden.bs.modal', () => {

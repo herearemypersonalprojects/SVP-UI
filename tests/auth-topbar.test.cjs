@@ -249,3 +249,34 @@ test('refreshAccessToken clears session when refresh token is genuinely invalid'
     assert.equal(env.store.has('refreshToken'), false);
     assert.match(env.authBox.innerHTML, /login\.html/);
 });
+
+test('tracking requests avoid Authorization header and keep authUserId in payload', () => {
+    const token = makeToken({
+        sub: '81',
+        email: 'alice@example.com',
+        nickname: 'alice',
+        displayName: 'Alice',
+        role: 'USER',
+        exp: Math.floor(Date.now() / 1000) + 3600
+    });
+    const requests = [];
+
+    loadAuthTopbar({
+        localStorageEntries: {
+            accessToken: token,
+            authUserId: '81'
+        },
+        fetchImpl: async (targetUrl, requestOptions = {}) => {
+            requests.push({ url: String(targetUrl), options: requestOptions || {} });
+            return { ok: true, status: 204, json: async () => ({}) };
+        }
+    });
+
+    const trackingRequest = requests.find((entry) => entry.url.endsWith('/stats/visit'));
+    assert.ok(trackingRequest);
+    assert.equal(trackingRequest.options.headers.Authorization, undefined);
+    assert.match(String(trackingRequest.options.headers['Content-Type'] || ''), /^text\/plain/i);
+
+    const payload = JSON.parse(String(trackingRequest.options.body || '{}'));
+    assert.equal(payload.authUserId, 81);
+});

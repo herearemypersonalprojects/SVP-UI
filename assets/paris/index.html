@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <title>Paris Discovery by Lozu – Heritage Map & Nearby Places Guide</title>
+
+  <meta name="title:vi" content="Khám Phá Paris – Bản Đồ Di Sản & Điểm Gần Bạn | Lozu" />
+  <meta name="title:en" content="Paris Discovery by Lozu – Heritage Map & Nearby Places Guide" />
+  <meta name="title:fr" content="Découvrir Paris – Carte du Patrimoine & Lieux Proches | Lozu" />
+
+  <meta property="og:image" content="https://lozu.fr/icons/preview.png" />
+  <meta property="og:image:width" content="1200" />
+  <meta property="og:image:height" content="630" />
+
+
+  <!-- SEO META -->
+  <!-- Default description (Google dùng cái này) -->
+  <meta name="description"
+        content="Discover cultural heritage sites, stories, and remarkable places around you in Paris. Lozu offers a smart and intuitive map experience for explorers." />
+
+  <!-- Optional đa ngôn ngữ (cho plugin / future i18n) -->
+  <meta name="description:vi"
+        content="Khám phá các địa điểm văn hoá, di tích và câu chuyện thú vị quanh bạn tại Paris. Lozu – trải nghiệm bản đồ thông minh cho du lịch và khám phá di sản." />
+  <meta name="description:fr"
+        content="Découvrez les sites patrimoniaux, les lieux culturels et leurs histoires fascinantes autour de vous à Paris. Lozu propose une carte intelligente pour explorer la ville autrement." />
+
+  <meta name="keywords"
+        content="Lozu, Paris Discovery, heritage map, Paris tourism, bản đồ Paris, du lịch Paris, di sản Pháp, smart tourism" />
+
+  <!-- Canonical & hreflang -->
+  <link rel="canonical" href="https://lozu.fr/" />
+  <link rel="alternate" hreflang="x-default" href="https://lozu.fr/" />
+  <link rel="alternate" hreflang="vi" href="https://lozu.fr/?lang=vi" />
+  <link rel="alternate" hreflang="en" href="https://lozu.fr/?lang=en" />
+  <link rel="alternate" hreflang="fr" href="https://lozu.fr/?lang=fr" />
+
+  <!-- Open Graph -->
+  <meta property="og:title" content="Lozu – Paris Discovery" />
+  <meta property="og:description"
+        content="Khám phá di sản và các địa điểm thú vị quanh bạn tại Paris. Bản đồ thông minh cho người yêu du lịch và văn hoá." />
+  <meta property="og:type" content="website" />
+  <meta property="og:url" content="https://lozu.fr" />
+  <meta property="og:image" content="https://lozu.fr/icons/castle_logo_512.png" />
+  <meta property="og:site_name" content="Lozu – Paris Discovery" />
+  <meta property="og:locale" content="vi_VN" />
+  <meta property="og:locale:alternate" content="en_US" />
+  <meta property="og:locale:alternate" content="fr_FR" />
+
+  <!-- Twitter Card -->
+  <meta name="twitter:card" content="summary_large_image" />
+  <meta name="twitter:title" content="Lozu – Paris Discovery" />
+  <meta name="twitter:description"
+        content="Discover heritage sites and fascinating stories around you in Paris with Lozu smart map." />
+  <meta name="twitter:image" content="https://lozu.fr/icons/castle_logo_512.png" />
+  <meta name="twitter:url" content="https://lozu.fr" />
+
+  <!-- Viewport -->
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <script>
+    (function () {
+      var url = new URL(window.location.href);
+      var lang = (url.searchParams.get("lang") || "").trim().toLowerCase();
+
+      if (!lang) {
+        url.searchParams.set("lang", "vi");
+        window.location.replace(url.toString());
+      }
+    })();
+  </script>
+
+  <!-- favicon -->
+  <link rel="icon" type="image/svg+xml" href="/icons/castle_favicon.ico">
+  <link rel="icon" type="image/png" sizes="16x16" href="/icons/castle_logo_16.png">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/castle_logo_32.png">
+
+  <!-- Google Analytics / GA dùng chung -->
+  <script src="ga-lozu.js"></script>
+  <script>
+    window.addEventListener('load', function () {
+      if (window.GA_LOZU) {
+        GA_LOZU.initPage({
+          title: 'Lozu – Index',
+          path: '/index'
+        });
+      }
+    });
+  </script>
+
+  <!-- JSON-LD structured data -->
+  <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebApplication",
+      "name": "Lozu – Paris Discovery",
+      "url": "https://lozu.fr/",
+      "description": "Khám phá địa điểm văn hoá và di sản quanh bạn tại Paris với bản đồ thông minh Lozu.",
+      "applicationCategory": "TravelApplication",
+      "operatingSystem": "All",
+      "inLanguage": ["vi", "en", "fr"],
+      "creator": {
+        "@type": "Organization",
+        "name": "Lozu",
+        "url": "https://lozu.fr/"
+      }
+    }
+  </script>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100vh;
+      background: #0d47a1;
+      color: #e3f2fd;
+    }
+    .loader {
+      text-align: center;
+      padding: 24px;
+    }
+    .title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+    .subtitle {
+      font-size: 0.95rem;
+      margin-bottom: 16px;
+      opacity: 0.9;
+    }
+    .buttons {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-bottom: 8px;
+      flex-wrap: wrap;
+    }
+    button {
+      border: none;
+      padding: 10px 18px;
+      border-radius: 999px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      background: #e3f2fd;
+      color: #0d47a1;
+      font-weight: 600;
+    }
+    button:hover {
+      opacity: 0.9;
+    }
+    .hint {
+      font-size: 0.8rem;
+      opacity: 0.8;
+    }
+  </style>
+</head>
+<body>
+<div class="loader">
+  <div class="title">Paris Discovery by Lozu – Heritage Map & Nearby Places Guide</div>
+  <div class="subtitle">
+    Selecting the best interface for your device…
+  </div>
+
+  <div class="buttons">
+    <button id="btn-web">Open Web Interface</button>
+    <button id="btn-mobile">Open Mobile Interface</button>
+  </div>
+
+  <div class="hint">
+    If it doesn’t redirect automatically, please choose one of the options above.
+  </div>
+</div>
+
+<noscript>
+  <p style="text-align:center; padding:16px;">
+    JavaScript is disabled in your browser. Please choose:<br>
+    <a href="web.html?lang=vi" style="color:#bbdefb;">Web Interface</a> |
+    <a href="mobile.html?lang=vi" style="color:#bbdefb;">Mobile Interface</a>
+  </p>
+</noscript>
+
+
+<script>
+  (function () {
+    // Đọc tham số URL: ?mode=web / ?mode=mobile
+    var params = new URLSearchParams(window.location.search);
+    var modeParam = (params.get("mode") || "").toLowerCase();
+
+    function buildTargetUrl(target) {
+      var newParams = new URLSearchParams(window.location.search);
+      newParams.delete("mode");
+      var qs = newParams.toString();
+      return qs ? target + "?" + qs : target;
+    }
+
+    function trackAndGo(target, modeLabel) {
+      if (window.GA_LOZU) {
+        GA_LOZU.track('select_mode', { mode: modeLabel });
+      }
+      window.location.href = buildTargetUrl(target);
+    }
+
+    // Gắn sự kiện cho nút thủ công
+    var btnWeb = document.getElementById('btn-web');
+    var btnMobile = document.getElementById('btn-mobile');
+
+    if (btnWeb) {
+      btnWeb.addEventListener('click', function () {
+        trackAndGo('web.html', 'web-manual');
+      });
+    }
+    if (btnMobile) {
+      btnMobile.addEventListener('click', function () {
+        trackAndGo('mobile.html', 'mobile-manual');
+      });
+    }
+
+    // Ưu tiên tham số mode trên URL
+    if (modeParam === 'web') {
+      trackAndGo('web.html', 'web-param');
+      return;
+    }
+    if (modeParam === 'mobile') {
+      trackAndGo('mobile.html', 'mobile-param');
+      return;
+    }
+
+    // Không có mode → tự detect sau một khoảng ngắn để user vẫn thấy nội dung
+    setTimeout(function () {
+      var isMobile =
+        /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) ||
+        window.innerWidth <= 768;
+
+      if (isMobile) {
+        trackAndGo('mobile.html', 'mobile-auto');
+      } else {
+        trackAndGo('web.html', 'web-auto');
+      }
+    }, 800);
+  })();
+</script>
+
+</body>
+</html>

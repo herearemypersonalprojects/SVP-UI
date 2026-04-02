@@ -117,6 +117,19 @@
             max-height: 320px;
             overflow: auto;
         }
+        .sv-inline-actions {
+            display: flex;
+            align-items: center;
+            gap: .45rem;
+            flex-wrap: wrap;
+        }
+        .sv-post-status-select {
+            min-width: 140px;
+        }
+        .sv-post-status-cell {
+            font-weight: 700;
+            white-space: nowrap;
+        }
     </style>
 </head>
 <body>
@@ -845,6 +858,40 @@
             setOverviewValue(housingNewslettersEl, payload.activeHousingNewsletters);
         };
 
+        const MANAGEABLE_POST_STATUSES = ['PENDING', 'PUBLISHED', 'HIDDEN'];
+        const normalizeManageablePostStatus = (value) => {
+            const upper = String(value || '').trim().toUpperCase();
+            return MANAGEABLE_POST_STATUSES.includes(upper) ? upper : '';
+        };
+        const canManagePostStatus = (item) => {
+            const status = normalizeManageablePostStatus(item?.status);
+            return Boolean(item?.isArticle) && Boolean(status) && (currentRole === 'ADMIN' || currentRole === 'SUPERADMIN');
+        };
+        const updateOverviewPostCounts = (fromStatus, toStatus) => {
+            const previous = normalizeManageablePostStatus(fromStatus);
+            const next = normalizeManageablePostStatus(toStatus);
+            if (!previous || !next || previous === next) {
+                return;
+            }
+            const cached = dashboardCache.get('overview');
+            if (!cached) {
+                return;
+            }
+            const updated = { ...cached };
+            const increment = (key) => {
+                updated[key] = Math.max(0, Number(updated[key] || 0) + 1);
+            };
+            const decrement = (key) => {
+                updated[key] = Math.max(0, Number(updated[key] || 0) - 1);
+            };
+            if (previous === 'PENDING' && next !== 'PENDING') decrement('pendingPosts');
+            if (previous !== 'PENDING' && next === 'PENDING') increment('pendingPosts');
+            if (previous === 'PUBLISHED' && next !== 'PUBLISHED') decrement('publishedPosts');
+            if (previous !== 'PUBLISHED' && next === 'PUBLISHED') increment('publishedPosts');
+            dashboardCache.set('overview', updated);
+            renderOverview(updated);
+        };
+
         const resolveTrackedPathHref = (rawPath) => {
             const path = String(rawPath || '').trim();
             if (!path) return '';
@@ -1212,6 +1259,104 @@
             }
         };
 
+        const buildPostStatusActions = (item) => {
+            if (!canManagePostStatus(item)) {
+                return '<span class="sv-admin-muted">Không khả dụng</span>';
+            }
+            const status = normalizeManageablePostStatus(item.status);
+            const postId = Number(item.postId || 0);
+            const options = MANAGEABLE_POST_STATUSES.map((candidate) => `
+                <option value="${candidate}"${candidate === status ? ' selected' : ''}>${candidate}</option>
+            `).join('');
+            return `
+                <div class="sv-inline-actions">
+                    <select class="form-select form-select-sm sv-post-status-select" data-post-status-select="${postId}" aria-label="Cập nhật trạng thái bài viết ${postId}">
+                        ${options}
+                    </select>
+                    <button type="button" class="btn btn-sm btn-outline-primary" data-post-status-save="${postId}">Lưu</button>
+                </div>
+            `;
+        };
+
+        const setPostStatusControlBusy = (postId, busy) => {
+            if (!detailBodyEl) return;
+            const select = detailBodyEl.querySelector(`[data-post-status-select="${postId}"]`);
+            const button = detailBodyEl.querySelector(`[data-post-status-save="${postId}"]`);
+            if (select) {
+                select.disabled = busy;
+            }
+            if (button) {
+                button.disabled = busy;
+                button.textContent = busy ? 'Đang lưu...' : 'Lưu';
+            }
+        };
+
+        const syncPostStatusRow = (postId, status) => {
+            if (!detailBodyEl) return;
+            const statusLabel = detailBodyEl.querySelector(`[data-post-status-label="${postId}"]`);
+            const select = detailBodyEl.querySelector(`[data-post-status-select="${postId}"]`);
+            if (statusLabel) {
+                statusLabel.textContent = status;
+            }
+            if (select) {
+                select.value = status;
+            }
+        };
+
+        const updatePostStatusQuick = async (postId, targetStatus) => {
+            const normalizedTargetStatus = normalizeManageablePostStatus(targetStatus);
+            if (!normalizedTargetStatus) {
+                setDetailStatus('Trạng thái bài viết không hợp lệ.', true);
+                return;
+            }
+            if (!detailBodyEl) return;
+            const statusLabel = detailBodyEl.querySelector(`[data-post-status-label="${postId}"]`);
+            const currentStatus = normalizeManageablePostStatus(statusLabel?.textContent || '');
+            if (!currentStatus) {
+                setDetailStatus('Không thể xác định trạng thái hiện tại của bài viết.', true);
+                return;
+            }
+            if (currentStatus === normalizedTargetStatus) {
+                setDetailStatus(`Bài viết đã ở trạng thái ${normalizedTargetStatus}.`, false);
+                return;
+            }
+            setPostStatusControlBusy(postId, true);
+            try {
+                const token = window.SVPAuth?.getValidAccessToken ? await window.SVPAuth.getValidAccessToken() : '';
+                if (!token) {
+                    throw new Error('Bạn cần đăng nhập bằng tài khoản admin.');
+                }
+                const response = await fetch(`${API_BASE_URL}/posts/${encodeURIComponent(postId)}/status`, {
+                    method: 'PATCH',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({ status: normalizedTargetStatus })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Không thể cập nhật trạng thái bài viết.');
+                }
+                syncPostStatusRow(postId, normalizedTargetStatus);
+                updateOverviewPostCounts(currentStatus, normalizedTargetStatus);
+                if (detailState.type === 'posts'
+                        && detailState.status
+                        && normalizeManageablePostStatus(detailState.status) !== normalizedTargetStatus) {
+                    const refreshed = await fetchDetail();
+                    if (!refreshed) {
+                        return;
+                    }
+                }
+                setDetailStatus(`Đã cập nhật bài viết #${postId} → ${normalizedTargetStatus}.`, false);
+            } catch (error) {
+                setDetailStatus(error.message || 'Không thể cập nhật trạng thái bài viết.', true);
+            } finally {
+                setPostStatusControlBusy(postId, false);
+            }
+        };
+
         const buildDetailRows = (type, items) => {
             switch (type) {
                 case 'users': {
@@ -1242,21 +1387,23 @@
                     return { headers, rows };
                 }
                 case 'posts': {
-                    const headers = ['ID', 'Tiêu đề', 'Trạng thái', 'Loại', 'Tác giả', 'Ngày tạo'];
+                    const headers = ['ID', 'Tiêu đề', 'Trạng thái', 'Loại', 'Tác giả', 'Ngày tạo', 'Thao tác'];
                     const rows = items.map((item) => {
                         const isArticle = Boolean(item.isArticle);
                         const href = isArticle
                             ? buildArticleHref(item.postId, item.title)
                             : buildThreadHref(item.postId, item.title);
                         const authorName = item.authorDisplayName || item.authorNickname || '';
+                        const status = normalizeManageablePostStatus(item.status) || String(item.status || '').trim();
                         return `
-                            <tr>
+                            <tr data-post-row="${escapeHtml(item.postId)}">
                                 <td>${escapeHtml(item.postId)}</td>
                                 <td><a href="${href}">${escapeHtml(item.title || '')}</a></td>
-                                <td>${escapeHtml(item.status || '')}</td>
+                                <td class="sv-post-status-cell"><span data-post-status-label="${escapeHtml(item.postId)}">${escapeHtml(status)}</span></td>
                                 <td>${isArticle ? 'Article' : 'Discussion'}</td>
                                 <td>${escapeHtml(authorName)}</td>
                                 <td>${escapeHtml(item.createdAt || '')}</td>
+                                <td>${buildPostStatusActions(item)}</td>
                             </tr>
                         `;
                     }).join('');
@@ -1410,10 +1557,12 @@
                 renderDetailTable(detail.headers, detail.rows);
                 setDetailPagination(true, Boolean(payload.hasMore));
                 setDetailStatus('', false);
+                return true;
             } catch (error) {
                 setDetailStatus(error.message || 'Không thể tải chi tiết.', true);
                 renderDetailTable(['Thông tin'], '');
                 setDetailPagination(false, false);
+                return false;
             }
         };
 
@@ -1638,6 +1787,20 @@
             detailNextBtn.addEventListener('click', () => {
                 detailState.page += 1;
                 fetchDetail();
+            });
+        }
+        if (detailBodyEl) {
+            detailBodyEl.addEventListener('click', (event) => {
+                const actionButton = event.target.closest('[data-post-status-save]');
+                if (!actionButton) {
+                    return;
+                }
+                const postId = Number(actionButton.getAttribute('data-post-status-save') || 0);
+                if (!Number.isFinite(postId) || postId <= 0) {
+                    return;
+                }
+                const select = detailBodyEl.querySelector(`[data-post-status-select="${postId}"]`);
+                updatePostStatusQuick(postId, select?.value || '');
             });
         }
 

@@ -51,6 +51,10 @@ async function loadEventDetailPage(options = {}) {
         setStructuredData() {}
     };
 
+    if (options.accessToken) {
+        window.localStorage.setItem('accessToken', options.accessToken);
+    }
+
     window.eval(extractEventDetailInlineScript());
     await flushAsync(window, 10);
     return dom;
@@ -168,4 +172,57 @@ test('event detail submits a new comment and updates the visible count', async (
     assert.match(document.getElementById('event-comment-list').textContent || '', /Minh Duc/);
     assert.match(document.getElementById('event-comment-list').textContent || '', /Moi nguoi nho den som nhe/);
     assert.equal(document.getElementById('event-comment-message').value, '');
+});
+
+test('event detail only shows hide action for SUPERADMIN', async () => {
+    const fetch = async (targetUrl) => {
+        const url = String(targetUrl);
+        if (url === 'https://api.svp.test/events/7?trackView=true&includeComments=true') {
+            return makeJsonResponse({
+                event: {
+                    eventId: 7,
+                    title: 'Hoi thao SVP',
+                    content: '<p>Noi dung su kien day du.</p>',
+                    eventTime: '2026-05-10T18:30:00Z',
+                    address: 'Paris 13e',
+                    price: 0,
+                    online: false,
+                    eventTypeName: 'Giao lưu',
+                    viewCount: 12,
+                    commentCount: 0,
+                    hidden: true,
+                    organizer: {
+                        nickname: 'owner'
+                    }
+                },
+                comments: []
+            });
+        }
+        throw new Error(`Unexpected fetch: ${targetUrl}`);
+    };
+
+    const adminDom = await loadEventDetailPage({
+        fetch,
+        accessToken: 'admin-token',
+        svpAuth: {
+            getValidAccessToken: async () => 'admin-token',
+            parseJwtPayload: () => ({ nickname: 'admin', role: 'ADMIN' })
+        }
+    });
+    const adminButtons = Array.from(adminDom.window.document.querySelectorAll('button'))
+        .map((button) => (button.textContent || '').trim());
+    assert.equal(adminButtons.includes('Ẩn sự kiện'), false);
+    assert.equal(adminButtons.includes('Hiện sự kiện'), false);
+
+    const superadminDom = await loadEventDetailPage({
+        fetch,
+        accessToken: 'super-token',
+        svpAuth: {
+            getValidAccessToken: async () => 'super-token',
+            parseJwtPayload: () => ({ nickname: 'superadmin', role: 'SUPERADMIN' })
+        }
+    });
+    const superadminButtons = Array.from(superadminDom.window.document.querySelectorAll('button'))
+        .map((button) => (button.textContent || '').trim());
+    assert.equal(superadminButtons.includes('Hiện sự kiện'), true);
 });

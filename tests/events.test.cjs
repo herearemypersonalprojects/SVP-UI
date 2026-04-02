@@ -39,6 +39,10 @@ async function loadEventsPage(items, options = {}) {
     });
     const { window } = dom;
     window.SVP_API_BASE_URL = 'https://api.svp.test';
+    window.SVPAuth = options.svpAuth || {
+        getValidAccessToken: async () => '',
+        parseJwtPayload: () => null
+    };
     window.SVPSeo = {
         urls: {
             buildDetailPath(kind, id) {
@@ -158,4 +162,40 @@ test('events page filters listed events by selected event type', async () => {
     assert.match(upcomingListText, /Dem nhac ngoai troi/);
     assert.doesNotMatch(upcomingListText, /Hoi thao du hoc/);
     assert.match(dom.window.document.getElementById('sv-events-upcoming-page-info').textContent || '', /1 \/ 1 sự kiện/);
+});
+
+test('events page sends Authorization only for SUPERADMIN viewers', async () => {
+    let capturedAuthorization = '';
+    const dom = createDomFromHtml('events.html', {
+        url: 'https://svpforum.fr/events.html',
+        fetch: async (targetUrl, options = {}) => {
+            const url = new URL(String(targetUrl));
+            if (url.pathname.endsWith('/events')) {
+                capturedAuthorization = String(options.headers?.Authorization || '');
+                return makeJsonResponse({ items: [] });
+            }
+            if (url.pathname.endsWith('/event-types')) {
+                return makeJsonResponse({ items: [] });
+            }
+            throw new Error(`Unexpected fetch: ${targetUrl}`);
+        }
+    });
+    const { window } = dom;
+    window.SVP_API_BASE_URL = 'https://api.svp.test';
+    window.SVPAuth = {
+        getValidAccessToken: async () => 'fresh-superadmin-token',
+        parseJwtPayload: () => ({ role: 'SUPERADMIN' })
+    };
+    window.SVPSeo = {
+        urls: {
+            buildDetailPath(kind, id) {
+                return `/${kind}/${id}`;
+            }
+        }
+    };
+
+    window.eval(extractEventsInlineScript());
+    await flushAsync(window, 10);
+
+    assert.equal(capturedAuthorization, 'Bearer fresh-superadmin-token');
 });

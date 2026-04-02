@@ -822,9 +822,9 @@
             const organizerNickname = event.organizer?.nickname || event.organizer?.displayName || '';
             const isOwner = caller.nickname && organizerNickname && caller.nickname === organizerNickname;
             const isSuperadmin = caller.role === 'SUPERADMIN';
-            const isAdmin = caller.role === 'ADMIN' || isSuperadmin;
+            const isAdmin = caller.role === 'ADMIN';
             const canEdit = isOwner || isAdmin || isSuperadmin;
-            const canHide = isAdmin;
+            const canHide = isSuperadmin;
             if (!canEdit && !canHide) return;
 
             const titleEl2 = document.getElementById('event-detail-title');

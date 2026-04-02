@@ -432,6 +432,19 @@
             }
         };
 
+        const getSuperadminAccessToken = async () => {
+            const token = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
+                ? await window.SVPAuth.getValidAccessToken()
+                : String(localStorage.getItem('accessToken') || '').trim();
+            if (!token) {
+                return '';
+            }
+            const payload = (window.SVPAuth && typeof window.SVPAuth.parseJwtPayload === 'function')
+                ? window.SVPAuth.parseJwtPayload(token)
+                : parseJwtPayload(token);
+            return String(payload?.role || '').toUpperCase() === 'SUPERADMIN' ? token : '';
+        };
+
         const normalizeSafeHref = (href) => {
             const raw = String(href || '').trim();
             if (!raw) {
@@ -983,9 +996,13 @@
         };
 
         const fetchEvents = async () => {
+            const accessToken = await getSuperadminAccessToken();
             const response = await fetch(`${API_BASE_URL}/events?limit=200`, {
                 method: 'GET',
-                headers: { Accept: 'application/json' }
+                headers: {
+                    Accept: 'application/json',
+                    ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+                }
             });
             const payload = await response.json().catch(() => ({}));
             if (!response.ok) {

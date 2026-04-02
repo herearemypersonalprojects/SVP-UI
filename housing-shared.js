@@ -2,6 +2,8 @@
     const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
     const SITE_URL = String((window.SVPSeo && window.SVPSeo.siteUrl) || window.SVP_PUBLIC_SITE_URL || 'https://svpforum.fr').replace(/\/+$/g, '');
     const SHARE_SITE_URL = String(window.SVP_SHARE_BASE_URL || 'https://share.svpforum.fr').replace(/\/+$/g, '');
+    const remoteImageTools = window.SVPRemoteImageUpload || null;
+    const HOUSING_IMAGE_UPLOAD_MAX_BYTES = 300 * 1024;
 
     const PROPERTY_TYPES = [
         { value: 'STUDIO', label: 'Studio' },
@@ -149,6 +151,14 @@
         return fetchJson(url, { ...(options || {}), headers });
     };
 
+    const formatUploadSize = (bytes) => remoteImageTools && typeof remoteImageTools.formatSize === 'function'
+        ? remoteImageTools.formatSize(bytes)
+        : `${(Number(bytes || 0) / 1024).toFixed(1)}KB`;
+
+    const isCompressionLimitError = (error) => String(error?.message || '')
+        .toLowerCase()
+        .includes('không thể nén ảnh xuống dưới');
+
     const uploadImages = async (files, onProgress) => {
         const token = await getAccessToken();
         if (!token) {
@@ -156,9 +166,25 @@
         }
         const uploaded = [];
         for (let index = 0; index < files.length; index += 1) {
-            const file = files[index];
-            if (!file || !(file.type || '').toLowerCase().startsWith('image/')) {
+            const sourceFile = files[index];
+            if (!sourceFile || !(sourceFile.type || '').toLowerCase().startsWith('image/')) {
                 throw new Error('Chỉ hỗ trợ upload file ảnh.');
+            }
+            let file = sourceFile;
+            if (remoteImageTools && typeof remoteImageTools.compressImageBelowLimit === 'function') {
+                if (typeof onProgress === 'function') {
+                    onProgress({ index, total: files.length, stage: 'compress', fileName: sourceFile.name });
+                }
+                try {
+                    file = await remoteImageTools.compressImageBelowLimit(sourceFile, HOUSING_IMAGE_UPLOAD_MAX_BYTES);
+                } catch (error) {
+                    if (isCompressionLimitError(error)) {
+                        throw new Error(
+                            `Không thể nén ảnh ${sourceFile.name || `#${index + 1}`} xuống dưới ${formatUploadSize(HOUSING_IMAGE_UPLOAD_MAX_BYTES)}.`
+                        );
+                    }
+                    throw error;
+                }
             }
             if (typeof onProgress === 'function') {
                 onProgress({ index, total: files.length, stage: 'presign', fileName: file.name });

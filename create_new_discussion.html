@@ -223,6 +223,12 @@
                     <div class="mb-3">
                         <label for="discussion-cover-url" class="form-label">URL ảnh đính kèm</label>
                         <input id="discussion-cover-url" class="form-control" type="url" placeholder="https://...">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                            <button id="discussion-cover-url-import-btn" class="btn btn-outline-secondary btn-sm" type="button">
+                                <i class="fa-solid fa-cloud-arrow-up me-1"></i>Tải ảnh từ Internet
+                            </button>
+                            <span class="sv-meta">Nếu Windows báo đường dẫn quá dài, hãy dán link ở đây rồi bấm nút này.</span>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -278,6 +284,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="config.js"></script>
+<script src="remote-image-upload.js"></script>
 <script src="svp-rich-content.js"></script>
 <script>
     (function () {
@@ -311,6 +318,7 @@
         const titleInput = document.getElementById('discussion-title');
         const categoryInput = document.getElementById('discussion-category');
         const coverUrlInput = document.getElementById('discussion-cover-url');
+        const coverUrlImportBtn = document.getElementById('discussion-cover-url-import-btn');
         const coverFileInput = document.getElementById('discussion-cover-file');
         const coverPreview = document.getElementById('discussion-cover-preview');
         const coverUploadNote = document.getElementById('discussion-cover-upload-note');
@@ -327,6 +335,7 @@
         }
 
         const editorPlaceholder = subjectInput.getAttribute('placeholder') || '';
+        const remoteImageTools = window.SVPRemoteImageUpload || null;
         let pendingCoverFile = null;
         let pendingCoverPreviewUrl = '';
         let isUploadingCover = false;
@@ -521,6 +530,21 @@
             clearPendingCoverPreview();
             coverFileInput.value = '';
             lastResolvedCoverUrl = '';
+        };
+
+        const setPendingCoverSelection = (file, statusText) => {
+            if (!(file instanceof File)) {
+                return;
+            }
+            cancelCoverUrlResolve();
+            clearPendingCoverPreview();
+            pendingCoverPreviewUrl = URL.createObjectURL(file);
+            pendingCoverFile = file;
+            coverFileInput.value = '';
+            coverUrlInput.value = '';
+            lastResolvedCoverUrl = '';
+            refreshCoverPreview();
+            setCoverUploadStatus(statusText, 'info');
         };
 
         const cancelCoverUrlResolve = () => {
@@ -755,6 +779,51 @@
                 return 'Upload bị chặn do CORS trên Cloudflare R2. Hãy bật CORS cho origin frontend, method PUT, allowed headers *.';
             }
             return message;
+        };
+
+        const toFriendlyRemoteCoverImportError = (error) => {
+            const message = error && error.message ? String(error.message) : '';
+            return message || 'Không thể tải ảnh từ URL để chuẩn bị upload.';
+        };
+
+        const importCoverFromRemoteUrl = async () => {
+            const safeUrl = sanitizeUrl(coverUrlInput.value);
+            if (!safeUrl) {
+                setCoverUploadStatus('URL ảnh không hợp lệ.', 'error');
+                coverUrlInput.focus();
+                return;
+            }
+            if (!remoteImageTools || typeof remoteImageTools.fetchRemoteImageAsFile !== 'function') {
+                setCoverUploadStatus('Trình tải ảnh từ URL chưa sẵn sàng.', 'error');
+                return;
+            }
+
+            cancelCoverUrlResolve();
+            isPreparingCoverFromUrl = true;
+            coverFileInput.disabled = true;
+            if (coverUrlImportBtn) {
+                coverUrlImportBtn.disabled = true;
+            }
+            setCoverUploadStatus('Đang tải ảnh từ URL để chuẩn bị upload...', 'info');
+            try {
+                const file = await remoteImageTools.fetchRemoteImageAsFile(safeUrl, {
+                    fileNamePrefix: 'discussion-cover'
+                });
+                setPendingCoverSelection(
+                    file,
+                    editPostId
+                        ? 'Đã tải ảnh từ URL. Ảnh sẽ được nén và upload khi bấm "Lưu thay đổi".'
+                        : 'Đã tải ảnh từ URL. Ảnh sẽ được nén và upload khi bấm "Tạo chủ đề mới".'
+                );
+            } catch (error) {
+                setCoverUploadStatus(toFriendlyRemoteCoverImportError(error), 'error');
+            } finally {
+                isPreparingCoverFromUrl = false;
+                coverFileInput.disabled = false;
+                if (coverUrlImportBtn) {
+                    coverUrlImportBtn.disabled = false;
+                }
+            }
         };
 
         const escapeHtml = (value) => String(value || '')
@@ -1137,6 +1206,9 @@
             element.addEventListener('input', updatePreview);
             element.addEventListener('change', updatePreview);
         });
+        coverUrlImportBtn?.addEventListener('click', () => {
+            void importCoverFromRemoteUrl();
+        });
 
         coverUrlInput.addEventListener('input', () => {
             const safeUrl = sanitizeUrl(coverUrlInput.value);
@@ -1180,17 +1252,11 @@
                 return;
             }
             cancelCoverUrlResolve();
-            clearPendingCoverPreview();
-            pendingCoverPreviewUrl = URL.createObjectURL(file);
-            pendingCoverFile = file;
-            coverUrlInput.value = '';
-            lastResolvedCoverUrl = '';
-            refreshCoverPreview();
-            setCoverUploadStatus(
+            setPendingCoverSelection(
+                file,
                 editPostId
                     ? 'Ảnh đã được chọn cục bộ. Ảnh sẽ được upload khi bấm "Lưu thay đổi".'
-                    : 'Ảnh đã được chọn cục bộ. Ảnh sẽ được upload khi bấm "Tạo chủ đề mới".',
-                'info'
+                    : 'Ảnh đã được chọn cục bộ. Ảnh sẽ được upload khi bấm "Tạo chủ đề mới".'
             );
         });
 

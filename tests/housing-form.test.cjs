@@ -9,6 +9,8 @@ const {
     runScript
 } = require('./dom-test-helpers.cjs');
 
+const LONG_REMOTE_IMAGE_URL = 'https://scontent-cdg6-1.xx.fbcdn.net/v/t39.30808-6/658428494_26938466825757832_1654291503066964002_n.jpg?stp=cp6_dst-jpg_s590x590_tt6&_nc_cat=103&ccb=1-7&_nc_sid=e06c5d&_nc_ohc=aVoENoWVR5UQ7kNvwFXQ5eK&_nc_oc=AdqrDEO4IgVDKfd2iVBscdxkKJrEGTjuC1BGPeNZJj-4Vt01SLWAhTr1BFUg3Sa-djU&_nc_zt=23&_nc_ht=scontent-cdg6-1.xx&_nc_gid=na-2nNZlqoWWxCoZ06Komw&_nc_ss=7a3a8&oh=00_Af0h0cHUKVG_3bmP4lF6ANyEbnRi0NikRQ_DuLQOYAV1BA&oe=69D4059E';
+
 async function loadHousingFormPage(options = {}) {
     const dom = createDomFromHtml('housing_form.html', {
         url: options.url || 'https://svpforum.fr/housing_form.html',
@@ -26,6 +28,7 @@ async function loadHousingFormPage(options = {}) {
     }
 
     runScript(dom, 'seo.js');
+    runScript(dom, 'remote-image-upload.js');
     runScript(dom, 'housing-shared.js');
     runScript(dom, 'svp-rich-content.js');
     runScript(dom, 'housing-form.js');
@@ -256,6 +259,63 @@ test('housing form submit sends imageUrl from the uploaded primary image when a 
     assert.equal(submitCalls, 1);
     assert.equal(submittedPayload.imageUrl, 'https://cdn.svp.test/housing/uploaded-primary.jpg');
     assert.equal(submittedPayload.images[0].imageUrl, 'https://cdn.svp.test/housing/uploaded-primary.jpg');
+});
+
+test('housing form can import a long remote image URL and upload it to R2 on submit', async () => {
+    let submitCalls = 0;
+    let submittedPayload = null;
+    let presignCalls = 0;
+    let remoteFetchCalls = 0;
+    const dom = await loadHousingFormPage({
+        fetch: async (targetUrl, options = {}) => {
+            const url = String(targetUrl);
+            const method = String(options.method || 'GET').toUpperCase();
+            if (url === LONG_REMOTE_IMAGE_URL) {
+                remoteFetchCalls += 1;
+                return new Response(new Blob(['remote-image-bytes'], { type: 'image/jpeg' }), {
+                    status: 200,
+                    headers: { 'Content-Type': 'image/jpeg' }
+                });
+            }
+            if (url === 'http://localhost:8080/api/upload/post-image') {
+                presignCalls += 1;
+                return makeJsonResponse({
+                    uploadUrl: 'https://upload.svp.test/housing/remote-image-1',
+                    publicUrl: 'https://cdn.svp.test/housing/from-remote-url.jpg'
+                });
+            }
+            if (url === 'https://upload.svp.test/housing/remote-image-1' && method === 'PUT') {
+                return { ok: true, status: 200 };
+            }
+            if (url === 'http://localhost:8080/api/housing' && method === 'POST') {
+                submitCalls += 1;
+                submittedPayload = JSON.parse(String(options.body || '{}'));
+                return makeJsonResponse({ listingId: 'listing-remote-url-123' });
+            }
+            throw new Error(`Unexpected fetch: ${targetUrl}`);
+        }
+    });
+    const { document } = dom.window;
+
+    document.getElementById('housing-remote-image-url').value = LONG_REMOTE_IMAGE_URL;
+    document.getElementById('housing-remote-image-add-btn').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+    await flushAsync(dom.window, 12);
+
+    dispatchInput(dom.window, document.getElementById('housing-title-input'), 'Studio remote image');
+    dispatchInput(dom.window, document.getElementById('housing-price-input'), '640');
+    dispatchChange(dom.window, document.getElementById('housing-type-input'), 'STUDIO');
+    dispatchInput(dom.window, document.getElementById('housing-city-input'), 'Paris');
+    dispatchInput(dom.window, document.getElementById('housing-address-text-input'), 'Tolbiac');
+    dispatchInput(dom.window, document.getElementById('housing-description-input'), 'Studio meublé très calme, lumineux, disponible immédiatement.');
+
+    document.getElementById('housing-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+    await flushAsync(dom.window, 16);
+
+    assert.equal(remoteFetchCalls, 1);
+    assert.equal(presignCalls, 1);
+    assert.equal(submitCalls, 1);
+    assert.equal(submittedPayload.imageUrl, 'https://cdn.svp.test/housing/from-remote-url.jpg');
+    assert.equal(submittedPayload.images[0].imageUrl, 'https://cdn.svp.test/housing/from-remote-url.jpg');
 });
 
 test('housing form update sends imageUrl when editing an existing listing', async () => {

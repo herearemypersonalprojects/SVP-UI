@@ -28,6 +28,8 @@
     const transitListEl = document.getElementById('housing-transit-list');
     const addTransitBtn = document.getElementById('housing-add-transit-btn');
     const imageFilesEl = document.getElementById('housing-image-files');
+    const remoteImageUrlEl = document.getElementById('housing-remote-image-url');
+    const remoteImageAddBtn = document.getElementById('housing-remote-image-add-btn');
     const imageListEl = document.getElementById('housing-image-list');
     const imageUploadStatusEl = document.getElementById('housing-image-upload-status');
     const contactNameEl = document.getElementById('housing-contact-name');
@@ -41,6 +43,7 @@
     const pageTitleEl = document.getElementById('housing-form-title');
     const breadcrumbEl = document.getElementById('housing-form-breadcrumb');
     const mapEl = document.getElementById('housing-inline-map');
+    const remoteImageTools = window.SVPRemoteImageUpload || null;
 
     if (!form || !titleEl || !priceEl || !areaEl || !typeEl || !cityEl || !arrondissementEl || !cafEl || !tagsEl || !descriptionEl || !addressTextEl || !geocodeBtn || !geocodeStatusEl || !geocodeResultsEl || !latEl || !lngEl || !transitListEl || !addTransitBtn || !imageFilesEl || !imageListEl || !imageUploadStatusEl || !contactNameEl || !contactPhoneEl || !contactEmailEl || !contactNoteEl || !submitBtn || !submitLabelEl || !feedbackEl || !previewEl || !breadcrumbEl || !pageTitleEl || !mapEl) {
         return;
@@ -79,6 +82,7 @@
     };
     let descriptionComposer = null;
     let isGeocoding = false;
+    let isImportingRemoteImage = false;
     let isSubmitting = false;
     const TOUCH_ACTIVATION_DEDUP_MS = 900;
     const touchActivationTimes = new WeakMap();
@@ -476,6 +480,56 @@
         updatePreview();
     };
 
+    const toFriendlyRemoteImageImportError = (error) => {
+        const message = error && error.message ? String(error.message) : '';
+        return message || 'Không thể tải ảnh từ URL để chuẩn bị upload.';
+    };
+
+    const importRemoteImage = async () => {
+        if (isImportingRemoteImage) {
+            return;
+        }
+        const rawUrl = remoteImageUrlEl ? String(remoteImageUrlEl.value || '').trim() : '';
+        if (!rawUrl) {
+            setImageStatus('URL ảnh không hợp lệ.', 'error');
+            remoteImageUrlEl?.focus();
+            return;
+        }
+        if (!remoteImageTools || typeof remoteImageTools.fetchRemoteImageAsFile !== 'function') {
+            setImageStatus('Trình tải ảnh từ URL chưa sẵn sàng.', 'error');
+            return;
+        }
+
+        isImportingRemoteImage = true;
+        imageFilesEl.disabled = true;
+        if (remoteImageAddBtn) {
+            remoteImageAddBtn.disabled = true;
+        }
+        setImageStatus('Đang tải ảnh từ URL để chuẩn bị upload...', 'info');
+        try {
+            const file = await remoteImageTools.fetchRemoteImageAsFile(rawUrl, {
+                fileNamePrefix: 'housing-image'
+            });
+            addImageEntries([{
+                file,
+                previewUrl: URL.createObjectURL(file),
+                source: 'remote'
+            }]);
+            if (remoteImageUrlEl) {
+                remoteImageUrlEl.value = '';
+            }
+            setImageStatus('Đã tải ảnh từ URL. Ảnh sẽ được nén và upload khi bạn bấm lưu.', 'success');
+        } catch (error) {
+            setImageStatus(toFriendlyRemoteImageImportError(error), 'error');
+        } finally {
+            isImportingRemoteImage = false;
+            imageFilesEl.disabled = false;
+            if (remoteImageAddBtn) {
+                remoteImageAddBtn.disabled = false;
+            }
+        }
+    };
+
     const refreshMapLayout = () => {
         if (map && typeof map.invalidateSize === 'function') {
             window.requestAnimationFrame(() => map.invalidateSize());
@@ -767,7 +821,7 @@
             source: 'new'
         })));
         imageFilesEl.value = '';
-        setImageStatus('Ảnh mới sẽ được upload khi bạn bấm lưu.', 'info');
+        setImageStatus('Ảnh mới sẽ được nén và upload khi bạn bấm lưu.', 'info');
     });
 
     imageListEl.addEventListener('change', (event) => {
@@ -831,6 +885,10 @@
         if (isSubmitting) {
             return;
         }
+        if (isImportingRemoteImage) {
+            setFeedback('Ảnh từ URL đang được tải. Vui lòng chờ xong rồi lưu.', 'error');
+            return;
+        }
         isSubmitting = true;
         try {
             await ensureAuth();
@@ -848,7 +906,10 @@
             const newFiles = state.imageEntries.filter((item) => item.file && !item.uploadedUrl).map((item) => item.file);
             if (newFiles.length) {
                 const uploadedUrls = await shared.uploadImages(newFiles, ({ index, total, stage }) => {
-                    setImageStatus(`Đang ${stage === 'presign' ? 'chuẩn bị' : 'upload'} ảnh ${index + 1}/${total}...`, 'info');
+                    const stageText = stage === 'compress'
+                        ? 'nén'
+                        : (stage === 'presign' ? 'chuẩn bị' : 'upload');
+                    setImageStatus(`Đang ${stageText} ảnh ${index + 1}/${total}...`, 'info');
                 });
                 let uploadIndex = 0;
                 state.imageEntries = state.imageEntries.map((item) => {
@@ -907,6 +968,17 @@
         handleAddTransit();
     });
     bindTouchFallback(addTransitBtn, () => handleAddTransit());
+
+    remoteImageAddBtn?.addEventListener('click', (event) => {
+        if (shouldIgnoreSyntheticClick(remoteImageAddBtn)) {
+            event.preventDefault();
+            return;
+        }
+        void importRemoteImage();
+    });
+    bindTouchFallback(remoteImageAddBtn, () => {
+        void importRemoteImage();
+    });
 
     transitListEl.addEventListener('click', handleTransitAction);
     bindDelegatedTouchFallback(transitListEl, 'button[data-action]', handleTransitAction);

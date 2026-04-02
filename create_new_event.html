@@ -237,6 +237,12 @@
                     <div class="mb-3">
                         <label for="event-image-url" class="form-label">Link ảnh sự kiện (tùy chọn)</label>
                         <input id="event-image-url" class="form-control" type="url" placeholder="https://...">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                            <button id="event-image-url-import-btn" class="btn btn-outline-secondary btn-sm" type="button">
+                                <i class="fa-solid fa-cloud-arrow-up me-1"></i>Tải ảnh từ Internet
+                            </button>
+                            <span class="sv-meta">Nếu Windows báo đường dẫn quá dài, hãy dán link ở đây rồi bấm nút này.</span>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -316,6 +322,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="config.js"></script>
+<script src="remote-image-upload.js"></script>
 <script src="svp-rich-content.js"></script>
 <script>
     (function () {
@@ -345,6 +352,7 @@
         const priceInput = document.getElementById('event-price');
         const onlineInput = document.getElementById('event-online');
         const imageUrlInput = document.getElementById('event-image-url');
+        const imageUrlImportBtn = document.getElementById('event-image-url-import-btn');
         const imageFileInput = document.getElementById('event-image-file');
         const imageUploadStatus = document.getElementById('event-image-upload-status');
         const descriptionInput = document.getElementById('event-description');
@@ -364,6 +372,9 @@
         const editorPlaceholder = descriptionInput
             ? (descriptionInput.getAttribute('placeholder') || '')
             : '';
+        const remoteImageTools = window.SVPRemoteImageUpload || null;
+        const DEFAULT_MAX_IMAGE_UPLOAD_BYTES = 100 * 1024;
+        const FALLBACK_MAX_IMAGE_UPLOAD_BYTES = 300 * 1024;
 
         if (!form || !emailWrap || !emailInput || !titleInput || !startDatetimeInput || !endDatetimeToggle || !endDatetimeWrap || !endDatetimeInput || !locationInput || !priceInput || !onlineInput || !imageUrlInput || !imageFileInput || !imageUploadStatus || !descriptionInput || !typeInput || !typeAdminPanel || !typeAdminNewNameInput || !typeAdminAddBtn || !typeAdminFeedback || !typeAdminList || !tagsInput || !previewCover || !previewTitle || !previewDatetime || !previewLocation || !previewDescription || !feedback) {
             return;
@@ -714,9 +725,11 @@
         };
 
         let imageFilePreviewUrl = '';
+        let pendingImageFile = null;
         let eventTypes = [];
         let currentEventTypeSelection = { eventTypeId: null, eventTypeName: '' };
         let isSuperadmin = false;
+        let isPreparingImageFromUrl = false;
         let eventEditor = null;
         let eventEditorReady = false;
         let pendingEditorContent = '';
@@ -725,6 +738,127 @@
             if (imageFilePreviewUrl) {
                 URL.revokeObjectURL(imageFilePreviewUrl);
                 imageFilePreviewUrl = '';
+            }
+        };
+
+        const clearPendingImageSelection = () => {
+            pendingImageFile = null;
+            imageFileInput.value = '';
+            clearImageFilePreview();
+        };
+
+        const setPendingImageSelection = (file, statusText) => {
+            if (!(file instanceof File)) {
+                return;
+            }
+            clearImageFilePreview();
+            pendingImageFile = file;
+            imageFileInput.value = '';
+            imageUrlInput.value = '';
+            imageFilePreviewUrl = URL.createObjectURL(file);
+            setUploadStatus(statusText, 'info');
+            preview();
+        };
+
+        const formatUploadSize = (bytes) => remoteImageTools && typeof remoteImageTools.formatSize === 'function'
+            ? remoteImageTools.formatSize(bytes)
+            : `${(Number(bytes || 0) / 1024).toFixed(1)}KB`;
+
+        const isCompressionLimitError = (error) => String(error?.message || '')
+            .toLowerCase()
+            .includes('không thể nén ảnh xuống dưới');
+
+        const compressSelectedImageForUpload = async (file) => {
+            if (!remoteImageTools || typeof remoteImageTools.compressImageBelowLimit !== 'function') {
+                return file;
+            }
+
+            let compressedFile;
+            let activeUploadLimit = DEFAULT_MAX_IMAGE_UPLOAD_BYTES;
+            let usedFallbackLimit = false;
+
+            try {
+                compressedFile = await remoteImageTools.compressImageBelowLimit(file, activeUploadLimit);
+            } catch (error) {
+                if (!isCompressionLimitError(error)) {
+                    throw error;
+                }
+                activeUploadLimit = FALLBACK_MAX_IMAGE_UPLOAD_BYTES;
+                usedFallbackLimit = true;
+                setUploadStatus(
+                    `Không thể nén ảnh xuống ${formatUploadSize(DEFAULT_MAX_IMAGE_UPLOAD_BYTES)}. Chuyển sang giới hạn ${formatUploadSize(FALLBACK_MAX_IMAGE_UPLOAD_BYTES)}...`,
+                    'info'
+                );
+                compressedFile = await remoteImageTools.compressImageBelowLimit(file, activeUploadLimit);
+            }
+
+            if (usedFallbackLimit) {
+                if (compressedFile.size !== file.size) {
+                    setUploadStatus(
+                        `Không thể nén dưới ${formatUploadSize(DEFAULT_MAX_IMAGE_UPLOAD_BYTES)}. Hệ thống dùng giới hạn ${formatUploadSize(activeUploadLimit)} và đã nén ảnh từ ${formatUploadSize(file.size)} xuống ${formatUploadSize(compressedFile.size)}.`,
+                        'info'
+                    );
+                } else {
+                    setUploadStatus(
+                        `Không thể nén dưới ${formatUploadSize(DEFAULT_MAX_IMAGE_UPLOAD_BYTES)}. Hệ thống dùng giới hạn ${formatUploadSize(activeUploadLimit)} và sẽ upload ảnh ${formatUploadSize(compressedFile.size)}.`,
+                        'info'
+                    );
+                }
+                return compressedFile;
+            }
+
+            if (compressedFile.size !== file.size) {
+                setUploadStatus(
+                    `Đã nén ảnh từ ${formatUploadSize(file.size)} xuống ${formatUploadSize(compressedFile.size)}.`,
+                    'info'
+                );
+            } else {
+                setUploadStatus(`Ảnh đã ở mức ${formatUploadSize(compressedFile.size)}.`, 'info');
+            }
+            return compressedFile;
+        };
+
+        const toFriendlyRemoteImageImportError = (error) => {
+            const message = error && error.message ? String(error.message) : '';
+            return message || 'Không thể tải ảnh từ URL để chuẩn bị upload.';
+        };
+
+        const importImageFromRemoteUrl = async () => {
+            const safeUrl = sanitizeUrl(imageUrlInput.value);
+            if (!safeUrl) {
+                setUploadStatus('URL ảnh không hợp lệ.', 'error');
+                imageUrlInput.focus();
+                return;
+            }
+            if (!remoteImageTools || typeof remoteImageTools.fetchRemoteImageAsFile !== 'function') {
+                setUploadStatus('Trình tải ảnh từ URL chưa sẵn sàng.', 'error');
+                return;
+            }
+
+            isPreparingImageFromUrl = true;
+            imageFileInput.disabled = true;
+            if (imageUrlImportBtn) {
+                imageUrlImportBtn.disabled = true;
+            }
+            setUploadStatus('Đang tải ảnh từ URL để chuẩn bị upload...', 'info');
+            try {
+                const file = await remoteImageTools.fetchRemoteImageAsFile(safeUrl, {
+                    fileNamePrefix: 'event-cover'
+                });
+                setPendingImageSelection(
+                    file,
+                    editEventId
+                        ? 'Đã tải ảnh từ URL. Ảnh sẽ được nén và upload khi bấm "Lưu thay đổi".'
+                        : 'Đã tải ảnh từ URL. Ảnh sẽ được nén và upload khi bấm "Tạo sự kiện".'
+                );
+            } catch (error) {
+                setUploadStatus(toFriendlyRemoteImageImportError(error), 'error');
+            } finally {
+                isPreparingImageFromUrl = false;
+                imageFileInput.disabled = false;
+                if (imageUrlImportBtn) {
+                    imageUrlImportBtn.disabled = false;
+                }
             }
         };
 
@@ -1128,13 +1262,15 @@
         };
 
         const uploadSelectedImageIfNeeded = async (accessToken) => {
-            const file = imageFileInput.files && imageFileInput.files[0] ? imageFileInput.files[0] : null;
-            if (!file) {
+            const selectedFile = pendingImageFile || (imageFileInput.files && imageFileInput.files[0] ? imageFileInput.files[0] : null);
+            if (!selectedFile) {
                 return sanitizeUrl(imageUrlInput.value);
             }
-            if (!file.type || !file.type.toLowerCase().startsWith('image/')) {
+            if (!selectedFile.type || !selectedFile.type.toLowerCase().startsWith('image/')) {
                 throw new Error('Chỉ hỗ trợ file ảnh.');
             }
+
+            const file = await compressSelectedImageForUpload(selectedFile);
 
             setUploadStatus('Đang lấy URL upload ảnh...', 'info');
             const presignResponse = await fetch(`${API_BASE_URL}/api/upload/post-image`, {
@@ -1181,6 +1317,7 @@
                 throw new Error(`Upload ảnh thất bại (${uploadResponse.status}).`);
             }
             setUploadStatus('Upload ảnh thành công.', 'success');
+            clearPendingImageSelection();
             imageUrlInput.value = publicUrl;
             return publicUrl;
         };
@@ -1204,6 +1341,24 @@
         [titleInput, startDatetimeInput, endDatetimeInput, locationInput, onlineInput, imageUrlInput, descriptionInput].forEach((el) => {
             el.addEventListener('input', preview);
             el.addEventListener('change', preview);
+        });
+        imageUrlImportBtn?.addEventListener('click', () => {
+            void importImageFromRemoteUrl();
+        });
+        imageUrlInput.addEventListener('input', () => {
+            const rawUrl = String(imageUrlInput.value || '').trim();
+            const safeUrl = sanitizeUrl(imageUrlInput.value);
+            if (rawUrl && pendingImageFile) {
+                clearPendingImageSelection();
+                setUploadStatus(
+                    safeUrl
+                        ? 'URL ảnh sẽ được lưu trực tiếp. Nếu muốn upload lên R2, hãy bấm "Tải ảnh từ Internet".'
+                        : 'Bạn đang nhập URL ảnh mới nên ảnh local đã được bỏ chọn.',
+                    'info'
+                );
+            } else if (!safeUrl && !pendingImageFile) {
+                setUploadStatus('', 'info');
+            }
         });
         startDatetimeInput.addEventListener('input', () => {
             syncEndDatetimeConstraint({ autofillIfNeeded: true });
@@ -1230,22 +1385,25 @@
         });
         imageFileInput.addEventListener('change', () => {
             const file = imageFileInput.files && imageFileInput.files[0] ? imageFileInput.files[0] : null;
-            clearImageFilePreview();
             if (!file) {
+                clearPendingImageSelection();
                 setUploadStatus('', 'info');
                 preview();
                 return;
             }
             if (!file.type || !file.type.toLowerCase().startsWith('image/')) {
+                clearPendingImageSelection();
                 imageFileInput.value = '';
                 setUploadStatus('Chỉ hỗ trợ file ảnh.', 'error');
                 preview();
                 return;
             }
-            imageUrlInput.value = '';
-            imageFilePreviewUrl = URL.createObjectURL(file);
-            setUploadStatus('Ảnh sẽ được upload khi bấm "Tạo sự kiện".', 'info');
-            preview();
+            setPendingImageSelection(
+                file,
+                editEventId
+                    ? 'Ảnh sẽ được nén và upload khi bấm "Lưu thay đổi".'
+                    : 'Ảnh sẽ được nén và upload khi bấm "Tạo sự kiện".'
+            );
         });
         typeAdminAddBtn.addEventListener('click', async () => {
             const name = normalizeEventTypeName(typeAdminNewNameInput.value);
@@ -1354,6 +1512,10 @@
 
         form.addEventListener('submit', async (event) => {
             event.preventDefault();
+            if (isPreparingImageFromUrl) {
+                setFeedback('Ảnh từ URL đang được tải. Vui lòng chờ xong rồi đăng.', 'error');
+                return;
+            }
 
             const title = titleInput.value.trim();
             const descriptionText = htmlToPlainText(getSanitizedDescriptionBodyHtml());
@@ -1465,7 +1627,7 @@
                     emailInput.value = email;
                     setDescriptionBodyHtml('');
                     setEndDatetimeVisibility(false, { preserveValue: false });
-                    clearImageFilePreview();
+                    clearPendingImageSelection();
                     setUploadStatus('', 'info');
                     setCurrentEventTypeSelection(null, '');
                     renderEventTypeOptions();

@@ -199,6 +199,12 @@
                     <div class="mb-3">
                         <label for="article-cover-url" class="form-label">URL ảnh đại diện</label>
                         <input id="article-cover-url" class="form-control" type="url" placeholder="https://...">
+                        <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                            <button id="article-cover-url-import-btn" class="btn btn-outline-secondary btn-sm" type="button">
+                                <i class="fa-solid fa-cloud-arrow-up me-1"></i>Tải ảnh từ Internet
+                            </button>
+                            <span class="sv-meta">Nếu Windows báo đường dẫn quá dài, hãy dán link ở đây rồi bấm nút này.</span>
+                        </div>
                     </div>
 
                     <div class="mb-3">
@@ -282,6 +288,7 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
 <script src="config.js"></script>
+<script src="remote-image-upload.js"></script>
 <script src="svp-rich-content.js"></script>
 <script>
     (function () {
@@ -321,6 +328,7 @@
         const contentEditor = document.getElementById('article-content-editor');
         const contentHiddenInput = document.getElementById('article-content');
         const coverUrlInput = document.getElementById('article-cover-url');
+        const coverUrlImportBtn = document.getElementById('article-cover-url-import-btn');
         const coverFileInput = document.getElementById('article-cover-file');
         const coverPreview = document.getElementById('article-cover-preview');
         const coverUploadStatus = document.getElementById('article-cover-upload-status');
@@ -340,6 +348,7 @@
         const editorPlaceholder = contentEditor
             ? (contentEditor.getAttribute('placeholder') || '')
             : '';
+        const remoteImageTools = window.SVPRemoteImageUpload || null;
         let articleEditor = null;
         let articleEditorReady = false;
         let pendingEditorContent = '';
@@ -568,6 +577,22 @@
             clearPendingCoverPreview();
             coverFileInput.value = '';
             lastResolvedCoverUrl = '';
+        };
+
+        const setPendingCoverSelection = (file, statusText) => {
+            if (!(file instanceof File)) {
+                return;
+            }
+            cancelCoverUrlResolve();
+            clearPendingCoverPreview();
+            pendingCoverPreviewUrl = URL.createObjectURL(file);
+            pendingCoverFile = file;
+            coverFileInput.value = '';
+            coverUrlInput.value = '';
+            lastResolvedCoverUrl = '';
+            refreshCoverPreview();
+            updateDraft();
+            setCoverUploadStatus(statusText, 'info');
         };
 
         const cancelCoverUrlResolve = () => {
@@ -1225,6 +1250,52 @@
             return message;
         };
 
+        const toFriendlyRemoteCoverImportError = (error) => {
+            const message = error && error.message ? String(error.message) : '';
+            if (!message) {
+                return 'Không thể tải ảnh từ URL để chuẩn bị upload.';
+            }
+            return message;
+        };
+
+        const importCoverFromRemoteUrl = async () => {
+            const safeUrl = sanitizeUrl(coverUrlInput.value);
+            if (!safeUrl) {
+                setCoverUploadStatus('URL ảnh không hợp lệ.', 'error');
+                coverUrlInput.focus();
+                return;
+            }
+            if (!remoteImageTools || typeof remoteImageTools.fetchRemoteImageAsFile !== 'function') {
+                setCoverUploadStatus('Trình tải ảnh từ URL chưa sẵn sàng.', 'error');
+                return;
+            }
+
+            cancelCoverUrlResolve();
+            isPreparingCoverFromUrl = true;
+            coverFileInput.disabled = true;
+            if (coverUrlImportBtn) {
+                coverUrlImportBtn.disabled = true;
+            }
+            setCoverUploadStatus('Đang tải ảnh từ URL để chuẩn bị upload...', 'info');
+            try {
+                const file = await remoteImageTools.fetchRemoteImageAsFile(safeUrl, {
+                    fileNamePrefix: 'article-cover'
+                });
+                setPendingCoverSelection(
+                    file,
+                    `Đã tải ảnh từ URL. Ảnh sẽ được nén và upload khi bấm "${isBlogMode() ? 'Xuất bản blog' : 'Đăng bài viết'}".`
+                );
+            } catch (error) {
+                setCoverUploadStatus(toFriendlyRemoteCoverImportError(error), 'error');
+            } finally {
+                isPreparingCoverFromUrl = false;
+                coverFileInput.disabled = false;
+                if (coverUrlImportBtn) {
+                    coverUrlImportBtn.disabled = false;
+                }
+            }
+        };
+
         [titleInput, coverUrlInput, categoryInput].forEach((element) => {
             element.addEventListener('input', updateDraft);
             element.addEventListener('change', updateDraft);
@@ -1232,6 +1303,9 @@
         contentEditor.addEventListener('input', updateDraft);
         multiImageBtn?.addEventListener('click', openMultiImageDialog);
         multiImageInsertBtn?.addEventListener('click', insertMultiImageRow);
+        coverUrlImportBtn?.addEventListener('click', () => {
+            void importCoverFromRemoteUrl();
+        });
         multiImageModalEl?.addEventListener('hidden.bs.modal', () => {
             if (multiImageUrlsInput instanceof HTMLTextAreaElement) {
                 multiImageUrlsInput.value = '';
@@ -1285,14 +1359,10 @@
                 return;
             }
             cancelCoverUrlResolve();
-            clearPendingCoverPreview();
-            pendingCoverPreviewUrl = URL.createObjectURL(file);
-            pendingCoverFile = file;
-            coverUrlInput.value = '';
-            lastResolvedCoverUrl = '';
-            refreshCoverPreview();
-            updateDraft();
-            setCoverUploadStatus(`Ảnh đã được chọn cục bộ. Ảnh sẽ được upload khi bấm "${isBlogMode() ? 'Xuất bản blog' : 'Đăng bài viết'}".`, 'info');
+            setPendingCoverSelection(
+                file,
+                `Ảnh đã được chọn cục bộ. Ảnh sẽ được upload khi bấm "${isBlogMode() ? 'Xuất bản blog' : 'Đăng bài viết'}".`
+            );
         });
 
         form.addEventListener('submit', async (event) => {

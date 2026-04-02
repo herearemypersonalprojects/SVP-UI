@@ -631,10 +631,10 @@
           <label id="radius-label" for="radius">Radius:</label>
           <select id="radius" class="radius-select">
             <option value="0.5">500 m</option>
-            <option value="1">1 km</option>
+            <option value="1" selected>1 km</option>
             <option value="2">2 km</option>
             <option value="5">5 km</option>
-            <option value="10" selected>10 km</option>
+            <option value="10">10 km</option>
           </select>
         </div>
 
@@ -671,7 +671,7 @@
   let map;
   let pois = [];
   let markers = [];
-  let currentRadiusKm = 10;
+  let currentRadiusKm = 1;
   let currentMaxPoints = 20;
   let currentPriority = "topscore";
 

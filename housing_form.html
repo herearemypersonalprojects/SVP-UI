@@ -170,23 +170,19 @@
             <section class="sv-housing-section">
                 <div class="sv-housing-section__head"><i class="fa-regular fa-images me-2 text-primary"></i>Ảnh</div>
                 <div class="sv-housing-section__body">
-                    <label class="form-label" for="housing-image-files">Chọn ảnh</label>
-                    <input id="housing-image-files" class="form-control" type="file" accept="image/*" multiple>
-                    <div class="row g-2 mt-2">
-                        <div class="col-md">
-                            <label class="form-label" for="housing-remote-image-url">Hoặc dán URL ảnh từ web</label>
-                            <input id="housing-remote-image-url" class="form-control" type="url" placeholder="https://...">
-                        </div>
-                        <div class="col-md-auto d-flex align-items-end">
-                            <button id="housing-remote-image-add-btn" class="btn btn-outline-secondary" type="button">
-                                <i class="fa-solid fa-cloud-arrow-up me-1"></i>Tải ảnh từ Internet
-                            </button>
-                        </div>
+                    <label class="form-label" for="housing-remote-image-url">URL ảnh đại diện</label>
+                    <input id="housing-remote-image-url" class="form-control" type="url" placeholder="https://...">
+                    <div class="d-flex flex-wrap align-items-center gap-2 mt-2">
+                        <button id="housing-remote-image-add-btn" class="btn btn-outline-secondary btn-sm" type="button">
+                            <i class="fa-solid fa-cloud-arrow-up me-1"></i>Tải ảnh từ Internet
+                        </button>
+                        <span class="sv-housing-note">Nếu Windows báo đường dẫn quá dài, hãy dán link ở đây rồi bấm nút này.</span>
                     </div>
-                    <div class="sv-housing-note mt-2">Nếu Windows báo đường dẫn quá dài, hãy dán link vào ô này thay vì ô chọn file.</div>
-                    <div class="sv-housing-note mt-2">Nếu mô tả chi tiết đã có URL ảnh hợp lệ hoặc ảnh nhúng hợp lệ, bạn không bắt buộc upload thêm ở đây.</div>
-                    <div id="housing-image-upload-status" class="sv-housing-note mt-2"></div>
                     <div id="housing-image-list" class="sv-housing-image-list mt-3"></div>
+                    <label class="form-label mt-3" for="housing-image-files">Hoặc tải ảnh từ máy</label>
+                    <input id="housing-image-files" class="form-control" type="file" accept="image/*">
+                    <div id="housing-image-upload-status" class="sv-housing-note mt-2"></div>
+                    <div class="sv-housing-note mt-2">Nếu mô tả chi tiết đã có URL ảnh hợp lệ hoặc ảnh nhúng hợp lệ, bạn không bắt buộc thêm ảnh đại diện ở đây.</div>
                 </div>
             </section>
 

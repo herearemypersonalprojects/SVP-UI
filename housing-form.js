@@ -77,11 +77,16 @@
     const state = {
         editingId,
         transitPoints: [],
-        imageEntries: [],
+        selectedImage: null,
         geocodeSuggestions: []
     };
     let descriptionComposer = null;
+    let persistedImageUrl = '';
+    let lastResolvedRemoteImageUrl = '';
+    let remoteImageResolveTimer = null;
+    let remoteImageResolveSeq = 0;
     let isGeocoding = false;
+    let isPreparingRemoteImageUrl = false;
     let isImportingRemoteImage = false;
     let isSubmitting = false;
     const TOUCH_ACTIVATION_DEDUP_MS = 900;
@@ -335,32 +340,6 @@
         `).join('');
     };
 
-    const renderImageList = () => {
-        const descriptionImageUrl = shared.extractFirstImageUrlFromHtml(getDescriptionHtml());
-        if (!state.imageEntries.length) {
-            imageListEl.innerHTML = descriptionImageUrl
-                ? '<div class="sv-housing-empty">Ảnh đang được lấy từ mô tả chi tiết. Upload album ảnh riêng ở đây là tùy chọn.</div>'
-                : '<div class="sv-housing-empty">Chưa có album ảnh riêng. Bạn có thể upload ảnh ở đây hoặc chèn URL ảnh hợp lệ trực tiếp trong mô tả chi tiết.</div>';
-            return;
-        }
-        imageListEl.innerHTML = state.imageEntries.map((item) => `
-            <div class="sv-housing-image-item" data-image-id="${shared.escapeHtml(item.id)}">
-                <img class="sv-housing-image-thumb" src="${shared.escapeHtml(item.previewUrl)}" alt="Housing image">
-                <div class="d-flex justify-content-between align-items-center gap-2 mt-2">
-                    <div class="form-check">
-                        <input class="form-check-input" type="radio" name="housing-primary-image" ${item.isPrimary ? 'checked' : ''}>
-                        <label class="form-check-label">Ảnh chính</label>
-                    </div>
-                    <div class="btn-group btn-group-sm" role="group">
-                        <button class="btn btn-outline-secondary" type="button" data-action="up">Lên</button>
-                        <button class="btn btn-outline-secondary" type="button" data-action="down">Xuống</button>
-                        <button class="btn btn-outline-danger" type="button" data-action="remove">Xóa</button>
-                    </div>
-                </div>
-            </div>
-        `).join('');
-    };
-
     const renderTransitList = () => {
         if (!state.transitPoints.length) {
             transitListEl.innerHTML = '<div class="sv-housing-empty">Hãy thêm ít nhất 1 ga hoặc trạm gần nhà.</div>';
@@ -405,15 +384,68 @@
         `).join('');
     };
 
+    const normalizeRemoteImageUrl = (value) => {
+        if (remoteImageTools && typeof remoteImageTools.sanitizeHttpUrl === 'function') {
+            return remoteImageTools.sanitizeHttpUrl(value);
+        }
+        const raw = String(value || '').trim();
+        if (!/^https?:\/\//i.test(raw)) {
+            return '';
+        }
+        try {
+            const parsed = new URL(raw);
+            return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+                ? parsed.toString()
+                : '';
+        } catch (_) {
+            return '';
+        }
+    };
+
+    const REMOTE_IMAGE_URL_DIRECT_STATUS = 'URL ảnh hợp lệ. Hệ thống sẽ lưu trực tiếp URL này.';
+
+    const getRemoteImageUrl = () => normalizeRemoteImageUrl(remoteImageUrlEl ? remoteImageUrlEl.value : '');
+
+    const getSelectedImagePreviewUrl = () => {
+        if (state.selectedImage && state.selectedImage.previewUrl) {
+            return String(state.selectedImage.previewUrl || '').trim();
+        }
+        return getRemoteImageUrl();
+    };
+
+    const getSelectedImageSubmittedUrl = () => {
+        if (state.selectedImage && state.selectedImage.uploadedUrl) {
+            return String(state.selectedImage.uploadedUrl || '').trim();
+        }
+        return getRemoteImageUrl();
+    };
+
+    const renderImageList = () => {
+        const previewUrl = getSelectedImagePreviewUrl();
+        const descriptionImageUrl = shared.extractFirstImageUrlFromHtml(getDescriptionHtml());
+        if (previewUrl) {
+            imageListEl.innerHTML = `
+                <div class="sv-housing-image-item">
+                    <img class="sv-housing-image-thumb" src="${shared.escapeHtml(previewUrl)}" alt="Housing cover image">
+                </div>
+            `;
+            return;
+        }
+        imageListEl.innerHTML = descriptionImageUrl
+            ? '<div class="sv-housing-empty">Ảnh đang được lấy từ mô tả chi tiết. URL ảnh đại diện hoặc file ảnh ở trên sẽ ưu tiên hơn.</div>'
+            : '<div class="sv-housing-empty">Chưa có ảnh đại diện. Dán URL ảnh hoặc tải một ảnh từ máy để xem preview.</div>';
+    };
+
     const updatePreview = () => {
         const descriptionHtml = getDescriptionHtml();
         const descriptionImageUrl = shared.extractFirstImageUrlFromHtml(descriptionHtml);
         const descriptionImageRowUrls = richContent && typeof richContent.extractLeadingImageRowUrls === 'function'
             ? richContent.extractLeadingImageRowUrls(descriptionHtml, { maxItems: 3 })
             : [];
-        const primaryImage = state.imageEntries.find((item) => item.isPrimary)
-            || state.imageEntries[0]
-            || (descriptionImageUrl ? { previewUrl: descriptionImageUrl } : null);
+        const selectedImagePreviewUrl = getSelectedImagePreviewUrl();
+        const primaryImage = selectedImagePreviewUrl
+            ? { previewUrl: selectedImagePreviewUrl }
+            : (descriptionImageUrl ? { previewUrl: descriptionImageUrl } : null);
         const previewTransit = state.transitPoints.find((item) => item.isPrimary) || state.transitPoints[0];
         const statusBadge = '<span class="sv-housing-badge sv-housing-badge--AVAILABLE">Còn trống</span>';
         const descriptionPreview = getDescriptionPlainText();
@@ -426,9 +458,7 @@
                 maxItems: 3
             })
             : (primaryImage ? `<img class="sv-housing-image-thumb mb-3" src="${shared.escapeHtml(primaryImage.previewUrl)}" alt="Preview">` : '');
-        if (!state.imageEntries.length) {
-            renderImageList();
-        }
+        renderImageList();
         previewEl.innerHTML = `
             ${previewCoverHtml}
             <div class="d-flex justify-content-between align-items-center gap-2 mb-2">
@@ -462,43 +492,46 @@
         updatePreview();
     };
 
-    const addImageEntries = (entries) => {
-        entries.forEach((entry, index) => {
-            state.imageEntries.push({
-                id: nextId(),
-                previewUrl: entry.previewUrl,
-                existingUrl: entry.existingUrl || '',
-                file: entry.file || null,
-                isPrimary: state.imageEntries.length === 0 && index === 0,
-                source: entry.source || 'new'
-            });
-        });
-        if (state.imageEntries.length === 1) {
-            state.imageEntries[0].isPrimary = true;
+    const clearSelectedImage = () => {
+        const current = state.selectedImage;
+        if (current && current.previewUrl && current.previewUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(current.previewUrl);
         }
+        state.selectedImage = null;
+        imageFilesEl.value = '';
+    };
+
+    const cancelRemoteImageResolve = () => {
+        if (remoteImageResolveTimer) {
+            clearTimeout(remoteImageResolveTimer);
+            remoteImageResolveTimer = null;
+        }
+        remoteImageResolveSeq += 1;
+        isPreparingRemoteImageUrl = false;
+    };
+
+    const setSelectedImage = (file, statusText) => {
+        if (!(file instanceof File)) {
+            return;
+        }
+        cancelRemoteImageResolve();
+        clearSelectedImage();
+        state.selectedImage = {
+            file,
+            previewUrl: URL.createObjectURL(file),
+            uploadedUrl: '',
+            source: 'local'
+        };
+        if (remoteImageUrlEl) {
+            remoteImageUrlEl.value = '';
+        }
+        lastResolvedRemoteImageUrl = '';
         renderImageList();
         updatePreview();
+        setImageStatus(statusText, 'info');
     };
 
-    const normalizeRemoteImageUrl = (value) => {
-        if (remoteImageTools && typeof remoteImageTools.sanitizeHttpUrl === 'function') {
-            return remoteImageTools.sanitizeHttpUrl(value);
-        }
-        const raw = String(value || '').trim();
-        if (!/^https?:\/\//i.test(raw)) {
-            return '';
-        }
-        try {
-            const parsed = new URL(raw);
-            return parsed.protocol === 'http:' || parsed.protocol === 'https:'
-                ? parsed.toString()
-                : '';
-        } catch (_) {
-            return '';
-        }
-    };
-
-    const verifyRemoteImagePreview = (url) => new Promise((resolve, reject) => {
+    const verifyRemoteImageUrl = (url) => new Promise((resolve, reject) => {
         const safeUrl = normalizeRemoteImageUrl(url);
         if (!safeUrl) {
             reject(new Error('URL ảnh không hợp lệ.'));
@@ -535,6 +568,38 @@
         image.src = safeUrl;
     });
 
+    const verifyRemoteSelectedUrl = async (url, statusPrefix, successStatus) => {
+        const safeUrl = normalizeRemoteImageUrl(url);
+        if (!safeUrl) {
+            return false;
+        }
+
+        const currentSeq = ++remoteImageResolveSeq;
+        isPreparingRemoteImageUrl = true;
+        setImageStatus(statusPrefix || 'Đang kiểm tra URL ảnh...', 'info');
+        try {
+            await verifyRemoteImageUrl(safeUrl);
+            if (currentSeq !== remoteImageResolveSeq) {
+                return false;
+            }
+            lastResolvedRemoteImageUrl = safeUrl;
+            renderImageList();
+            updatePreview();
+            setImageStatus(successStatus || REMOTE_IMAGE_URL_DIRECT_STATUS, 'info');
+            return true;
+        } catch (error) {
+            if (currentSeq !== remoteImageResolveSeq) {
+                return false;
+            }
+            lastResolvedRemoteImageUrl = '';
+            throw error;
+        } finally {
+            if (currentSeq === remoteImageResolveSeq) {
+                isPreparingRemoteImageUrl = false;
+            }
+        }
+    };
+
     const toFriendlyRemoteImageImportError = (error) => {
         const message = error && error.message ? String(error.message) : '';
         return message || 'Không thể tải ảnh từ URL để chuẩn bị upload.';
@@ -556,39 +621,16 @@
         if (remoteImageAddBtn) {
             remoteImageAddBtn.disabled = true;
         }
+        setImageStatus('Đang tải ảnh từ URL để chuẩn bị upload...', 'info');
         try {
-            if (remoteImageTools && typeof remoteImageTools.fetchRemoteImageAsFile === 'function') {
-                setImageStatus('Đang tải ảnh từ URL để chuẩn bị upload...', 'info');
-                try {
-                    const file = await remoteImageTools.fetchRemoteImageAsFile(safeUrl, {
-                        fileNamePrefix: 'housing-image'
-                    });
-                    addImageEntries([{
-                        file,
-                        previewUrl: URL.createObjectURL(file),
-                        source: 'remote'
-                    }]);
-                    if (remoteImageUrlEl) {
-                        remoteImageUrlEl.value = '';
-                    }
-                    setImageStatus('Đã tải ảnh từ URL. Ảnh sẽ được nén và upload khi bạn bấm lưu.', 'success');
-                    return;
-                } catch (_) {
-                    // Some hosts allow direct <img> rendering but block fetch() by CORS.
-                }
+            if (!remoteImageTools || typeof remoteImageTools.fetchRemoteImageAsFile !== 'function') {
+                setImageStatus('Trình tải ảnh từ URL chưa sẵn sàng.', 'error');
+                return;
             }
-
-            setImageStatus('Đang kiểm tra URL ảnh để hiển thị preview...', 'info');
-            const verifiedUrl = await verifyRemoteImagePreview(safeUrl);
-            addImageEntries([{
-                previewUrl: verifiedUrl,
-                existingUrl: verifiedUrl,
-                source: 'remote-url'
-            }]);
-            if (remoteImageUrlEl) {
-                remoteImageUrlEl.value = '';
-            }
-            setImageStatus('Nguồn ảnh không cho tải trực tiếp. Ảnh đã được thêm bằng URL và preview đã hiển thị.', 'success');
+            const file = await remoteImageTools.fetchRemoteImageAsFile(safeUrl, {
+                fileNamePrefix: 'housing-image'
+            });
+            setSelectedImage(file, 'Đã tải ảnh từ URL. Ảnh sẽ được nén và upload khi bạn bấm lưu.');
         } catch (error) {
             setImageStatus(toFriendlyRemoteImageImportError(error), 'error');
         } finally {
@@ -624,11 +666,23 @@
         }
     }, 220);
 
+    const pickExistingImageUrl = (payload) => {
+        const directImageUrl = normalizeRemoteImageUrl(payload && payload.imageUrl ? payload.imageUrl : '');
+        if (directImageUrl) {
+            return directImageUrl;
+        }
+        const images = Array.isArray(payload && payload.images) ? payload.images : [];
+        const primaryImage = images.find((item) => item && item.primary)
+            || images[0];
+        return normalizeRemoteImageUrl(primaryImage && primaryImage.imageUrl ? primaryImage.imageUrl : '');
+    };
+
+    const collectSelectedImageUrl = () => getSelectedImageSubmittedUrl();
+
     const collectPrimaryImageUrl = () => {
-        const primaryGalleryImage = state.imageEntries.find((item) => item.isPrimary && (item.uploadedUrl || item.existingUrl))
-            || state.imageEntries.find((item) => item.uploadedUrl || item.existingUrl);
-        if (primaryGalleryImage) {
-            return String(primaryGalleryImage.uploadedUrl || primaryGalleryImage.existingUrl || '').trim();
+        const selectedImageUrl = collectSelectedImageUrl();
+        if (selectedImageUrl) {
+            return selectedImageUrl;
         }
         return String(shared.extractFirstImageUrlFromHtml(getDescriptionHtml()) || '').trim();
     };
@@ -651,11 +705,13 @@
         contactPhone: contactPhoneEl.value.trim(),
         contactEmail: contactEmailEl.value.trim(),
         contactNote: contactNoteEl.value.trim(),
-        images: state.imageEntries.map((item, index) => ({
-            imageUrl: item.uploadedUrl || item.existingUrl,
-            sortOrder: index,
-            isPrimary: !!item.isPrimary
-        })),
+        images: collectSelectedImageUrl()
+            ? [{
+                imageUrl: collectSelectedImageUrl(),
+                sortOrder: 0,
+                isPrimary: true
+            }]
+            : [],
         transitPoints: state.transitPoints.map((item, index) => ({
             stationName: item.stationName,
             transportType: item.transportType,
@@ -707,14 +763,12 @@
             walkingMinutes: item.walkingMinutes || 0,
             isPrimary: !!item.primary
         }));
-        state.imageEntries = (payload.images || []).map((item, index) => ({
-            id: nextId(),
-            previewUrl: item.imageUrl,
-            existingUrl: item.imageUrl,
-            file: null,
-            isPrimary: !!item.primary || index === 0,
-            source: 'existing'
-        }));
+        clearSelectedImage();
+        persistedImageUrl = pickExistingImageUrl(payload);
+        lastResolvedRemoteImageUrl = persistedImageUrl;
+        if (remoteImageUrlEl) {
+            remoteImageUrlEl.value = persistedImageUrl;
+        }
         renderTransitList();
         renderImageList();
         updatePreview();
@@ -880,70 +934,52 @@
         updatePreview();
     };
 
-    imageFilesEl.addEventListener('change', () => {
-        const files = Array.from(imageFilesEl.files || []);
-        if (!files.length) {
-            return;
-        }
-        addImageEntries(files.map((file) => ({
-            file,
-            previewUrl: URL.createObjectURL(file),
-            source: 'new'
-        })));
-        imageFilesEl.value = '';
-        setImageStatus('Ảnh mới sẽ được nén và upload khi bạn bấm lưu.', 'info');
-    });
-
-    imageListEl.addEventListener('change', (event) => {
-        const row = event.target.closest('[data-image-id]');
-        if (!row) {
-            return;
-        }
-        if (event.target.matches('input[type="radio"][name="housing-primary-image"]')) {
-            state.imageEntries = ensureSinglePrimary(state.imageEntries, row.getAttribute('data-image-id'), 'isPrimary');
+    const handleRemoteImageUrlInput = () => {
+        const safeUrl = getRemoteImageUrl();
+        cancelRemoteImageResolve();
+        if (!safeUrl) {
+            lastResolvedRemoteImageUrl = '';
             renderImageList();
             updatePreview();
-        }
-    });
-
-    const handleImageAction = (event, sourceButton) => {
-        const button = sourceButton || (event.target instanceof Element
-            ? event.target.closest('button[data-action]')
-            : null);
-        if (!button) {
+            setImageStatus('', 'info');
             return;
         }
-        if (!sourceButton && shouldIgnoreSyntheticClick(button)) {
-            event.preventDefault();
+        if (!state.selectedImage && safeUrl === lastResolvedRemoteImageUrl) {
+            renderImageList();
+            updatePreview();
+            setImageStatus(REMOTE_IMAGE_URL_DIRECT_STATUS, 'info');
             return;
         }
-        const row = button.closest('[data-image-id]');
-        if (!row) {
-            return;
-        }
-        const itemId = row.getAttribute('data-image-id');
-        const index = state.imageEntries.findIndex((entry) => entry.id === itemId);
-        if (index < 0) {
-            return;
-        }
-        const action = button.getAttribute('data-action');
-        const current = state.imageEntries[index];
-        if (action === 'remove') {
-            if (current.file && current.previewUrl.startsWith('blob:')) {
-                URL.revokeObjectURL(current.previewUrl);
-            }
-            state.imageEntries.splice(index, 1);
-            if (!state.imageEntries.some((item) => item.isPrimary) && state.imageEntries[0]) {
-                state.imageEntries[0].isPrimary = true;
-            }
-        } else if (action === 'up' && index > 0) {
-            [state.imageEntries[index - 1], state.imageEntries[index]] = [state.imageEntries[index], state.imageEntries[index - 1]];
-        } else if (action === 'down' && index < state.imageEntries.length - 1) {
-            [state.imageEntries[index + 1], state.imageEntries[index]] = [state.imageEntries[index], state.imageEntries[index + 1]];
-        }
+        clearSelectedImage();
         renderImageList();
         updatePreview();
+        remoteImageResolveTimer = window.setTimeout(async () => {
+            try {
+                await verifyRemoteSelectedUrl(safeUrl, 'Đang kiểm tra URL ảnh...');
+            } catch (_) {
+                setImageStatus('Không thể tải ảnh từ URL. Vui lòng kiểm tra lại URL hoặc tải ảnh từ máy.', 'error');
+            }
+        }, 250);
     };
+
+    imageFilesEl.addEventListener('change', () => {
+        const file = imageFilesEl.files && imageFilesEl.files[0] ? imageFilesEl.files[0] : null;
+        if (!file) {
+            clearSelectedImage();
+            renderImageList();
+            updatePreview();
+            setImageStatus('', 'info');
+            return;
+        }
+        if (!file.type || !file.type.toLowerCase().startsWith('image/')) {
+            clearSelectedImage();
+            renderImageList();
+            updatePreview();
+            setImageStatus('Chỉ hỗ trợ file ảnh.', 'error');
+            return;
+        }
+        setSelectedImage(file, 'Ảnh sẽ được nén và upload khi bạn bấm lưu.');
+    });
 
     [titleEl, priceEl, areaEl, typeEl, cityEl, arrondissementEl, cafEl, tagsEl, descriptionEl, addressTextEl, contactNameEl, contactPhoneEl, contactEmailEl, contactNoteEl].forEach((element) => {
         element.addEventListener('input', updatePreview);
@@ -953,6 +989,10 @@
     const handleSubmit = async (event) => {
         event.preventDefault();
         if (isSubmitting) {
+            return;
+        }
+        if (isPreparingRemoteImageUrl) {
+            setFeedback('URL ảnh đang được kiểm tra. Vui lòng chờ xong rồi lưu.', 'error');
             return;
         }
         if (isImportingRemoteImage) {
@@ -973,23 +1013,35 @@
             submitBtn.disabled = true;
             setFeedback(editingId ? 'Đang cập nhật tin thuê nhà...' : 'Đang đăng tin thuê nhà...', 'info');
 
-            const newFiles = state.imageEntries.filter((item) => item.file && !item.uploadedUrl).map((item) => item.file);
-            if (newFiles.length) {
-                const uploadedUrls = await shared.uploadImages(newFiles, ({ index, total, stage }) => {
+            const inputRemoteImageUrl = getRemoteImageUrl();
+            const shouldPrepareRemoteImage = inputRemoteImageUrl
+                && !state.selectedImage
+                && (!editingId || inputRemoteImageUrl !== persistedImageUrl);
+            if (shouldPrepareRemoteImage) {
+                try {
+                    await verifyRemoteSelectedUrl(
+                        inputRemoteImageUrl,
+                        'Đang kiểm tra URL ảnh trước khi lưu...',
+                        REMOTE_IMAGE_URL_DIRECT_STATUS
+                    );
+                } catch (_) {
+                    setImageStatus('Không thể tải ảnh từ URL. Vui lòng kiểm tra lại URL hoặc tải ảnh từ máy.', 'error');
+                    setFeedback('URL ảnh không hợp lệ hoặc không thể hiển thị.', 'error');
+                    return;
+                }
+            }
+
+            if (state.selectedImage && state.selectedImage.file && !state.selectedImage.uploadedUrl) {
+                const uploadedUrls = await shared.uploadImages([state.selectedImage.file], ({ index, total, stage }) => {
                     const stageText = stage === 'compress'
                         ? 'nén'
                         : (stage === 'presign' ? 'chuẩn bị' : 'upload');
                     setImageStatus(`Đang ${stageText} ảnh ${index + 1}/${total}...`, 'info');
                 });
-                let uploadIndex = 0;
-                state.imageEntries = state.imageEntries.map((item) => {
-                    if (!item.file || item.uploadedUrl) {
-                        return item;
-                    }
-                    const uploadedUrl = uploadedUrls[uploadIndex];
-                    uploadIndex += 1;
-                    return { ...item, uploadedUrl };
-                });
+                state.selectedImage = {
+                    ...state.selectedImage,
+                    uploadedUrl: String(uploadedUrls[0] || '').trim()
+                };
                 setImageStatus('Upload ảnh thành công.', 'success');
             }
 
@@ -1049,12 +1101,11 @@
     bindTouchFallback(remoteImageAddBtn, () => {
         void importRemoteImage();
     });
+    remoteImageUrlEl?.addEventListener('input', handleRemoteImageUrlInput);
+    remoteImageUrlEl?.addEventListener('change', handleRemoteImageUrlInput);
 
     transitListEl.addEventListener('click', handleTransitAction);
     bindDelegatedTouchFallback(transitListEl, 'button[data-action]', handleTransitAction);
-
-    imageListEl.addEventListener('click', handleImageAction);
-    bindDelegatedTouchFallback(imageListEl, 'button[data-action]', handleImageAction);
 
     submitBtn.addEventListener('click', (event) => {
         if (shouldIgnoreSyntheticClick(submitBtn)) {

@@ -318,6 +318,78 @@ test('housing form can import a long remote image URL and upload it to R2 on sub
     assert.equal(submittedPayload.images[0].imageUrl, 'https://cdn.svp.test/housing/from-remote-url.jpg');
 });
 
+test('housing form falls back to direct URL preview when remote fetch is blocked', async () => {
+    let submitCalls = 0;
+    let submittedPayload = null;
+    let remoteFetchCalls = 0;
+    const dom = await loadHousingFormPage({
+        fetch: async (targetUrl, options = {}) => {
+            const url = String(targetUrl);
+            const method = String(options.method || 'GET').toUpperCase();
+            if (url === LONG_REMOTE_IMAGE_URL) {
+                remoteFetchCalls += 1;
+                throw new TypeError('Failed to fetch');
+            }
+            if (url === 'http://localhost:8080/api/housing' && method === 'POST') {
+                submitCalls += 1;
+                submittedPayload = JSON.parse(String(options.body || '{}'));
+                return makeJsonResponse({ listingId: 'listing-remote-direct-123' });
+            }
+            throw new Error(`Unexpected fetch: ${targetUrl}`);
+        },
+        configureWindow: (window) => {
+            window.Image = class MockImage {
+                constructor() {
+                    this.onload = null;
+                    this.onerror = null;
+                    this.decoding = 'auto';
+                    this.referrerPolicy = '';
+                }
+
+                set src(value) {
+                    this._src = String(value || '');
+                    window.setTimeout(() => {
+                        if (this._src === LONG_REMOTE_IMAGE_URL) {
+                            this.onload?.();
+                            return;
+                        }
+                        this.onerror?.();
+                    }, 0);
+                }
+
+                get src() {
+                    return this._src || '';
+                }
+            };
+        }
+    });
+    const { document } = dom.window;
+
+    document.getElementById('housing-remote-image-url').value = LONG_REMOTE_IMAGE_URL;
+    document.getElementById('housing-remote-image-add-btn').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+    await flushAsync(dom.window, 16);
+
+    const previewImage = document.getElementById('housing-preview-main').querySelector('img.sv-housing-image-thumb');
+    assert.ok(previewImage);
+    assert.equal(previewImage.getAttribute('src'), LONG_REMOTE_IMAGE_URL);
+    assert.match(document.getElementById('housing-image-upload-status').textContent, /preview đã hiển thị/i);
+
+    dispatchInput(dom.window, document.getElementById('housing-title-input'), 'Studio direct url');
+    dispatchInput(dom.window, document.getElementById('housing-price-input'), '640');
+    dispatchChange(dom.window, document.getElementById('housing-type-input'), 'STUDIO');
+    dispatchInput(dom.window, document.getElementById('housing-city-input'), 'Paris');
+    dispatchInput(dom.window, document.getElementById('housing-address-text-input'), 'Tolbiac');
+    dispatchInput(dom.window, document.getElementById('housing-description-input'), 'Studio meublé très calme, lumineux, disponible immédiatement.');
+
+    document.getElementById('housing-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+    await flushAsync(dom.window, 16);
+
+    assert.equal(remoteFetchCalls, 1);
+    assert.equal(submitCalls, 1);
+    assert.equal(submittedPayload.imageUrl, LONG_REMOTE_IMAGE_URL);
+    assert.equal(submittedPayload.images[0].imageUrl, LONG_REMOTE_IMAGE_URL);
+});
+
 test('housing form update sends imageUrl when editing an existing listing', async () => {
     let submittedPayload = null;
     const listingId = 'listing-edit-123';

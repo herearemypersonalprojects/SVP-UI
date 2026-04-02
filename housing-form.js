@@ -480,6 +480,61 @@
         updatePreview();
     };
 
+    const normalizeRemoteImageUrl = (value) => {
+        if (remoteImageTools && typeof remoteImageTools.sanitizeHttpUrl === 'function') {
+            return remoteImageTools.sanitizeHttpUrl(value);
+        }
+        const raw = String(value || '').trim();
+        if (!/^https?:\/\//i.test(raw)) {
+            return '';
+        }
+        try {
+            const parsed = new URL(raw);
+            return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+                ? parsed.toString()
+                : '';
+        } catch (_) {
+            return '';
+        }
+    };
+
+    const verifyRemoteImagePreview = (url) => new Promise((resolve, reject) => {
+        const safeUrl = normalizeRemoteImageUrl(url);
+        if (!safeUrl) {
+            reject(new Error('URL ảnh không hợp lệ.'));
+            return;
+        }
+
+        const image = new Image();
+        let settled = false;
+        const cleanup = () => {
+            image.onload = null;
+            image.onerror = null;
+        };
+        const finish = (callback) => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            window.clearTimeout(timeoutId);
+            cleanup();
+            callback();
+        };
+        const timeoutId = window.setTimeout(() => {
+            finish(() => reject(new Error('Không thể hiển thị ảnh từ URL.')));
+        }, 10000);
+
+        image.onload = () => {
+            finish(() => resolve(safeUrl));
+        };
+        image.onerror = () => {
+            finish(() => reject(new Error('Không thể hiển thị ảnh từ URL.')));
+        };
+        image.decoding = 'async';
+        image.referrerPolicy = 'no-referrer';
+        image.src = safeUrl;
+    });
+
     const toFriendlyRemoteImageImportError = (error) => {
         const message = error && error.message ? String(error.message) : '';
         return message || 'Không thể tải ảnh từ URL để chuẩn bị upload.';
@@ -489,14 +544,10 @@
         if (isImportingRemoteImage) {
             return;
         }
-        const rawUrl = remoteImageUrlEl ? String(remoteImageUrlEl.value || '').trim() : '';
-        if (!rawUrl) {
+        const safeUrl = normalizeRemoteImageUrl(remoteImageUrlEl ? remoteImageUrlEl.value : '');
+        if (!safeUrl) {
             setImageStatus('URL ảnh không hợp lệ.', 'error');
             remoteImageUrlEl?.focus();
-            return;
-        }
-        if (!remoteImageTools || typeof remoteImageTools.fetchRemoteImageAsFile !== 'function') {
-            setImageStatus('Trình tải ảnh từ URL chưa sẵn sàng.', 'error');
             return;
         }
 
@@ -505,20 +556,39 @@
         if (remoteImageAddBtn) {
             remoteImageAddBtn.disabled = true;
         }
-        setImageStatus('Đang tải ảnh từ URL để chuẩn bị upload...', 'info');
         try {
-            const file = await remoteImageTools.fetchRemoteImageAsFile(rawUrl, {
-                fileNamePrefix: 'housing-image'
-            });
+            if (remoteImageTools && typeof remoteImageTools.fetchRemoteImageAsFile === 'function') {
+                setImageStatus('Đang tải ảnh từ URL để chuẩn bị upload...', 'info');
+                try {
+                    const file = await remoteImageTools.fetchRemoteImageAsFile(safeUrl, {
+                        fileNamePrefix: 'housing-image'
+                    });
+                    addImageEntries([{
+                        file,
+                        previewUrl: URL.createObjectURL(file),
+                        source: 'remote'
+                    }]);
+                    if (remoteImageUrlEl) {
+                        remoteImageUrlEl.value = '';
+                    }
+                    setImageStatus('Đã tải ảnh từ URL. Ảnh sẽ được nén và upload khi bạn bấm lưu.', 'success');
+                    return;
+                } catch (_) {
+                    // Some hosts allow direct <img> rendering but block fetch() by CORS.
+                }
+            }
+
+            setImageStatus('Đang kiểm tra URL ảnh để hiển thị preview...', 'info');
+            const verifiedUrl = await verifyRemoteImagePreview(safeUrl);
             addImageEntries([{
-                file,
-                previewUrl: URL.createObjectURL(file),
-                source: 'remote'
+                previewUrl: verifiedUrl,
+                existingUrl: verifiedUrl,
+                source: 'remote-url'
             }]);
             if (remoteImageUrlEl) {
                 remoteImageUrlEl.value = '';
             }
-            setImageStatus('Đã tải ảnh từ URL. Ảnh sẽ được nén và upload khi bạn bấm lưu.', 'success');
+            setImageStatus('Nguồn ảnh không cho tải trực tiếp. Ảnh đã được thêm bằng URL và preview đã hiển thị.', 'success');
         } catch (error) {
             setImageStatus(toFriendlyRemoteImageImportError(error), 'error');
         } finally {

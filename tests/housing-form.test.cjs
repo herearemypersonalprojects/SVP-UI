@@ -261,6 +261,62 @@ test('housing form submit sends imageUrl from the uploaded selected image', asyn
     assert.equal(submittedPayload.images[0].imageUrl, 'https://cdn.svp.test/housing/uploaded-primary.jpg');
 });
 
+test('housing form retries the R2 upload without Content-Type when the first PUT fails', async () => {
+    let submittedPayload = null;
+    let uploadCalls = 0;
+    let secondUploadUsedArrayBuffer = false;
+    let secondUploadSkippedHeaders = false;
+    const dom = await loadHousingFormPage({
+        fetch: async (targetUrl, options = {}) => {
+            const url = String(targetUrl);
+            const method = String(options.method || 'GET').toUpperCase();
+            if (url === 'http://localhost:8080/api/upload/post-image') {
+                return makeJsonResponse({
+                    uploadUrl: 'https://upload.svp.test/housing/retry-image-1',
+                    publicUrl: 'https://cdn.svp.test/housing/retry-uploaded-primary.jpg'
+                });
+            }
+            if (url === 'https://upload.svp.test/housing/retry-image-1' && method === 'PUT') {
+                uploadCalls += 1;
+                if (uploadCalls === 1) {
+                    throw new Error('Failed to fetch');
+                }
+                secondUploadUsedArrayBuffer = options.body instanceof ArrayBuffer;
+                secondUploadSkippedHeaders = !options.headers;
+                return { ok: true, status: 200 };
+            }
+            if (url === 'http://localhost:8080/api/housing' && method === 'POST') {
+                submittedPayload = JSON.parse(String(options.body || '{}'));
+                return makeJsonResponse({ listingId: 'listing-upload-retry-123' });
+            }
+            throw new Error(`Unexpected fetch: ${targetUrl}`);
+        }
+    });
+    const { document, File } = dom.window;
+    const imageFilesEl = document.getElementById('housing-image-files');
+
+    Object.defineProperty(imageFilesEl, 'files', {
+        configurable: true,
+        value: [new File(['image-bytes'], 'primary.png', { type: 'image/png' })]
+    });
+    imageFilesEl.dispatchEvent(new dom.window.Event('change', { bubbles: true }));
+
+    dispatchInput(dom.window, document.getElementById('housing-title-input'), 'Studio Tolbiac retry upload');
+    dispatchInput(dom.window, document.getElementById('housing-price-input'), '640');
+    dispatchChange(dom.window, document.getElementById('housing-type-input'), 'STUDIO');
+    dispatchInput(dom.window, document.getElementById('housing-city-input'), 'Paris');
+    dispatchInput(dom.window, document.getElementById('housing-address-text-input'), 'Tolbiac');
+    dispatchInput(dom.window, document.getElementById('housing-description-input'), 'Studio meublé très calme, lumineux, disponible immédiatement.');
+
+    document.getElementById('housing-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+    await flushAsync(dom.window, 16);
+
+    assert.equal(uploadCalls, 2);
+    assert.equal(secondUploadUsedArrayBuffer, true);
+    assert.equal(secondUploadSkippedHeaders, true);
+    assert.equal(submittedPayload.imageUrl, 'https://cdn.svp.test/housing/retry-uploaded-primary.jpg');
+});
+
 test('housing form can import a long remote image URL and upload it to R2 on submit', async () => {
     let submitCalls = 0;
     let submittedPayload = null;

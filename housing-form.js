@@ -77,15 +77,19 @@
     const state = {
         editingId,
         transitPoints: [],
-        selectedImage: null,
         geocodeSuggestions: []
     };
     let descriptionComposer = null;
+    const DEFAULT_MAX_IMAGE_UPLOAD_BYTES = 100 * 1024;
+    const FALLBACK_MAX_IMAGE_UPLOAD_BYTES = 300 * 1024;
     let persistedImageUrl = '';
+    let pendingImageFile = null;
+    let pendingImagePreviewUrl = '';
     let lastResolvedRemoteImageUrl = '';
     let remoteImageResolveTimer = null;
     let remoteImageResolveSeq = 0;
     let isGeocoding = false;
+    let isUploadingImage = false;
     let isPreparingRemoteImageUrl = false;
     let isImportingRemoteImage = false;
     let isSubmitting = false;
@@ -172,6 +176,8 @@
         imageUploadStatusEl.textContent = text || '';
         imageUploadStatusEl.style.color = type === 'error' ? '#b91c1c' : (type === 'success' ? '#15803d' : '#475569');
     };
+
+    const getSubmitActionLabel = () => String(submitLabelEl?.textContent || '').trim() || 'Lưu';
 
     const extractArrondissement = (...candidates) => {
         for (const candidate of candidates) {
@@ -407,18 +413,13 @@
     const getRemoteImageUrl = () => normalizeRemoteImageUrl(remoteImageUrlEl ? remoteImageUrlEl.value : '');
 
     const getSelectedImagePreviewUrl = () => {
-        if (state.selectedImage && state.selectedImage.previewUrl) {
-            return String(state.selectedImage.previewUrl || '').trim();
+        if (pendingImagePreviewUrl) {
+            return String(pendingImagePreviewUrl || '').trim();
         }
         return getRemoteImageUrl();
     };
 
-    const getSelectedImageSubmittedUrl = () => {
-        if (state.selectedImage && state.selectedImage.uploadedUrl) {
-            return String(state.selectedImage.uploadedUrl || '').trim();
-        }
-        return getRemoteImageUrl();
-    };
+    const getSelectedImageSubmittedUrl = () => getRemoteImageUrl();
 
     const renderImageList = () => {
         const previewUrl = getSelectedImagePreviewUrl();
@@ -492,13 +493,18 @@
         updatePreview();
     };
 
-    const clearSelectedImage = () => {
-        const current = state.selectedImage;
-        if (current && current.previewUrl && current.previewUrl.startsWith('blob:')) {
-            URL.revokeObjectURL(current.previewUrl);
+    const clearPendingImagePreview = () => {
+        if (pendingImagePreviewUrl && pendingImagePreviewUrl.startsWith('blob:')) {
+            URL.revokeObjectURL(pendingImagePreviewUrl);
         }
-        state.selectedImage = null;
+        pendingImagePreviewUrl = '';
+    };
+
+    const clearPendingImageFile = () => {
+        pendingImageFile = null;
+        clearPendingImagePreview();
         imageFilesEl.value = '';
+        lastResolvedRemoteImageUrl = '';
     };
 
     const cancelRemoteImageResolve = () => {
@@ -510,18 +516,15 @@
         isPreparingRemoteImageUrl = false;
     };
 
-    const setSelectedImage = (file, statusText) => {
+    const setPendingImageSelection = (file, statusText) => {
         if (!(file instanceof File)) {
             return;
         }
         cancelRemoteImageResolve();
-        clearSelectedImage();
-        state.selectedImage = {
-            file,
-            previewUrl: URL.createObjectURL(file),
-            uploadedUrl: '',
-            source: 'local'
-        };
+        clearPendingImagePreview();
+        pendingImagePreviewUrl = URL.createObjectURL(file);
+        pendingImageFile = file;
+        imageFilesEl.value = '';
         if (remoteImageUrlEl) {
             remoteImageUrlEl.value = '';
         }
@@ -600,6 +603,140 @@
         }
     };
 
+    const formatSize = (bytes) => remoteImageTools && typeof remoteImageTools.formatSize === 'function'
+        ? remoteImageTools.formatSize(bytes)
+        : `${(Number(bytes || 0) / 1024).toFixed(1)}KB`;
+
+    const isCompressionLimitError = (error) => String(error?.message || '')
+        .toLowerCase()
+        .includes('không thể nén ảnh xuống dưới');
+
+    const uploadSelectedImageToCloudflare = async (file) => {
+        if (!file) {
+            return;
+        }
+        if (!file.type || !file.type.toLowerCase().startsWith('image/')) {
+            throw new Error('Chỉ hỗ trợ file ảnh.');
+        }
+
+        setImageStatus('Đang tải ảnh...', 'info');
+        let compressedFile = file;
+        let activeUploadLimit = DEFAULT_MAX_IMAGE_UPLOAD_BYTES;
+        let usedFallbackLimit = false;
+
+        if (remoteImageTools && typeof remoteImageTools.compressImageBelowLimit === 'function') {
+            try {
+                compressedFile = await remoteImageTools.compressImageBelowLimit(file, activeUploadLimit);
+            } catch (error) {
+                if (!isCompressionLimitError(error)) {
+                    throw error;
+                }
+                activeUploadLimit = FALLBACK_MAX_IMAGE_UPLOAD_BYTES;
+                usedFallbackLimit = true;
+                setImageStatus(
+                    `Không thể nén ảnh xuống ${formatSize(DEFAULT_MAX_IMAGE_UPLOAD_BYTES)}. Chuyển sang giới hạn ${formatSize(FALLBACK_MAX_IMAGE_UPLOAD_BYTES)}...`,
+                    'info'
+                );
+                compressedFile = await remoteImageTools.compressImageBelowLimit(file, activeUploadLimit);
+            }
+        }
+
+        if (usedFallbackLimit) {
+            if (compressedFile.size !== file.size) {
+                setImageStatus(
+                    `Không thể nén dưới ${formatSize(DEFAULT_MAX_IMAGE_UPLOAD_BYTES)}. Hệ thống dùng giới hạn ${formatSize(activeUploadLimit)} và đã nén ảnh từ ${formatSize(file.size)} xuống ${formatSize(compressedFile.size)}. Đang upload...`,
+                    'info'
+                );
+            } else {
+                setImageStatus(
+                    `Không thể nén dưới ${formatSize(DEFAULT_MAX_IMAGE_UPLOAD_BYTES)}. Hệ thống dùng giới hạn ${formatSize(activeUploadLimit)} và sẽ upload ảnh ${formatSize(compressedFile.size)}.`,
+                    'info'
+                );
+            }
+        } else if (compressedFile.size !== file.size) {
+            setImageStatus(
+                `Đã nén ảnh từ ${formatSize(file.size)} xuống ${formatSize(compressedFile.size)}. Đang upload...`,
+                'info'
+            );
+        } else {
+            setImageStatus(`Ảnh đã ở mức ${formatSize(compressedFile.size)}. Đang upload...`, 'info');
+        }
+
+        const accessToken = await shared.getAccessToken();
+        const presignResponse = await fetch(`${shared.API_BASE_URL}/api/upload/post-image`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                Accept: 'application/json',
+                ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {})
+            },
+            body: JSON.stringify({
+                filename: compressedFile.name || 'housing-image',
+                contentType: compressedFile.type || 'application/octet-stream'
+            })
+        });
+        const presignPayload = await presignResponse.json().catch(() => ({}));
+        if (!presignResponse.ok) {
+            throw new Error(presignPayload.error || 'Không lấy được presigned URL.');
+        }
+
+        const uploadMethod = (presignPayload.method || 'PUT').toUpperCase();
+        if (uploadMethod !== 'PUT') {
+            throw new Error('Upload method không hợp lệ.');
+        }
+        const uploadUrl = String(presignPayload.uploadUrl || '').trim();
+        const publicUrl = String(presignPayload.publicUrl || '').trim();
+        if (!uploadUrl || !publicUrl) {
+            throw new Error('Thiếu uploadUrl/publicUrl từ API.');
+        }
+
+        let uploadResponse;
+        try {
+            uploadResponse = await fetch(uploadUrl, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': compressedFile.type
+                },
+                body: compressedFile
+            });
+        } catch (_) {
+            try {
+                const binaryBody = typeof compressedFile.arrayBuffer === 'function'
+                    ? await compressedFile.arrayBuffer()
+                    : await new Response(compressedFile).arrayBuffer();
+                uploadResponse = await fetch(uploadUrl, {
+                    method: 'PUT',
+                    body: binaryBody
+                });
+            } catch (_) {
+                throw new Error('Upload bị chặn do CORS trên Cloudflare R2. Hãy bật CORS cho origin http://localhost:63342, method PUT, allowed headers *.');
+            }
+        }
+        if (!uploadResponse.ok) {
+            throw new Error(`Upload lên R2 thất bại (${uploadResponse.status}).`);
+        }
+
+        if (remoteImageUrlEl) {
+            remoteImageUrlEl.value = publicUrl;
+        }
+        persistedImageUrl = normalizeRemoteImageUrl(publicUrl);
+        clearPendingImageFile();
+        renderImageList();
+        updatePreview();
+        setImageStatus('Upload ảnh thành công.', 'success');
+    };
+
+    const toFriendlyUploadError = (error) => {
+        const message = error && error.message ? String(error.message) : '';
+        if (!message) {
+            return 'Upload ảnh thất bại.';
+        }
+        if (message.toLowerCase().includes('failed to fetch')) {
+            return 'Upload bị chặn do CORS trên Cloudflare R2. Hãy bật CORS cho origin http://localhost:63342, method PUT, allowed headers *.';
+        }
+        return message;
+    };
+
     const toFriendlyRemoteImageImportError = (error) => {
         const message = error && error.message ? String(error.message) : '';
         return message || 'Không thể tải ảnh từ URL để chuẩn bị upload.';
@@ -630,7 +767,10 @@
             const file = await remoteImageTools.fetchRemoteImageAsFile(safeUrl, {
                 fileNamePrefix: 'housing-image'
             });
-            setSelectedImage(file, 'Đã tải ảnh từ URL. Ảnh sẽ được nén và upload khi bạn bấm lưu.');
+            setPendingImageSelection(
+                file,
+                `Đã tải ảnh từ URL. Ảnh sẽ được nén và upload khi bấm "${getSubmitActionLabel()}".`
+            );
         } catch (error) {
             setImageStatus(toFriendlyRemoteImageImportError(error), 'error');
         } finally {
@@ -763,7 +903,7 @@
             walkingMinutes: item.walkingMinutes || 0,
             isPrimary: !!item.primary
         }));
-        clearSelectedImage();
+        clearPendingImageFile();
         persistedImageUrl = pickExistingImageUrl(payload);
         lastResolvedRemoteImageUrl = persistedImageUrl;
         if (remoteImageUrlEl) {
@@ -944,13 +1084,13 @@
             setImageStatus('', 'info');
             return;
         }
-        if (!state.selectedImage && safeUrl === lastResolvedRemoteImageUrl) {
+        if (!pendingImageFile && safeUrl === lastResolvedRemoteImageUrl) {
             renderImageList();
             updatePreview();
             setImageStatus(REMOTE_IMAGE_URL_DIRECT_STATUS, 'info');
             return;
         }
-        clearSelectedImage();
+        clearPendingImageFile();
         renderImageList();
         updatePreview();
         remoteImageResolveTimer = window.setTimeout(async () => {
@@ -965,20 +1105,28 @@
     imageFilesEl.addEventListener('change', () => {
         const file = imageFilesEl.files && imageFilesEl.files[0] ? imageFilesEl.files[0] : null;
         if (!file) {
-            clearSelectedImage();
+            cancelRemoteImageResolve();
+            clearPendingImageFile();
+            lastResolvedRemoteImageUrl = '';
             renderImageList();
             updatePreview();
             setImageStatus('', 'info');
             return;
         }
         if (!file.type || !file.type.toLowerCase().startsWith('image/')) {
-            clearSelectedImage();
+            cancelRemoteImageResolve();
+            clearPendingImageFile();
+            lastResolvedRemoteImageUrl = '';
             renderImageList();
             updatePreview();
             setImageStatus('Chỉ hỗ trợ file ảnh.', 'error');
             return;
         }
-        setSelectedImage(file, 'Ảnh sẽ được nén và upload khi bạn bấm lưu.');
+        cancelRemoteImageResolve();
+        setPendingImageSelection(
+            file,
+            `Ảnh đã được chọn cục bộ. Ảnh sẽ được upload khi bấm "${getSubmitActionLabel()}".`
+        );
     });
 
     [titleEl, priceEl, areaEl, typeEl, cityEl, arrondissementEl, cafEl, tagsEl, descriptionEl, addressTextEl, contactNameEl, contactPhoneEl, contactEmailEl, contactNoteEl].forEach((element) => {
@@ -989,6 +1137,10 @@
     const handleSubmit = async (event) => {
         event.preventDefault();
         if (isSubmitting) {
+            return;
+        }
+        if (isUploadingImage) {
+            setFeedback('Ảnh đại diện đang tải lên máy chủ. Vui lòng chờ xong rồi lưu.', 'error');
             return;
         }
         if (isPreparingRemoteImageUrl) {
@@ -1015,7 +1167,7 @@
 
             const inputRemoteImageUrl = getRemoteImageUrl();
             const shouldPrepareRemoteImage = inputRemoteImageUrl
-                && !state.selectedImage
+                && !pendingImageFile
                 && (!editingId || inputRemoteImageUrl !== persistedImageUrl);
             if (shouldPrepareRemoteImage) {
                 try {
@@ -1031,18 +1183,20 @@
                 }
             }
 
-            if (state.selectedImage && state.selectedImage.file && !state.selectedImage.uploadedUrl) {
-                const uploadedUrls = await shared.uploadImages([state.selectedImage.file], ({ index, total, stage }) => {
-                    const stageText = stage === 'compress'
-                        ? 'nén'
-                        : (stage === 'presign' ? 'chuẩn bị' : 'upload');
-                    setImageStatus(`Đang ${stageText} ảnh ${index + 1}/${total}...`, 'info');
-                });
-                state.selectedImage = {
-                    ...state.selectedImage,
-                    uploadedUrl: String(uploadedUrls[0] || '').trim()
-                };
-                setImageStatus('Upload ảnh thành công.', 'success');
+            if (pendingImageFile) {
+                isUploadingImage = true;
+                imageFilesEl.disabled = true;
+                setImageStatus('Đang upload ảnh lên Cloudflare R2...', 'info');
+                try {
+                    await uploadSelectedImageToCloudflare(pendingImageFile);
+                } catch (uploadError) {
+                    setImageStatus(toFriendlyUploadError(uploadError), 'error');
+                    setFeedback('Không thể upload ảnh đại diện.', 'error');
+                    return;
+                } finally {
+                    isUploadingImage = false;
+                    imageFilesEl.disabled = false;
+                }
             }
 
             const payload = collectPayload();

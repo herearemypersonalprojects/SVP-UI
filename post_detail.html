@@ -172,6 +172,24 @@
             border-color: #cbd5e1;
             color: #0f172a;
         }
+        .pd-stat__label {
+            display: inline;
+        }
+        @media (max-width: 767.98px) {
+            .pd-stat--copy {
+                justify-content: center;
+                width: 2.35rem;
+                height: 2.35rem;
+                padding: 0;
+                border-radius: 50%;
+            }
+            .pd-stat--copy .pd-stat__label {
+                display: none;
+            }
+            .pd-stat--copy i {
+                font-size: .95rem;
+            }
+        }
 
         /* Article body typography */
         .pd-body {
@@ -527,9 +545,9 @@
                     <a class="pd-stat pd-stat--action pd-stat--icon pd-stat--messenger" id="pd-share-messenger-inline" href="#" target="_blank" rel="noopener noreferrer" aria-label="Gửi qua Messenger" title="Gửi qua Messenger">
                         <i class="fa-brands fa-facebook-messenger" aria-hidden="true"></i>
                     </a>
-                    <button class="pd-stat pd-stat--button pd-stat--action pd-stat--copy" id="pd-share-copy-inline" type="button" data-copy-share-link aria-label="Copy link">
-                        <i class="fa-regular fa-copy" aria-hidden="true"></i>
-                        <span>Copy link</span>
+                    <button class="pd-stat pd-stat--button pd-stat--action pd-stat--copy" id="pd-share-copy-inline" type="button" data-copy-share-link aria-label="Copy link" title="Copy link">
+                        <i class="fa-solid fa-link" aria-hidden="true"></i>
+                        <span class="pd-stat__label">Copy link</span>
                     </button>
                 </div>
             </div>

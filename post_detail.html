@@ -1637,15 +1637,11 @@
 
     /* ── Render functions ── */
     const renderHero = (post) => {
-        const coverUrl = toSafeHttpUrl(post?.coverImageUrl || '');
         heroCover.classList.remove('pd-skeleton');
-        if (!coverUrl) {
-            heroCover.classList.add('is-hidden');
-            heroCover.style.backgroundImage = '';
-            return;
-        }
-        heroCover.classList.remove('is-hidden');
-        heroCover.style.backgroundImage = `url('${escapeCssUrl(coverUrl)}')`;
+        // Always hide the hero banner – the cover image is already displayed
+        // inside the post body content, so showing it here would duplicate it.
+        heroCover.classList.add('is-hidden');
+        heroCover.style.backgroundImage = '';
     };
 
     const renderViewCount = (post) => {

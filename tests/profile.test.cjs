@@ -14,9 +14,14 @@ const REQUIRED_IDS = [
     'profile-display-name',
     'profile-nickname',
     'profile-role',
+    'profile-joined-at',
+    'profile-last-active',
+    'profile-email-row',
     'profile-email',
-    'profile-blog-count',
+    'profile-post-count',
     'profile-follower-count',
+    'profile-kpi-posts',
+    'profile-kpi-followers',
     'profile-message-actions',
     'profile-write-link',
     'profile-follow-btn',
@@ -29,10 +34,13 @@ const REQUIRED_IDS = [
     'profile-space-note',
     'profile-tabs',
     'profile-tab-blog',
+    'profile-tab-followers',
     'profile-tab-manage',
     'profile-panel-blog',
+    'profile-panel-followers',
     'profile-panel-manage',
     'profile-blog-list',
+    'profile-follower-list',
     'profile-form',
     'profile-password-form',
     'profile-readonly',
@@ -194,11 +202,14 @@ test('profile page requests espace by authUserId when auth_user_id is present', 
                             nickname: 'alice',
                             displayName: 'Alice',
                             avatarUrl: '',
-                            role: 'USER'
+                            role: 'USER',
+                            createdAt: '2026-03-01T10:00:00Z',
+                            lastActiveAt: '2026-03-28T18:30:00Z'
                         },
-                        stats: { blogCount: 2, followerCount: 5 },
+                        stats: { postCount: 2, blogCount: 2, followerCount: 5 },
                         viewer: { authenticated: false, self: false, canFollow: false, following: false },
-                        articles: []
+                        posts: [],
+                        followers: []
                     })
                 };
             }
@@ -208,7 +219,7 @@ test('profile page requests espace by authUserId when auth_user_id is present', 
 
     await flushMicrotasks();
 
-    assert.ok(env.fetchCalls.some((call) => call.url.includes('/users/espace?authUserId=81&limit=12')));
+    assert.ok(env.fetchCalls.some((call) => call.url.includes('/users/espace?authUserId=81&limit=24')));
     assert.equal(env.historyCalls.at(-1), 'profile.html?auth_user_id=81');
 });
 
@@ -216,7 +227,7 @@ test('profile page canonicalizes legacy nickname URL to auth_user_id after loadi
     const env = loadProfilePage({
         search: '?nickname=alice',
         fetchImpl: async (url) => {
-            if (String(url).includes('/users/espace?nickname=alice&limit=12')) {
+            if (String(url).includes('/users/espace?nickname=alice&limit=24')) {
                 return {
                     ok: true,
                     json: async () => ({
@@ -226,11 +237,14 @@ test('profile page canonicalizes legacy nickname URL to auth_user_id after loadi
                             nickname: 'alice',
                             displayName: 'Alice',
                             avatarUrl: '',
-                            role: 'USER'
+                            role: 'USER',
+                            createdAt: '2026-03-01T10:00:00Z',
+                            lastActiveAt: '2026-03-28T18:30:00Z'
                         },
-                        stats: { blogCount: 0, followerCount: 0 },
+                        stats: { postCount: 0, blogCount: 0, followerCount: 0 },
                         viewer: { authenticated: false, self: false, canFollow: false, following: false },
-                        articles: []
+                        posts: [],
+                        followers: []
                     })
                 };
             }
@@ -244,4 +258,6 @@ test('profile page canonicalizes legacy nickname URL to auth_user_id after loadi
     assert.equal(env.document.title, 'Alice - Espace SVP');
     assert.equal(env.elements.get('profile-nickname').textContent, '');
     assert.equal(env.elements.get('profile-nickname').classList.contains('d-none'), true);
+    assert.equal(env.elements.get('profile-role').textContent, 'Thành viên');
+    assert.equal(env.elements.get('profile-joined-at').textContent, '01/03/2026');
 });

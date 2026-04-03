@@ -1,6 +1,7 @@
 (function () {
     const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
     const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
+    const PROFILE_LIST_LIMIT = 24;
     const AVATAR_SELECTION_MAX_BYTES = 10 * 1024 * 1024;
     const AVATAR_UPLOAD_MAX_BYTES = 10 * 1024;
     const AVATAR_OUTPUT_SIZE = 96;
@@ -28,9 +29,14 @@
     const nameEl = document.getElementById('profile-display-name');
     const nicknameEl = document.getElementById('profile-nickname');
     const roleEl = document.getElementById('profile-role');
+    const joinedAtEl = document.getElementById('profile-joined-at');
+    const lastActiveEl = document.getElementById('profile-last-active');
+    const emailRowEl = document.getElementById('profile-email-row');
     const emailEl = document.getElementById('profile-email');
-    const blogCountEl = document.getElementById('profile-blog-count');
+    const postCountEl = document.getElementById('profile-post-count');
     const followerCountEl = document.getElementById('profile-follower-count');
+    const postKpiEl = document.getElementById('profile-kpi-posts');
+    const followerKpiEl = document.getElementById('profile-kpi-followers');
     const messageActionsEl = document.getElementById('profile-message-actions');
     const writeLinkEl = document.getElementById('profile-write-link');
     const followBtnEl = document.getElementById('profile-follow-btn');
@@ -43,10 +49,13 @@
     const spaceNoteEl = document.getElementById('profile-space-note');
     const tabsEl = document.getElementById('profile-tabs');
     const blogTabEl = document.getElementById('profile-tab-blog');
+    const followerTabEl = document.getElementById('profile-tab-followers');
     const manageTabEl = document.getElementById('profile-tab-manage');
     const blogPanelEl = document.getElementById('profile-panel-blog');
+    const followerPanelEl = document.getElementById('profile-panel-followers');
     const managePanelEl = document.getElementById('profile-panel-manage');
     const blogListEl = document.getElementById('profile-blog-list');
+    const followerListEl = document.getElementById('profile-follower-list');
     const formEl = document.getElementById('profile-form');
     const passwordFormEl = document.getElementById('profile-password-form');
     const readonlyEl = document.getElementById('profile-readonly');
@@ -62,11 +71,12 @@
     const passwordStatusEl = document.getElementById('profile-password-status');
     const clearAvatarBtn = document.getElementById('profile-clear-avatar');
 
-    if (!avatarEl || !nameEl || !nicknameEl || !roleEl || !emailEl || !blogCountEl || !followerCountEl
+    if (!avatarEl || !nameEl || !nicknameEl || !roleEl || !joinedAtEl || !lastActiveEl
+        || !emailRowEl || !emailEl || !postCountEl || !followerCountEl || !postKpiEl || !followerKpiEl
         || !messageActionsEl || !writeLinkEl || !followBtnEl || !followLoginEl || !messageLinkEl
         || !panelHeadEl || !panelTitleEl || !headlineEl || !spaceTitleEl || !spaceNoteEl
-        || !tabsEl || !blogTabEl || !manageTabEl || !blogPanelEl || !managePanelEl
-        || !blogListEl || !formEl || !passwordFormEl || !readonlyEl
+        || !tabsEl || !blogTabEl || !followerTabEl || !manageTabEl || !blogPanelEl || !followerPanelEl || !managePanelEl
+        || !blogListEl || !followerListEl || !formEl || !passwordFormEl || !readonlyEl
         || !displayInput || !avatarUrlInput || !avatarFileInput || !previewAvatar || !previewLabel
         || !statusEl || !currentPasswordInput || !newPasswordInput || !confirmPasswordInput
         || !passwordStatusEl || !clearAvatarBtn) {
@@ -79,7 +89,7 @@
     let profile = null;
     let isSelf = false;
     let followInFlight = false;
-    let activeTab = 'manage';
+    let activeTab = 'blog';
     let previewAvatarObjectUrl = '';
 
     const escapeHtml = (value) => String(value ?? '')
@@ -276,20 +286,32 @@
     const buildArticleHref = (postId, title) => urlHelpers
         ? urlHelpers.buildDetailPath('article', postId, title)
         : `post_detail.html?postId=${encodeURIComponent(postId)}`;
+    const ARTICLE_EDITOR_HREF = 'create_new_article.html';
     const BLOG_EDITOR_HREF = 'create_new_article.html?mode=blog';
 
     const setActiveTab = (tabName) => {
-        const nextTab = tabName === 'manage' && isSelf ? 'manage' : 'blog';
+        const nextTab = tabName === 'followers'
+            ? 'followers'
+            : (tabName === 'manage' && isSelf ? 'manage' : 'blog');
         activeTab = nextTab;
         const onBlog = nextTab === 'blog';
+        const onFollowers = nextTab === 'followers';
+        const onManage = nextTab === 'manage' && isSelf;
 
         blogTabEl.classList.toggle('is-active', onBlog);
         blogTabEl.setAttribute('aria-selected', onBlog ? 'true' : 'false');
         blogPanelEl.classList.toggle('d-none', !onBlog);
 
-        manageTabEl.classList.toggle('is-active', !onBlog);
-        manageTabEl.setAttribute('aria-selected', onBlog ? 'false' : 'true');
-        managePanelEl.classList.toggle('d-none', onBlog);
+        followerTabEl.classList.toggle('is-active', onFollowers);
+        followerTabEl.setAttribute('aria-selected', onFollowers ? 'true' : 'false');
+        followerPanelEl.classList.toggle('d-none', !onFollowers);
+
+        manageTabEl.classList.toggle('is-active', onManage);
+        manageTabEl.setAttribute('aria-selected', onManage ? 'true' : 'false');
+        managePanelEl.classList.toggle('d-none', !onManage);
+
+        postKpiEl.classList.toggle('is-active', onBlog);
+        followerKpiEl.classList.toggle('is-active', onFollowers);
     };
 
     const toPlainText = (html) => String(html ?? '')
@@ -317,24 +339,63 @@
         }).format(date);
     };
 
-    const renderAvatar = (targetEl, displayName, avatarUrl, seed, options = {}) => {
+    const formatDateTime = (value) => {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return 'Chưa có dữ liệu';
+        return new Intl.DateTimeFormat('vi-VN', {
+            day: '2-digit',
+            month: '2-digit',
+            year: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        }).format(date);
+    };
+
+    const formatRoleLabel = (value) => {
+        const normalized = String(value || '').trim().toUpperCase();
+        if (normalized === 'SUPERADMIN') return 'Super Admin';
+        if (normalized === 'ADMIN') return 'Quản trị viên';
+        if (normalized === 'MODERATOR') return 'Điều hành viên';
+        if (normalized === 'USER') return 'Thành viên';
+        return normalized || 'Thành viên';
+    };
+
+    const resolveAvatarPresentation = (displayName, avatarUrl, seed, options = {}) => {
         const safeName = String(displayName || '').trim();
         const fallbackInitial = window.SVPAvatar?.initial ? window.SVPAvatar.initial(safeName) : (safeName.charAt(0) || 'U').toUpperCase();
         const palette = window.SVPAvatar?.palette ? window.SVPAvatar.palette(seed || safeName) : { bg: '#e2e8f0', fg: '#475569' };
         const safeAvatarUrl = options.allowObjectUrl
             ? String(avatarUrl || '').trim()
             : sanitizeUrl(avatarUrl);
-        if (safeAvatarUrl) {
-            targetEl.style.backgroundImage = `url('${safeAvatarUrl.replace(/'/g, "\\'")}')`;
+        return {
+            text: fallbackInitial,
+            bg: palette.bg,
+            fg: palette.fg,
+            url: safeAvatarUrl
+        };
+    };
+
+    const renderAvatar = (targetEl, displayName, avatarUrl, seed, options = {}) => {
+        const avatar = resolveAvatarPresentation(displayName, avatarUrl, seed, options);
+        if (avatar.url) {
+            targetEl.style.backgroundImage = `url('${avatar.url.replace(/'/g, "\\'")}')`;
             targetEl.style.backgroundColor = '#e2e8f0';
             targetEl.textContent = '';
             targetEl.style.color = '#fff';
         } else {
             targetEl.style.backgroundImage = '';
-            targetEl.style.backgroundColor = palette.bg;
-            targetEl.textContent = fallbackInitial;
-            targetEl.style.color = palette.fg;
+            targetEl.style.backgroundColor = avatar.bg;
+            targetEl.textContent = avatar.text;
+            targetEl.style.color = avatar.fg;
         }
+    };
+
+    const renderAvatarMarkup = (displayName, avatarUrl, seed) => {
+        const avatar = resolveAvatarPresentation(displayName, avatarUrl, seed);
+        if (avatar.url) {
+            return `<div class="sv-profile-avatar" style="background-image:url('${escapeHtml(avatar.url)}');background-color:#e2e8f0;color:#fff;"></div>`;
+        }
+        return `<div class="sv-profile-avatar" style="background-color:${escapeHtml(avatar.bg)};color:${escapeHtml(avatar.fg)};">${escapeHtml(avatar.text)}</div>`;
     };
 
     const fetchMe = async () => {
@@ -378,7 +439,7 @@
         } else if (userId) {
             params.set('userId', userId);
         }
-        params.set('limit', '12');
+        params.set('limit', String(PROFILE_LIST_LIMIT));
         const response = await fetch(`${API_BASE_URL}/users/espace?${params.toString()}`, {
             headers: {
                 Accept: 'application/json',
@@ -506,37 +567,82 @@
     };
 
     const renderBlogList = () => {
-        const articles = Array.isArray(space?.articles) ? space.articles : [];
-        if (articles.length === 0) {
+        const posts = Array.isArray(space?.posts)
+            ? space.posts
+            : (Array.isArray(space?.articles) ? space.articles : []);
+        const totalPosts = Number(space?.stats?.postCount ?? space?.stats?.blogCount ?? posts.length ?? 0);
+        const hiddenCount = Math.max(0, totalPosts - posts.length);
+        if (posts.length === 0) {
             const cta = isSelf
-                ? `<a class="btn btn-primary mt-3" href="${BLOG_EDITOR_HREF}">Viết blog đầu tiên</a>`
+                ? `<a class="btn btn-primary mt-3" href="${ARTICLE_EDITOR_HREF}">Tạo bài viết đầu tiên</a>`
                 : '';
-            blogListEl.innerHTML = `<div class="sv-profile-empty">Chưa có blog nào được xuất bản.${cta}</div>`;
+            blogListEl.innerHTML = `<div class="sv-profile-empty">Chưa có bài viết nào được xuất bản.${cta}</div>`;
             return;
         }
 
-        blogListEl.innerHTML = articles.map((item) => {
+        const note = hiddenCount > 0
+            ? `<div class="sv-profile-list-note">Hiển thị ${posts.length.toLocaleString('vi-VN')} bài viết mới nhất trên trang này.</div>`
+            : '';
+
+        blogListEl.innerHTML = note + posts.map((item) => {
             const detailHref = buildArticleHref(item.postId, item.title);
             const coverUrl = sanitizeUrl(item.coverImageUrl);
             const coverNode = coverUrl
                 ? `<a class="sv-profile-blog-cover" href="${detailHref}" style="background-image:url('${escapeHtml(coverUrl)}')"></a>`
                 : '';
+            const isBlogPost = Boolean(item.isBlog ?? item.is_blog ?? true);
+            const typeLabel = isBlogPost ? 'Blog' : 'Bài viết';
+            const typeIcon = isBlogPost ? 'fa-solid fa-feather-pointed' : 'fa-regular fa-newspaper';
             return `
                 <article class="sv-profile-blog-card">
                     ${coverNode}
                     <div class="sv-profile-blog-body">
                         <div class="sv-profile-blog-top">
+                            <span class="sv-pill"><i class="${typeIcon}"></i>${typeLabel}</span>
                             <span class="sv-pill"><i class="fa-regular fa-folder-open"></i>${escapeHtml(getCategoryName(item.categoryId))}</span>
                             <span class="sv-meta">${escapeHtml(formatDate(item.createdAt))}</span>
                         </div>
                         <div class="sv-profile-blog-title">
-                            <a href="${detailHref}">${escapeHtml(item.title || 'Bài blog mới')}</a>
+                            <a href="${detailHref}">${escapeHtml(item.title || 'Bài viết mới')}</a>
                         </div>
                         <div class="sv-profile-blog-excerpt">${escapeHtml(excerptText(item.contentHtml, 240) || 'Bài viết đang được cập nhật nội dung.')}</div>
                         <div class="sv-profile-blog-meta">
                             <span><strong>${Number(item.viewCount || 0).toLocaleString('vi-VN')}</strong> lượt xem</span>
                             <span><strong>${Number(item.likeCount || 0).toLocaleString('vi-VN')}</strong> thích</span>
                             <span><strong>${Number(item.commentCount || 0).toLocaleString('vi-VN')}</strong> bình luận</span>
+                        </div>
+                    </div>
+                </article>
+            `;
+        }).join('');
+    };
+
+    const renderFollowerList = () => {
+        const followers = Array.isArray(space?.followers) ? space.followers : [];
+        const totalFollowers = Number(space?.stats?.followerCount ?? followers.length ?? 0);
+        const hiddenCount = Math.max(0, totalFollowers - followers.length);
+        if (followers.length === 0) {
+            followerListEl.innerHTML = '<div class="sv-profile-empty">Chưa có người theo dõi nào.</div>';
+            return;
+        }
+
+        const note = hiddenCount > 0
+            ? `<div class="sv-profile-list-note">Hiển thị ${followers.length.toLocaleString('vi-VN')} người theo dõi mới nhất trên trang này.</div>`
+            : '';
+
+        followerListEl.innerHTML = note + followers.map((item) => {
+            const displayName = item.displayName || item.nickname || 'Thành viên';
+            const profileHref = buildProfileHref(item.nickname, item.userId, item.authUserId);
+            const avatarMarkup = renderAvatarMarkup(displayName, item.avatarUrl, item.nickname || item.authUserId || item.userId);
+            return `
+                <article class="sv-profile-follower-card">
+                    ${avatarMarkup}
+                    <div class="sv-profile-follower-main">
+                        <a class="sv-profile-follower-name" href="${profileHref}">${escapeHtml(displayName)}</a>
+                        <div class="sv-profile-follower-nickname">${item.nickname ? `@${escapeHtml(item.nickname)}` : ''}</div>
+                        <div class="sv-profile-follower-meta">
+                            <span>${escapeHtml(formatRoleLabel(item.role))}</span>
+                            <span>Theo dõi từ ${escapeHtml(formatDate(item.followedAt))}</span>
                         </div>
                     </div>
                 </article>
@@ -584,10 +690,13 @@
         nameEl.textContent = displayName;
         nicknameEl.textContent = '';
         nicknameEl.classList.add('d-none');
-        roleEl.textContent = profile.role ? `Vai trò: ${profile.role}` : '';
-        blogCountEl.textContent = Number(space?.stats?.blogCount || 0).toLocaleString('vi-VN');
+        roleEl.textContent = formatRoleLabel(profile.role);
+        joinedAtEl.textContent = formatDate(profile.createdAt);
+        lastActiveEl.textContent = profile.lastActiveAt ? formatDateTime(profile.lastActiveAt) : 'Chưa có dữ liệu';
+        postCountEl.textContent = Number(space?.stats?.postCount ?? space?.stats?.blogCount ?? 0).toLocaleString('vi-VN');
         followerCountEl.textContent = Number(space?.stats?.followerCount || 0).toLocaleString('vi-VN');
         emailEl.textContent = isSelf && me?.email ? me.email : '';
+        emailRowEl.classList.toggle('d-none', !(isSelf && me?.email));
         panelHeadEl.classList.add('d-none');
         headlineEl.classList.add('d-none');
         panelTitleEl.textContent = '';
@@ -616,7 +725,7 @@
             }
         }
 
-        tabsEl.classList.toggle('d-none', !isSelf);
+        tabsEl.classList.remove('d-none');
         manageTabEl.classList.toggle('d-none', !isSelf);
         if (!isSelf && activeTab === 'manage') {
             activeTab = 'blog';
@@ -624,6 +733,7 @@
         setActiveTab(activeTab);
         renderActions();
         renderBlogList();
+        renderFollowerList();
     };
 
     const updatePreview = () => {
@@ -687,6 +797,7 @@
             setSpaceNote('Hãy mở link profile của một thành viên hoặc đăng nhập để vào espace của bạn.');
             setEditable(false);
             blogListEl.innerHTML = '<div class="sv-profile-empty">Không có espace nào để hiển thị.</div>';
+            followerListEl.innerHTML = '<div class="sv-profile-empty">Không có danh sách người theo dõi để hiển thị.</div>';
             return;
         }
 
@@ -696,7 +807,8 @@
             setStatus(error.message || 'Không thể tải espace.', 'error');
             setSpaceNote('Không thể tải espace thành viên vào lúc này.');
             setEditable(false);
-            blogListEl.innerHTML = '<div class="sv-profile-empty">Không thể tải danh sách blog.</div>';
+            blogListEl.innerHTML = '<div class="sv-profile-empty">Không thể tải danh sách bài viết.</div>';
+            followerListEl.innerHTML = '<div class="sv-profile-empty">Không thể tải danh sách người theo dõi.</div>';
             return;
         }
 
@@ -715,9 +827,18 @@
     blogTabEl.addEventListener('click', () => {
         setActiveTab('blog');
     });
+    followerTabEl.addEventListener('click', () => {
+        setActiveTab('followers');
+    });
     manageTabEl.addEventListener('click', () => {
         if (!isSelf) return;
         setActiveTab('manage');
+    });
+    postKpiEl.addEventListener('click', () => {
+        setActiveTab('blog');
+    });
+    followerKpiEl.addEventListener('click', () => {
+        setActiveTab('followers');
     });
     avatarFileInput.addEventListener('change', () => {
         const file = avatarFileInput.files && avatarFileInput.files[0] ? avatarFileInput.files[0] : null;
@@ -827,7 +948,8 @@
         setStatus('Không thể tải hồ sơ thành viên.', 'error');
         setSpaceNote('Không thể tải espace thành viên vào lúc này.');
         setEditable(false);
-        blogListEl.innerHTML = '<div class="sv-profile-empty">Không thể tải danh sách blog.</div>';
+        blogListEl.innerHTML = '<div class="sv-profile-empty">Không thể tải danh sách bài viết.</div>';
+        followerListEl.innerHTML = '<div class="sv-profile-empty">Không thể tải danh sách người theo dõi.</div>';
     });
 
     if (typeof window.addEventListener === 'function') {

@@ -52,6 +52,39 @@
             color: var(--sv-muted);
             font-size: .9rem;
         }
+        .sv-profile-meta-list {
+            display: grid;
+            gap: .4rem;
+            width: 100%;
+            max-width: 336px;
+            margin-top: .15rem;
+            text-align: left;
+        }
+        .sv-profile-meta-row {
+            display: grid;
+            grid-template-columns: 112px minmax(0, 1fr);
+            gap: .5rem;
+            align-items: center;
+        }
+        .sv-profile-meta-label {
+            color: var(--sv-muted);
+            font-size: .82rem;
+            font-weight: 700;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+        .sv-profile-meta-value {
+            color: #0f172a;
+            font-size: .84rem;
+            font-weight: 600;
+            min-width: 0;
+            line-height: 1.2;
+            white-space: nowrap;
+        }
+        #profile-email-row .sv-profile-meta-value {
+            white-space: normal;
+            overflow-wrap: anywhere;
+        }
         .sv-profile-card__actions {
             display: flex;
             flex-wrap: wrap;
@@ -72,6 +105,22 @@
             border-radius: 14px;
             background: linear-gradient(135deg, #eff6ff, #f8fafc);
             border: 1px solid #dbeafe;
+            text-align: center;
+        }
+        .sv-profile-kpi--button {
+            appearance: none;
+            width: 100%;
+            cursor: pointer;
+            transition: transform .15s ease, box-shadow .15s ease, border-color .15s ease;
+        }
+        .sv-profile-kpi--button:hover {
+            border-color: #93c5fd;
+            box-shadow: 0 14px 28px rgba(37, 99, 235, 0.12);
+            transform: translateY(-1px);
+        }
+        .sv-profile-kpi--button.is-active {
+            border-color: #2563eb;
+            box-shadow: 0 16px 32px rgba(37, 99, 235, 0.18);
         }
         .sv-profile-kpi strong {
             display: block;
@@ -215,6 +264,14 @@
             background: #f8fafc;
             color: var(--sv-muted);
         }
+        .sv-profile-list-note {
+            padding: .85rem 1rem;
+            border-radius: 14px;
+            background: #eff6ff;
+            border: 1px solid #dbeafe;
+            color: #1e40af;
+            font-size: .92rem;
+        }
         .sv-profile-tabs {
             display: flex;
             flex-wrap: wrap;
@@ -242,6 +299,74 @@
         }
         .sv-profile-tab-panel.d-none {
             display: none !important;
+        }
+        .sv-profile-follower-list {
+            display: grid;
+            gap: .9rem;
+        }
+        .sv-profile-follower-card {
+            display: flex;
+            align-items: center;
+            gap: .85rem;
+            padding: .95rem 1rem;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            background: #fff;
+            box-shadow: 0 12px 28px rgba(15, 23, 42, 0.05);
+        }
+        .sv-profile-follower-card .sv-profile-avatar {
+            width: 56px;
+            height: 56px;
+            font-size: 1.25rem;
+            flex-shrink: 0;
+        }
+        .sv-profile-follower-main {
+            min-width: 0;
+            flex: 1 1 auto;
+        }
+        .sv-profile-follower-name {
+            display: inline-flex;
+            align-items: center;
+            gap: .45rem;
+            color: #0f172a;
+            font-family: var(--sv-title-font);
+            font-size: 1rem;
+            font-weight: 800;
+            text-decoration: none;
+        }
+        .sv-profile-follower-name:hover {
+            color: #1d4ed8;
+        }
+        .sv-profile-follower-nickname {
+            color: var(--sv-muted);
+            font-size: .9rem;
+            margin-top: .15rem;
+        }
+        .sv-profile-follower-meta {
+            display: flex;
+            flex-wrap: wrap;
+            gap: .5rem .8rem;
+            margin-top: .4rem;
+            color: var(--sv-muted);
+            font-size: .85rem;
+        }
+        @media (max-width: 575.98px) {
+            .sv-profile-meta-list {
+                max-width: 292px;
+            }
+            .sv-profile-meta-row {
+                grid-template-columns: 104px minmax(0, 1fr);
+                gap: .4rem;
+            }
+            .sv-profile-meta-label {
+                font-size: .74rem;
+            }
+            .sv-profile-meta-value {
+                font-size: .76rem;
+            }
+            .sv-profile-follower-card {
+                align-items: flex-start;
+            }
         }
     </style>
 </head>
@@ -290,17 +415,33 @@
                     <div class="sv-profile-avatar" id="profile-avatar">?</div>
                     <div class="sv-profile-name" id="profile-display-name">Đang tải...</div>
                     <div class="sv-profile-nickname" id="profile-nickname"></div>
-                    <div class="sv-profile-meta" id="profile-role"></div>
-                    <div class="sv-profile-meta" id="profile-email"></div>
-                    <div class="sv-profile-kpis">
-                        <div class="sv-profile-kpi">
-                            <strong id="profile-blog-count">0</strong>
-                            <span>Bài blog</span>
+                    <div class="sv-profile-meta-list">
+                        <div class="sv-profile-meta-row">
+                            <span class="sv-profile-meta-label">Vai trò</span>
+                            <span class="sv-profile-meta-value" id="profile-role"></span>
                         </div>
-                        <div class="sv-profile-kpi">
+                        <div class="sv-profile-meta-row">
+                            <span class="sv-profile-meta-label">Ngày tham gia</span>
+                            <span class="sv-profile-meta-value" id="profile-joined-at"></span>
+                        </div>
+                        <div class="sv-profile-meta-row">
+                            <span class="sv-profile-meta-label">Lần cuối hoạt động</span>
+                            <span class="sv-profile-meta-value" id="profile-last-active"></span>
+                        </div>
+                        <div class="sv-profile-meta-row d-none" id="profile-email-row">
+                            <span class="sv-profile-meta-label">Email</span>
+                            <span class="sv-profile-meta-value" id="profile-email"></span>
+                        </div>
+                    </div>
+                    <div class="sv-profile-kpis">
+                        <button id="profile-kpi-posts" class="sv-profile-kpi sv-profile-kpi--button is-active" type="button">
+                            <strong id="profile-post-count">0</strong>
+                            <span>Bài viết</span>
+                        </button>
+                        <button id="profile-kpi-followers" class="sv-profile-kpi sv-profile-kpi--button" type="button">
                             <strong id="profile-follower-count">0</strong>
                             <span>Người theo dõi</span>
-                        </div>
+                        </button>
                     </div>
                     <div id="profile-message-actions" class="sv-profile-card__actions d-none">
                         <a id="profile-write-link" class="btn btn-primary d-none" href="create_new_article.html?mode=blog">Viết blog mới</a>
@@ -332,7 +473,18 @@
                             aria-selected="true"
                             aria-controls="profile-panel-blog"
                         >
-                            Blog
+                            Bài viết
+                        </button>
+                        <button
+                            id="profile-tab-followers"
+                            class="sv-profile-tab"
+                            type="button"
+                            data-profile-tab="followers"
+                            role="tab"
+                            aria-selected="false"
+                            aria-controls="profile-panel-followers"
+                        >
+                            Người theo dõi
                         </button>
                         <button
                             id="profile-tab-manage"
@@ -348,7 +500,12 @@
                     </div>
                     <div id="profile-panel-blog" class="sv-profile-tab-panel" data-profile-panel="blog" role="tabpanel" aria-labelledby="profile-tab-blog">
                         <div id="profile-blog-list" class="sv-profile-blog-list">
-                            <div class="sv-profile-empty">Đang tải danh sách blog...</div>
+                            <div class="sv-profile-empty">Đang tải danh sách bài viết...</div>
+                        </div>
+                    </div>
+                    <div id="profile-panel-followers" class="sv-profile-tab-panel d-none" data-profile-panel="followers" role="tabpanel" aria-labelledby="profile-tab-followers">
+                        <div id="profile-follower-list" class="sv-profile-follower-list">
+                            <div class="sv-profile-empty">Đang tải danh sách người theo dõi...</div>
                         </div>
                     </div>
                     <div id="profile-panel-manage" class="sv-profile-tab-panel d-none" data-profile-panel="manage" role="tabpanel" aria-labelledby="profile-tab-manage">

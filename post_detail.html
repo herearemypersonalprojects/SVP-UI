@@ -70,12 +70,21 @@
         .pd-author-bar {
             display: flex;
             align-items: center;
+            flex-wrap: nowrap;
             gap: .85rem;
             padding: .85rem 1rem;
             background: #f8fafc;
             border: 1px solid #e5e7eb;
             border-radius: 12px;
             margin-bottom: 1.5rem;
+            min-width: 0;
+        }
+        .pd-author-identity {
+            display: flex;
+            align-items: center;
+            gap: .75rem;
+            min-width: 0;
+            flex: 1 1 auto;
         }
         .pd-author-avatar {
             width: 48px;
@@ -102,9 +111,29 @@
         .pd-author-link:hover .pd-author-name {
             text-decoration: underline;
         }
+        .pd-author-main {
+            display: flex;
+            flex-direction: column;
+            gap: .12rem;
+            min-width: 0;
+            flex: 1 1 auto;
+        }
         .pd-author-meta {
             color: #64748b;
             font-size: .84rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .pd-author-actions {
+            display: flex;
+            align-items: center;
+            gap: .5rem;
+            flex-wrap: nowrap;
+            white-space: nowrap;
+            min-width: 0;
+            margin-left: auto;
+            flex: 0 0 auto;
         }
         .pd-stat {
             display: inline-flex;
@@ -119,6 +148,19 @@
             font-weight: 600;
             line-height: 1;
             text-decoration: none;
+            flex-shrink: 0;
+        }
+        #pd-view-count {
+            min-width: 0;
+        }
+        .pd-author-name,
+        .pd-view-count__number {
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .pd-view-count__label {
+            white-space: nowrap;
         }
         .pd-stat--button {
             appearance: none;
@@ -176,18 +218,86 @@
             display: inline;
         }
         @media (max-width: 767.98px) {
+            .pd-author-bar {
+                gap: .55rem;
+                padding: .68rem .78rem;
+            }
+            .pd-author-identity {
+                gap: .55rem;
+            }
+            .pd-author-avatar {
+                width: 40px;
+                height: 40px;
+                font-size: .98rem;
+            }
+            .pd-author-actions {
+                gap: .3rem;
+            }
+            .pd-author-name {
+                font-size: .92rem;
+            }
+            .pd-author-meta {
+                font-size: .72rem;
+            }
+            .pd-stat {
+                gap: .22rem;
+                padding: .28rem .46rem;
+                font-size: .67rem;
+            }
+            .pd-view-count__label {
+                display: none;
+            }
+            .pd-stat--icon,
             .pd-stat--copy {
                 justify-content: center;
-                width: 2.35rem;
-                height: 2.35rem;
+                width: 1.74rem;
+                height: 1.74rem;
                 padding: 0;
                 border-radius: 50%;
             }
             .pd-stat--copy .pd-stat__label {
                 display: none;
             }
+            .pd-stat--icon i,
             .pd-stat--copy i {
-                font-size: .95rem;
+                font-size: .78rem;
+            }
+        }
+        @media (max-width: 479.98px) {
+            .pd-author-bar {
+                gap: .45rem;
+                padding: .58rem .68rem;
+            }
+            .pd-author-identity {
+                gap: .45rem;
+            }
+            .pd-author-avatar {
+                width: 34px;
+                height: 34px;
+                font-size: .84rem;
+            }
+            .pd-author-name {
+                font-size: .82rem;
+            }
+            .pd-author-meta {
+                display: none;
+            }
+            .pd-author-actions {
+                gap: .22rem;
+            }
+            .pd-stat {
+                gap: .18rem;
+                padding: .22rem .38rem;
+                font-size: .6rem;
+            }
+            .pd-stat--icon,
+            .pd-stat--copy {
+                width: 1.58rem;
+                height: 1.58rem;
+            }
+            .pd-stat--icon i,
+            .pd-stat--copy i {
+                font-size: .72rem;
             }
         }
 
@@ -528,16 +638,18 @@
 
             <!-- Author bar -->
             <div class="pd-author-bar">
-                <a class="pd-author-link" id="pd-author-link" href="profile.html">
-                    <div class="pd-author-avatar" id="pd-author-avatar">?</div>
-                </a>
-                <div>
-                    <a class="pd-author-link" id="pd-author-name-link" href="profile.html">
-                        <div class="pd-author-name" id="pd-author-name">Đang tải...</div>
+                <div class="pd-author-identity">
+                    <a class="pd-author-link" id="pd-author-link" href="profile.html">
+                        <div class="pd-author-avatar" id="pd-author-avatar">?</div>
                     </a>
-                    <div class="pd-author-meta" id="pd-author-meta"></div>
+                    <div class="pd-author-main">
+                        <a class="pd-author-link" id="pd-author-name-link" href="profile.html">
+                            <div class="pd-author-name" id="pd-author-name">Đang tải...</div>
+                        </a>
+                        <div class="pd-author-meta" id="pd-author-meta"></div>
+                    </div>
                 </div>
-                <div class="ms-auto d-flex gap-2 flex-wrap align-items-center">
+                <div class="pd-author-actions">
                     <span class="pd-stat" id="pd-view-count"><i class="fa-regular fa-eye"></i>--</span>
                     <a class="pd-stat pd-stat--action pd-stat--icon pd-stat--fb" id="pd-share-fb-inline" href="#" target="_blank" rel="noopener noreferrer" aria-label="Chia sẻ lên Facebook" title="Chia sẻ lên Facebook">
                         <i class="fa-brands fa-facebook-f" aria-hidden="true"></i>
@@ -1671,7 +1783,7 @@
             Number.isFinite(postViews) ? postViews : 0,
             Number.isFinite(localViews) ? localViews : 0
         );
-        viewCountEl.innerHTML = `<i class="fa-regular fa-eye"></i>${totalViews.toLocaleString('vi-VN')} lượt xem`;
+        viewCountEl.innerHTML = `<i class="fa-regular fa-eye"></i><span class="pd-view-count__number">${totalViews.toLocaleString('vi-VN')}</span><span class="pd-view-count__label">lượt xem</span>`;
     };
 
     const renderPostHeader = (post) => {

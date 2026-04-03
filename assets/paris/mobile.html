@@ -2,63 +2,63 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <title>Paris Discovery by Lozu – Nearby Places & Heritage Map (Mobile)</title>
+  <title>Khám Phá Paris – Bản Đồ Di Sản & Điểm Gần Bạn (Di động) | SVP</title>
 
-  <meta property="og:image" content="https://lozu.fr/icons/preview.png" />
+  <meta property="og:image" content="https://svpforum.fr/icons/preview.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
 
   <!-- Description -->
   <meta name="description"
-        content="Discover nearby places, landmarks, and cultural heritage around you in Paris. Optimized for mobile users with GPS-based exploration." />
+        content="Khám phá các địa điểm di sản, danh lam thắng cảnh và văn hoá quanh bạn tại Paris. Tối ưu cho điện thoại với khám phá dựa trên GPS." />
 
   <!-- Keywords -->
   <meta name="keywords"
-        content="Paris mobile map, nearby places Paris, heritage map mobile, Paris Discovery mobile, Lozu" />
+        content="bản đồ Paris di động, điểm gần bạn Paris, bản đồ di sản, Khám Phá Paris, SVP, du lịch Paris" />
 
   <!-- Canonical -->
-  <link rel="canonical" href="https://lozu.fr/mobile.html" />
+  <link rel="canonical" href="https://svpforum.fr/mobile.html" />
 
   <!-- Hreflang -->
-  <link rel="alternate" hreflang="x-default" href="https://lozu.fr/mobile.html" />
-  <link rel="alternate" hreflang="vi" href="https://lozu.fr/mobile.html?lang=vi" />
-  <link rel="alternate" hreflang="en" href="https://lozu.fr/mobile.html?lang=en" />
-  <link rel="alternate" hreflang="fr" href="https://lozu.fr/mobile.html?lang=fr" />
+  <link rel="alternate" hreflang="x-default" href="https://svpforum.fr/mobile.html" />
+  <link rel="alternate" hreflang="vi" href="https://svpforum.fr/mobile.html?lang=vi" />
+  <link rel="alternate" hreflang="en" href="https://svpforum.fr/mobile.html?lang=en" />
+  <link rel="alternate" hreflang="fr" href="https://svpforum.fr/mobile.html?lang=fr" />
 
   <!-- Open Graph -->
-  <meta property="og:title" content="Paris Discovery by Lozu – Mobile Heritage & Nearby Places" />
+  <meta property="og:title" content="Khám Phá Paris – Bản Đồ Di Sản Di Động | SVP" />
   <meta property="og:description"
-        content="A fast and intuitive mobile-first map to explore nearby heritage sites and cultural landmarks in Paris." />
+        content="Bản đồ di động nhanh và trực quan để khám phá các di sản và danh lam thắng cảnh tại Paris." />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://lozu.fr/mobile.html" />
-  <meta property="og:image" content="https://lozu.fr/icons/castle_logo_512.png" />
+  <meta property="og:url" content="https://svpforum.fr/mobile.html" />
+  <meta property="og:image" content="https://svpforum.fr/icons/castle_logo_512.png" />
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
   <meta name="twitter:title"
-        content="Lozu Mobile – Paris Discovery Map" />
+        content="SVP Di Động – Khám Phá Paris" />
   <meta name="twitter:description"
-        content="Discover nearby places and cultural heritage in Paris with Lozu Mobile Mode." />
-  <meta name="twitter:image" content="https://lozu.fr/icons/castle_logo_512.png" />
+        content="Khám phá các địa điểm di sản và văn hoá tại Paris với chế độ di động SVP." />
+  <meta name="twitter:image" content="https://svpforum.fr/icons/castle_logo_512.png" />
 
   <!-- JSON-LD -->
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebPage",
-      "name": "Paris Discovery – Mobile Mode",
-      "url": "https://lozu.fr/mobile.html",
-      "description": "Mobile-first heritage explorer for Paris: nearby places, landmarks, and cultural discovery.",
+      "name": "Khám Phá Paris – Chế Độ Di Động",
+      "url": "https://svpforum.fr/mobile.html",
+      "description": "Khám phá di sản Paris trên di động: các địa điểm gần bạn, danh lam thắng cảnh và văn hoá.",
       "inLanguage": ["vi", "en", "fr"]
     }
   </script>
 
   <!-- GA dùng chung -->
-  <script src="ga-lozu.js"></script>
+  <script src="ga-SVP.js"></script>
   <script>
     window.addEventListener('load', function () {
-      GA_LOZU && GA_LOZU.initPage({
-        title: 'Lozu – Mobile Mode',
+      GA_SVP && GA_SVP.initPage({
+        title: 'SVP – Chế Độ Di Động',
         path: '/mobile',
         mode: 'mobile'
       });
@@ -66,22 +66,22 @@
 
     // log click POI trên mobile
     function onPoiClick(poi) {
-      if (window.GA_LOZU) {
-        GA_LOZU.trackPoiClick('mobile', poi);
+      if (window.GA_SVP) {
+        GA_SVP.trackPoiClick('mobile', poi);
       }
     }
 
     // log thay đổi bán kính
     function onChangeRadius(radiusKm) {
-      if (window.GA_LOZU) {
-        GA_LOZU.trackRadiusChange('mobile', radiusKm);
+      if (window.GA_SVP) {
+        GA_SVP.trackRadiusChange('mobile', radiusKm);
       }
     }
 
     // log thay đổi priority
     function onChangePriority(priority) {
-      if (window.GA_LOZU) {
-        GA_LOZU.trackPriorityChange('mobile', priority);
+      if (window.GA_SVP) {
+        GA_SVP.trackPriorityChange('mobile', priority);
       }
     }
 
@@ -628,7 +628,7 @@ main {
   </div>
   <div class="controls">
     <div class="lang-switch">
-      <button id="lang-toggle" class="lang-toggle" aria-label="Change language">🇬🇧</button>
+      <button id="lang-toggle" class="lang-toggle" aria-label="Đổi ngôn ngữ">🇻🇳</button>
       <div id="lang-menu" class="lang-menu"></div>
     </div>
     <a class="home-link" href="../../index.html" aria-label="Quay về trang chủ SVP" title="Quay về trang chủ SVP">🏠 SVP</a>
@@ -659,12 +659,12 @@ main {
     <aside class="sidebar">
       <div class="sidebar-header">
         <div class="sidebar-header-top">
-          <span id="nearby-title">Nearby places</span>
+          <span id="nearby-title">Điểm gần bạn</span>
         </div>
 
         <div class="filter-row">
           <div class="radius-row">
-            <label id="radius-label" for="radius">Radius:</label>
+            <label id="radius-label" for="radius">Bán kính:</label>
             <select id="radius" class="radius-select">
               <option value="0.5">500 m</option>
               <option value="1" selected>1 km</option>
@@ -675,15 +675,15 @@ main {
           </div>
 
           <div class="priority-row">
-            <label id="priority-label" for="priority-filter">Priority:</label>
+            <label id="priority-label" for="priority-filter">Ưu tiên:</label>
             <select id="priority-filter" class="priority-select">
-              <option value="topscore">Most famous</option>
-              <option value="nearest">Nearest</option>
+              <option value="topscore">Nổi tiếng nhất</option>
+              <option value="nearest">Gần nhất</option>
             </select>
           </div>
 
           <div class="count-row">
-            <label id="count-label" for="max-points">Places:</label>
+            <label id="count-label" for="max-points">Số điểm:</label>
             <select id="max-points" class="count-select">
               <option value="5">5</option>
               <option value="10">10</option>
@@ -784,9 +784,9 @@ main {
   let lastCenterForNearby = null;
 
   const languageConfigs = [
+    { id: "vi", key: "story_vn",         flag: "🇻🇳", label: "Tiếng Việt",    ttsLang: "vi-VN" },
     { id: "en", key: "story_en",         flag: "🇬🇧", label: "English",       ttsLang: "en-US" },
     { id: "fr", key: "story",            flag: "🇫🇷", label: "Français",      ttsLang: "fr-FR" },
-    { id: "vi", key: "story_vn",         flag: "🇻🇳", label: "Tiếng Việt",    ttsLang: "vi-VN" },
     { id: "pt", key: "story_portuguese", flag: "🇵🇹", label: "Português",     ttsLang: "pt-PT" },
     { id: "ar", key: "story_arabic",     flag: "🇸🇦", label: "العربية",       ttsLang: "ar-SA" },
     { id: "hi", key: "story_hindi",      flag: "🇮🇳", label: "हिन्दी",        ttsLang: "hi-IN" },

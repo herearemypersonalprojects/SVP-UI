@@ -2,78 +2,78 @@
 <html lang="vi">
 <head>
   <meta charset="UTF-8" />
-  <title>Paris Discovery by Lozu – Heritage Map Explorer (Web Version)</title>
+  <title>Khám Phá Paris – Bản Đồ Di Sản Tương Tác (Web) | SVP</title>
 
-  <meta property="og:image" content="https://lozu.fr/icons/preview.png" />
+  <meta property="og:image" content="https://svpforum.fr/icons/preview.png" />
   <meta property="og:image:width" content="1200" />
   <meta property="og:image:height" content="630" />
 
   <!-- Description -->
   <meta name="description"
-        content="Explore Paris through an interactive heritage map designed for desktop. Discover landmarks, cultural sites, and nearby places with Lozu Web Mode." />
+        content="Khám phá Paris qua bản đồ di sản tương tác dành cho máy tính. Tìm hiểu danh lam thắng cảnh, di tích văn hoá và các điểm gần bạn với SVP." />
 
   <!-- Keywords -->
   <meta name="keywords"
-        content="Paris map, heritage map, Paris Discovery, Lozu web, cultural sites Paris, nearby places, Paris landmarks" />
+        content="Paris map, heritage map, Paris Discovery, SVP web, cultural sites Paris, nearby places, Paris landmarks" />
 
   <!-- Canonical -->
-  <link rel="canonical" href="https://lozu.fr/web.html" />
+  <link rel="canonical" href="https://svpforum.fr/web.html" />
 
   <!-- Hreflang -->
-  <link rel="alternate" hreflang="x-default" href="https://lozu.fr/web.html" />
-  <link rel="alternate" hreflang="vi" href="https://lozu.fr/web.html?lang=vi" />
-  <link rel="alternate" hreflang="en" href="https://lozu.fr/web.html?lang=en" />
-  <link rel="alternate" hreflang="fr" href="https://lozu.fr/web.html?lang=fr" />
+  <link rel="alternate" hreflang="x-default" href="https://svpforum.fr/web.html" />
+  <link rel="alternate" hreflang="vi" href="https://svpforum.fr/web.html?lang=vi" />
+  <link rel="alternate" hreflang="en" href="https://svpforum.fr/web.html?lang=en" />
+  <link rel="alternate" hreflang="fr" href="https://svpforum.fr/web.html?lang=fr" />
 
   <!-- Open Graph -->
-  <meta property="og:title" content="Paris Discovery by Lozu – Heritage Map Explorer (Web)" />
+  <meta property="og:title" content="Khám Phá Paris – Bản Đồ Di Sản Tương Tác (Web) | SVP" />
   <meta property="og:description"
-        content="A detailed heritage map of Paris optimized for desktop. Explore monuments, cultural sites, and nearby places with Lozu Web Mode." />
+        content="Bản đồ di sản Paris chi tiết, tối ưu cho máy tính. Khám phá các công trình, di tích văn hoá và điểm gần bạn với SVP." />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://lozu.fr/web.html" />
-  <meta property="og:image" content="https://lozu.fr/icons/castle_logo_512.png" />
+  <meta property="og:url" content="https://svpforum.fr/web.html" />
+  <meta property="og:image" content="https://svpforum.fr/icons/castle_logo_512.png" />
 
   <!-- Twitter -->
   <meta name="twitter:card" content="summary_large_image" />
-  <meta name="twitter:title" content="Paris Discovery by Lozu – Web Heritage Map" />
+  <meta name="twitter:title" content="Khám Phá Paris – Bản Đồ Di Sản Web | SVP" />
   <meta name="twitter:description"
-        content="Explore Paris heritage and nearby places through the Lozu Web Map." />
-  <meta name="twitter:image" content="https://lozu.fr/icons/castle_logo_512.png" />
+        content="Khám phá di sản và các điểm gần bạn tại Paris qua bản đồ SVP Web." />
+  <meta name="twitter:image" content="https://svpforum.fr/icons/castle_logo_512.png" />
 
   <!-- JSON-LD -->
   <script type="application/ld+json">
     {
       "@context": "https://schema.org",
       "@type": "WebPage",
-      "name": "Paris Discovery – Web Mode",
-      "url": "https://lozu.fr/web.html",
-      "description": "Interactive heritage map of Paris optimized for desktop: monuments, cultural sites, and nearby places.",
+      "name": "Khám Phá Paris – Chế Độ Web",
+      "url": "https://svpforum.fr/web.html",
+      "description": "Bản đồ di sản tương tác của Paris tối ưu cho máy tính: công trình, di tích văn hoá và các điểm gần bạn.",
       "inLanguage": ["vi", "en", "fr"]
     }
   </script>
 
 
   <!-- GA dùng chung -->
-  <script src="ga-lozu.js"></script>
+  <script src="ga-SVP.js"></script>
   <script>
     window.addEventListener('load', function () {
-      GA_LOZU && GA_LOZU.initPage({
-        title: 'Lozu – Web Mode',
+      GA_SVP && GA_SVP.initPage({
+        title: 'SVP – Chế Độ Web',
         path: '/web',
         mode: 'web'
       });
     });
 
     function onPoiClick(poi) {
-      GA_LOZU && GA_LOZU.trackPoiClick('web', poi);
+      GA_SVP && GA_SVP.trackPoiClick('web', poi);
     }
 
     function onChangeRadius(radiusKm) {
-      GA_LOZU && GA_LOZU.trackRadiusChange('web', radiusKm);
+      GA_SVP && GA_SVP.trackRadiusChange('web', radiusKm);
     }
 
     function onChangePriority(priority) {
-      GA_LOZU && GA_LOZU.trackPriorityChange('web', priority);
+      GA_SVP && GA_SVP.trackPriorityChange('web', priority);
     }
 
   </script>
@@ -623,12 +623,12 @@
   <aside class="sidebar">
     <div class="sidebar-header">
       <div class="sidebar-header-top">
-        <span id="nearby-title">Nearby places</span>
+        <span id="nearby-title">Điểm gần bạn</span>
       </div>
 
       <div class="filter-row">
         <div class="radius-row">
-          <label id="radius-label" for="radius">Radius:</label>
+          <label id="radius-label" for="radius">Bán kính:</label>
           <select id="radius" class="radius-select">
             <option value="0.5">500 m</option>
             <option value="1" selected>1 km</option>
@@ -647,7 +647,7 @@
         </div>
 
         <div class="count-row">
-          <label id="count-label" for="max-points">Places:</label>
+          <label id="count-label" for="max-points">Số điểm:</label>
           <select id="max-points" class="count-select">
             <option value="5">5</option>
             <option value="10">10</option>
@@ -659,7 +659,7 @@
 
     <ul id="poi-list" class="poi-list">
       <li id="empty-placeholder" class="empty">
-        Move the map or click “📍 My location” to see nearby heritage sites.
+        Di chuyển bản đồ hoặc bấm "📍 Vị trí của tôi" để xem các di sản gần bạn.
       </li>
     </ul>
   </aside>
@@ -815,7 +815,7 @@
     var params = new URLSearchParams(window.location.search);
     var langParam = (params.get("lang") || "").toLowerCase(); // "vi", "fr", ...
     if (!langParam) {
-      return languageConfigs[0]; // mặc định English
+      return languageConfigs[0]; // mặc định Tiếng Việt
     }
     var match = languageConfigs.find(function (cfg) {
       return cfg.id === langParam;

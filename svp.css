@@ -21,6 +21,22 @@
         .sv-brand{
             display:flex; align-items:center; gap:.75rem;
         }
+        .sv-brand__home{
+            display:flex;
+            align-items:center;
+            gap:.75rem;
+            min-width:0;
+            color:inherit;
+            text-decoration:none;
+        }
+        .sv-brand__home:hover .sv-brand__title h1{
+            color:var(--sv-primary-d);
+        }
+        .sv-brand__home:focus-visible{
+            outline:2px solid rgba(26,115,232,.28);
+            outline-offset:4px;
+            border-radius:10px;
+        }
         .sv-brand__logo{
             width:48px; height:48px; border-radius:8px;
             background:linear-gradient(135deg, var(--sv-accent), #ff7a59);
@@ -169,43 +185,22 @@
         .sv-search .fa-magnifying-glass{
             position:absolute; left:12px; top:50%; transform:translateY(-50%); color:#94a3b8;
         }
-        .sv-mobile-nav-summary{
-            display:none;
-            align-items:center;
-            justify-content:space-between;
-            gap:.75rem;
-            width:100%;
-        }
-        .sv-mobile-nav-summary__home{
-            min-width:0;
-            color:#0f172a;
-            font-size:.88rem;
-            font-weight:800;
-            letter-spacing:.06em;
-            text-transform:uppercase;
-            white-space:nowrap;
-            overflow:hidden;
-            text-overflow:ellipsis;
-            text-decoration:none;
-        }
-        .sv-mobile-nav-summary__home:hover{
-            color:var(--sv-primary);
-        }
         .sv-hamburger{
             display:none;
             align-items:center;
             justify-content:center;
-            min-width:48px;
-            height:40px;
-            padding:0 .95rem .12rem;
+            min-width:40px;
+            height:36px;
+            padding:0 .72rem .1rem;
             border:1px solid #cbd5e1;
             border-radius:999px;
             background:#fff;
             color:#0f172a;
             box-shadow:0 10px 20px rgba(15,23,42,.08);
-            font-size:1.2rem;
+            font-size:1.05rem;
             font-weight:800;
             line-height:1;
+            flex:0 0 auto;
         }
         .sv-hamburger:hover{
             background:#eff6ff;
@@ -907,26 +902,54 @@
     .sv-mobile-nav-active .sv-topbar .sv-auth{
         display:none !important;
     }
-    .sv-mobile-nav-active .sv-nav .container{
-        gap:.75rem;
+    .sv-mobile-nav-active .sv-topbar .container{
+        flex-wrap:nowrap;
+        align-items:center;
+        gap:.6rem;
     }
-    .sv-mobile-nav-active .sv-nav .nav,
-    .sv-mobile-nav-active .sv-nav .sv-search{
-        display:none !important;
+    .sv-mobile-nav-active .sv-brand{
+        flex:1 1 auto;
+        min-width:0;
+        gap:.45rem;
     }
-    .sv-mobile-nav-active .sv-mobile-nav-summary{
-        display:flex;
+    .sv-mobile-nav-active .sv-brand__home{
+        gap:.45rem;
+        flex:1 1 auto;
+        min-width:0;
+    }
+    .sv-mobile-nav-active .sv-brand__logo-img{
+        width:40px;
+        height:40px;
+        flex:0 0 auto;
+    }
+    .sv-mobile-nav-active .sv-brand__title{
+        min-width:0;
+        text-align:left;
+        flex:1 1 auto;
+    }
+    .sv-mobile-nav-active .sv-brand__divider,
+    .sv-mobile-nav-active .sv-brand__tagline{
+        display:none;
+    }
+    .sv-mobile-nav-active .sv-brand__title h1{
+        font-size:clamp(.48rem, 1.75vw, .72rem);
+        letter-spacing:0;
+        line-height:1.15;
+        white-space:nowrap;
+        overflow:hidden;
+        text-overflow:clip;
+        display:block;
+    }
+    .sv-mobile-nav-active .sv-nav{
+        display:none;
     }
     .sv-mobile-nav-active .sv-hamburger{
         display:inline-flex;
+        margin-left:auto;
     }
 }
 
 @media (max-width: 768px){
-    .sv-topbar .container{
-        flex-wrap:wrap;
-        gap:.6rem;
-    }
     /* Bootstrap uses display:none !important for .d-none; re-enable auth on small screens. */
     .sv-auth.d-none{
         display:flex !important;
@@ -948,8 +971,7 @@
         flex:1 1 100%;
         width:100% !important;
     }
-    .sv-mobile-nav-active .sv-nav .container{
-        flex-wrap:nowrap;
+    .sv-mobile-nav-active .sv-topbar .container{
         justify-content:space-between;
     }
     .sv-page-hero{
@@ -971,10 +993,6 @@
 }
 
 @media (max-width: 576px){
-    .sv-brand{
-        flex:1 1 auto;
-        min-width:0;
-    }
     .sv-brand__logo-img{
         width:52px;
         height:52px;
@@ -1036,6 +1054,19 @@
     }
     .sv-badge{
         margin-left:auto;
+    }
+    .sv-mobile-nav-active .sv-brand__title h1{
+        font-size:clamp(.42rem, 1.55vw, .6rem);
+        display:block;
+        overflow:hidden;
+        text-overflow:clip;
+        white-space:nowrap;
+        -webkit-line-clamp:unset;
+        -webkit-box-orient:initial;
+    }
+    .sv-mobile-nav-active .sv-brand__logo-img{
+        width:34px;
+        height:34px;
     }
 }
 

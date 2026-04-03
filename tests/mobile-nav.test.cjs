@@ -27,8 +27,13 @@ function buildNavDom() {
             <html lang="vi">
             <body>
                 <div class="sv-topbar">
-                    <div class="container">
-                        <div class="sv-brand">SVP</div>
+                    <div class="container d-flex align-items-center justify-content-between">
+                        <div class="sv-brand">
+                            <img class="sv-brand__logo-img" src="assets/icons/logo_svp.png" alt="SVP" />
+                            <div class="sv-brand__title">
+                                <h1>DIEN DAN SINH VIEN & TRI THUC VIET TAI PHAP</h1>
+                            </div>
+                        </div>
                         <div id="sv-auth-box" class="sv-auth d-none d-md-flex align-items-center gap-2">
                             <a class="btn btn-outline-secondary" href="signup.html">Dang Ky</a>
                             <a class="btn btn-primary" href="login.html">Dang Nhap</a>
@@ -63,18 +68,17 @@ test('mobile nav injects a collapsed trigger into the navbar and mirrors links i
     window.document.dispatchEvent(new window.Event('DOMContentLoaded', { bubbles: true }));
     await flushAsync(window, 4);
 
-    const summary = window.document.querySelector('.sv-mobile-nav-summary');
     const trigger = window.document.querySelector('.sv-hamburger');
     const drawer = window.document.querySelector('.sv-mobile-drawer');
+    const topbarContainer = window.document.querySelector('.sv-topbar .container');
 
     assert.ok(window.document.body.classList.contains('sv-mobile-nav-active'));
-    assert.ok(summary);
-    const homeLink = summary.querySelector('.sv-mobile-nav-summary__home');
-    assert.equal(homeLink?.textContent, 'Trang Chu');
-    assert.match(homeLink?.getAttribute('href') || '', /index\.html/);
     assert.ok(trigger);
     assert.equal(trigger.textContent.trim(), '...');
     assert.ok(drawer);
+    assert.equal(topbarContainer?.lastElementChild, trigger);
+    assert.equal(window.document.querySelector('.sv-mobile-nav-summary__home'), null);
+    assert.equal(drawer.querySelector('.sv-mobile-drawer__title')?.textContent, 'Trang Chu');
 
     const drawerLinks = Array.from(drawer.querySelectorAll('.sv-mobile-drawer__nav a')).map((node) => node.textContent.trim());
     assert.deepEqual(drawerLinks, ['Trang Chu', 'Dien Dan', 'Su Kien']);

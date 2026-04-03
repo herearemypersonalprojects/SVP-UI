@@ -1,7 +1,7 @@
 /**
  * Mobile Navigation - collapsed "..." menu for narrow screens.
  *
- * Injects a compact trigger into .sv-nav and builds an off-canvas drawer
+ * Injects a compact trigger into .sv-topbar and builds an off-canvas drawer
  * that mirrors the main nav links, search bar and auth controls.
  */
 (function () {
@@ -10,8 +10,6 @@
     const MQ = window.matchMedia('(max-width: 991.98px)');
     let injected = false;
     let triggerBtn;
-    let summary;
-    let summaryHomeLink;
     let overlay;
     let drawer;
     let drawerCloseBtn;
@@ -21,8 +19,8 @@
     let drawerAuth;
     let lastFocusedElement = null;
 
-    function getNavContainer() {
-        return document.querySelector('.sv-nav .container');
+    function getTopbarContainer() {
+        return document.querySelector('.sv-topbar .container');
     }
 
     function getNavLinks() {
@@ -50,11 +48,6 @@
 
     function syncCurrentLabel() {
         const label = getCurrentLabel();
-        const homeLink = getHomeNavLink();
-        if (summaryHomeLink) {
-            summaryHomeLink.textContent = String(homeLink && homeLink.textContent || 'Trang Chu').trim();
-            summaryHomeLink.href = homeLink ? homeLink.href : 'index.html';
-        }
         if (drawerTitle) {
             drawerTitle.textContent = label;
         }
@@ -65,18 +58,11 @@
             return;
         }
 
-        const navContainer = getNavContainer();
-        if (!navContainer || !document.body) {
+        const topbarContainer = getTopbarContainer();
+        if (!topbarContainer || !document.body) {
             return;
         }
         injected = true;
-
-        summary = document.createElement('div');
-        summary.className = 'sv-mobile-nav-summary';
-
-        summaryHomeLink = document.createElement('a');
-        summaryHomeLink.className = 'sv-mobile-nav-summary__home';
-        summary.appendChild(summaryHomeLink);
 
         triggerBtn = document.createElement('button');
         triggerBtn.className = 'sv-hamburger';
@@ -85,9 +71,7 @@
         triggerBtn.setAttribute('aria-expanded', 'false');
         triggerBtn.setAttribute('type', 'button');
         triggerBtn.innerHTML = '<span aria-hidden="true">...</span>';
-        summary.appendChild(triggerBtn);
-
-        navContainer.appendChild(summary);
+        topbarContainer.appendChild(triggerBtn);
 
         overlay = document.createElement('div');
         overlay.className = 'sv-mobile-overlay';

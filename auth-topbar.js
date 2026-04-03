@@ -26,6 +26,7 @@
     const VISIT_SESSION_MAX_ENGAGED_MS = 12 * 60 * 60 * 1000;
     const VISIT_SESSION_MIN_FLUSH_INTERVAL_MS = 1000;
     const authBox = document.querySelector(".sv-auth");
+    const topbarBrand = document.querySelector(".sv-topbar .sv-brand");
     const guestAuthMarkup = authBox ? authBox.innerHTML : "";
     let refreshTimer = null;
     let refreshInFlight = null;
@@ -51,6 +52,29 @@
             return;
         }
         window.setTimeout(task, Math.max(0, timeoutMs));
+    };
+
+    const resolveHomeHref = () => {
+        const homeNavLink = document.querySelector('.sv-nav .nav-link[href="index.html"]')
+            || document.querySelector('.sv-nav .nav-link[href="./index.html"]')
+            || document.querySelector('.sv-nav .nav-link[href="/"]')
+            || document.querySelector('.sv-nav .nav-link');
+        const href = homeNavLink ? String(homeNavLink.getAttribute("href") || "").trim() : "";
+        return href || "index.html";
+    };
+
+    const initializeBrandHomeLink = () => {
+        if (!topbarBrand || topbarBrand.querySelector(".sv-brand__home")) {
+            return;
+        }
+        const link = document.createElement("a");
+        link.className = "sv-brand__home";
+        link.href = resolveHomeHref();
+        link.setAttribute("aria-label", "Trang chủ SVP");
+        while (topbarBrand.firstChild) {
+            link.appendChild(topbarBrand.firstChild);
+        }
+        topbarBrand.appendChild(link);
     };
 
     const decodeBase64Url = (value) => {
@@ -1000,6 +1024,7 @@
     };
 
     bindInboxLifecycle();
+    initializeBrandHomeLink();
 
     const bootstrapProfile = readFreshProfileCache();
     renderTopbar(bootstrapProfile);

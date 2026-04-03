@@ -3,7 +3,7 @@
     const SHARE_SITE_URL = String(window.SVP_SHARE_BASE_URL || 'https://share.svpforum.fr').replace(/\/+$/g, '');
     const SITE_NAME = 'SVP Forum';
     const DEFAULT_IMAGE = `${SITE_URL}/assets/icons/icon_svp.png`;
-    const DEFAULT_DESCRIPTION = 'Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP) - nơi kết nối, chia sẻ kiến thức, sự kiện và cộng đồng người Việt tại Pháp.';
+    const DEFAULT_DESCRIPTION = 'Diễn đàn Sinh viên & Tri thức Việt tại Pháp  - nơi kết nối, chia sẻ kiến thức, sự kiện và cộng đồng người Việt tại Pháp.';
     const PUBLIC_ROBOTS = 'index,follow,max-image-preview:large,max-snippet:-1,max-video-preview:-1';
     const PRIVATE_ROBOTS = 'noindex,nofollow,noarchive';
     const DEFAULT_THEME_COLOR = '#1d4ed8';
@@ -422,7 +422,7 @@
 
     const PAGE_PRESETS = {
         'index.html': {
-            title: 'Diễn đàn Sinh viên & Tri thức Việt tại Pháp (SVP)',
+            title: 'Diễn đàn Sinh viên & Tri thức Việt tại Pháp ',
             description: DEFAULT_DESCRIPTION,
             path: '/',
             type: 'website',

@@ -1138,3 +1138,31 @@
     }
 }
 
+@media (max-width: 430px){
+    .sv-mobile-nav-active .sv-topbar .container{
+        gap:.22rem;
+        padding-left:.4rem;
+        padding-right:.4rem;
+    }
+    .sv-mobile-nav-active .sv-brand,
+    .sv-mobile-nav-active .sv-brand__home{
+        gap:.18rem;
+    }
+    .sv-mobile-nav-active .sv-brand__title h1{
+        font-size:clamp(.56rem, calc((100vw - 90px) / 25), .78rem);
+        letter-spacing:-.02em;
+    }
+    .sv-mobile-nav-active .sv-brand__logo-img{
+        width:36px;
+        height:36px;
+    }
+    .sv-mobile-nav-active .sv-hamburger{
+        width:32px;
+        height:32px;
+        border-radius:9px;
+    }
+    .sv-mobile-nav-active .sv-hamburger__icon{
+        transform:scale(.68);
+    }
+}
+

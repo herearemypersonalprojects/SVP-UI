@@ -329,55 +329,6 @@
             overflow: hidden;
         }
 
-        .sv-tail-list {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: .9rem;
-        }
-
-        .sv-tail-card {
-            text-decoration: none;
-            color: inherit;
-            display: grid;
-            grid-template-columns: 108px minmax(0, 1fr);
-            gap: .8rem;
-            align-items: start;
-        }
-
-        .sv-tail-card__thumb {
-            width: 108px;
-            aspect-ratio: 16 / 10;
-            border-radius: 0;
-            background: #e5e7eb center/cover no-repeat;
-            border: 1px solid #e7e7eb;
-        }
-
-        .sv-tail-card__body {
-            min-width: 0;
-        }
-
-        .sv-tail-card__title {
-            font-size: 1rem;
-            line-height: 1.4;
-            font-weight: 600;
-            color: #1f2937;
-            display: -webkit-box;
-            -webkit-line-clamp: 3;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
-        .sv-tail-card__excerpt {
-            margin-top: .32rem;
-            font-size: .9rem;
-            line-height: 1.45;
-            color: #6b7280;
-            display: -webkit-box;
-            -webkit-line-clamp: 4;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
-        }
-
         .sv-feed-pagination {
             display: flex;
             align-items: center;
@@ -611,14 +562,6 @@
                 aspect-ratio: 5 / 4;
             }
 
-            .sv-tail-card {
-                grid-template-columns: 146px minmax(0, 1fr);
-            }
-
-            .sv-tail-card__thumb {
-                width: 146px;
-                aspect-ratio: 5 / 4;
-            }
         }
 
         @media (max-width: 991.98px) {
@@ -1335,8 +1278,9 @@
         });
 
         const HOME_PAGE_SIZE = 18;
+        const HOME_LOAD_MORE_SIZE = 2;
         const HOME_SOURCE_POSTS_LIMIT = 18;
-        const HOME_FETCH_BATCH_SIZE = 18;
+        const HOME_FETCH_BATCH_SIZE = HOME_LOAD_MORE_SIZE;
         const FEATURED_MEMBERS_LIMIT = 25;
         const SIDEBAR_UPCOMING_EVENTS_LIMIT = 5;
         const CATEGORY_LATEST_CATEGORY_IDS = Object.keys(CATEGORY_NAMES)
@@ -1418,9 +1362,8 @@
             postsPageInfoEl.textContent = '';
             postsPageInfoEl.style.display = 'none';
 
-            // Correction : afficher le bouton si on a au moins HOME_PAGE_SIZE posts ou s'il y a plus à charger
-            const hasEnoughPosts = loadedPosts.length >= HOME_PAGE_SIZE;
-            const canLoadMore = hasEnoughPosts || hasMoreBackendPosts;
+            const hasHiddenLoadedPosts = visibleLoadedCount > visiblePostCount;
+            const canLoadMore = hasHiddenLoadedPosts || hasMoreBackendPosts;
             postsLoadMoreBtn.disabled = !canLoadMore || isLoadingMore;
             postsLoadMoreBtn.textContent = isLoadingMore ? 'Đang tải...' : 'Xem thêm...';
             postPaginationEl.style.display = canLoadMore ? 'flex' : 'none';
@@ -1525,23 +1468,6 @@
             `;
         };
 
-        const renderTailCard = (post) => {
-            const href = buildPostHref(post);
-            const safeTitle = escapeHtml(post.title || 'Chưa có tiêu đề');
-            const safeCover = getSafeCover(post);
-            const safeExcerpt = escapeHtml(getMiddleColumnExcerpt(post));
-
-            return `
-                <a class="sv-tail-card" href="${href}">
-                    <div class="sv-tail-card__thumb" ${safeCover ? `style="background-image:url('${safeCover}')"` : ''}></div>
-                    <div class="sv-tail-card__body">
-                        <div class="sv-tail-card__title">${safeTitle}</div>
-                        <div class="sv-tail-card__excerpt">${safeExcerpt}</div>
-                    </div>
-                </a>
-            `;
-        };
-
         const renderMagazineFeed = (posts) => {
             if (!posts || posts.length === 0) {
                 return `<div class="sv-meta">Chưa có bài viết phù hợp để hiển thị.</div>`;
@@ -1567,10 +1493,8 @@
             const bulletItems = posts.slice(bulletStart, bulletEnd);
             const bottomItems = posts.slice(bottomStart, bottomEnd);
             const overflowItems = posts.slice(bottomEnd);
-            const leftOverflowCount = Math.ceil(overflowItems.length / 2);
-            const leftOverflowItems = overflowItems.slice(0, leftOverflowCount);
-            const mainOverflowItems = overflowItems.slice(leftOverflowCount);
-            const allLeftItems = leftItems.concat(leftOverflowItems);
+            const allLeftItems = leftItems;
+            const mainOverflowItems = overflowItems;
 
             return `
                 <div class="sv-home-news">
@@ -1596,8 +1520,8 @@
                         ` : ''}
 
                         ${mainOverflowItems.length ? `
-                            <div class="sv-tail-list">
-                                ${mainOverflowItems.map(renderTailCard).join('')}
+                            <div class="sv-featured-main__stack">
+                                ${mainOverflowItems.map(renderFeaturedMainCard).join('')}
                             </div>
                         ` : ''}
                     </section>
@@ -1876,7 +1800,7 @@
             if (isLoadingMore) {
                 return;
             }
-            const nextVisibleCount = visiblePostCount + HOME_PAGE_SIZE;
+            const nextVisibleCount = visiblePostCount + HOME_LOAD_MORE_SIZE;
             if (getVisibleDisplayPosts().length >= nextVisibleCount) {
                 visiblePostCount = nextVisibleCount;
                 renderFeedAndMembers();

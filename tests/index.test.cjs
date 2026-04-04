@@ -13,6 +13,24 @@ function extractLastInlineScript(html) {
     return matches.length ? matches[matches.length - 1][1] : '';
 }
 
+function makePost(postId, createdAt) {
+    return {
+        postId,
+        categoryId: 1,
+        title: `Bai viet ${postId}`,
+        contentHtml: `<p>Noi dung bai viet ${postId}.</p>`,
+        coverImageUrl: `https://cdn.svp.test/posts/${postId}.jpg`,
+        createdAt,
+        isArticle: true,
+        isBlog: false,
+        author: {
+            userId: `00000000-0000-4000-8000-${String(postId).padStart(12, '0')}`,
+            nickname: `user-${postId}`,
+            displayName: `User ${postId}`
+        }
+    };
+}
+
 test('index only loads the home payload on first render', async () => {
     const calls = [];
     const fetchStub = async (targetUrl) => {
@@ -300,4 +318,89 @@ test('index renders 25 star avatars from topStars independently of loaded posts'
     assert.equal(memberLinks.length, 25);
     assert.match(memberLinks[0]?.getAttribute('aria-label') || '', /Star 1/);
     assert.match(memberLinks[24]?.getAttribute('aria-label') || '', /Star 25/);
+});
+
+test('index load more fetches 2 posts per click and only hides the button after a click returns no posts', async () => {
+    const calls = [];
+    const latestPosts = Array.from({ length: 18 }, (_, index) => makePost(
+        500 - index,
+        `2026-04-${String(30 - index).padStart(2, '0')}T10:00:00Z`
+    ));
+    const loadMorePages = [
+        [
+            makePost(482, '2026-04-12T10:00:00Z'),
+            makePost(481, '2026-04-11T10:00:00Z')
+        ],
+        []
+    ];
+
+    const fetchStub = async (targetUrl) => {
+        calls.push(String(targetUrl));
+        const url = new URL(String(targetUrl));
+        if (url.pathname === '/api/home') {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({ latestPosts, upcomingEvents: [], topStars: [] })
+            };
+        }
+        if (url.pathname === '/posts/latest-articles') {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({ items: loadMorePages.shift() || [] })
+            };
+        }
+        if (url.pathname === '/stats/visit' || url.pathname === '/stats/visit-session') {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({})
+            };
+        }
+        throw new Error(`Unexpected fetch: ${targetUrl}`);
+    };
+
+    const dom = createDomFromHtml('index.html', {
+        url: 'https://svpforum.fr/index.html',
+        fetch: fetchStub
+    });
+    const { window } = dom;
+    window.localStorage.clear();
+    window.fetch = fetchStub;
+    window.AbortController = global.AbortController;
+    window.URLSearchParams = global.URLSearchParams;
+    window.requestIdleCallback = (callback) => window.setTimeout(() => callback({
+        didTimeout: false,
+        timeRemaining: () => 50
+    }), 0);
+    window.cancelIdleCallback = (id) => window.clearTimeout(id);
+
+    runScript(dom, 'config.js');
+    runScript(dom, 'seo.js');
+    runScript(dom, 'avatar-utils.js');
+    runScript(dom, 'auth-topbar.js');
+    window.eval(extractLastInlineScript(readFrontendFile('index.html')));
+
+    await flushAsync(window, 12);
+
+    const loadMoreButton = window.document.getElementById('sv-posts-load-more');
+    const pagination = window.document.getElementById('sv-post-pagination');
+
+    assert.equal(pagination.style.display, 'flex');
+
+    loadMoreButton.click();
+    await flushAsync(window, 12);
+
+    const loadMoreCalls = calls.filter((url) => url.includes('/posts/latest-articles'));
+    assert.equal(loadMoreCalls.length, 1);
+    assert.equal(new URL(loadMoreCalls[0]).searchParams.get('limit'), '2');
+    assert.equal(pagination.style.display, 'flex');
+    assert.equal(loadMoreButton.disabled, false);
+
+    loadMoreButton.click();
+    await flushAsync(window, 12);
+
+    assert.equal(calls.filter((url) => url.includes('/posts/latest-articles')).length, 2);
+    assert.equal(pagination.style.display, 'none');
 });

@@ -130,6 +130,24 @@
             font-weight: 700;
             white-space: nowrap;
         }
+        .sv-newsletter-admin-controls {
+            display: grid;
+            gap: .75rem;
+            padding: .85rem;
+            border: 1px solid #dbeafe;
+            border-radius: 12px;
+            background: #f8fbff;
+        }
+        .sv-newsletter-admin-controls__row {
+            display: flex;
+            gap: .75rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .sv-newsletter-admin-controls__row .form-control {
+            min-width: 240px;
+            flex: 1 1 260px;
+        }
     </style>
 </head>
 <body>
@@ -230,6 +248,15 @@
         </div>
         <div class="p-3">
             <div id="detail-status" class="sv-admin-muted mb-2"></div>
+            <div id="detail-newsletter-controls" class="d-none mb-3">
+                <div class="sv-newsletter-admin-controls">
+                    <div class="sv-newsletter-admin-controls__row">
+                        <input id="detail-newsletter-email" class="form-control" type="email" placeholder="email@example.com">
+                        <button id="detail-newsletter-add" type="button" class="btn btn-primary">Thêm email</button>
+                    </div>
+                    <div class="sv-admin-muted small">SUPERADMIN có thể thêm email vào danh sách newsletter đang mở. Email mới sẽ nhận toàn bộ bản tin của danh sách này.</div>
+                </div>
+            </div>
             <div class="table-responsive">
                 <table class="sv-admin-table">
                     <thead id="detail-head"></thead>
@@ -549,6 +576,9 @@
         const detailNextBtn = document.getElementById('detail-next');
         const detailPageEl = document.getElementById('detail-page');
         const detailCloseBtn = document.getElementById('detail-close');
+        const detailNewsletterControls = document.getElementById('detail-newsletter-controls');
+        const detailNewsletterEmailInput = document.getElementById('detail-newsletter-email');
+        const detailNewsletterAddBtn = document.getElementById('detail-newsletter-add');
 
         let lastVisitPayload = null;
         let detailState = { type: '', role: '', status: '', page: 1, limit: 20 };
@@ -582,6 +612,8 @@
         };
 
         const canViewIpDetails = () => currentRole === 'SUPERADMIN';
+        const isNewsletterDetailType = (type) => ['newsletters', 'discussion_newsletters', 'event_newsletters', 'housing_newsletters'].includes(String(type || ''));
+        const canManageNewsletterDetail = () => currentRole === 'SUPERADMIN' && isNewsletterDetailType(detailState.type);
         const getVisitsCacheKey = (days) => `visits_${currentRole || 'ANON'}_${Number(days || 30)}`;
 
         const normalizeIpForLookup = (ip) => String(ip || '').trim().replace(/^\[(.+)]$/, '$1').replace(/\/(\d+)$/, '');
@@ -1228,12 +1260,42 @@
             detailStatusEl.className = isError ? 'sv-admin-error mb-2' : 'sv-admin-muted mb-2';
         };
 
+        const renderNewsletterAdminControls = () => {
+            if (!detailNewsletterControls || !detailNewsletterEmailInput || !detailNewsletterAddBtn) {
+                return;
+            }
+            const visible = canManageNewsletterDetail();
+            detailNewsletterControls.classList.toggle('d-none', !visible);
+            if (!visible) {
+                detailNewsletterEmailInput.value = '';
+                detailNewsletterAddBtn.disabled = false;
+                detailNewsletterAddBtn.textContent = 'Thêm email';
+            }
+        };
+
+        const setNewsletterAddBusy = (busy) => {
+            if (!detailNewsletterAddBtn) {
+                return;
+            }
+            detailNewsletterAddBtn.disabled = busy;
+            detailNewsletterAddBtn.textContent = busy ? 'Đang thêm...' : 'Thêm email';
+        };
+
+        const buildNewsletterDeleteAction = (email) => {
+            const normalizedEmail = String(email || '').trim();
+            if (!canManageNewsletterDetail() || !normalizedEmail) {
+                return '<span class="sv-admin-muted">--</span>';
+            }
+            return `<button type="button" class="btn btn-sm btn-outline-danger" data-newsletter-delete="${escapeHtml(normalizedEmail)}">Xóa</button>`;
+        };
+
         const showDetailCard = () => {
             if (detailCard) detailCard.classList.remove('d-none');
         };
 
         const hideDetailCard = () => {
             if (detailCard) detailCard.classList.add('d-none');
+            renderNewsletterAdminControls();
         };
 
         const setDetailPagination = (enabled, hasMore) => {
@@ -1357,6 +1419,101 @@
             }
         };
 
+        const addNewsletterEmailToCurrentList = async () => {
+            if (!canManageNewsletterDetail() || !detailNewsletterEmailInput) {
+                return;
+            }
+            const email = String(detailNewsletterEmailInput.value || '').trim().toLowerCase();
+            if (!email) {
+                setDetailStatus('Nhập email cần thêm vào newsletter.', true);
+                detailNewsletterEmailInput.focus();
+                return;
+            }
+            setNewsletterAddBusy(true);
+            setDetailStatus('Đang thêm email...', false);
+            try {
+                const token = window.SVPAuth?.getValidAccessToken ? await window.SVPAuth.getValidAccessToken() : '';
+                if (!token) {
+                    throw new Error('Bạn cần đăng nhập bằng tài khoản superadmin.');
+                }
+                const response = await fetch(`${API_BASE_URL}/admin/dashboard/newsletters`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        type: detailState.type,
+                        email
+                    })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Không thể thêm email vào newsletter.');
+                }
+                dashboardCache.clear('overview');
+                detailNewsletterEmailInput.value = '';
+                detailState.page = 1;
+                await Promise.all([loadOverview(true), fetchDetail()]);
+                setDetailStatus(`Đã thêm ${payload.email || email} vào danh sách newsletter.`, false);
+            } catch (error) {
+                setDetailStatus(error.message || 'Không thể thêm email vào newsletter.', true);
+            } finally {
+                setNewsletterAddBusy(false);
+            }
+        };
+
+        const deleteNewsletterEmailFromCurrentList = async (email, triggerButton) => {
+            const normalizedEmail = String(email || '').trim().toLowerCase();
+            if (!canManageNewsletterDetail() || !normalizedEmail) {
+                return;
+            }
+            const confirmed = typeof window.confirm === 'function'
+                ? window.confirm(`Xóa ${normalizedEmail} khỏi danh sách newsletter này?`)
+                : true;
+            if (!confirmed) {
+                return;
+            }
+            if (triggerButton) {
+                triggerButton.disabled = true;
+                triggerButton.textContent = 'Đang xóa...';
+            }
+            setDetailStatus('Đang xóa email...', false);
+            try {
+                const token = window.SVPAuth?.getValidAccessToken ? await window.SVPAuth.getValidAccessToken() : '';
+                if (!token) {
+                    throw new Error('Bạn cần đăng nhập bằng tài khoản superadmin.');
+                }
+                const response = await fetch(`${API_BASE_URL}/admin/dashboard/newsletters`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        Accept: 'application/json',
+                        Authorization: `Bearer ${token}`
+                    },
+                    body: JSON.stringify({
+                        type: detailState.type,
+                        email: normalizedEmail
+                    })
+                });
+                const payload = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    throw new Error(payload.error || 'Không thể xóa email khỏi newsletter.');
+                }
+                dashboardCache.clear('overview');
+                await Promise.all([loadOverview(true), fetchDetail()]);
+                setDetailStatus(`Đã xóa ${payload.email || normalizedEmail} khỏi danh sách newsletter.`, false);
+            } catch (error) {
+                setDetailStatus(error.message || 'Không thể xóa email khỏi newsletter.', true);
+            } finally {
+                if (triggerButton) {
+                    triggerButton.disabled = false;
+                    triggerButton.textContent = 'Xóa';
+                }
+            }
+        };
+
         const buildDetailRows = (type, items) => {
             switch (type) {
                 case 'users': {
@@ -1444,37 +1601,49 @@
                 }
                 case 'newsletters':
                 case 'discussion_newsletters': {
-                    const headers = ['Email', 'Chuyên mục', 'Trạng thái', 'Ngày tạo'];
+                    const showActions = canManageNewsletterDetail();
+                    const headers = showActions
+                        ? ['Email', 'Chuyên mục', 'Trạng thái', 'Ngày tạo', 'Thao tác']
+                        : ['Email', 'Chuyên mục', 'Trạng thái', 'Ngày tạo'];
                     const rows = items.map((item) => `
                         <tr>
                             <td>${escapeHtml(item.email || '')}</td>
                             <td>${escapeHtml(Array.isArray(item.categoryIds) && item.categoryIds.length ? item.categoryIds.join(', ') : 'Tất cả')}</td>
                             <td>${item.active ? 'Active' : 'Inactive'}</td>
                             <td>${escapeHtml(item.createdAt || '')}</td>
+                            ${showActions ? `<td>${buildNewsletterDeleteAction(item.email)}</td>` : ''}
                         </tr>
                     `).join('');
                     return { headers, rows };
                 }
                 case 'event_newsletters': {
-                    const headers = ['Email', 'Loại sự kiện', 'Trạng thái', 'Ngày tạo'];
+                    const showActions = canManageNewsletterDetail();
+                    const headers = showActions
+                        ? ['Email', 'Loại sự kiện', 'Trạng thái', 'Ngày tạo', 'Thao tác']
+                        : ['Email', 'Loại sự kiện', 'Trạng thái', 'Ngày tạo'];
                     const rows = items.map((item) => `
                         <tr>
                             <td>${escapeHtml(item.email || '')}</td>
                             <td>${escapeHtml(Array.isArray(item.eventTypeIds) && item.eventTypeIds.length ? item.eventTypeIds.join(', ') : 'Tất cả')}</td>
                             <td>${item.active ? 'Active' : 'Inactive'}</td>
                             <td>${escapeHtml(item.createdAt || '')}</td>
+                            ${showActions ? `<td>${buildNewsletterDeleteAction(item.email)}</td>` : ''}
                         </tr>
                     `).join('');
                     return { headers, rows };
                 }
                 case 'housing_newsletters': {
-                    const headers = ['Email', 'Phạm vi', 'Trạng thái', 'Ngày tạo'];
+                    const showActions = canManageNewsletterDetail();
+                    const headers = showActions
+                        ? ['Email', 'Phạm vi', 'Trạng thái', 'Ngày tạo', 'Thao tác']
+                        : ['Email', 'Phạm vi', 'Trạng thái', 'Ngày tạo'];
                     const rows = items.map((item) => `
                         <tr>
                             <td>${escapeHtml(item.email || '')}</td>
                             <td>Tất cả tin thuê nhà mới</td>
                             <td>${item.active ? 'Active' : 'Inactive'}</td>
                             <td>${escapeHtml(item.createdAt || '')}</td>
+                            ${showActions ? `<td>${buildNewsletterDeleteAction(item.email)}</td>` : ''}
                         </tr>
                     `).join('');
                     return { headers, rows };
@@ -1594,6 +1763,7 @@
                 };
                 detailTitleEl.textContent = titleMap[type] || 'Chi tiết';
             }
+            renderNewsletterAdminControls();
             showDetailCard();
             if (type.startsWith('visits_')) {
                 await renderVisitsDetail(type);
@@ -1789,8 +1959,27 @@
                 fetchDetail();
             });
         }
+        if (detailNewsletterAddBtn) {
+            detailNewsletterAddBtn.addEventListener('click', addNewsletterEmailToCurrentList);
+        }
+        if (detailNewsletterEmailInput) {
+            detailNewsletterEmailInput.addEventListener('keydown', (event) => {
+                if (event.key === 'Enter') {
+                    event.preventDefault();
+                    addNewsletterEmailToCurrentList();
+                }
+            });
+        }
         if (detailBodyEl) {
             detailBodyEl.addEventListener('click', (event) => {
+                const deleteButton = event.target.closest('[data-newsletter-delete]');
+                if (deleteButton) {
+                    deleteNewsletterEmailFromCurrentList(
+                        deleteButton.getAttribute('data-newsletter-delete') || '',
+                        deleteButton
+                    );
+                    return;
+                }
                 const actionButton = event.target.closest('[data-post-status-save]');
                 if (!actionButton) {
                     return;

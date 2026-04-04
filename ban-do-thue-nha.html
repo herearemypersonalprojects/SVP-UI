@@ -300,6 +300,9 @@
             }
         };
 
+        const isInlineEmailErrorMessage = (message) => /invalid email|email is required|email khong ton tai|email không tồn tại|domain email|xac minh email|xác minh email/i
+            .test(String(message || '').trim().toLowerCase());
+
         const readSavedSubscription = () => {
             try {
                 const parsed = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null');
@@ -380,7 +383,14 @@
                 }, 1200);
             } catch (error) {
                 console.error('Cannot subscribe to housing notifications:', error);
-                setStatus(error && error.message ? error.message : 'Không thể kết nối máy chủ.', 'error');
+                const message = error && error.message ? error.message : 'Không thể kết nối máy chủ.';
+                if (isInlineEmailErrorMessage(message)) {
+                    showEmailError(message);
+                    setStatus('', null);
+                    emailInput.focus();
+                } else {
+                    setStatus(message, 'error');
+                }
                 submitBtn.textContent = 'Đăng Ký Nhận Tin';
                 submitBtn.disabled = false;
             }

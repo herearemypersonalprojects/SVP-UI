@@ -641,6 +641,9 @@
             }
         };
 
+        const isInlineSubscriptionEmailError = (message) => /invalid email|email is required|email khong ton tai|email không tồn tại|domain email|xac minh email|xác minh email/i
+            .test(String(message || '').trim().toLowerCase());
+
         const readSavedSubscription = () => {
             try {
                 const parsed = JSON.parse(localStorage.getItem(EVENT_SUBSCRIPTION_STORAGE_KEY) || 'null');
@@ -840,10 +843,14 @@
                     }, 1200);
                 } catch (error) {
                     console.error('Cannot subscribe to event notifications:', error);
-                    setSubscriptionStatus(
-                        error && error.message ? error.message : 'Không thể kết nối máy chủ.',
-                        'error'
-                    );
+                    const message = error && error.message ? error.message : 'Không thể kết nối máy chủ.';
+                    if (isInlineSubscriptionEmailError(message)) {
+                        showSubscriptionEmailError(message);
+                        setSubscriptionStatus('', null);
+                        subscribeEmailEl.focus();
+                    } else {
+                        setSubscriptionStatus(message, 'error');
+                    }
                     subscribeSubmitBtn.textContent = 'Đăng Ký Nhận Tin';
                     subscribeSubmitBtn.disabled = false;
                 }

@@ -288,3 +288,144 @@ test('admin dashboard lets ADMIN update pending article status quickly', async (
     assert.match(document.getElementById('detail-status').textContent || '', /#91 → PUBLISHED/);
     assert.match(document.getElementById('detail-body').textContent || '', /Chưa có dữ liệu/);
 });
+
+test('admin dashboard lets SUPERADMIN add and delete housing newsletter emails', async () => {
+    let housingItems = [
+        {
+            email: 'first@example.com',
+            active: true,
+            createdAt: '2026-04-02T08:00:00Z'
+        }
+    ];
+    const mutationCalls = [];
+
+    const dom = createDomFromHtml('admin_dashboard.html', {
+        url: 'https://svpforum.fr/admin_dashboard.html',
+        fetch: async (targetUrl, options = {}) => {
+            const url = new URL(String(targetUrl));
+            const method = String(options.method || 'GET').toUpperCase();
+
+            if (url.pathname.endsWith('/admin/dashboard/overview')) {
+                return makeJsonResponse({
+                    totalUsers: 120,
+                    totalAdmins: 3,
+                    totalPosts: 88,
+                    publishedPosts: 71,
+                    pendingPosts: 17,
+                    totalComments: 245,
+                    totalEvents: 14,
+                    activeDiscussionNewsletters: 11,
+                    activeEventNewsletters: 7,
+                    activeHousingNewsletters: housingItems.length,
+                    activeNewsletters: 11
+                });
+            }
+            if (url.pathname.endsWith('/admin/dashboard/visits')) {
+                return makeJsonResponse({
+                    days: 30,
+                    totalVisits: 340,
+                    uniqueIps: 96,
+                    daily: [],
+                    cities: [],
+                    countries: [],
+                    paths: [],
+                    ips: [],
+                    recentVisits: [],
+                    activityHours: [],
+                    loggedInActivityHours: [],
+                    engagementSummary: null,
+                    loggedInUsers: []
+                });
+            }
+            if (url.pathname.endsWith('/admin/dashboard/details')) {
+                assert.equal(url.searchParams.get('type'), 'housing_newsletters');
+                return makeJsonResponse({
+                    items: housingItems.map((item) => ({ ...item })),
+                    hasMore: false,
+                    page: 1,
+                    limit: 20
+                });
+            }
+            if (url.pathname.endsWith('/admin/dashboard/newsletters') && method === 'POST') {
+                const body = JSON.parse(String(options.body || '{}'));
+                mutationCalls.push({ method, body });
+                housingItems = [
+                    {
+                        email: body.email,
+                        active: true,
+                        createdAt: '2026-04-05T09:00:00Z'
+                    },
+                    ...housingItems.filter((item) => item.email !== body.email)
+                ];
+                return makeJsonResponse({
+                    status: 'added',
+                    type: body.type,
+                    email: body.email
+                });
+            }
+            if (url.pathname.endsWith('/admin/dashboard/newsletters') && method === 'DELETE') {
+                const body = JSON.parse(String(options.body || '{}'));
+                mutationCalls.push({ method, body });
+                housingItems = housingItems.filter((item) => item.email !== body.email);
+                return makeJsonResponse({
+                    status: 'deleted',
+                    type: body.type,
+                    email: body.email
+                });
+            }
+            throw new Error(`Unexpected fetch: ${targetUrl}`);
+        }
+    });
+
+    const { window } = dom;
+    window.SVP_API_BASE_URL = 'https://api.svp.test';
+    window.SVPAuth = {
+        getValidAccessToken: async () => 'token',
+        parseJwtPayload: () => ({ role: 'SUPERADMIN' })
+    };
+    window.confirm = () => true;
+    installDashboardLeafletStub(window);
+
+    window.eval(extractAdminDashboardInlineScript());
+    await flushAsync(window, 12);
+
+    const { document } = window;
+    document.querySelector('[data-detail="housing_newsletters"]').click();
+    await flushAsync(window, 12);
+
+    const controls = document.getElementById('detail-newsletter-controls');
+    const emailInput = document.getElementById('detail-newsletter-email');
+    const addButton = document.getElementById('detail-newsletter-add');
+
+    assert.equal(controls.classList.contains('d-none'), false);
+    emailInput.value = 'Added@Example.com';
+    addButton.click();
+    await flushAsync(window, 18);
+
+    assert.deepEqual(mutationCalls[0], {
+        method: 'POST',
+        body: {
+            type: 'housing_newsletters',
+            email: 'added@example.com'
+        }
+    });
+    assert.match(document.getElementById('detail-status').textContent || '', /Đã thêm added@example.com/);
+    assert.match(document.getElementById('detail-body').textContent || '', /added@example.com/);
+    assert.equal(document.getElementById('kpi-housing-newsletters').textContent.trim(), '2');
+
+    const deleteButton = document.querySelector('[data-newsletter-delete="added@example.com"]');
+    assert.ok(deleteButton);
+    deleteButton.click();
+    await flushAsync(window, 18);
+
+    assert.deepEqual(mutationCalls[1], {
+        method: 'DELETE',
+        body: {
+            type: 'housing_newsletters',
+            email: 'added@example.com'
+        }
+    });
+    assert.match(document.getElementById('detail-status').textContent || '', /Đã xóa added@example.com/);
+    assert.equal((document.getElementById('detail-body').textContent || '').includes('added@example.com'), false);
+    assert.equal(document.getElementById('kpi-housing-newsletters').textContent.trim(), '1');
+});

@@ -949,42 +949,41 @@
     .sv-mobile-nav-active .sv-topbar .container{
         flex-wrap:nowrap;
         align-items:center;
-        gap:.6rem;
+        gap:.4rem;
     }
     .sv-mobile-nav-active .sv-brand{
         flex:1 1 auto;
         min-width:0;
-        gap:.45rem;
+        gap:.35rem;
     }
     .sv-mobile-nav-active .sv-brand__home{
-        gap:.45rem;
+        gap:.35rem;
         flex:1 1 auto;
         min-width:0;
     }
     .sv-mobile-nav-active .sv-brand__logo-img{
-        width:46px;
-        height:46px;
+        width:42px;
+        height:42px;
         flex:0 0 auto;
     }
     .sv-mobile-nav-active .sv-brand__title{
         min-width:0;
         text-align:left;
         flex:1 1 auto;
+        overflow:hidden;
     }
     .sv-mobile-nav-active .sv-brand__divider,
     .sv-mobile-nav-active .sv-brand__tagline{
         display:none;
     }
     .sv-mobile-nav-active .sv-brand__title h1{
-        font-size:1rem;
-        letter-spacing:.01em;
-        line-height:1.12;
-        white-space:normal;
+        font-size:.78rem;
+        letter-spacing:0;
+        line-height:1.14;
+        white-space:nowrap;
         overflow:hidden;
-        text-overflow:initial;
-        display:-webkit-box;
-        -webkit-line-clamp:2;
-        -webkit-box-orient:vertical;
+        text-overflow:clip;
+        display:block;
     }
     .sv-mobile-nav-active .sv-nav{
         display:none;
@@ -992,6 +991,12 @@
     .sv-mobile-nav-active .sv-hamburger{
         display:inline-flex;
         margin-left:auto;
+        width:38px;
+        height:38px;
+        border-radius:12px;
+    }
+    .sv-mobile-nav-active .sv-hamburger__icon{
+        transform:scale(.84);
     }
 }
 
@@ -1101,19 +1106,35 @@
     .sv-badge{
         margin-left:auto;
     }
+    .sv-mobile-nav-active .sv-topbar .container{
+        gap:.3rem;
+        padding-left:.5rem;
+        padding-right:.5rem;
+    }
+    .sv-mobile-nav-active .sv-brand,
+    .sv-mobile-nav-active .sv-brand__home{
+        gap:.25rem;
+    }
     .sv-mobile-nav-active .sv-brand__title h1{
-        font-size:.95rem;
-        line-height:1.12;
-        display:-webkit-box;
+        font-size:clamp(.66rem, calc((100vw - 98px) / 21), .9rem);
+        letter-spacing:-.015em;
+        line-height:1.14;
+        display:block;
         overflow:hidden;
-        text-overflow:initial;
-        white-space:normal;
-        -webkit-line-clamp:2;
-        -webkit-box-orient:vertical;
+        text-overflow:ellipsis;
+        white-space:nowrap;
     }
     .sv-mobile-nav-active .sv-brand__logo-img{
-        width:44px;
-        height:44px;
+        width:38px;
+        height:38px;
+    }
+    .sv-mobile-nav-active .sv-hamburger{
+        width:34px;
+        height:34px;
+        border-radius:10px;
+    }
+    .sv-mobile-nav-active .sv-hamburger__icon{
+        transform:scale(.72);
     }
 }
 

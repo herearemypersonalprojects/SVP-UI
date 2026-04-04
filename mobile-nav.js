@@ -70,7 +70,13 @@
         triggerBtn.setAttribute('aria-controls', 'sv-mobile-drawer');
         triggerBtn.setAttribute('aria-expanded', 'false');
         triggerBtn.setAttribute('type', 'button');
-        triggerBtn.innerHTML = '<span aria-hidden="true">...</span>';
+        triggerBtn.innerHTML = `
+            <span class="sv-hamburger__icon" aria-hidden="true">
+                <span class="sv-hamburger__line"></span>
+                <span class="sv-hamburger__line"></span>
+                <span class="sv-hamburger__line"></span>
+            </span>
+        `;
         topbarContainer.appendChild(triggerBtn);
 
         overlay = document.createElement('div');

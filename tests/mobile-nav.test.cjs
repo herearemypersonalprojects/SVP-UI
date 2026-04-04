@@ -74,7 +74,8 @@ test('mobile nav injects a collapsed trigger into the navbar and mirrors links i
 
     assert.ok(window.document.body.classList.contains('sv-mobile-nav-active'));
     assert.ok(trigger);
-    assert.equal(trigger.textContent.trim(), '...');
+    assert.equal(trigger.getAttribute('aria-label'), 'Mo menu');
+    assert.equal(trigger.querySelectorAll('.sv-hamburger__line').length, 3);
     assert.ok(drawer);
     assert.equal(topbarContainer?.lastElementChild, trigger);
     assert.equal(window.document.querySelector('.sv-mobile-nav-summary__home'), null);

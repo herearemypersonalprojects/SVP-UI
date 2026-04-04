@@ -22,7 +22,7 @@ test('index only loads the home payload on first render', async () => {
             return {
                 ok: true,
                 status: 200,
-                json: async () => ({ latestPosts: [], upcomingEvents: [] })
+                json: async () => ({ latestPosts: [], upcomingEvents: [], topStars: [] })
             };
         }
         if (url.pathname === '/stats/visit' || url.pathname === '/stats/visit-session') {
@@ -76,6 +76,7 @@ test('index wraps upcoming event preview images with links to event detail pages
                 status: 200,
                 json: async () => ({
                     latestPosts: [],
+                    topStars: [],
                     upcomingEvents: [
                         {
                             eventId: 7,
@@ -130,4 +131,173 @@ test('index wraps upcoming event preview images with links to event detail pages
     assert.ok(previewImage);
     assert.match(previewImage.getAttribute('src') || '', /preview-7\.jpg/);
     assert.match(previewLink.getAttribute('href') || '', /\/su-kien\/7\//);
+});
+
+test('index derives homepage post summaries from full contentHtml', async () => {
+    const latestPosts = [
+        {
+            postId: 101,
+            categoryId: 1,
+            title: 'Bai noi bat',
+            contentHtml: '<p>Tom tat noi bat tu noi dung day du cua bai viet dau tien.</p>',
+            coverImageUrl: 'https://cdn.svp.test/posts/featured.jpg',
+            createdAt: '2026-04-04T10:00:00Z',
+            isArticle: true,
+            isBlog: false,
+            author: { userId: '11111111-1111-1111-1111-111111111111', nickname: 'a', displayName: 'A' }
+        },
+        {
+            postId: 102,
+            categoryId: 1,
+            title: 'Bai phu 1',
+            contentHtml: '<p>Tom tat bai phu 1 tu noi dung day du.</p>',
+            coverImageUrl: 'https://cdn.svp.test/posts/sub-1.jpg',
+            createdAt: '2026-04-04T09:00:00Z',
+            isArticle: true,
+            isBlog: false,
+            author: { userId: '22222222-2222-2222-2222-222222222222', nickname: 'b', displayName: 'B' }
+        },
+        {
+            postId: 103,
+            categoryId: 1,
+            title: 'Bai phu 2',
+            contentHtml: '<p>Tom tat bai phu 2 tu noi dung day du.</p>',
+            coverImageUrl: 'https://cdn.svp.test/posts/sub-2.jpg',
+            createdAt: '2026-04-04T08:00:00Z',
+            isArticle: true,
+            isBlog: false,
+            author: { userId: '33333333-3333-3333-3333-333333333333', nickname: 'c', displayName: 'C' }
+        },
+        {
+            postId: 104,
+            categoryId: 1,
+            title: 'Bai cot trai',
+            contentHtml: '<p>Tom tat cot trai tu noi dung day du cho the bai viet thu tu.</p>',
+            coverImageUrl: 'https://cdn.svp.test/posts/left.jpg',
+            createdAt: '2026-04-04T07:00:00Z',
+            isArticle: true,
+            isBlog: false,
+            author: { userId: '44444444-4444-4444-4444-444444444444', nickname: 'd', displayName: 'D' }
+        }
+    ];
+
+    const fetchStub = async (targetUrl) => {
+        const url = new URL(String(targetUrl));
+        if (url.pathname === '/api/home') {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({ latestPosts, upcomingEvents: [], topStars: [] })
+            };
+        }
+        if (url.pathname === '/stats/visit' || url.pathname === '/stats/visit-session') {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({})
+            };
+        }
+        throw new Error(`Unexpected fetch: ${targetUrl}`);
+    };
+
+    const dom = createDomFromHtml('index.html', {
+        url: 'https://svpforum.fr/index.html',
+        fetch: fetchStub
+    });
+    const { window } = dom;
+    window.localStorage.clear();
+    window.fetch = fetchStub;
+    window.AbortController = global.AbortController;
+    window.URLSearchParams = global.URLSearchParams;
+    window.requestIdleCallback = (callback) => window.setTimeout(() => callback({
+        didTimeout: false,
+        timeRemaining: () => 50
+    }), 0);
+    window.cancelIdleCallback = (id) => window.clearTimeout(id);
+
+    runScript(dom, 'config.js');
+    runScript(dom, 'seo.js');
+    runScript(dom, 'avatar-utils.js');
+    runScript(dom, 'auth-topbar.js');
+    window.eval(extractLastInlineScript(readFrontendFile('index.html')));
+
+    await flushAsync(window, 12);
+
+    const featuredExcerpt = window.document.querySelector('.sv-featured-main__excerpt');
+    const leftExcerpt = window.document.querySelector('.sv-headline__excerpt');
+
+    assert.equal(featuredExcerpt?.textContent.trim(), 'Tom tat noi bat tu noi dung day du cua bai viet dau tien.');
+    assert.equal(leftExcerpt?.textContent.trim(), 'Tom tat cot trai tu noi dung day du cho the bai viet thu tu.');
+});
+
+test('index renders 25 star avatars from topStars independently of loaded posts', async () => {
+    const topStars = Array.from({ length: 25 }, (_, index) => ({
+        authUserId: String(index + 1),
+        userId: `00000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+        nickname: `star-${index + 1}`,
+        displayName: `Star ${index + 1}`,
+        avatarUrl: ''
+    }));
+
+    const latestPosts = [
+        {
+            postId: 201,
+            categoryId: 1,
+            title: 'Mot bai viet duy nhat',
+            contentHtml: '<p>Noi dung bai viet.</p>',
+            coverImageUrl: 'https://cdn.svp.test/posts/only-post.jpg',
+            createdAt: '2026-04-04T11:00:00Z',
+            isArticle: true,
+            isBlog: false,
+            author: { userId: 'aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa', nickname: 'solo', displayName: 'Solo' }
+        }
+    ];
+
+    const fetchStub = async (targetUrl) => {
+        const url = new URL(String(targetUrl));
+        if (url.pathname === '/api/home') {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({ latestPosts, upcomingEvents: [], topStars })
+            };
+        }
+        if (url.pathname === '/stats/visit' || url.pathname === '/stats/visit-session') {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({})
+            };
+        }
+        throw new Error(`Unexpected fetch: ${targetUrl}`);
+    };
+
+    const dom = createDomFromHtml('index.html', {
+        url: 'https://svpforum.fr/index.html',
+        fetch: fetchStub
+    });
+    const { window } = dom;
+    window.localStorage.clear();
+    window.fetch = fetchStub;
+    window.AbortController = global.AbortController;
+    window.URLSearchParams = global.URLSearchParams;
+    window.requestIdleCallback = (callback) => window.setTimeout(() => callback({
+        didTimeout: false,
+        timeRemaining: () => 50
+    }), 0);
+    window.cancelIdleCallback = (id) => window.clearTimeout(id);
+
+    runScript(dom, 'config.js');
+    runScript(dom, 'seo.js');
+    runScript(dom, 'avatar-utils.js');
+    runScript(dom, 'auth-topbar.js');
+    window.eval(extractLastInlineScript(readFrontendFile('index.html')));
+
+    await flushAsync(window, 12);
+
+    const memberLinks = window.document.querySelectorAll('#sv-featured-members .sv-member-link');
+
+    assert.equal(memberLinks.length, 25);
+    assert.match(memberLinks[0]?.getAttribute('aria-label') || '', /Star 1/);
+    assert.match(memberLinks[24]?.getAttribute('aria-label') || '', /Star 25/);
 });

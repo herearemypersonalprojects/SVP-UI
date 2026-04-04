@@ -2017,15 +2017,20 @@
     };
 
     const renderAuthorArticles = async (post) => {
-        if (!authorArticlesCardEl || !authorArticlesEl) return;
+        const excludedPostIds = new Set();
+        const currentPostId = Number(post?.postId || 0);
+        if (currentPostId > 0) {
+            excludedPostIds.add(currentPostId);
+        }
+        if (!authorArticlesCardEl || !authorArticlesEl) return excludedPostIds;
         authorArticlesCardEl.hidden = true;
         authorArticlesEl.innerHTML = '';
         if (!post || !canMatchAuthor(post.author)) {
-            return;
+            return excludedPostIds;
         }
 
         const collected = [];
-        const seenPostIds = new Set([Number(post.postId || 0)]);
+        const seenPostIds = new Set(excludedPostIds);
         let beforeCreatedAt = '';
         let beforePostId = 0;
         const PAGE_LIMIT = 20;
@@ -2059,6 +2064,7 @@
                         return;
                     }
                     seenPostIds.add(item.postId);
+                    excludedPostIds.add(item.postId);
                     collected.push(item);
                 });
 
@@ -2074,7 +2080,7 @@
             }
 
             if (!collected.length) {
-                return;
+                return excludedPostIds;
             }
 
             authorArticlesEl.innerHTML = renderSidebarPostListItems(
@@ -2082,12 +2088,14 @@
                 (item) => buildArticleHref(item.postId, item.title)
             );
             authorArticlesCardEl.hidden = false;
+            return excludedPostIds;
         } catch {
             authorArticlesCardEl.hidden = true;
+            return excludedPostIds;
         }
     };
 
-    const renderRelated = async (postId, categoryId) => {
+    const renderRelated = async (postId, categoryId, excludedPostIds = new Set()) => {
         if (!relatedArticlesEl) return;
         try {
             const res = await fetch(`${API_BASE_URL}/posts/latest-articles?limit=6&categoryId=${encodeURIComponent(categoryId)}`,
@@ -2096,7 +2104,8 @@
             if (!res.ok) throw new Error();
             const items = (Array.isArray(data.items)?data.items:[])
                 .map(normalizeArticleSummary)
-                .filter(i=>i.postId>0 && i.postId!==postId).slice(0,5);
+                .filter((item) => item.postId > 0 && item.postId !== postId && !excludedPostIds.has(item.postId))
+                .slice(0,5);
             if (!items.length) { relatedArticlesEl.innerHTML='<li><div class="sv-meta">Chưa có bài liên quan.</div></li>'; return; }
             relatedArticlesEl.innerHTML = renderSidebarPostListItems(
                 items,
@@ -2513,9 +2522,9 @@
         renderShare(post);
         syncSeo(post, comments.length);
         renderComments(comments);
-        renderAuthorArticles(post);
-        renderRelated(postId, post.categoryId);
-        renderRelatedThreads(postId, post.categoryId);
+        const excludedArticleIds = await renderAuthorArticles(post);
+        await renderRelated(postId, post.categoryId, excludedArticleIds);
+        await renderRelatedThreads(postId, post.categoryId);
 
         // Form
         prefillForm();

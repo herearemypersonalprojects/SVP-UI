@@ -146,7 +146,7 @@ test('post detail shows other articles from the same author and removes the stat
     assert.match(authorPreview?.getAttribute('src') || '', /author-cover\.jpg/);
     assert.match(authorPreview?.closest('a')?.getAttribute('href') || '', /120/);
     assert.equal(relatedPreviewSources.some((src) => /related-cover\.jpg/.test(src)), true);
-    assert.equal(relatedPreviewSources.some((src) => /author-cover\.jpg/.test(src)), true);
+    assert.equal(relatedPreviewSources.some((src) => /author-cover\.jpg/.test(src)), false);
     assert.match(threadPreview?.getAttribute('src') || '', /thread-cover\.jpg/);
     assert.match(threadPreview?.closest('a')?.getAttribute('href') || '', /201/);
 });

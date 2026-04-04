@@ -31,6 +31,19 @@ function makePost(postId, createdAt) {
     };
 }
 
+function createMobileHomeMatchMedia() {
+    return (query) => ({
+        matches: String(query || '').includes('max-width: 991.98px'),
+        media: String(query || ''),
+        onchange: null,
+        addListener() {},
+        removeListener() {},
+        addEventListener() {},
+        removeEventListener() {},
+        dispatchEvent() { return false; }
+    });
+}
+
 test('index only loads the home payload on first render', async () => {
     const calls = [];
     const fetchStub = async (targetUrl) => {
@@ -246,6 +259,64 @@ test('index derives homepage post summaries from full contentHtml', async () => 
 
     assert.equal(featuredExcerpt?.textContent.trim(), 'Tom tat noi bat tu noi dung day du cua bai viet dau tien.');
     assert.equal(leftExcerpt?.textContent.trim(), 'Tom tat cot trai tu noi dung day du cho the bai viet thu tu.');
+});
+
+test('index renders all homepage posts with featured card format on mobile', async () => {
+    const latestPosts = [
+        makePost(301, '2026-04-05T10:00:00Z'),
+        makePost(300, '2026-04-05T09:00:00Z'),
+        makePost(299, '2026-04-05T08:00:00Z'),
+        makePost(298, '2026-04-05T07:00:00Z'),
+        makePost(297, '2026-04-05T06:00:00Z')
+    ];
+
+    const fetchStub = async (targetUrl) => {
+        const url = new URL(String(targetUrl));
+        if (url.pathname === '/api/home') {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({ latestPosts, upcomingEvents: [], topStars: [] })
+            };
+        }
+        if (url.pathname === '/stats/visit' || url.pathname === '/stats/visit-session') {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({})
+            };
+        }
+        throw new Error(`Unexpected fetch: ${targetUrl}`);
+    };
+
+    const dom = createDomFromHtml('index.html', {
+        url: 'https://svpforum.fr/index.html',
+        fetch: fetchStub
+    });
+    const { window } = dom;
+    window.localStorage.clear();
+    window.fetch = fetchStub;
+    window.AbortController = global.AbortController;
+    window.URLSearchParams = global.URLSearchParams;
+    window.matchMedia = createMobileHomeMatchMedia();
+    window.requestIdleCallback = (callback) => window.setTimeout(() => callback({
+        didTimeout: false,
+        timeRemaining: () => 50
+    }), 0);
+    window.cancelIdleCallback = (id) => window.clearTimeout(id);
+
+    runScript(dom, 'config.js');
+    runScript(dom, 'seo.js');
+    runScript(dom, 'avatar-utils.js');
+    runScript(dom, 'auth-topbar.js');
+    window.eval(extractLastInlineScript(readFrontendFile('index.html')));
+
+    await flushAsync(window, 12);
+
+    assert.equal(window.document.querySelectorAll('.sv-featured-main__card').length, latestPosts.length);
+    assert.equal(window.document.querySelectorAll('.sv-headline').length, 0);
+    assert.equal(window.document.querySelectorAll('.sv-subcard').length, 0);
+    assert.equal(window.document.querySelectorAll('.sv-bottom-card').length, 0);
 });
 
 test('index renders 25 star avatars from topStars independently of loaded posts', async () => {

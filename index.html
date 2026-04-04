@@ -1055,6 +1055,9 @@
         const buildEventHref = (eventId, title) => urlHelpers
             ? urlHelpers.buildDetailPath('event', eventId, title)
             : `event_detail.html?eventId=${encodeURIComponent(eventId)}`;
+        const compactHomeFeedMq = typeof window.matchMedia === 'function'
+            ? window.matchMedia('(max-width: 991.98px)')
+            : null;
         const activeCategoryId = (() => {
             const raw = new URLSearchParams(window.location.search).get('categoryId');
             if (!raw || raw.trim().length === 0) {
@@ -1440,6 +1443,12 @@
             `;
         };
 
+        const renderCompactHomeFeed = (posts) => `
+            <div class="sv-featured-main sv-featured-main--compact">
+                ${posts.map((post) => renderFeaturedMainCard(post)).join('')}
+            </div>
+        `;
+
         const renderSubCard = (post) => {
             const href = buildPostHref(post);
             const safeTitle = escapeHtml(post.title || 'Chưa có tiêu đề');
@@ -1473,6 +1482,10 @@
         const renderMagazineFeed = (posts) => {
             if (!posts || posts.length === 0) {
                 return `<div class="sv-meta">Chưa có bài viết phù hợp để hiển thị.</div>`;
+            }
+
+            if (compactHomeFeedMq && compactHomeFeedMq.matches) {
+                return renderCompactHomeFeed(posts);
             }
 
             const LEFT_COLUMN_POST_COUNT = 10;
@@ -1724,6 +1737,17 @@
 
             updatePostPaginationState();
         };
+
+        if (compactHomeFeedMq) {
+            const rerenderForHomeLayout = () => {
+                renderFeedAndMembers();
+            };
+            if (typeof compactHomeFeedMq.addEventListener === 'function') {
+                compactHomeFeedMq.addEventListener('change', rerenderForHomeLayout);
+            } else if (typeof compactHomeFeedMq.addListener === 'function') {
+                compactHomeFeedMq.addListener(rerenderForHomeLayout);
+            }
+        }
 
         const renderHomeData = (payload) => {
             const latestPosts = Array.isArray(payload.latestPosts) ? payload.latestPosts.map(normalizePost) : [];

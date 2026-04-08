@@ -1,4 +1,9 @@
 (function () {
+    if (window.__svpAuthTopbarInitialized) {
+        return;
+    }
+    window.__svpAuthTopbarInitialized = true;
+
     const fallbackBase = (() => {
         const origin = window.location.origin || "";
         const isLocal = origin.includes("localhost")
@@ -26,9 +31,13 @@
     const VISIT_SESSION_IDLE_TIMEOUT_MS = 30 * 60 * 1000;
     const VISIT_SESSION_MAX_ENGAGED_MS = 12 * 60 * 60 * 1000;
     const VISIT_SESSION_MIN_FLUSH_INTERVAL_MS = 1000;
+    const RAPID_BOOTSTRAP_STORAGE_KEY = "svp.page.bootstrap.v1";
+    const RAPID_BOOTSTRAP_WINDOW_MS = 15 * 1000;
     const authBox = document.querySelector(".sv-auth");
     const topbarBrand = document.querySelector(".sv-topbar .sv-brand");
     const guestAuthMarkup = authBox ? authBox.innerHTML : "";
+    const currentPagePath = window.location.pathname + window.location.search;
+    const pageBootStartedAtMs = Date.now();
     let refreshTimer = null;
     let refreshInFlight = null;
     let inboxPollTimer = null;
@@ -103,6 +112,35 @@
     };
 
     const asText = (value) => String(value ?? "").trim();
+    const readSessionStorageJson = (key) => {
+        try {
+            const raw = window.sessionStorage.getItem(key);
+            return raw ? JSON.parse(raw) : null;
+        } catch (_) {
+            return null;
+        }
+    };
+    const writeSessionStorageJson = (key, value) => {
+        try {
+            window.sessionStorage.setItem(key, JSON.stringify(value));
+        } catch (_) {
+        }
+    };
+    const consumeRapidBootstrapFlag = () => {
+        const previous = readSessionStorageJson(RAPID_BOOTSTRAP_STORAGE_KEY);
+        const previousPath = String(previous?.path || "");
+        const previousStartedAtMs = Number(previous?.startedAtMs || 0);
+        const isRapidSamePathBootstrap = previousPath === currentPagePath
+            && Number.isFinite(previousStartedAtMs)
+            && previousStartedAtMs > 0
+            && (pageBootStartedAtMs - previousStartedAtMs) < RAPID_BOOTSTRAP_WINDOW_MS;
+        writeSessionStorageJson(RAPID_BOOTSTRAP_STORAGE_KEY, {
+            path: currentPagePath,
+            startedAtMs: pageBootStartedAtMs
+        });
+        return isRapidSamePathBootstrap;
+    };
+    const suppressRapidBootstrapNetwork = consumeRapidBootstrapFlag();
     const parsePositiveSeconds = (value) => {
         const seconds = Number(value);
         if (!Number.isFinite(seconds) || seconds <= 0) {
@@ -1004,10 +1042,13 @@
     const flushVisitSession = () => {
         try {
             const nowMs = Date.now();
+            accumulateVisitEngagement(nowMs);
             if (!visitSessionState || (nowMs - lastVisitSessionFlushAt) < VISIT_SESSION_MIN_FLUSH_INTERVAL_MS) {
                 return;
             }
-            accumulateVisitEngagement(nowMs);
+            if (suppressRapidBootstrapNetwork && (nowMs - pageBootStartedAtMs) < RAPID_BOOTSTRAP_WINDOW_MS) {
+                return;
+            }
             const payload = buildVisitSessionPayload();
             if (!payload) {
                 return;
@@ -1063,7 +1104,12 @@
 
     const trackVisit = () => {
         try {
-            const path = window.location.pathname + window.location.search;
+            const path = currentPagePath;
+            if (suppressRapidBootstrapNetwork) {
+                visitSessionState = readVisitSessionState();
+                resumeVisitSession();
+                return;
+            }
             ensureVisitSessionState(path);
             const payload = {
                 path,
@@ -1088,7 +1134,11 @@
             renderTopbar(readFreshProfileCache() || bootstrapProfile);
             if (accessToken) {
                 void refreshProfileAvatar(accessToken);
-                void refreshUnreadCount({ immediate: true });
+                if (suppressRapidBootstrapNetwork) {
+                    scheduleUnreadPoll();
+                } else {
+                    void refreshUnreadCount({ immediate: true });
+                }
             }
         })();
     }, 1200);

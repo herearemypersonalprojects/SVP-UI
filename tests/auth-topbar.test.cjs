@@ -17,10 +17,19 @@ function makeToken(payload) {
     return `${encode({ alg: 'HS256', typ: 'JWT' })}.${encode(payload)}.signature`;
 }
 
-function loadAuthTopbar({ localStorageEntries = {}, fetchImpl } = {}) {
+function loadAuthTopbar({
+    localStorageEntries = {},
+    fetchImpl,
+    setTimeoutImpl,
+    clearTimeoutImpl,
+    requestIdleCallbackImpl
+} = {}) {
     const store = new Map(
         Object.entries(localStorageEntries).map(([key, value]) => [key, String(value)])
     );
+    const scheduleTimeout = typeof setTimeoutImpl === 'function' ? setTimeoutImpl : () => 1;
+    const clearScheduledTimeout = typeof clearTimeoutImpl === 'function' ? clearTimeoutImpl : () => {};
+    const requestIdleCallback = typeof requestIdleCallbackImpl === 'function' ? requestIdleCallbackImpl : () => 1;
     const authBox = {
         innerHTML: '<a href="login.html">Login</a>',
         querySelector: () => null
@@ -41,9 +50,9 @@ function loadAuthTopbar({ localStorageEntries = {}, fetchImpl } = {}) {
     };
     const window = {
         location,
-        requestIdleCallback: () => 1,
-        setTimeout: () => 1,
-        clearTimeout: () => {},
+        requestIdleCallback,
+        setTimeout: scheduleTimeout,
+        clearTimeout: clearScheduledTimeout,
         addEventListener: () => {},
         crypto: { randomUUID: () => '00000000-0000-4000-8000-000000000000' }
     };
@@ -75,8 +84,8 @@ function loadAuthTopbar({ localStorageEntries = {}, fetchImpl } = {}) {
         JSON,
         Math,
         Date,
-        setTimeout: () => 1,
-        clearTimeout: () => {},
+        setTimeout: scheduleTimeout,
+        clearTimeout: clearScheduledTimeout,
         atob: (value) => Buffer.from(value, 'base64').toString('binary')
     };
 
@@ -248,6 +257,59 @@ test('refreshAccessToken clears session when refresh token is genuinely invalid'
     assert.equal(env.store.has('accessToken'), false);
     assert.equal(env.store.has('refreshToken'), false);
     assert.match(env.authBox.innerHTML, /login\.html/);
+});
+
+test('refreshAccessToken schedules the next refresh from expiresIn returned by backend', async () => {
+    const scheduledDelays = [];
+    const env = loadAuthTopbar({
+        localStorageEntries: {
+            accessToken: makeToken({
+                sub: '81',
+                email: 'alice@example.com',
+                nickname: 'alice',
+                displayName: 'Alice',
+                role: 'USER',
+                exp: Math.floor(Date.now() / 1000) - 60
+            }),
+            refreshToken: 'refresh-old'
+        },
+        setTimeoutImpl: (_fn, delay) => {
+            scheduledDelays.push(delay);
+            return scheduledDelays.length;
+        },
+        fetchImpl: async (targetUrl) => {
+            if (String(targetUrl).endsWith('/auth/refresh')) {
+                return {
+                    ok: true,
+                    status: 200,
+                    json: async () => ({
+                        accessToken: makeToken({
+                            sub: '81',
+                            email: 'alice@example.com',
+                            nickname: 'alice',
+                            displayName: 'Alice',
+                            role: 'USER',
+                            exp: Math.floor(Date.now() / 1000) + 3600
+                        }),
+                        refreshToken: 'refresh-new',
+                        expiresIn: 120,
+                        authUserId: 81,
+                        email: 'alice@example.com',
+                        displayName: 'Alice'
+                    })
+                };
+            }
+            return { ok: true, status: 200, json: async () => ({}) };
+        }
+    });
+
+    const refreshed = await env.window.SVPAuth.refreshAccessToken();
+
+    assert.equal(refreshed, true);
+    assert.equal(env.store.get('refreshToken'), 'refresh-new');
+    assert.ok(env.store.has('accessTokenExpiresAt'));
+    assert.equal(scheduledDelays.length, 1);
+    assert.ok(scheduledDelays[0] >= 55_000 && scheduledDelays[0] <= 60_000);
 });
 
 test('tracking requests avoid Authorization header and keep authUserId in payload', () => {

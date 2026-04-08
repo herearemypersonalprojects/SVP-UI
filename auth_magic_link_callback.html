@@ -84,6 +84,7 @@
     const hashParams = new URLSearchParams((window.location.hash || '').replace(/^#/, ''));
     applyTokens({
         accessToken: hashParams.get('accessToken') || '',
+        expiresIn: hashParams.get('expiresIn') || '',
         refreshToken: hashParams.get('refreshToken') || '',
         email: hashParams.get('email') || '',
         nickname: hashParams.get('nickname') || '',

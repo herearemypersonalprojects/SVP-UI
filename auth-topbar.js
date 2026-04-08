@@ -16,6 +16,7 @@
     const REFRESH_SKEW_MS = 60 * 1000;
     const MIN_REFRESH_DELAY_MS = 5 * 1000;
     const RETRY_REFRESH_DELAY_MS = 30 * 1000;
+    const ACCESS_TOKEN_EXPIRES_AT_KEY = "accessTokenExpiresAt";
     const PROFILE_CACHE_KEY = "svp.auth.profileCache.v1";
     const PROFILE_CACHE_TTL_MS = 15 * 60 * 1000;
     const NON_CRITICAL_IDLE_TIMEOUT_MS = 1500;
@@ -102,6 +103,57 @@
     };
 
     const asText = (value) => String(value ?? "").trim();
+    const parsePositiveSeconds = (value) => {
+        const seconds = Number(value);
+        if (!Number.isFinite(seconds) || seconds <= 0) {
+            return 0;
+        }
+        return Math.floor(seconds);
+    };
+    const parseEpochMs = (value) => {
+        const parsed = Date.parse(asText(value));
+        return Number.isFinite(parsed) && parsed > 0 ? parsed : 0;
+    };
+    const readJwtExpiryMs = (token) => {
+        const payload = parseJwtPayload(token) || {};
+        const exp = Number(payload.exp || 0);
+        if (!Number.isFinite(exp) || exp <= 0) {
+            return 0;
+        }
+        return exp * 1000;
+    };
+    const resolveAccessTokenExpiryMs = (payload, accessTokenOverride) => {
+        const source = payload && typeof payload === "object" ? payload : {};
+        const expiresIn = parsePositiveSeconds(source.expiresIn);
+        if (expiresIn > 0) {
+            return Date.now() + (expiresIn * 1000);
+        }
+        const accessExpiresAtMs = parseEpochMs(source.accessExpiresAt);
+        if (accessExpiresAtMs > 0) {
+            return accessExpiresAtMs;
+        }
+        return readJwtExpiryMs(accessTokenOverride || source.accessToken || "");
+    };
+    const readStoredAccessTokenExpiryMs = () => {
+        const expiresAtMs = Number(localStorage.getItem(ACCESS_TOKEN_EXPIRES_AT_KEY) || 0);
+        return Number.isFinite(expiresAtMs) && expiresAtMs > 0 ? expiresAtMs : 0;
+    };
+    const readAccessTokenExpiryMs = (accessToken) => {
+        const storedExpiresAtMs = readStoredAccessTokenExpiryMs();
+        if (storedExpiresAtMs > 0) {
+            return storedExpiresAtMs;
+        }
+        return readJwtExpiryMs(accessToken);
+    };
+    const persistAccessTokenExpiry = (payload, accessTokenOverride) => {
+        const expiresAtMs = resolveAccessTokenExpiryMs(payload, accessTokenOverride);
+        if (expiresAtMs > 0) {
+            localStorage.setItem(ACCESS_TOKEN_EXPIRES_AT_KEY, String(expiresAtMs));
+            return expiresAtMs;
+        }
+        localStorage.removeItem(ACCESS_TOKEN_EXPIRES_AT_KEY);
+        return 0;
+    };
     const isUuidLike = (value) => /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
         .test(asText(value));
     const isPositiveIntegerLike = (value) => /^[1-9]\d*$/.test(asText(value));
@@ -164,6 +216,9 @@
         return {
             accessToken: asText(payload.accessToken),
             refreshToken: asText(payload.refreshToken),
+            expiresIn: parsePositiveSeconds(payload.expiresIn),
+            accessExpiresAt: asText(payload.accessExpiresAt),
+            refreshExpiresAt: asText(payload.refreshExpiresAt),
             email: asText(payload.email),
             nickname: asText(payload.nickname),
             displayName: asText(payload.displayName),
@@ -270,6 +325,7 @@
     const removeSession = () => {
         localStorage.removeItem("accessToken");
         localStorage.removeItem("refreshToken");
+        localStorage.removeItem(ACCESS_TOKEN_EXPIRES_AT_KEY);
         localStorage.removeItem("userEmail");
         localStorage.removeItem("userNickname");
         localStorage.removeItem("userDisplayName");
@@ -291,6 +347,7 @@
         }
         localStorage.setItem("accessToken", accessToken);
         localStorage.setItem("refreshToken", refreshToken);
+        persistAccessTokenExpiry(normalized, accessToken);
         localStorage.removeItem("userAvatarUrl");
         clearProfileCache();
         persistIdentity(normalized);
@@ -313,12 +370,11 @@
 
     const scheduleRefreshFromToken = (accessToken) => {
         clearRefreshTimer();
-        const payload = parseJwtPayload(accessToken) || {};
-        const exp = Number(payload.exp || 0);
-        if (!Number.isFinite(exp) || exp <= 0) {
+        const expiresAtMs = readAccessTokenExpiryMs(accessToken);
+        if (!Number.isFinite(expiresAtMs) || expiresAtMs <= 0) {
             return;
         }
-        const dueMs = exp * 1000 - Date.now() - REFRESH_SKEW_MS;
+        const dueMs = expiresAtMs - Date.now() - REFRESH_SKEW_MS;
         const delay = Math.max(MIN_REFRESH_DELAY_MS, dueMs);
         refreshTimer = setTimeout(() => {
             void refreshAccessToken();
@@ -331,9 +387,8 @@
         if (!latestRefreshToken || latestRefreshToken === staleRefreshToken || !latestAccessToken) {
             return false;
         }
-        const latestPayload = parseJwtPayload(latestAccessToken) || {};
-        const latestExp = Number(latestPayload.exp || 0);
-        if (Number.isFinite(latestExp) && latestExp > 0 && latestExp * 1000 > Date.now() + REFRESH_SKEW_MS) {
+        const latestExpiresAtMs = readAccessTokenExpiryMs(latestAccessToken);
+        if (Number.isFinite(latestExpiresAtMs) && latestExpiresAtMs > Date.now() + REFRESH_SKEW_MS) {
             scheduleRefreshFromToken(latestAccessToken);
         } else {
             scheduleRefreshRetry();
@@ -407,14 +462,13 @@
             return refreshed ? (localStorage.getItem("accessToken") || "") : "";
         }
 
-        const payload = parseJwtPayload(accessToken) || {};
-        const exp = Number(payload.exp || 0);
-        if (!Number.isFinite(exp) || exp <= 0) {
+        const expiresAtMs = readAccessTokenExpiryMs(accessToken);
+        if (!Number.isFinite(expiresAtMs) || expiresAtMs <= 0) {
             const refreshed = await refreshAccessToken();
             return refreshed ? (localStorage.getItem("accessToken") || "") : "";
         }
 
-        if (exp * 1000 <= Date.now() + REFRESH_SKEW_MS) {
+        if (expiresAtMs <= Date.now() + REFRESH_SKEW_MS) {
             const refreshed = await refreshAccessToken();
             return refreshed ? (localStorage.getItem("accessToken") || "") : "";
         }
@@ -534,12 +588,11 @@
         if (!accessToken && !localStorage.getItem("refreshToken")) {
             return;
         }
-        const payload = parseJwtPayload(accessToken) || {};
-        const exp = Number(payload.exp || 0);
+        const expiresAtMs = readAccessTokenExpiryMs(accessToken);
         const needsRefresh = !accessToken
-            || !Number.isFinite(exp)
-            || exp <= 0
-            || exp * 1000 <= Date.now() + REFRESH_SKEW_MS;
+            || !Number.isFinite(expiresAtMs)
+            || expiresAtMs <= 0
+            || expiresAtMs <= Date.now() + REFRESH_SKEW_MS;
         if (needsRefresh) {
             await refreshAccessToken();
         } else {
@@ -574,7 +627,7 @@
             if (!event || !event.key) {
                 return;
             }
-            if (!["accessToken", "refreshToken", "userId", "authUserId"].includes(event.key)) {
+            if (!["accessToken", "refreshToken", ACCESS_TOKEN_EXPIRES_AT_KEY, "userId", "authUserId"].includes(event.key)) {
                 return;
             }
             if (!localStorage.getItem("accessToken")) {

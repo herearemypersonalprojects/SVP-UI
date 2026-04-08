@@ -97,6 +97,7 @@
         const normalized = {
             accessToken: asText(auth.accessToken),
             refreshToken: asText(auth.refreshToken),
+            expiresIn: asText(auth.expiresIn),
             email: asText(auth.email),
             nickname: asText(auth.nickname),
             displayName: asText(auth.displayName),
@@ -241,6 +242,7 @@
     const hashAuth = normalizeAuth({
         accessToken: readParam('accessToken'),
         refreshToken: readParam('refreshToken'),
+        expiresIn: readParam('expiresIn'),
         email: readParam('email'),
         nickname: readParam('nickname'),
         displayName: readParam('displayName'),

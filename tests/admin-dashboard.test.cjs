@@ -225,6 +225,62 @@ test('admin dashboard engagement user list shows displayName without nickname', 
     assert.equal((userList.textContent || '').includes('@lan-anh'), false);
 });
 
+test('admin dashboard engagement user list sorts by lastSeenAt descending', async () => {
+    const dom = await loadAdminDashboard('SUPERADMIN', {
+        days: 30,
+        totalVisits: 340,
+        uniqueIps: 96,
+        daily: [],
+        cities: [],
+        countries: [],
+        paths: [],
+        ips: [],
+        recentVisits: [],
+        activityHours: [],
+        loggedInActivityHours: [],
+        engagementSummary: {
+            totalSessions: 12,
+            totalEngagedSeconds: 3600,
+            avgEngagedSeconds: 300,
+            totalPageViews: 48,
+            loggedInSessions: 3,
+            loggedInUsers: 2,
+            loggedInReturnVisits: 2,
+            loggedInEngagedSeconds: 1200,
+            avgLoggedInEngagedSeconds: 400
+        },
+        loggedInUsers: [
+            {
+                authUserId: 81,
+                email: 'older@example.com',
+                displayName: 'Older User',
+                sessionCount: 5,
+                returnVisits: 4,
+                totalEngagedSeconds: 1200,
+                avgEngagedSeconds: 240,
+                totalPageViews: 14,
+                lastSeenAt: '2026-04-09T08:30:00Z'
+            },
+            {
+                authUserId: 82,
+                email: 'recent@example.com',
+                displayName: 'Recent User',
+                sessionCount: 2,
+                returnVisits: 1,
+                totalEngagedSeconds: 600,
+                avgEngagedSeconds: 300,
+                totalPageViews: 8,
+                lastSeenAt: '2026-04-10T08:30:00Z'
+            }
+        ]
+    });
+
+    const rows = Array.from(dom.window.document.querySelectorAll('#engagement-user-list tr'));
+    assert.equal(rows.length, 2);
+    assert.match(rows[0].textContent || '', /Recent User/);
+    assert.match(rows[1].textContent || '', /Older User/);
+});
+
 test('admin dashboard lets ADMIN update pending article status quickly', async () => {
     let detailCalls = 0;
     let patchedPayload = null;

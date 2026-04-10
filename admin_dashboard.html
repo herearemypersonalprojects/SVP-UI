@@ -1147,7 +1147,21 @@
             }
             engagementCard.classList.remove('d-none');
             const summary = payload?.engagementSummary || null;
-            const users = Array.isArray(payload?.loggedInUsers) ? payload.loggedInUsers : [];
+            const users = (Array.isArray(payload?.loggedInUsers) ? payload.loggedInUsers : [])
+                .slice()
+                .sort((left, right) => {
+                    const leftLastSeen = Date.parse(left?.lastSeenAt || '') || 0;
+                    const rightLastSeen = Date.parse(right?.lastSeenAt || '') || 0;
+                    if (rightLastSeen !== leftLastSeen) {
+                        return rightLastSeen - leftLastSeen;
+                    }
+                    const rightReturnVisits = Number(right?.returnVisits || 0);
+                    const leftReturnVisits = Number(left?.returnVisits || 0);
+                    if (rightReturnVisits !== leftReturnVisits) {
+                        return rightReturnVisits - leftReturnVisits;
+                    }
+                    return Number(right?.sessionCount || 0) - Number(left?.sessionCount || 0);
+                });
             const visitorActivityHours = normalizeActivityHours(payload?.activityHours);
             const loggedInActivityHours = normalizeActivityHours(payload?.loggedInActivityHours);
             const visitorPeakHour = visitorActivityHours[0] || null;

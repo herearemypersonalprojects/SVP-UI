@@ -944,13 +944,26 @@
         .trim()
         .toLowerCase();
 
+    const pickDisplayText = (...values) => {
+        for (const value of values) {
+            const normalized = String(value || '')
+                .replace(/\u00a0/g, ' ')
+                .replace(/\s+/g, ' ')
+                .trim();
+            if (normalized) {
+                return normalized;
+            }
+        }
+        return '';
+    };
+
     const toAuthorIdentity = (author) => {
         const source = author && typeof author === 'object' ? author : {};
         return {
             authUserId: String(source.authUserId || source.auth_user_id || '').trim(),
             userId: String(source.userId || source.user_id || '').trim(),
             nickname: normalizeLookupText(source.nickname),
-            displayName: normalizeLookupText(source.displayName || source.display_name)
+            displayName: normalizeLookupText(pickDisplayText(source.displayName, source.display_name))
         };
     };
 
@@ -1260,7 +1273,7 @@
         };
 
         rememberUser(
-            post?.author?.displayName || post?.author?.nickname || '',
+            post?.author?.displayName || '',
             post?.author?.nickname || '',
             post?.author?.userId || '',
             post?.author?.authUserId || ''
@@ -1363,6 +1376,13 @@
 
     const normalizePost = (post) => {
         const rawAuthor = post?.author || {};
+        const authorDisplayName = pickDisplayText(
+            rawAuthor.displayName,
+            rawAuthor.display_name,
+            post?.authorDisplayName,
+            post?.author_display_name,
+            post?.authorName
+        );
         return {
             postId: Number(post?.postId ?? post?.id ?? 0),
             userId: String(post?.userId || post?.user_id || ''),
@@ -1377,7 +1397,7 @@
                 authUserId: rawAuthor.authUserId || rawAuthor.auth_user_id || post?.authorAuthUserId || post?.author_auth_user_id || null,
                 userId: rawAuthor.userId || post?.authorUserId || post?.author_user_id || null,
                 nickname: rawAuthor.nickname || post?.authorNickname || post?.author_nickname || post?.nickname || 'anonymous',
-                displayName: rawAuthor.displayName || post?.authorDisplayName || post?.author_display_name || post?.authorName || post?.nickname || 'Ẩn danh',
+                displayName: authorDisplayName || 'Ẩn danh',
                 avatarUrl: rawAuthor.avatarUrl || rawAuthor.avatar_url || post?.authorAvatarUrl || post?.author_avatar_url || post?.avatarUrl || post?.avatar_url || ''
             },
             viewCount: Number(post?.viewCount ?? post?.views ?? 0),
@@ -1390,11 +1410,18 @@
         const contentHtml = String(c?.contentHtml || c?.content_html || c?.content || '');
         const directImg = toSafeHttpUrl(c?.imageUrl || c?.image_url || '');
         const safeContentHtml = sanitizeCommentHtml(contentHtml) || textToCommentHtml(String(c?.contentText || ''));
+        const authorDisplayName = pickDisplayText(
+            author.displayName,
+            author.display_name,
+            c?.authorDisplayName,
+            c?.author_display_name,
+            c?.authorName
+        );
         return {
             id: Number(c?.commentId || c?.id || Date.now()),
             postId: Number(c?.postId || c?.post_id || 0),
-            authorName: String(author.displayName || author.nickname || c?.authorName || 'Ẩn danh'),
-            authorSeed: String(author.nickname || author.userId || author.displayName || c?.authorName || 'anonymous'),
+            authorName: String(authorDisplayName || 'Ẩn danh'),
+            authorSeed: String(author.nickname || author.userId || authorDisplayName || 'anonymous'),
             authorNickname: String(author.nickname || ''),
             authorAuthUserId: String(author.authUserId || author.auth_user_id || c?.authorAuthUserId || c?.author_auth_user_id || ''),
             authorUserId: String(author.userId || ''),
@@ -1788,7 +1815,7 @@
 
     const renderPostHeader = (post) => {
         const author = post.author || {};
-        const displayName = author.displayName || author.nickname || 'Ẩn danh';
+        const displayName = pickDisplayText(author.displayName) || 'Ẩn danh';
         const categoryName = getCategoryName(post.categoryId);
 
         // Page title & breadcrumb
@@ -1881,7 +1908,7 @@
         if (!seo || !post) return;
 
         const author = post.author || {};
-        const authorName = author.displayName || author.nickname || 'SVP Forum';
+        const authorName = pickDisplayText(author.displayName) || 'SVP Forum';
         const categoryName = getCategoryName(post.categoryId);
         const articleText = seo.htmlToText(post.contentHtml || '');
         const description = seo.excerpt(articleText || post.title || '', 170)

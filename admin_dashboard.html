@@ -1207,13 +1207,11 @@
                 return;
             }
             engagementUserList.innerHTML = users.map((item) => {
-                const displayName = item?.displayName || item?.nickname || `User #${item?.authUserId || '--'}`;
-                const nickname = item?.nickname ? `@${item.nickname}` : '';
+                const displayName = item?.displayName || item?.email || `User #${item?.authUserId || '--'}`;
                 return `
                     <tr>
                         <td>
                             <div><strong>${escapeHtml(displayName)}</strong></div>
-                            ${nickname ? `<div class="sv-admin-muted">${escapeHtml(nickname)}</div>` : ''}
                         </td>
                         <td>${escapeHtml(item?.email || '')}</td>
                         <td>${Number(item?.sessionCount || 0).toLocaleString('vi-VN')}</td>
@@ -1527,7 +1525,7 @@
                             : /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(safeUserId)
                             ? `profile.html?user_id=${encodeURIComponent(safeUserId)}`
                             : (safeNickname ? `profile.html?nickname=${encodeURIComponent(safeNickname)}` : '');
-                        const displayName = item.displayName || item.nickname || '';
+                        const displayName = item.displayName || item.email || item.userId || '';
                         const displayNameNode = profile
                             ? `<a href="${profile}">${escapeHtml(displayName)}</a>`
                             : escapeHtml(displayName);
@@ -1838,7 +1836,7 @@
                 if (!response.ok) {
                     throw new Error(data.error || 'Không thể cập nhật quyền.');
                 }
-                setRoleStatus(`Đã cập nhật ${data.displayName || data.nickname || data.email} → ${data.role}.`, false);
+                setRoleStatus(`Đã cập nhật ${data.displayName || data.email || data.userId || 'tài khoản'} → ${data.role}.`, false);
                 await loadOverview(true);
             } catch (error) {
                 setRoleStatus(error.message || 'Không thể cập nhật quyền.', true);

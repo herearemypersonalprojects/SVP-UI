@@ -180,6 +180,51 @@ test('admin dashboard keeps visitor activity stats hidden from ADMIN', async () 
     assert.equal(engagementCard.style.display, 'none');
 });
 
+test('admin dashboard engagement user list shows displayName without nickname', async () => {
+    const dom = await loadAdminDashboard('SUPERADMIN', {
+        days: 30,
+        totalVisits: 340,
+        uniqueIps: 96,
+        daily: [],
+        cities: [],
+        countries: [],
+        paths: [],
+        ips: [],
+        recentVisits: [],
+        activityHours: [],
+        loggedInActivityHours: [],
+        engagementSummary: {
+            totalSessions: 12,
+            totalEngagedSeconds: 3600,
+            avgEngagedSeconds: 300,
+            totalPageViews: 48,
+            loggedInSessions: 3,
+            loggedInUsers: 1,
+            loggedInReturnVisits: 1,
+            loggedInEngagedSeconds: 1200,
+            avgLoggedInEngagedSeconds: 400
+        },
+        loggedInUsers: [
+            {
+                authUserId: 81,
+                email: 'lan.anh@example.com',
+                nickname: 'lan-anh',
+                displayName: 'Lan Anh',
+                sessionCount: 3,
+                returnVisits: 1,
+                totalEngagedSeconds: 1200,
+                avgEngagedSeconds: 400,
+                totalPageViews: 14,
+                lastSeenAt: '2026-04-10T08:30:00Z'
+            }
+        ]
+    });
+
+    const userList = dom.window.document.getElementById('engagement-user-list');
+    assert.match(userList.textContent || '', /Lan Anh/);
+    assert.equal((userList.textContent || '').includes('@lan-anh'), false);
+});
+
 test('admin dashboard lets ADMIN update pending article status quickly', async () => {
     let detailCalls = 0;
     let patchedPayload = null;

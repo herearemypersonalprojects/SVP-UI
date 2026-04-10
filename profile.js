@@ -639,7 +639,6 @@
                     ${avatarMarkup}
                     <div class="sv-profile-follower-main">
                         <a class="sv-profile-follower-name" href="${profileHref}">${escapeHtml(displayName)}</a>
-                        <div class="sv-profile-follower-nickname">${item.nickname ? `@${escapeHtml(item.nickname)}` : ''}</div>
                         <div class="sv-profile-follower-meta">
                             <span>${escapeHtml(formatRoleLabel(item.role))}</span>
                             <span>Theo dõi từ ${escapeHtml(formatDate(item.followedAt))}</span>

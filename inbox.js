@@ -124,7 +124,7 @@
         if (!items.length) {
             listEl.innerHTML = state.loading
                 ? '<div class="sv-inbox-empty">Đang tải hội thoại...</div>'
-                : '<div class="sv-inbox-empty">Chưa có hội thoại nào. Hãy bắt đầu bằng nickname của thành viên bạn muốn nhắn tin.</div>';
+                : '<div class="sv-inbox-empty">Chưa có hội thoại nào. Hãy bắt đầu cuộc trò chuyện mới ở khung bên phải hoặc từ trang hồ sơ thành viên.</div>';
             return;
         }
         listEl.innerHTML = items.map((conversation) => {
@@ -144,7 +144,6 @@
                             <div class="sv-inbox-row__head">
                                 <div>
                                     <div class="sv-inbox-row__name">${escapeHtml(otherUser.displayName || otherUser.nickname || "Thành viên SVP")}</div>
-                                    <div class="sv-inbox-row__meta">@${escapeHtml(otherUser.nickname || "user")}</div>
                                 </div>
                                 ${unreadMarkup}
                             </div>
@@ -230,7 +229,7 @@
         event.preventDefault();
         const identifier = String(targetInput.value || "").trim();
         if (!identifier) {
-            setComposerStatus("Nhập nickname, UUID hoặc auth user id.", "error");
+            setComposerStatus("Nhập định danh thành viên, UUID hoặc auth user id.", "error");
             return;
         }
         setComposerStatus("Đang tạo hội thoại...", "muted");

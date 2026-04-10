@@ -172,6 +172,24 @@ test('topbar uses auth_user_id from JWT sub when only stale numeric userId exist
     assert.ok(!env.authBox.innerHTML.includes('nickname=alice'));
 });
 
+test('topbar does not render nickname as the visible account label when displayName is missing', () => {
+    const token = makeToken({
+        sub: '81',
+        email: 'alice@example.com',
+        nickname: 'alice',
+        role: 'USER',
+        exp: Math.floor(Date.now() / 1000) + 3600
+    });
+    const env = loadAuthTopbar({
+        localStorageEntries: {
+            accessToken: token
+        }
+    });
+
+    assert.ok(env.authBox.innerHTML.includes('alice@example.com'));
+    assert.ok(!env.authBox.innerHTML.includes('>alice<'));
+});
+
 test('refreshAccessToken keeps session when another tab already rotated refresh token', async () => {
     const oldRefreshToken = 'refresh-old';
     const rotatedRefreshToken = 'refresh-new';

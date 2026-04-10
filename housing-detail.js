@@ -773,7 +773,6 @@
             : `<strong>${escapeHtml(displayName)}</strong>`;
         ownerEl.innerHTML = `
             <div>${ownerNameHtml}</div>
-            ${nickname ? `<div class="sv-housing-note mt-1">@${escapeHtml(nickname)}</div>` : ''}
             ${currentDetail.createdAt ? `<div class="sv-housing-note mt-2">Đăng lúc ${escapeHtml(formatDate(currentDetail.createdAt))}</div>` : ''}
         `;
     };

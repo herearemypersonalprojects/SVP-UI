@@ -727,7 +727,7 @@
         const email = asText(localStorage.getItem("userEmail") || payload.email);
         const displayName = (profileOverride && profileOverride.displayName)
             ? asText(profileOverride.displayName)
-            : asText(localStorage.getItem("userDisplayName") || payload.displayName || nickname || email || "Tai khoan");
+            : asText(localStorage.getItem("userDisplayName") || payload.displayName || email || "Tai khoan");
         const initial = (displayName.charAt(0) || "U").toUpperCase();
         const profileHref = buildProfileHref({ nickname, userId, authUserId }, "profile.html");
         const role = asText(payload.role).toUpperCase();

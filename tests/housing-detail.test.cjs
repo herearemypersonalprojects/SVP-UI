@@ -216,3 +216,17 @@ test('housing detail submits a guest comment and updates the rendered view count
     assert.match(document.getElementById('housing-comment-badge').textContent, /1 bình luận/);
     assert.ok(dom.requests.some((entry) => String(entry.url).includes(`/api/housing/${payload.id}/comments`) && String(entry.options?.method || 'GET').toUpperCase() === 'POST'));
 });
+
+test('housing detail shows owner displayName without rendering nickname', async () => {
+    const dom = await loadHousingDetailPage(buildHousingPayload({
+        owner: {
+            displayName: 'Lan Anh',
+            nickname: 'lan-anh',
+            userId: '4e999a2a-d4c6-4e1b-95dc-ae4f699dd8cf'
+        }
+    }));
+
+    const owner = dom.window.document.getElementById('housing-detail-owner');
+    assert.match(owner.textContent || '', /Lan Anh/);
+    assert.equal((owner.textContent || '').includes('@lan-anh'), false);
+});

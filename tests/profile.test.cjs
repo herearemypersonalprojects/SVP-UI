@@ -244,7 +244,17 @@ test('profile page canonicalizes legacy nickname URL to auth_user_id after loadi
                         stats: { postCount: 0, blogCount: 0, followerCount: 0 },
                         viewer: { authenticated: false, self: false, canFollow: false, following: false },
                         posts: [],
-                        followers: []
+                        followers: [
+                            {
+                                userId: '0f7d4411-f20c-4741-b818-1058853fd36d',
+                                authUserId: '82',
+                                nickname: 'lan-anh',
+                                displayName: 'Lan Anh',
+                                avatarUrl: '',
+                                role: 'USER',
+                                followedAt: '2026-03-25T09:15:00Z'
+                            }
+                        ]
                     })
                 };
             }
@@ -258,6 +268,7 @@ test('profile page canonicalizes legacy nickname URL to auth_user_id after loadi
     assert.equal(env.document.title, 'Alice - Espace SVP');
     assert.equal(env.elements.get('profile-nickname').textContent, '');
     assert.equal(env.elements.get('profile-nickname').classList.contains('d-none'), true);
+    assert.equal((env.elements.get('profile-follower-list').innerHTML || '').includes('@lan-anh'), false);
     assert.equal(env.elements.get('profile-role').textContent, 'Thành viên');
     assert.equal(env.elements.get('profile-joined-at').textContent, '01/03/2026');
 });

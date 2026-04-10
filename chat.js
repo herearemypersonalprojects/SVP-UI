@@ -118,7 +118,7 @@
             headerEl.innerHTML = `
                 <div>
                     <div class="sv-section-title mb-1">Hội thoại riêng</div>
-                    <div class="sv-meta">Nhập một nickname từ hộp thư để bắt đầu.</div>
+                    <div class="sv-meta">Mở một hội thoại từ hộp thư để bắt đầu.</div>
                 </div>
             `;
             return;
@@ -128,7 +128,7 @@
                 ${avatarMarkup(otherUser)}
                 <div>
                     <div class="sv-chat-header__name">${escapeHtml(otherUser.displayName || otherUser.nickname || "Thành viên SVP")}</div>
-                    <div class="sv-meta">@${escapeHtml(otherUser.nickname || "user")} • Bấm Làm mới để xem tin nhắn mới nhất.</div>
+                    <div class="sv-meta">Bấm Làm mới để xem tin nhắn mới nhất.</div>
                 </div>
             </div>
         `;

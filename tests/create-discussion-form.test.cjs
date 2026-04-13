@@ -10,6 +10,7 @@ const {
 } = require('./dom-test-helpers.cjs');
 
 const LONG_REMOTE_IMAGE_URL = 'https://scontent-cdg6-1.xx.fbcdn.net/v/t39.30808-6/658428494_26938466825757832_1654291503066964002_n.jpg?stp=cp6_dst-jpg_s590x590_tt6&_nc_cat=103&ccb=1-7&_nc_sid=e06c5d&_nc_ohc=aVoENoWVR5UQ7kNvwFXQ5eK&_nc_oc=AdqrDEO4IgVDKfd2iVBscdxkKJrEGTjuC1BGPeNZJj-4Vt01SLWAhTr1BFUg3Sa-djU&_nc_zt=23&_nc_ht=scontent-cdg6-1.xx&_nc_gid=na-2nNZlqoWWxCoZ06Komw&_nc_ss=7a3a8&oh=00_Af0h0cHUKVG_3bmP4lF6ANyEbnRi0NikRQ_DuLQOYAV1BA&oe=69D4059E';
+const CORS_BLOCKED_REMOTE_IMAGE_URL = 'https://www.francebleu.fr/pikapi/images/a0d34edb-7f3d-4c22-82a6-343dbb6ba742/1200x680?webp=false';
 
 function extractCreateDiscussionInlineScript() {
     const html = readFrontendFile('create_new_discussion.html');
@@ -190,6 +191,70 @@ test('create discussion can import a long remote image URL and upload it to R2 o
     assert.equal(remoteFetchCalls, 1);
     assert.equal(presignCalls, 1);
     assert.equal(submittedPayload.imageUrl, 'https://cdn.svp.test/discussions/from-remote-url.jpg');
+});
+
+test('create discussion retries remote image import through the share-image proxy when direct fetch is CORS-blocked', async () => {
+    let submittedPayload = null;
+    let directFetchCalls = 0;
+    let proxyFetchCalls = 0;
+    let presignCalls = 0;
+    const expectedProxyUrl = `https://api.svp.test/share-image?url=${encodeURIComponent(CORS_BLOCKED_REMOTE_IMAGE_URL)}`;
+    const dom = await loadCreateDiscussionPage(async (targetUrl, options = {}) => {
+        const url = String(targetUrl);
+        const method = String(options.method || 'GET').toUpperCase();
+        if (url === CORS_BLOCKED_REMOTE_IMAGE_URL) {
+            directFetchCalls += 1;
+            throw new TypeError('Failed to fetch');
+        }
+        if (url === expectedProxyUrl) {
+            proxyFetchCalls += 1;
+            return new Response(new Blob(['remote-image-via-proxy'], { type: 'image/jpeg' }), {
+                status: 200,
+                headers: { 'Content-Type': 'image/jpeg' }
+            });
+        }
+        if (url === 'https://api.svp.test/api/upload/post-image') {
+            presignCalls += 1;
+            return makeJsonResponse({
+                uploadUrl: 'https://upload.svp.test/discussion-cover-from-proxy',
+                publicUrl: 'https://cdn.svp.test/discussions/from-proxy-url.jpg'
+            });
+        }
+        if (url === 'https://upload.svp.test/discussion-cover-from-proxy' && method === 'PUT') {
+            return { ok: true, status: 200 };
+        }
+        if (url === 'https://api.svp.test/posts/discussions' && method === 'POST') {
+            submittedPayload = JSON.parse(String(options.body || '{}'));
+            return makeJsonResponse({
+                postId: 64,
+                status: 'PUBLISHED',
+                author: { displayName: 'Author' }
+            });
+        }
+        throw new Error(`Unexpected fetch: ${targetUrl}`);
+    });
+    const { document } = dom.window;
+
+    document.getElementById('discussion-cover-url').value = CORS_BLOCKED_REMOTE_IMAGE_URL;
+    document.getElementById('discussion-cover-url-import-btn').dispatchEvent(new dom.window.Event('click', { bubbles: true }));
+    await flushAsync(dom.window, 12);
+
+    dispatchInput(dom.window, document.getElementById('discussion-email'), 'author@example.com');
+    dispatchInput(dom.window, document.getElementById('discussion-title'), 'Chu de lay anh qua proxy');
+    document.getElementById('discussion-category').value = '3';
+    dispatchInput(
+        dom.window,
+        document.getElementById('discussion-subject'),
+        '<p>Noi dung chu de du dai de hop le tren he thong.</p>'
+    );
+
+    document.getElementById('discussion-form').dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
+    await flushAsync(dom.window, 16);
+
+    assert.equal(directFetchCalls, 1);
+    assert.equal(proxyFetchCalls, 1);
+    assert.equal(presignCalls, 1);
+    assert.equal(submittedPayload.imageUrl, 'https://cdn.svp.test/discussions/from-proxy-url.jpg');
 });
 
 test('edit discussion submit sends imageUrl when updating an existing thread', async () => {

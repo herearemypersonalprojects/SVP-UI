@@ -14,6 +14,36 @@
         }
     };
 
+    const buildRemoteImageProxyUrl = (rawUrl, options) => {
+        const safeUrl = sanitizeHttpUrl(rawUrl);
+        if (!safeUrl) {
+            return '';
+        }
+
+        const settings = options && typeof options === 'object' ? options : {};
+        const proxyBaseUrl = sanitizeHttpUrl(
+            settings.proxyBaseUrl
+            || (typeof window !== 'undefined' ? window.SVP_API_BASE_URL : '')
+        );
+        if (!proxyBaseUrl) {
+            return '';
+        }
+
+        try {
+            const targetUrl = new URL(safeUrl);
+            const proxyBase = new URL(proxyBaseUrl);
+            if (targetUrl.origin === proxyBase.origin && targetUrl.pathname.replace(/\/+$/, '') === '/share-image') {
+                return '';
+            }
+
+            const proxyUrl = new URL('/share-image', proxyBase);
+            proxyUrl.searchParams.set('url', safeUrl);
+            return proxyUrl.toString();
+        } catch (_) {
+            return '';
+        }
+    };
+
     const normalizeImageMimeType = (value) => {
         const normalized = String(value || '')
             .split(';')[0]
@@ -168,23 +198,42 @@
         }
 
         const settings = options && typeof options === 'object' ? options : {};
-        let response;
-        try {
-            response = await fetch(safeUrl, {
-                method: 'GET',
-                mode: 'cors',
-                credentials: 'omit',
-                cache: 'no-store',
-                referrerPolicy: 'no-referrer'
-            });
-        } catch (error) {
+        const proxyUrl = buildRemoteImageProxyUrl(safeUrl, settings);
+        let lastTransportError = null;
+
+        const fetchImageResponse = async (targetUrl) => {
+            try {
+                const currentResponse = await fetch(targetUrl, {
+                    method: 'GET',
+                    mode: 'cors',
+                    credentials: 'omit',
+                    cache: 'no-store',
+                    referrerPolicy: 'no-referrer'
+                });
+                lastTransportError = null;
+                return currentResponse;
+            } catch (error) {
+                lastTransportError = error;
+                return null;
+            }
+        };
+
+        let response = await fetchImageResponse(safeUrl);
+        if ((!response || !response.ok) && proxyUrl) {
+            const proxyResponse = await fetchImageResponse(proxyUrl);
+            if (proxyResponse) {
+                response = proxyResponse;
+            }
+        }
+
+        if (!response) {
             const wrappedError = new Error('Không thể tải bytes ảnh từ URL này. Nguồn ảnh có thể chặn CORS hoặc URL đã hết hạn.');
-            wrappedError.cause = error;
+            wrappedError.cause = lastTransportError;
             throw wrappedError;
         }
 
-        if (!response || !response.ok) {
-            throw new Error(`Không thể tải ảnh từ URL (HTTP ${response && Number.isFinite(response.status) ? response.status : 'N/A'}).`);
+        if (!response.ok) {
+            throw new Error(`Không thể tải ảnh từ URL (HTTP ${Number.isFinite(response.status) ? response.status : 'N/A'}).`);
         }
 
         const contentType = response.headers && typeof response.headers.get === 'function'

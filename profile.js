@@ -608,7 +608,6 @@
                         <div class="sv-profile-blog-excerpt">${escapeHtml(excerptText(item.contentHtml, 240) || 'Bài viết đang được cập nhật nội dung.')}</div>
                         <div class="sv-profile-blog-meta">
                             <span><strong>${Number(item.viewCount || 0).toLocaleString('vi-VN')}</strong> lượt xem</span>
-                            <span><strong>${Number(item.likeCount || 0).toLocaleString('vi-VN')}</strong> thích</span>
                             <span><strong>${Number(item.commentCount || 0).toLocaleString('vi-VN')}</strong> bình luận</span>
                         </div>
                     </div>

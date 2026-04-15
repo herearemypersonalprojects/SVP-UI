@@ -1798,7 +1798,8 @@
         // Always hide the hero banner – the cover image is already displayed
         // inside the post body content, so showing it here would duplicate it.
         heroCover.classList.add('is-hidden');
-        heroCover.style.backgroundImage = '';
+        const safeCover = toSafeHttpUrl(post?.coverImageUrl || post?.cover_image_url || '');
+        heroCover.style.backgroundImage = safeCover ? `url('${safeCover}')` : '';
     };
 
     const renderViewCount = (post) => {

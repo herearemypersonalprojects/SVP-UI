@@ -57,6 +57,8 @@ function createDom({ html, url = 'https://svpforum.fr/', fetch } = {}) {
             }
         });
     }
+    window.__SVP_BYPASS_AUTH_GUARD = true;
+    window.__SVP_CAPTURE_AUTH_REDIRECTS = true;
 
     return dom;
 }

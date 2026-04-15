@@ -29,7 +29,7 @@
     <input id="password" class="input" type="password" placeholder="Mật khẩu" />
     <button id="btn-login" class="btn" type="button">Đăng Nhập</button>
     <button id="btn-forgot" class="btn btn-link" type="button">Quên mật khẩu?</button>
-    <div class="row"><a href="signup.html">Chưa có tài khoản? Đăng ký</a></div>
+    <div class="row"><a id="sv-signup-link" href="signup.html">Chưa có tài khoản? Đăng ký</a></div>
     <div id="msg" class="hint"></div>
 </div>
 <script src="config.js"></script>
@@ -38,6 +38,7 @@
 (() => {
     const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
     const searchParams = new URLSearchParams(window.location.search);
+    const rawRedirect = searchParams.get('redirect');
     const normalizeRedirectTarget = (value) => {
         const raw = String(value || '').trim();
         if (!raw) {
@@ -53,7 +54,13 @@
             return 'index.html';
         }
     };
-    const redirectTarget = normalizeRedirectTarget(searchParams.get('redirect'));
+    const redirectTarget = normalizeRedirectTarget(rawRedirect);
+    const signupLink = document.getElementById('sv-signup-link');
+    if (signupLink) {
+        signupLink.href = rawRedirect
+            ? `signup.html?redirect=${encodeURIComponent(redirectTarget)}`
+            : 'signup.html';
+    }
     const msgEl = document.getElementById('msg');
     const setMsg = (text, ok) => {
         msgEl.textContent = text || '';

@@ -43,7 +43,7 @@
         <input id="captcha-a" class="input" type="text" placeholder="Nhập kết quả" style="margin:0;" />
     </div>
     <button id="btn-signup" class="btn" type="button">Tạo tài khoản</button>
-    <div class="row"><a href="login.html">Đã có tài khoản? Đăng nhập</a></div>
+    <div class="row"><a id="sv-login-link" href="login.html">Đã có tài khoản? Đăng nhập</a></div>
     <div id="msg" class="hint"></div>
 </div>
 <script src="config.js"></script>
@@ -52,9 +52,34 @@
 <script>
 (() => {
     const API_BASE_URL = window.SVP_API_BASE_URL || 'http://localhost:8080';
+    const searchParams = new URLSearchParams(window.location.search);
+    const rawRedirect = searchParams.get('redirect');
+    const normalizeRedirectTarget = (value) => {
+        const raw = String(value || '').trim();
+        if (!raw) {
+            return 'index.html';
+        }
+        try {
+            const url = new URL(raw, window.location.href);
+            if (url.origin !== window.location.origin) {
+                return 'index.html';
+            }
+            return `${url.pathname}${url.search}${url.hash}` || 'index.html';
+        } catch (_) {
+            return 'index.html';
+        }
+    };
+    const redirectTarget = normalizeRedirectTarget(rawRedirect);
     const msgEl = document.getElementById('msg');
     const captchaQEl = document.getElementById('captcha-q');
+    const loginLink = document.getElementById('sv-login-link');
     let captchaAnswer = null;
+
+    if (loginLink) {
+        loginLink.href = rawRedirect
+            ? `login.html?redirect=${encodeURIComponent(redirectTarget)}`
+            : 'login.html';
+    }
 
     const setMsg = (text, ok) => {
         msgEl.textContent = text || '';
@@ -105,7 +130,7 @@
                 if (payload.authUserId) localStorage.setItem('authUserId', payload.authUserId);
             }
             setMsg('Tạo tài khoản thành công, đang chuyển trang...', true);
-            window.location.replace('index.html');
+            window.location.replace(redirectTarget);
         } catch (_) {
             setMsg('Không thể kết nối máy chủ.', false);
             resetCaptcha();
@@ -117,7 +142,7 @@
     if (window.SVPSocialAuth && typeof window.SVPSocialAuth.init === 'function') {
         window.SVPSocialAuth.init({
             mode: 'signup',
-            redirectUrl: 'index.html',
+            redirectUrl: redirectTarget,
             sectionId: 'social-auth',
             googleRowId: 'google-signin-row',
             googleContainerId: 'google-signin',

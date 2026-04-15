@@ -36,8 +36,12 @@ function makePostDetailFetch(options = {}) {
     };
     const latestArticles = Array.isArray(options.latestArticles) ? options.latestArticles : [];
     const latestDiscussions = Array.isArray(options.latestDiscussions) ? options.latestDiscussions : [];
+    const calls = Array.isArray(options.calls) ? options.calls : null;
     return async (targetUrl) => {
         const url = new URL(String(targetUrl));
+        if (calls) {
+            calls.push(url.toString());
+        }
         if (/\/posts\/\d+$/.test(url.pathname)) {
             return makeJsonResponse({
                 post,
@@ -149,4 +153,27 @@ test('post detail shows other articles from the same author and removes the stat
     assert.equal(relatedPreviewSources.some((src) => /author-cover\.jpg/.test(src)), false);
     assert.match(threadPreview?.getAttribute('src') || '', /thread-cover\.jpg/);
     assert.match(threadPreview?.closest('a')?.getAttribute('href') || '', /201/);
+});
+
+test('post detail requests article sidebars in summary mode', async () => {
+    const calls = [];
+    await loadPostDetailPage({
+        calls,
+        latestArticles: [
+            {
+                postId: 120,
+                title: 'Bai viet khac cung tac gia',
+                createdAt: '2026-03-18T08:00:00Z',
+                coverImageUrl: 'https://cdn.svp.test/articles/author-cover.jpg',
+                author: { displayName: 'Tac gia', nickname: 'tac-gia' }
+            }
+        ]
+    });
+
+    const articleCalls = calls
+        .map((entry) => new URL(entry))
+        .filter((url) => url.pathname.endsWith('/posts/latest-articles'));
+
+    assert.equal(articleCalls.length >= 2, true);
+    assert.equal(articleCalls.every((url) => url.searchParams.get('summaryOnly') === 'true'), true);
 });

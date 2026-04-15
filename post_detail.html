@@ -2066,7 +2066,10 @@
 
         try {
             for (let requestIndex = 0; requestIndex < MAX_REQUESTS && collected.length < 5; requestIndex += 1) {
-                const params = new URLSearchParams({ limit: String(PAGE_LIMIT) });
+                const params = new URLSearchParams({
+                    limit: String(PAGE_LIMIT),
+                    summaryOnly: 'true'
+                });
                 if (beforeCreatedAt) {
                     params.set('beforeCreatedAt', beforeCreatedAt);
                 }
@@ -2126,7 +2129,7 @@
     const renderRelated = async (postId, categoryId, excludedPostIds = new Set()) => {
         if (!relatedArticlesEl) return;
         try {
-            const res = await fetch(`${API_BASE_URL}/posts/latest-articles?limit=6&categoryId=${encodeURIComponent(categoryId)}`,
+            const res = await fetch(`${API_BASE_URL}/posts/latest-articles?limit=6&categoryId=${encodeURIComponent(categoryId)}&summaryOnly=true`,
                 { headers: { Accept: 'application/json' } });
             const data = await res.json().catch(()=>({}));
             if (!res.ok) throw new Error();

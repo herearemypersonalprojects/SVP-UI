@@ -18,6 +18,7 @@ function makePost(postId, createdAt) {
         postId,
         categoryId: 1,
         title: `Bai viet ${postId}`,
+        excerpt: `Tom tat bai viet ${postId}.`,
         contentHtml: `<p>Noi dung bai viet ${postId}.</p>`,
         coverImageUrl: `https://cdn.svp.test/posts/${postId}.jpg`,
         createdAt,
@@ -164,13 +165,13 @@ test('index wraps upcoming event preview images with links to event detail pages
     assert.match(previewLink.getAttribute('href') || '', /\/su-kien\/7\//);
 });
 
-test('index derives homepage post summaries from full contentHtml', async () => {
+test('index renders homepage post summaries from excerpt without requiring full contentHtml', async () => {
     const latestPosts = [
         {
             postId: 101,
             categoryId: 1,
             title: 'Bai noi bat',
-            contentHtml: '<p>Tom tat noi bat tu noi dung day du cua bai viet dau tien.</p>',
+            excerpt: 'Tom tat noi bat tu cot excerpt cua bai viet dau tien.',
             coverImageUrl: 'https://cdn.svp.test/posts/featured.jpg',
             createdAt: '2026-04-04T10:00:00Z',
             isArticle: true,
@@ -181,7 +182,7 @@ test('index derives homepage post summaries from full contentHtml', async () => 
             postId: 102,
             categoryId: 1,
             title: 'Bai phu 1',
-            contentHtml: '<p>Tom tat bai phu 1 tu noi dung day du.</p>',
+            excerpt: 'Tom tat bai phu 1 tu cot excerpt.',
             coverImageUrl: 'https://cdn.svp.test/posts/sub-1.jpg',
             createdAt: '2026-04-04T09:00:00Z',
             isArticle: true,
@@ -192,7 +193,7 @@ test('index derives homepage post summaries from full contentHtml', async () => 
             postId: 103,
             categoryId: 1,
             title: 'Bai phu 2',
-            contentHtml: '<p>Tom tat bai phu 2 tu noi dung day du.</p>',
+            excerpt: 'Tom tat bai phu 2 tu cot excerpt.',
             coverImageUrl: 'https://cdn.svp.test/posts/sub-2.jpg',
             createdAt: '2026-04-04T08:00:00Z',
             isArticle: true,
@@ -203,7 +204,7 @@ test('index derives homepage post summaries from full contentHtml', async () => 
             postId: 104,
             categoryId: 1,
             title: 'Bai cot trai',
-            contentHtml: '<p>Tom tat cot trai tu noi dung day du cho the bai viet thu tu.</p>',
+            excerpt: 'Tom tat cot trai tu cot excerpt cho the bai viet thu tu.',
             coverImageUrl: 'https://cdn.svp.test/posts/left.jpg',
             createdAt: '2026-04-04T07:00:00Z',
             isArticle: true,
@@ -257,8 +258,195 @@ test('index derives homepage post summaries from full contentHtml', async () => 
     const featuredExcerpt = window.document.querySelector('.sv-featured-main__excerpt');
     const leftExcerpt = window.document.querySelector('.sv-headline__excerpt');
 
-    assert.equal(featuredExcerpt?.textContent.trim(), 'Tom tat noi bat tu noi dung day du cua bai viet dau tien.');
-    assert.equal(leftExcerpt?.textContent.trim(), 'Tom tat cot trai tu noi dung day du cho the bai viet thu tu.');
+    assert.equal(featuredExcerpt?.textContent.trim(), 'Tom tat noi bat tu cot excerpt cua bai viet dau tien.');
+    assert.equal(leftExcerpt?.textContent.trim(), 'Tom tat cot trai tu cot excerpt cho the bai viet thu tu.');
+});
+
+test('index falls back to contentHtml when excerpt is missing', async () => {
+    const latestPosts = [
+        {
+            postId: 111,
+            categoryId: 1,
+            title: 'Bai fallback content',
+            contentHtml: '<p>Tom tat fallback tu contentHtml.</p>',
+            coverImageUrl: 'https://cdn.svp.test/posts/fallback-content.jpg',
+            createdAt: '2026-04-05T10:00:00Z',
+            isArticle: true,
+            isBlog: false,
+            author: { userId: '11111111-1111-1111-1111-111111111111', nickname: 'a', displayName: 'A' }
+        }
+    ];
+
+    const fetchStub = async (targetUrl) => {
+        const url = new URL(String(targetUrl));
+        if (url.pathname === '/api/home') {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({ latestPosts, upcomingEvents: [], topStars: [] })
+            };
+        }
+        if (url.pathname === '/stats/visit' || url.pathname === '/stats/visit-session') {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({})
+            };
+        }
+        throw new Error(`Unexpected fetch: ${targetUrl}`);
+    };
+
+    const dom = createDomFromHtml('index.html', {
+        url: 'https://svpforum.fr/index.html',
+        fetch: fetchStub
+    });
+    const { window } = dom;
+    window.localStorage.clear();
+    window.fetch = fetchStub;
+    window.AbortController = global.AbortController;
+    window.URLSearchParams = global.URLSearchParams;
+    window.requestIdleCallback = (callback) => window.setTimeout(() => callback({
+        didTimeout: false,
+        timeRemaining: () => 50
+    }), 0);
+    window.cancelIdleCallback = (id) => window.clearTimeout(id);
+
+    runScript(dom, 'config.js');
+    runScript(dom, 'seo.js');
+    runScript(dom, 'avatar-utils.js');
+    runScript(dom, 'auth-topbar.js');
+    window.eval(extractLastInlineScript(readFrontendFile('index.html')));
+
+    await flushAsync(window, 12);
+
+    const featuredExcerpt = window.document.querySelector('.sv-featured-main__excerpt');
+    assert.equal(featuredExcerpt?.textContent.trim(), 'Tom tat fallback tu contentHtml.');
+});
+
+test('index falls back to default category/date copy when excerpt and content are missing', async () => {
+    const latestPosts = [
+        {
+            postId: 112,
+            categoryId: 8,
+            title: 'Bai fallback mac dinh',
+            excerpt: '',
+            contentHtml: '',
+            coverImageUrl: 'https://cdn.svp.test/posts/fallback-empty.jpg',
+            createdAt: '2026-04-06T10:00:00Z',
+            isArticle: true,
+            isBlog: false,
+            author: { userId: '22222222-2222-2222-2222-222222222222', nickname: 'b', displayName: 'B' }
+        }
+    ];
+
+    const fetchStub = async (targetUrl) => {
+        const url = new URL(String(targetUrl));
+        if (url.pathname === '/api/home') {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({ latestPosts, upcomingEvents: [], topStars: [] })
+            };
+        }
+        if (url.pathname === '/stats/visit' || url.pathname === '/stats/visit-session') {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({})
+            };
+        }
+        throw new Error(`Unexpected fetch: ${targetUrl}`);
+    };
+
+    const dom = createDomFromHtml('index.html', {
+        url: 'https://svpforum.fr/index.html',
+        fetch: fetchStub
+    });
+    const { window } = dom;
+    window.localStorage.clear();
+    window.fetch = fetchStub;
+    window.AbortController = global.AbortController;
+    window.URLSearchParams = global.URLSearchParams;
+    window.requestIdleCallback = (callback) => window.setTimeout(() => callback({
+        didTimeout: false,
+        timeRemaining: () => 50
+    }), 0);
+    window.cancelIdleCallback = (id) => window.clearTimeout(id);
+
+    runScript(dom, 'config.js');
+    runScript(dom, 'seo.js');
+    runScript(dom, 'avatar-utils.js');
+    runScript(dom, 'auth-topbar.js');
+    window.eval(extractLastInlineScript(readFrontendFile('index.html')));
+
+    await flushAsync(window, 12);
+
+    const featuredExcerpt = window.document.querySelector('.sv-featured-main__excerpt');
+    assert.equal(
+        featuredExcerpt?.textContent.trim(),
+        'Bài viết mới cập nhật ngày 06/04/2026 trong chuyên mục Nhà cửa.'
+    );
+});
+
+test('index decodes html entities and collapses whitespace in excerpt text', async () => {
+    const latestPosts = [
+        {
+            postId: 113,
+            categoryId: 1,
+            title: 'Bai decode excerpt',
+            excerpt: 'Tom&nbsp;&nbsp;tat &amp; noi&nbsp;dung',
+            coverImageUrl: 'https://cdn.svp.test/posts/decode-excerpt.jpg',
+            createdAt: '2026-04-07T10:00:00Z',
+            isArticle: true,
+            isBlog: false,
+            author: { userId: '33333333-3333-3333-3333-333333333333', nickname: 'c', displayName: 'C' }
+        }
+    ];
+
+    const fetchStub = async (targetUrl) => {
+        const url = new URL(String(targetUrl));
+        if (url.pathname === '/api/home') {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({ latestPosts, upcomingEvents: [], topStars: [] })
+            };
+        }
+        if (url.pathname === '/stats/visit' || url.pathname === '/stats/visit-session') {
+            return {
+                ok: true,
+                status: 200,
+                json: async () => ({})
+            };
+        }
+        throw new Error(`Unexpected fetch: ${targetUrl}`);
+    };
+
+    const dom = createDomFromHtml('index.html', {
+        url: 'https://svpforum.fr/index.html',
+        fetch: fetchStub
+    });
+    const { window } = dom;
+    window.localStorage.clear();
+    window.fetch = fetchStub;
+    window.AbortController = global.AbortController;
+    window.URLSearchParams = global.URLSearchParams;
+    window.requestIdleCallback = (callback) => window.setTimeout(() => callback({
+        didTimeout: false,
+        timeRemaining: () => 50
+    }), 0);
+    window.cancelIdleCallback = (id) => window.clearTimeout(id);
+
+    runScript(dom, 'config.js');
+    runScript(dom, 'seo.js');
+    runScript(dom, 'avatar-utils.js');
+    runScript(dom, 'auth-topbar.js');
+    window.eval(extractLastInlineScript(readFrontendFile('index.html')));
+
+    await flushAsync(window, 12);
+
+    const featuredExcerpt = window.document.querySelector('.sv-featured-main__excerpt');
+    assert.equal(featuredExcerpt?.textContent.trim(), 'Tom tat & noi dung');
 });
 
 test('index renders all homepage posts with featured card format on mobile', async () => {
@@ -466,6 +654,7 @@ test('index load more fetches 2 posts per click and only hides the button after 
     const loadMoreCalls = calls.filter((url) => url.includes('/posts/latest-articles'));
     assert.equal(loadMoreCalls.length, 1);
     assert.equal(new URL(loadMoreCalls[0]).searchParams.get('limit'), '2');
+    assert.equal(new URL(loadMoreCalls[0]).searchParams.get('summaryOnly'), 'true');
     assert.equal(pagination.style.display, 'flex');
     assert.equal(loadMoreButton.disabled, false);
 

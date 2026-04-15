@@ -1200,14 +1200,20 @@
             const rawAuthor = post?.author || {};
             const title = decodeHtmlEntities(post?.title || '');
             const coverImageUrl = decodeHtmlEntities(post?.coverImageUrl || post?.cover_image_url || '');
+            const excerpt = collapseWhitespace(
+                decodeHtmlEntities(
+                    post?.excerpt
+                    || post?.summary
+                    || post?.description
+                    || post?.contentPreview
+                    || post?.content_preview
+                    || post?.preview
+                    || ''
+                )
+            );
             const contentHtml = decodeHtmlEntities(
                 post?.contentHtml
                 || post?.content_html
-                || post?.summary
-                || post?.description
-                || post?.contentPreview
-                || post?.content_preview
-                || post?.preview
                 || ''
             );
             return {
@@ -1217,6 +1223,7 @@
                 isBlog: Boolean(post?.isBlog ?? post?.is_blog ?? false),
                 status: post?.status ?? post?.postStatus ?? null,
                 title,
+                excerpt,
                 contentHtml,
                 coverImageUrl,
                 resolvedCoverImageUrl: coverImageUrl,
@@ -1388,20 +1395,30 @@
 
         const getSafeCover = (post) => escapeHtml(post.resolvedCoverImageUrl || '');
 
-        const getCompactHeadlineExcerpt = (post) => {
-            const preview = htmlToPlainText(post?.contentHtml || '');
+        const getPostExcerpt = (post, fallback) => {
+            const preview = collapseWhitespace(post?.excerpt || '');
             if (preview) {
                 return preview;
             }
-            return `Cập nhật ${formatDate(post?.createdAt)} trong chuyên mục ${getCategoryName(post?.categoryId)}.`;
+            const contentPreview = htmlToPlainText(post?.contentHtml || '');
+            if (contentPreview) {
+                return contentPreview;
+            }
+            return fallback;
+        };
+
+        const getCompactHeadlineExcerpt = (post) => {
+            return getPostExcerpt(
+                post,
+                `Cập nhật ${formatDate(post?.createdAt)} trong chuyên mục ${getCategoryName(post?.categoryId)}.`
+            );
         };
 
         const getMiddleColumnExcerpt = (post) => {
-            const preview = htmlToPlainText(post?.contentHtml || '');
-            if (preview) {
-                return preview;
-            }
-            return `Bài viết mới cập nhật ngày ${formatDate(post?.createdAt)} trong chuyên mục ${getCategoryName(post?.categoryId)}.`;
+            return getPostExcerpt(
+                post,
+                `Bài viết mới cập nhật ngày ${formatDate(post?.createdAt)} trong chuyên mục ${getCategoryName(post?.categoryId)}.`
+            );
         };
 
         const renderCompactHeadline = (post) => {
@@ -1813,7 +1830,8 @@
             const params = new URLSearchParams({
                 limit: String(HOME_FETCH_BATCH_SIZE),
                 beforeCreatedAt,
-                beforePostId: String(beforePostId)
+                beforePostId: String(beforePostId),
+                summaryOnly: 'true'
             });
             if (Number.isFinite(activeCategoryId)) {
                 params.set('categoryId', String(activeCategoryId));

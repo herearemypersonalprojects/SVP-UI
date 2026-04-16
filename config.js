@@ -22,9 +22,15 @@
             '/index.html',
             '/auth_magic_link_callback.html',
             '/article_publish_verify_callback.html',
+            '/post_detail.html',
+            '/event_detail.html',
             '/share.html',
             '/11qyalh10yucjx9dvsey1u2ihsk4xf.html'
         ]);
+        const PUBLIC_DETAIL_PREFIXES = [
+            '/bai-viet/',
+            '/su-kien/'
+        ];
         const asText = (value) => String(value || '').trim();
         const normalizePathname = (value) => {
             const raw = asText(value);
@@ -43,6 +49,12 @@
             } catch (_) {
                 return false;
             }
+        };
+        const isPublicPath = (path) => {
+            if (PUBLIC_PATHS.has(path)) {
+                return true;
+            }
+            return PUBLIC_DETAIL_PREFIXES.some((prefix) => path.startsWith(prefix));
         };
         const currentRelativeTarget = () => {
             const pathname = normalizePathname(window.location.pathname);
@@ -97,7 +109,7 @@
                 const params = new URLSearchParams(window.location.search || '');
                 return redirectTo(normalizeRedirectTarget(params.get('redirect')));
             }
-            if (PUBLIC_PATHS.has(currentPath) || GUEST_ONLY_PATHS.has(currentPath) || hasSession) {
+            if (isPublicPath(currentPath) || GUEST_ONLY_PATHS.has(currentPath) || hasSession) {
                 return '';
             }
             return redirectTo(buildLoginRedirectUrl());

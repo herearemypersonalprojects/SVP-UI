@@ -32,6 +32,7 @@
             '/index.html',
             '/auth_magic_link_callback.html',
             '/article_publish_verify_callback.html',
+            '/ban-do-thue-nha.html',
             '/post_detail.html',
             '/event_detail.html',
             '/share.html',

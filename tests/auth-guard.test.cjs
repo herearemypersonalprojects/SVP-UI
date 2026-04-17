@@ -38,6 +38,20 @@ test('seo guard keeps index public for logged-out visitors', () => {
     assert.equal(window.__SVP_LAST_AUTH_REDIRECT, undefined);
 });
 
+test('seo guard keeps housing map public for logged-out visitors', () => {
+    const dom = createDomFromHtml('ban-do-thue-nha.html', {
+        url: 'https://svpforum.fr/ban-do-thue-nha.html'
+    });
+    const { window } = dom;
+
+    window.__SVP_BYPASS_AUTH_GUARD = false;
+    window.localStorage.clear();
+
+    runScript(dom, 'seo.js');
+
+    assert.equal(window.__SVP_LAST_AUTH_REDIRECT, undefined);
+});
+
 test('seo guard keeps article and event details public for logged-out visitors', () => {
     for (const [fileName, url] of [
         ['post_detail.html', 'https://svpforum.fr/post_detail.html?postId=99'],
@@ -101,6 +115,21 @@ test('config guard keeps pretty article and event detail routes public', () => {
 
         assert.equal(window.__SVP_LAST_AUTH_REDIRECT, undefined);
     }
+});
+
+test('config guard keeps housing map public for logged-out visitors', () => {
+    const dom = createDom({
+        html: '<!doctype html><html lang="vi"><head></head><body></body></html>',
+        url: 'https://svpforum.fr/ban-do-thue-nha.html'
+    });
+    const { window } = dom;
+
+    window.__SVP_BYPASS_AUTH_GUARD = false;
+    window.localStorage.clear();
+
+    runScript(dom, 'config.js');
+
+    assert.equal(window.__SVP_LAST_AUTH_REDIRECT, undefined);
 });
 
 test('config guard protects nested Paris pages that do not load seo.js', () => {

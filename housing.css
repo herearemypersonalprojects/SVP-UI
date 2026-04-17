@@ -232,6 +232,8 @@
 .sv-housing-card {
     display: grid;
     grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    align-items: start;
     border: 1px solid #dbe5f3;
     border-radius: 10px;
     overflow: hidden;
@@ -252,18 +254,28 @@
     box-shadow: 0 16px 28px rgba(15, 23, 42, .12);
 }
 
-.sv-housing-card__image {
-    display: block;
+.sv-housing-card__media {
+    position: relative;
     width: 100%;
     aspect-ratio: 16 / 9;
     height: clamp(168px, 56.25vw, 214px);
-    min-height: 0;
-    object-fit: cover;
+    overflow: hidden;
     background: #e2e8f0;
+}
+
+.sv-housing-card__image {
+    position: absolute;
+    inset: 0;
+    display: block;
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    object-fit: cover;
 }
 
 .sv-housing-card__content {
     min-width: 0;
+    width: 100%;
     padding: .62rem .68rem .7rem;
     display: grid;
     gap: .34rem;
@@ -1011,7 +1023,7 @@
         flex: 0 0 auto;
         margin-left: auto;
     }
-    .sv-housing-card__image {
+    .sv-housing-card__media {
         aspect-ratio: 16 / 9;
         height: clamp(168px, 56.25vw, 214px);
     }

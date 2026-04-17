@@ -157,12 +157,15 @@ function readCardFormatSignatures(document) {
     return Array.from(document.querySelectorAll('#housing-list .sv-housing-card'))
         .map((card) => {
             const children = Array.from(card.children);
-            const image = children[0];
+            const media = children[0];
+            const image = media ? media.querySelector('.sv-housing-card__image') : null;
             const content = children[1];
             return [
                 card.tagName.toLowerCase(),
                 card.className,
                 children.length,
+                media ? media.tagName.toLowerCase() : '',
+                media ? media.className : '',
                 image ? image.tagName.toLowerCase() : '',
                 image ? image.className : '',
                 content ? content.tagName.toLowerCase() : '',
@@ -197,7 +200,7 @@ test('housing map applies explicit keyword search and ranks matches by field pri
 
     const readIds = () => Array.from(document.querySelectorAll('#housing-list [data-listing-id]'))
         .map((element) => element.getAttribute('data-listing-id'));
-    const expectedCardFormat = 'a|sv-housing-card|2|img|sv-housing-card__image|div|sv-housing-card__content|price|badge|tags';
+    const expectedCardFormat = 'a|sv-housing-card|2|div|sv-housing-card__media|img|sv-housing-card__image|div|sv-housing-card__content|price|badge|tags';
 
     assert.deepEqual(readIds(), [
         'other-650',

@@ -465,7 +465,9 @@
             const href = shared.buildHousingDetailHref(item.id, item.title || '');
             return `
                 <a class="sv-housing-card" href="${shared.escapeHtml(href)}" data-listing-id="${shared.escapeHtml(item.id)}">
-                    <img class="sv-housing-card__image" src="${shared.escapeHtml(image)}" alt="${shared.escapeHtml(item.title || 'Housing image')}">
+                    <div class="sv-housing-card__media">
+                        <img class="sv-housing-card__image" src="${shared.escapeHtml(image)}" alt="${shared.escapeHtml(item.title || 'Housing image')}">
+                    </div>
                     <div class="sv-housing-card__content">
                         <div class="d-flex justify-content-between align-items-start gap-2">
                             <div class="sv-housing-price">${shared.escapeHtml(item.priceLabel || shared.formatPrice(item.price))}</div>

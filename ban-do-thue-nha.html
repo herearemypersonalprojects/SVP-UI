@@ -68,28 +68,22 @@
 
 <main class="container my-3 my-md-4">
     <div class="sv-housing-intro mb-3">
-        <section class="sv-housing-hero">
-            <span class="sv-housing-hero__eyebrow">Bản đồ thuê nhà</span>
-            <p class="sv-housing-hero__subtitle">
-                Xem giá ngay trên bản đồ, lọc theo thành phố, colocation và ga/trạm.
-            </p>
-        </section>
-
         <section class="sv-card sv-newsletter sv-housing-subscribe-card">
-            <div class="sv-card__hd">
-                <i class="fa-solid fa-house-circle-check text-primary"></i>
-                Nhận Tin Thuê Nhà Mới
-            </div>
-            <div class="sv-housing-subscribe-card__body">
-                <p class="sv-meta mb-0">Nhận email khi có tin thuê nhà mới trên SVP.</p>
-                <div class="sv-housing-subscribe-card__form">
-                    <div class="sv-housing-subscribe-card__field">
-                        <input id="housing-subscribe-email" class="form-control sv-newsletter__input" type="email" placeholder="Email của bạn">
-                        <div id="housing-subscribe-email-error" class="small text-danger mt-1 d-none"></div>
-                    </div>
-                    <button id="housing-subscribe-submit" class="btn btn-primary" type="button">Đăng Ký</button>
+            <div class="sv-housing-subscribe-card__row">
+                <div class="sv-card__hd">
+                    <i class="fa-solid fa-house-circle-check text-primary"></i>
+                    Nhận tin mới
                 </div>
-                <div id="housing-subscribe-status" class="small" aria-live="polite"></div>
+                <div class="sv-housing-subscribe-card__body">
+                    <div class="sv-housing-subscribe-card__form">
+                        <div class="sv-housing-subscribe-card__field">
+                            <input id="housing-subscribe-email" class="form-control sv-newsletter__input" type="email" placeholder="Email của bạn">
+                            <div id="housing-subscribe-email-error" class="small text-danger mt-1 d-none"></div>
+                        </div>
+                        <button id="housing-subscribe-submit" class="btn btn-primary" type="button">Đăng Ký</button>
+                    </div>
+                    <div id="housing-subscribe-status" class="small" aria-live="polite"></div>
+                </div>
             </div>
         </section>
     </div>
@@ -195,8 +189,7 @@
         <section class="sv-housing-panel sv-housing-panel--map overflow-hidden">
             <div class="sv-housing-panel__head d-flex flex-wrap justify-content-between align-items-center gap-2">
                 <div>
-                    <strong><i class="fa-solid fa-map-location-dot me-2 text-primary"></i>Bản đồ</strong>
-                    <div id="housing-map-status" class="sv-housing-note mt-1" aria-live="polite">Đang tải dữ liệu cho bản đồ...</div>
+                    <div id="housing-map-status" class="sv-housing-note" aria-live="polite">Đang tải dữ liệu cho bản đồ...</div>
                 </div>
                 <form id="housing-map-search-form" class="sv-housing-panel__search" role="search">
                     <label class="visually-hidden" for="housing-map-search-input">Tìm kiếm tin thuê nhà</label>

@@ -70,17 +70,13 @@
     <div class="sv-housing-intro mb-3">
         <section class="sv-card sv-newsletter sv-housing-subscribe-card">
             <div class="sv-housing-subscribe-card__row">
-                <div class="sv-card__hd">
-                    <i class="fa-solid fa-house-circle-check text-primary"></i>
-                    Nhận tin mới
-                </div>
                 <div class="sv-housing-subscribe-card__body">
                     <div class="sv-housing-subscribe-card__form">
                         <div class="sv-housing-subscribe-card__field">
                             <input id="housing-subscribe-email" class="form-control sv-newsletter__input" type="email" placeholder="Email của bạn">
                             <div id="housing-subscribe-email-error" class="small text-danger mt-1 d-none"></div>
                         </div>
-                        <button id="housing-subscribe-submit" class="btn btn-primary" type="button">Đăng Ký</button>
+                        <button id="housing-subscribe-submit" class="btn btn-primary" type="button">Đăng ký nhận tin mới</button>
                     </div>
                     <div id="housing-subscribe-status" class="small" aria-live="polite"></div>
                 </div>
@@ -245,6 +241,7 @@
         }
 
         const STORAGE_KEY = 'svp.housing.subscription';
+        const SUBMIT_LABEL = 'Đăng ký nhận tin mới';
 
         const decodeBase64Url = (value) => {
             if (!value) return '';
@@ -315,8 +312,21 @@
             return String(payload.email || '').trim();
         };
 
+        const hasStoredSession = () => Boolean(
+            String(localStorage.getItem('accessToken') || '').trim()
+            || String(localStorage.getItem('refreshToken') || '').trim()
+        );
+
         const saved = readSavedSubscription();
-        emailInput.value = String(saved?.email || '').trim() || getKnownSessionEmail();
+        const usingSessionEmail = hasStoredSession();
+        if (usingSessionEmail) {
+            emailInput.value = getKnownSessionEmail();
+            emailInput.closest('.sv-housing-subscribe-card__field')?.setAttribute('hidden', '');
+            emailInput.setAttribute('aria-hidden', 'true');
+            submitBtn.closest('.sv-housing-subscribe-card__form')?.classList.add('sv-housing-subscribe-card__form--session');
+        } else {
+            emailInput.value = String(saved?.email || '').trim();
+        }
 
         emailInput.addEventListener('input', () => {
             clearEmailError();
@@ -324,16 +334,24 @@
         });
 
         submitBtn.addEventListener('click', async () => {
-            const email = emailInput.value.trim();
+            const email = (usingSessionEmail ? getKnownSessionEmail() : emailInput.value).trim();
             const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
             if (!email) {
+                if (usingSessionEmail) {
+                    setStatus('Không tìm thấy email của tài khoản đang đăng nhập. Vui lòng đăng nhập lại.', 'error');
+                    return;
+                }
                 showEmailError('Vui lòng nhập email để nhận tin thuê nhà mới.');
                 setStatus('', null);
                 emailInput.focus();
                 return;
             }
             if (!emailPattern.test(email)) {
+                if (usingSessionEmail) {
+                    setStatus('Email của tài khoản đang đăng nhập không hợp lệ. Vui lòng đăng nhập lại.', 'error');
+                    return;
+                }
                 showEmailError('Email không đúng định dạng.');
                 setStatus('', null);
                 emailInput.focus();
@@ -371,20 +389,24 @@
                 setStatus('Đăng ký thành công. Bạn sẽ nhận email khi có tin thuê nhà mới.', 'success');
                 submitBtn.textContent = 'Đã đăng ký';
                 setTimeout(() => {
-                    submitBtn.textContent = 'Đăng Ký Nhận Tin';
+                    submitBtn.textContent = SUBMIT_LABEL;
                     submitBtn.disabled = false;
                 }, 1200);
             } catch (error) {
                 console.error('Cannot subscribe to housing notifications:', error);
                 const message = error && error.message ? error.message : 'Không thể kết nối máy chủ.';
                 if (isInlineEmailErrorMessage(message)) {
-                    showEmailError(message);
-                    setStatus('', null);
-                    emailInput.focus();
+                    if (usingSessionEmail) {
+                        setStatus(message, 'error');
+                    } else {
+                        showEmailError(message);
+                        setStatus('', null);
+                        emailInput.focus();
+                    }
                 } else {
                     setStatus(message, 'error');
                 }
-                submitBtn.textContent = 'Đăng Ký Nhận Tin';
+                submitBtn.textContent = SUBMIT_LABEL;
                 submitBtn.disabled = false;
             }
         });

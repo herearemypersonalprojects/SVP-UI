@@ -31,22 +31,7 @@
 }
 
 .sv-housing-subscribe-card__row {
-    display: grid;
-    grid-template-columns: auto minmax(320px, 1fr);
-    gap: .85rem;
-    align-items: start;
     padding: .75rem .9rem;
-}
-
-.sv-housing-subscribe-card .sv-card__hd {
-    display: flex;
-    align-items: center;
-    gap: .55rem;
-    min-height: 44px;
-    padding: 0;
-    border-bottom: 0;
-    background: transparent;
-    white-space: nowrap;
 }
 
 .sv-housing-subscribe-card__body {
@@ -63,6 +48,11 @@
     align-items: start;
 }
 
+.sv-housing-subscribe-card__form--session {
+    grid-template-columns: auto;
+    justify-content: start;
+}
+
 .sv-housing-subscribe-card__field {
     min-width: 0;
 }
@@ -72,7 +62,7 @@
 }
 
 .sv-housing-subscribe-card .btn {
-    min-width: 116px;
+    min-width: 190px;
     min-height: 44px;
     border-radius: 999px;
     font-weight: 800;
@@ -888,9 +878,6 @@
 }
 
 @media (max-width: 767px) {
-    .sv-housing-subscribe-card__row {
-        grid-template-columns: 1fr;
-    }
     .sv-housing-subscribe-card__form {
         grid-template-columns: 1fr;
     }

@@ -85,7 +85,7 @@ test('housing subscribe uses logged-in user email without showing email input', 
 
     assert.equal(emailField.hidden, true);
     assert.equal(emailInput.value, 'member@example.com');
-    assert.equal(submitBtn.textContent.trim(), 'Đăng ký nhận tin mới');
+    assert.equal(submitBtn.textContent.trim(), 'Nhận tin mới');
 
     submitBtn.click();
     await flushAsync(window, 8);

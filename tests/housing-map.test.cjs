@@ -86,7 +86,16 @@ function installHousingMapLeafletStub(window) {
     return { map, clusterGroup };
 }
 
-async function loadHousingMapPage(fetch) {
+function makeJwt(payload) {
+    const encode = (value) => Buffer.from(JSON.stringify(value))
+        .toString('base64')
+        .replace(/=/g, '')
+        .replace(/\+/g, '-')
+        .replace(/\//g, '_');
+    return `${encode({ alg: 'none', typ: 'JWT' })}.${encode(payload)}.signature`;
+}
+
+async function loadHousingMapPage(fetch, options = {}) {
     const dom = createDomFromHtml('ban-do-thue-nha.html', {
         url: 'https://svpforum.fr/ban-do-thue-nha.html',
         fetch
@@ -95,7 +104,7 @@ async function loadHousingMapPage(fetch) {
     installHousingMapLeafletStub(window);
     window.SVP_API_BASE_URL = 'https://api.svp.test';
     window.SVPAuth = {
-        getValidAccessToken: async () => ''
+        getValidAccessToken: async () => options.accessToken || ''
     };
 
     runScript(dom, 'housing-shared.js');
@@ -208,7 +217,33 @@ test('housing map applies explicit keyword search and ranks matches by field pri
         'region-650',
         'other-650'
     ]);
-    assert.match(document.getElementById('housing-results-meta').textContent, /650/);
+    const resultsMeta = document.getElementById('housing-results-meta');
+    assert.equal(resultsMeta.hidden, true);
+    assert.equal(resultsMeta.textContent, '');
     assert.equal(document.getElementById('housing-map-status').textContent, '');
     assert.equal(document.getElementById('housing-map-status').hidden, true);
+});
+
+test('housing map shows result meta for SUPERADMIN only', async () => {
+    const payload = {
+        items: [
+            makeListing({ id: 'visible-1', title: 'Studio Paris' }),
+            makeListing({ id: 'visible-2', title: 'Chambre Lyon', city: 'Lyon' })
+        ],
+        hasMore: false,
+        limit: 1000
+    };
+
+    const publicDom = await loadHousingMapPage(async () => makeJsonResponse(payload));
+    const publicMeta = publicDom.window.document.getElementById('housing-results-meta');
+    assert.equal(publicMeta.hidden, true);
+    assert.equal(publicMeta.textContent, '');
+
+    const superadminDom = await loadHousingMapPage(
+        async () => makeJsonResponse(payload),
+        { accessToken: makeJwt({ role: 'SUPERADMIN' }) }
+    );
+    const superadminMeta = superadminDom.window.document.getElementById('housing-results-meta');
+    assert.equal(superadminMeta.hidden, false);
+    assert.match(superadminMeta.textContent, /2 tin phù hợp • đang hiện 2 bên trái/);
 });

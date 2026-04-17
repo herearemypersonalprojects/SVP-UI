@@ -426,6 +426,12 @@
     };
 
     const renderMeta = () => {
+        if (!state.isSuperadmin) {
+            metaEl.textContent = '';
+            metaEl.hidden = true;
+            return;
+        }
+        metaEl.hidden = false;
         if (!state.items.length) {
             metaEl.textContent = 'Chưa có tin để hiển thị';
             return;

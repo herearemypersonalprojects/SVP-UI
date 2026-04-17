@@ -66,28 +66,11 @@
     </div>
 </div>
 
-<main class="container my-3 my-md-4">
-    <div class="sv-housing-intro mb-3">
-        <section class="sv-card sv-newsletter sv-housing-subscribe-card">
-            <div class="sv-housing-subscribe-card__row">
-                <div class="sv-housing-subscribe-card__body">
-                    <div class="sv-housing-subscribe-card__form">
-                        <div class="sv-housing-subscribe-card__field">
-                            <input id="housing-subscribe-email" class="form-control sv-newsletter__input" type="email" placeholder="Email của bạn">
-                            <div id="housing-subscribe-email-error" class="small text-danger mt-1 d-none"></div>
-                        </div>
-                        <button id="housing-subscribe-submit" class="btn btn-primary" type="button">Đăng ký nhận tin mới</button>
-                    </div>
-                    <div id="housing-subscribe-status" class="small" aria-live="polite"></div>
-                </div>
-            </div>
-        </section>
-    </div>
-
+<main class="container sv-housing-main">
     <div class="sv-housing-shell">
         <aside class="sv-housing-panel sv-housing-panel--filters">
-            <div class="sv-housing-panel__head">
-                <div class="d-flex flex-wrap justify-content-between align-items-center gap-2">
+            <div class="sv-housing-panel__head sv-housing-panel__head--filters">
+                <div class="sv-housing-actions-row">
                     <a class="btn btn-primary btn-sm" href="housing_form.html">
                         <i class="fa-solid fa-plus me-1"></i>Đăng tin
                     </a>
@@ -100,6 +83,16 @@
                         <span><i class="fa-solid fa-sliders me-2"></i>Bộ lọc</span>
                         <i class="fa-solid fa-chevron-down sv-housing-filter-toggle__icon" aria-hidden="true"></i>
                     </button>
+                </div>
+                <div class="sv-housing-subscribe-inline" aria-label="Đăng ký nhận tin thuê nhà mới">
+                    <div class="sv-housing-subscribe-card__form">
+                        <div class="sv-housing-subscribe-card__field">
+                            <input id="housing-subscribe-email" class="form-control sv-newsletter__input" type="email" placeholder="Email của bạn">
+                            <div id="housing-subscribe-email-error" class="small text-danger mt-1 d-none"></div>
+                        </div>
+                        <button id="housing-subscribe-submit" class="btn btn-primary" type="button">Đăng ký nhận tin mới</button>
+                    </div>
+                    <div id="housing-subscribe-status" class="small" aria-live="polite"></div>
                 </div>
             </div>
             <div class="sv-housing-panel__body">
@@ -166,9 +159,7 @@
                     </div>
                 </div>
 
-                <div class="d-flex justify-content-between align-items-center mb-2 gap-2">
-                    <span id="housing-results-meta" class="sv-housing-note" hidden>Đang tải...</span>
-                </div>
+                <span id="housing-results-meta" class="sv-housing-note sv-housing-results-meta" hidden>Đang tải...</span>
                 <div id="housing-list" class="sv-housing-list" aria-live="polite"></div>
                 <div id="housing-load-more-wrap" class="sv-housing-load-more" hidden>
                     <button
@@ -184,9 +175,7 @@
 
         <section class="sv-housing-panel sv-housing-panel--map overflow-hidden">
             <div class="sv-housing-panel__head d-flex flex-wrap justify-content-between align-items-center gap-2">
-                <div>
-                    <div id="housing-map-status" class="sv-housing-note" aria-live="polite">Đang tải dữ liệu cho bản đồ...</div>
-                </div>
+                <div id="housing-map-status" class="sv-housing-note" aria-live="polite">Đang tải dữ liệu cho bản đồ...</div>
                 <form id="housing-map-search-form" class="sv-housing-panel__search" role="search">
                     <label class="visually-hidden" for="housing-map-search-input">Tìm kiếm tin thuê nhà</label>
                     <input

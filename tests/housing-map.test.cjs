@@ -251,3 +251,45 @@ test('housing map shows result meta for SUPERADMIN only', async () => {
     assert.equal(superadminMeta.hidden, false);
     assert.match(superadminMeta.textContent, /2 tin phù hợp • đang hiện 2 bên trái/);
 });
+
+test('housing map collapses filter controls after applying filters', async () => {
+    const payload = {
+        items: [
+            makeListing({ id: 'paris-1', title: 'Studio Paris', city: 'Paris' }),
+            makeListing({ id: 'lyon-1', title: 'Chambre Lyon', city: 'Lyon' })
+        ],
+        hasMore: false,
+        limit: 1000
+    };
+
+    const dom = await loadHousingMapPage(async () => makeJsonResponse(payload));
+    const { document, HTMLElement } = dom.window;
+    const filterToggle = document.getElementById('housing-filter-toggle');
+    const filterControls = document.getElementById('housing-filter-controls');
+    const cityInput = document.getElementById('filter-city');
+    const applyButton = document.getElementById('filter-apply-btn');
+    const scrolledTargets = [];
+
+    HTMLElement.prototype.scrollIntoView = function scrollIntoView(options) {
+        scrolledTargets.push({ id: this.id, options });
+    };
+
+    filterToggle.click();
+    assert.equal(filterControls.hidden, false);
+    assert.equal(filterToggle.getAttribute('aria-expanded'), 'true');
+
+    cityInput.value = 'Lyon';
+    applyButton.click();
+    await flushAsync(dom.window, 2);
+
+    const visibleIds = Array.from(document.querySelectorAll('#housing-list [data-listing-id]'))
+        .map((element) => element.getAttribute('data-listing-id'));
+
+    assert.deepEqual(visibleIds, ['lyon-1']);
+    assert.equal(filterControls.hidden, true);
+    assert.equal(filterToggle.getAttribute('aria-expanded'), 'false');
+    assert.equal(scrolledTargets.length, 1);
+    assert.equal(scrolledTargets[0].id, 'housing-list');
+    assert.equal(scrolledTargets[0].options.block, 'start');
+    assert.equal(scrolledTargets[0].options.behavior, 'smooth');
+});

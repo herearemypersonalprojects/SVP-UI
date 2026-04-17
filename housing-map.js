@@ -734,6 +734,13 @@
         filterToggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
     };
 
+    const showResultsAfterFilterApply = () => {
+        setFilterPanelExpanded(false);
+        if (typeof listEl.scrollIntoView === 'function') {
+            listEl.scrollIntoView({ block: 'start', behavior: 'smooth' });
+        }
+    };
+
     ['dragstart', 'zoomstart'].forEach((eventName) => {
         map.on(eventName, () => {
             if (!state.isAutoFittingMap) {
@@ -754,6 +761,7 @@
     applyBtn.addEventListener('click', () => {
         activateSearchQuery();
         applyClientFilters();
+        showResultsAfterFilterApply();
     });
 
     resetBtn.addEventListener('click', () => {
@@ -767,6 +775,7 @@
     form.addEventListener('submit', (event) => {
         event.preventDefault();
         applyClientFilters();
+        showResultsAfterFilterApply();
     });
 
     searchForm.addEventListener('submit', (event) => {

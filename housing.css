@@ -29,7 +29,8 @@
     display: grid;
     gap: .28rem;
     min-width: 0;
-    margin-top: .45rem;
+    margin-top: .75rem;
+    padding-top: .7rem;
 }
 
 .sv-housing-subscribe-card__form {
@@ -96,6 +97,10 @@
     min-height: 34px;
     border-radius: 999px;
     font-weight: 800;
+}
+
+.sv-housing-actions-row .sv-housing-filter-toggle {
+    margin-left: auto;
 }
 
 .sv-housing-panel__search {
@@ -991,8 +996,14 @@
         align-items: stretch;
     }
     .sv-housing-actions-row .btn {
-        flex: 1 1 0;
         justify-content: center;
+    }
+    .sv-housing-actions-row .btn-primary {
+        flex: 0 0 auto;
+    }
+    .sv-housing-actions-row .sv-housing-filter-toggle {
+        flex: 0 0 auto;
+        margin-left: auto;
     }
     .sv-housing-card {
         grid-template-columns: 92px minmax(0, 1fr);

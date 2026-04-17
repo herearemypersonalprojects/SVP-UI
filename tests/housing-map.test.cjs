@@ -153,6 +153,27 @@ function makeListing(overrides = {}) {
     };
 }
 
+function readCardFormatSignatures(document) {
+    return Array.from(document.querySelectorAll('#housing-list .sv-housing-card'))
+        .map((card) => {
+            const children = Array.from(card.children);
+            const image = children[0];
+            const content = children[1];
+            return [
+                card.tagName.toLowerCase(),
+                card.className,
+                children.length,
+                image ? image.tagName.toLowerCase() : '',
+                image ? image.className : '',
+                content ? content.tagName.toLowerCase() : '',
+                content ? content.className : '',
+                content && content.querySelector('.sv-housing-price') ? 'price' : '',
+                content && content.querySelector('.sv-housing-badge') ? 'badge' : '',
+                content && content.querySelector('.sv-housing-tags') ? 'tags' : ''
+            ].join('|');
+        });
+}
+
 test('housing map applies explicit keyword search and ranks matches by field priority', async () => {
     const payload = {
         items: [
@@ -176,6 +197,7 @@ test('housing map applies explicit keyword search and ranks matches by field pri
 
     const readIds = () => Array.from(document.querySelectorAll('#housing-list [data-listing-id]'))
         .map((element) => element.getAttribute('data-listing-id'));
+    const expectedCardFormat = 'a|sv-housing-card|2|img|sv-housing-card__image|div|sv-housing-card__content|price|badge|tags';
 
     assert.deepEqual(readIds(), [
         'other-650',
@@ -186,6 +208,8 @@ test('housing map applies explicit keyword search and ranks matches by field pri
         'price-650',
         'title-650'
     ]);
+    assert.equal(readCardFormatSignatures(document).length, 7);
+    assert.equal(readCardFormatSignatures(document).every((signature) => signature === expectedCardFormat), true);
     assert.equal(document.getElementById('housing-map-status').textContent, '');
     assert.equal(document.getElementById('housing-map-status').hidden, true);
 
@@ -203,6 +227,8 @@ test('housing map applies explicit keyword search and ranks matches by field pri
         'price-650',
         'title-650'
     ]);
+    assert.equal(readCardFormatSignatures(document).length, 7);
+    assert.equal(readCardFormatSignatures(document).every((signature) => signature === expectedCardFormat), true);
 
     document.getElementById('housing-map-search-form')
         .dispatchEvent(new dom.window.Event('submit', { bubbles: true, cancelable: true }));
@@ -217,6 +243,8 @@ test('housing map applies explicit keyword search and ranks matches by field pri
         'region-650',
         'other-650'
     ]);
+    assert.equal(readCardFormatSignatures(document).length, 7);
+    assert.equal(readCardFormatSignatures(document).every((signature) => signature === expectedCardFormat), true);
     assert.equal(
         document.querySelector('#housing-list [data-listing-id="title-650"]').getAttribute('href'),
         '/housing/title-650/studio-650-tolbiac'
@@ -278,14 +306,20 @@ test('housing map collapses filter controls after applying filters', async () =>
     assert.equal(filterControls.hidden, false);
     assert.equal(filterToggle.getAttribute('aria-expanded'), 'true');
 
+    const readVisibleIds = () => Array.from(document.querySelectorAll('#housing-list [data-listing-id]'))
+        .map((element) => element.getAttribute('data-listing-id'));
+
     cityInput.value = 'Lyon';
+    cityInput.dispatchEvent(new dom.window.Event('input', { bubbles: true }));
+    await flushAsync(dom.window, 8);
+
+    assert.deepEqual(readVisibleIds(), ['paris-1', 'lyon-1']);
+    assert.equal(filterControls.hidden, false);
+
     applyButton.click();
     await flushAsync(dom.window, 2);
 
-    const visibleIds = Array.from(document.querySelectorAll('#housing-list [data-listing-id]'))
-        .map((element) => element.getAttribute('data-listing-id'));
-
-    assert.deepEqual(visibleIds, ['lyon-1']);
+    assert.deepEqual(readVisibleIds(), ['lyon-1']);
     assert.equal(filterControls.hidden, true);
     assert.equal(filterToggle.getAttribute('aria-expanded'), 'false');
     assert.equal(scrolledTargets.length, 1);

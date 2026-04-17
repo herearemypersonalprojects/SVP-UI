@@ -725,10 +725,6 @@
         }
     };
 
-    const debouncedApplyFilters = shared.debounce(() => {
-        applyClientFilters();
-    }, 180);
-
     const setFilterPanelExpanded = (expanded) => {
         filterControlsEl.hidden = !expanded;
         filterToggleBtn.setAttribute('aria-expanded', expanded ? 'true' : 'false');
@@ -782,16 +778,6 @@
         event.preventDefault();
         activateSearchQuery();
         applyClientFilters();
-    });
-
-    ['input', 'change'].forEach((eventName) => {
-        form.addEventListener(eventName, (event) => {
-            const target = event.target;
-            if (!(target instanceof HTMLInputElement || target instanceof HTMLSelectElement)) {
-                return;
-            }
-            debouncedApplyFilters();
-        });
     });
 
     const initializePage = async () => {

@@ -256,7 +256,7 @@
     display: block;
     width: 100%;
     aspect-ratio: 16 / 9;
-    height: auto;
+    height: clamp(168px, 56.25vw, 214px);
     min-height: 0;
     object-fit: cover;
     background: #e2e8f0;
@@ -1013,6 +1013,7 @@
     }
     .sv-housing-card__image {
         aspect-ratio: 16 / 9;
+        height: clamp(168px, 56.25vw, 214px);
     }
     .sv-housing-card__content {
         padding: .52rem .56rem;

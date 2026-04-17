@@ -8,7 +8,22 @@
     }
 
     const params = new URLSearchParams(window.location.search);
-    const listingId = (params.get('listingId') || '').trim();
+    const resolveListingIdFromLocation = () => {
+        const queryListingId = String(params.get('listingId') || '').trim();
+        if (queryListingId) {
+            return queryListingId;
+        }
+        const parts = String(window.location.pathname || '').split('/').filter(Boolean);
+        if (parts.length >= 2 && parts[0] === 'housing') {
+            try {
+                return decodeURIComponent(parts[1]).trim();
+            } catch (_) {
+                return String(parts[1] || '').trim();
+            }
+        }
+        return '';
+    };
+    const listingId = resolveListingIdFromLocation();
 
     const feedbackEl = document.getElementById('housing-detail-feedback');
     const breadcrumbEl = document.getElementById('housing-detail-breadcrumb');
@@ -823,6 +838,19 @@
         shareMessengerEl.href = buildMessengerFallbackUrl();
     };
 
+    const replaceHistoryWithPrettyUrl = () => {
+        if (!currentDetail || !window.history || typeof window.history.replaceState !== 'function') {
+            return;
+        }
+        const nextRelativeUrl = shared.buildHousingDetailHref(currentDetail.id, currentDetail.title);
+        const nextAbsoluteUrl = new URL(nextRelativeUrl, window.location.href);
+        const currentAbsoluteUrl = new URL(window.location.href);
+        if (nextAbsoluteUrl.pathname === currentAbsoluteUrl.pathname && nextAbsoluteUrl.search === currentAbsoluteUrl.search) {
+            return;
+        }
+        window.history.replaceState({}, '', `${nextRelativeUrl}${window.location.hash || ''}`);
+    };
+
     const syncSeo = () => {
         if (!currentDetail || !seo || typeof seo.setPage !== 'function') {
             return;
@@ -918,8 +946,9 @@
 
     const renderDetail = () => {
         if (!currentDetail) return;
-        currentCanonicalUrl = shared.buildHousingCanonicalUrl(currentDetail.id);
+        currentCanonicalUrl = shared.buildHousingCanonicalUrl(currentDetail.id, currentDetail.title);
         currentShareUrl = shared.buildHousingShareUrl(currentDetail.id, currentDetail.title);
+        replaceHistoryWithPrettyUrl();
         breadcrumbEl.textContent = currentDetail.title;
         titleEl.textContent = currentDetail.title;
         priceEl.textContent = currentDetail.priceLabel;

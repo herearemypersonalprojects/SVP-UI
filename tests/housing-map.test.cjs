@@ -217,6 +217,10 @@ test('housing map applies explicit keyword search and ranks matches by field pri
         'region-650',
         'other-650'
     ]);
+    assert.equal(
+        document.querySelector('#housing-list [data-listing-id="title-650"]').getAttribute('href'),
+        '/housing/title-650/studio-650-tolbiac'
+    );
     const resultsMeta = document.getElementById('housing-results-meta');
     assert.equal(resultsMeta.hidden, true);
     assert.equal(resultsMeta.textContent, '');

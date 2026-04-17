@@ -117,6 +117,17 @@ test('housing detail uses persisted imageUrl when gallery is empty', async () =>
     );
 });
 
+test('housing detail replaces legacy query URL with SEO-friendly path', async () => {
+    const payload = buildHousingPayload();
+    const dom = await loadHousingDetailPage(payload);
+
+    assert.equal(
+        dom.window.location.pathname,
+        '/housing/073e429c-c634-493b-9f4c-f5438b8bb979/tim-nguoi-sous-coloc-paris-metro-t9'
+    );
+    assert.equal(dom.window.location.search, '');
+});
+
 test('housing detail does not scan description images when imageUrl is missing', async () => {
     const dom = await loadHousingDetailPage(buildHousingPayload({
         description: `

@@ -26,6 +26,19 @@ test('buildHousingShareUrl creates a stable share slug for accented titles', () 
     );
 });
 
+test('buildHousingDetailHref creates SEO-friendly housing detail paths', () => {
+    const dom = loadHousingSharedDom();
+    const detailHref = dom.window.SVPHousing.buildHousingDetailHref(
+        '073e429c-c634-493b-9f4c-f5438b8bb979',
+        'Tìm người sous-coloc Paris métro T9'
+    );
+
+    assert.equal(
+        detailHref,
+        '/housing/073e429c-c634-493b-9f4c-f5438b8bb979/tim-nguoi-sous-coloc-paris-metro-t9'
+    );
+});
+
 test('extractFirstImageUrlFromHtml reads the first image from HTML content', () => {
     const dom = loadHousingSharedDom();
     const imageUrl = dom.window.SVPHousing.extractFirstImageUrlFromHtml(`

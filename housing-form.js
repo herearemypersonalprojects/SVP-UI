@@ -1212,7 +1212,7 @@
 
             setFeedback(editingId ? 'Đã cập nhật tin thuê nhà.' : 'Đã đăng tin thuê nhà.', 'success');
             setTimeout(() => {
-                window.location.href = shared.buildHousingDetailHref(result.listingId || editingId);
+                window.location.href = shared.buildHousingDetailHref(result.listingId || editingId, payload.title || '');
             }, 500);
         } catch (error) {
             setFeedback(error && error.message ? error.message : 'Không thể lưu tin thuê nhà.', 'error');

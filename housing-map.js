@@ -382,12 +382,12 @@
         }, 0);
     };
 
-    const openListingDetail = (listingId) => {
-        const value = String(listingId || '').trim();
+    const openListingDetail = (item) => {
+        const value = String(item?.id || '').trim();
         if (!value) {
             return;
         }
-        window.location.href = shared.buildHousingDetailHref(value);
+        window.location.href = shared.buildHousingDetailHref(value, item?.title || '');
     };
 
     const createPriceIcon = (item) => {
@@ -462,7 +462,7 @@
             const statusMeta = shared.statusMeta(item.status);
             const tags = Array.isArray(item.tags) ? item.tags.slice(0, 4) : [];
             const image = item.primaryImageUrl || 'assets/img/forum_svp_background.png';
-            const href = shared.buildHousingDetailHref(item.id);
+            const href = shared.buildHousingDetailHref(item.id, item.title || '');
             return `
                 <a class="sv-housing-card" href="${shared.escapeHtml(href)}" data-listing-id="${shared.escapeHtml(item.id)}">
                     <img class="sv-housing-card__image" src="${shared.escapeHtml(image)}" alt="${shared.escapeHtml(item.title || 'Housing image')}">
@@ -498,7 +498,7 @@
             const marker = L.marker([item.latitude, item.longitude], {
                 icon: createPriceIcon(item)
             });
-            marker.on('click', () => openListingDetail(item.id));
+            marker.on('click', () => openListingDetail(item));
             clusterGroup.addLayer(marker);
         });
     };

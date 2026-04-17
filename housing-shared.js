@@ -55,10 +55,6 @@
         return found || { value: value || 'OTHER', label: value || 'Khác', icon: '🚏' };
     };
 
-    const buildHousingDetailHref = (listingId) => `housing_detail.html?listingId=${encodeURIComponent(listingId)}`;
-    const buildHousingFormHref = (listingId) => listingId
-        ? `housing_form.html?listingId=${encodeURIComponent(listingId)}`
-        : 'housing_form.html';
     const slugify = (value, fallback = 'tin-thue-nha') => {
         if (window.SVPSeo && window.SVPSeo.urls && typeof window.SVPSeo.urls.slugify === 'function') {
             return window.SVPSeo.urls.slugify(value, fallback);
@@ -75,10 +71,74 @@
             .replace(/^-+|-+$/g, '');
         return base || fallback;
     };
-    const buildHousingCanonicalUrl = (listingId) => {
+
+    const currentApiMode = () => {
+        try {
+            const mode = String(new URLSearchParams(window.location.search || '').get('api') || '').trim().toLowerCase();
+            return mode === 'local' || mode === 'cloud' ? mode : '';
+        } catch (_) {
+            return '';
+        }
+    };
+
+    const isLocalUiContext = () => {
+        const protocol = String(window.location.protocol || '').toLowerCase();
+        const hostname = String(window.location.hostname || '').trim().toLowerCase();
+        return protocol === 'file:'
+            || hostname === 'localhost'
+            || hostname === '127.0.0.1'
+            || hostname === '::1'
+            || hostname === '[::1]';
+    };
+
+    const appendApiMode = (path, options = {}) => {
+        if (options.preserveApiMode === false) {
+            return path;
+        }
+        const apiMode = currentApiMode();
+        if (!apiMode) {
+            return path;
+        }
+        const separator = path.includes('?') ? '&' : '?';
+        return `${path}${separator}api=${encodeURIComponent(apiMode)}`;
+    };
+
+    const buildHousingPrettyPath = (listingId, title, options = {}) => {
+        const safeId = String(listingId || '').trim();
+        if (!safeId) {
+            return appendApiMode('/housing_detail.html', options);
+        }
+        return appendApiMode(`/housing/${encodeURIComponent(safeId)}/${slugify(title, 'tin-thue-nha')}`, options);
+    };
+
+    const buildHousingDetailHref = (listingId, title = '', options = {}) => {
+        const safeId = String(listingId || '').trim();
+        if (!safeId) {
+            return appendApiMode('housing_detail.html', options);
+        }
+        if (!isLocalUiContext()) {
+            return buildHousingPrettyPath(safeId, title, options);
+        }
+        const params = new URLSearchParams();
+        params.set('listingId', safeId);
+        params.set('slug', slugify(title, 'tin-thue-nha'));
+        if (options.preserveApiMode !== false) {
+            const apiMode = currentApiMode();
+            if (apiMode) {
+                params.set('api', apiMode);
+            }
+        }
+        return `housing_detail.html?${params.toString()}`;
+    };
+
+    const buildHousingFormHref = (listingId) => listingId
+        ? `housing_form.html?listingId=${encodeURIComponent(listingId)}`
+        : 'housing_form.html';
+
+    const buildHousingCanonicalUrl = (listingId, title = '') => {
         const safeId = String(listingId || '').trim();
         return safeId
-            ? `${SITE_URL}/housing_detail.html?listingId=${encodeURIComponent(safeId)}`
+            ? `${SITE_URL}${buildHousingPrettyPath(safeId, title, { preserveApiMode: false })}`
             : `${SITE_URL}/housing_detail.html`;
     };
     const buildHousingShareUrl = (listingId, title) => {
@@ -168,6 +228,7 @@
         propertyTypeLabel,
         transportMeta,
         extractFirstImageUrlFromHtml,
+        buildHousingPrettyPath,
         buildHousingDetailHref,
         buildHousingCanonicalUrl,
         buildHousingFormHref,

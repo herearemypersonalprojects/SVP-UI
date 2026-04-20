@@ -112,7 +112,8 @@
     const API_BASE_URL = shared.API_BASE_URL;
     const MAX_COMMENT_TEXT_LENGTH = 2000;
     const MAX_REPLY_IMAGE_SOURCE_BYTES = 10 * 1024 * 1024;
-    const MAX_REPLY_IMAGE_UPLOAD_BYTES = 300 * 1024;
+    const DEFAULT_REPLY_IMAGE_UPLOAD_BYTES = 100 * 1024;
+    const FALLBACK_REPLY_IMAGE_UPLOAD_BYTES = 300 * 1024;
     const escapeHtml = shared.escapeHtml;
     const imageUpload = window.SVPRemoteImageUpload || {};
     const AUTH_PROVIDERS_CACHE_KEY = 'svp.auth.providers.v1';
@@ -272,6 +273,9 @@
             }
             throw new Error('Trình duyệt không hỗ trợ nén ảnh trước khi upload.');
         });
+    const isCompressionLimitError = (error) => String(error?.message || '')
+        .toLowerCase()
+        .includes('không thể nén ảnh xuống dưới');
 
     const setFeedback = (element, message, type = 'info') => {
         element.textContent = message || '';
@@ -516,11 +520,46 @@
         }
 
         setReplyImageStatus('Đang nén ảnh...', 'info');
-        const compressedFile = await compressImageBelowLimit(file, MAX_REPLY_IMAGE_UPLOAD_BYTES);
-        if (Number(compressedFile?.size || 0) > MAX_REPLY_IMAGE_UPLOAD_BYTES) {
-            throw new Error(`Ảnh sau nén phải tối đa ${formatUploadSize(MAX_REPLY_IMAGE_UPLOAD_BYTES)}.`);
+        let compressedFile = file;
+        let activeUploadLimit = DEFAULT_REPLY_IMAGE_UPLOAD_BYTES;
+        let usedFallbackLimit = false;
+        try {
+            compressedFile = await compressImageBelowLimit(file, activeUploadLimit);
+        } catch (error) {
+            if (!isCompressionLimitError(error)) {
+                throw error;
+            }
+            activeUploadLimit = FALLBACK_REPLY_IMAGE_UPLOAD_BYTES;
+            usedFallbackLimit = true;
+            setReplyImageStatus(
+                `Không thể nén ảnh xuống ${formatUploadSize(DEFAULT_REPLY_IMAGE_UPLOAD_BYTES)}. Chuyển sang giới hạn ${formatUploadSize(FALLBACK_REPLY_IMAGE_UPLOAD_BYTES)}...`,
+                'info'
+            );
+            compressedFile = await compressImageBelowLimit(file, activeUploadLimit);
         }
-        setReplyImageStatus(`Đang upload ảnh (${formatUploadSize(compressedFile.size)})...`, 'info');
+        if (Number(compressedFile?.size || 0) > activeUploadLimit) {
+            throw new Error(`Ảnh sau nén phải tối đa ${formatUploadSize(activeUploadLimit)}.`);
+        }
+        if (usedFallbackLimit) {
+            if (compressedFile.size !== file.size) {
+                setReplyImageStatus(
+                    `Không thể nén dưới ${formatUploadSize(DEFAULT_REPLY_IMAGE_UPLOAD_BYTES)}. Hệ thống dùng giới hạn ${formatUploadSize(activeUploadLimit)} và đã nén ảnh từ ${formatUploadSize(file.size)} xuống ${formatUploadSize(compressedFile.size)}. Đang upload...`,
+                    'info'
+                );
+            } else {
+                setReplyImageStatus(
+                    `Không thể nén dưới ${formatUploadSize(DEFAULT_REPLY_IMAGE_UPLOAD_BYTES)}. Hệ thống dùng giới hạn ${formatUploadSize(activeUploadLimit)} và sẽ upload ảnh ${formatUploadSize(compressedFile.size)}.`,
+                    'info'
+                );
+            }
+        } else if (compressedFile.size !== file.size) {
+            setReplyImageStatus(
+                `Đã nén ảnh từ ${formatUploadSize(file.size)} xuống ${formatUploadSize(compressedFile.size)}. Đang upload...`,
+                'info'
+            );
+        } else {
+            setReplyImageStatus(`Ảnh đã ở mức ${formatUploadSize(compressedFile.size)}. Đang upload...`, 'info');
+        }
 
         const presignPayload = await shared.requestWithAuth(`${API_BASE_URL}/api/upload/post-image`, {
             method: 'POST',
@@ -1490,7 +1529,10 @@
             }
             setReplyImagePreview(file);
             replyImageClearBtn.classList.remove('d-none');
-            setReplyImageStatus(`Đã chọn: ${file.name} (${formatUploadSize(file.size)}).`, 'info');
+            setReplyImageStatus(
+                `Đã chọn: ${file.name} (${formatUploadSize(file.size)}). Ảnh sẽ ưu tiên nén dưới ${formatUploadSize(DEFAULT_REPLY_IMAGE_UPLOAD_BYTES)}; nếu không được sẽ dùng tối đa ${formatUploadSize(FALLBACK_REPLY_IMAGE_UPLOAD_BYTES)}.`,
+                'info'
+            );
         });
         replyImageClearBtn.addEventListener('click', () => {
             clearReplyImageInput({ clearStatus: false });

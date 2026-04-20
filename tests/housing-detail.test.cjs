@@ -106,6 +106,9 @@ async function loadHousingDetailPage(payload, options = {}) {
     runScript(dom, 'housing-shared.js');
     runScript(dom, 'svp-rich-content.js');
     runScript(dom, 'remote-image-upload.js');
+    if (typeof options.configureRemoteImageUpload === 'function') {
+        options.configureRemoteImageUpload(window);
+    }
     runScript(dom, 'housing-detail.js');
     await flushAsync(window);
     dom.requests = requests;
@@ -312,6 +315,96 @@ test('housing detail uploads an authenticated comment image up to 300KB', async 
     const submittedPayload = JSON.parse(String(commentPost.options.body || '{}'));
     assert.match(submittedPayload.contentHtml, new RegExp(uploadedUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
     assert.ok(document.getElementById('housing-comments-list').querySelector(`img[src="${uploadedUrl}"]`));
+});
+
+test('housing detail falls back to 300KB when comment image cannot compress to 100KB', async () => {
+    const payload = buildHousingPayload();
+    const uploadedUrl = 'https://cdn.svp.test/housing/comment-fallback-upload.jpg';
+    const compressionCalls = [];
+    const dom = await loadHousingDetailPage(payload, {
+        comments: [],
+        uploadedCommentImageUrl: uploadedUrl,
+        configureRemoteImageUpload: (window) => {
+            const originalTools = window.SVPRemoteImageUpload || {};
+            window.SVPRemoteImageUpload = {
+                ...originalTools,
+                compressImageBelowLimit: async (file, maxBytes) => {
+                    compressionCalls.push(maxBytes);
+                    if (maxBytes === 100 * 1024) {
+                        throw new Error('Không thể nén ảnh xuống dưới 100.0KB.');
+                    }
+                    return new window.File(
+                        [new window.Uint8Array(250 * 1024)],
+                        'room-fallback.jpg',
+                        { type: 'image/jpeg' }
+                    );
+                }
+            };
+        },
+        createCommentResponse: {
+            commentId: 78,
+            listingId: payload.id,
+            userId: 'user-78',
+            contentHtml: `<p>Ảnh sau khi fallback.</p><figure class="image"><img src="${uploadedUrl}" alt="Ảnh đính kèm"></figure>`,
+            createdAt: '2026-04-01T12:34:56Z',
+            modifiedAt: '',
+            hidden: false,
+            viewCount: 84,
+            commentCount: 1,
+            author: {
+                userId: 'user-78',
+                nickname: 'hoa',
+                displayName: 'Hoa Tran',
+                avatarUrl: '',
+                authUserId: '78'
+            }
+        }
+    });
+    const { window } = dom;
+    const document = window.document;
+    window.localStorage.setItem('accessToken', [
+        'header',
+        window.btoa(JSON.stringify({
+            userId: 'user-78',
+            nickname: 'hoa',
+            displayName: 'Hoa Tran',
+            role: 'USER'
+        })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+        'sig'
+    ].join('.'));
+
+    window.dispatchEvent(new window.Event('storage'));
+    await flushAsync(window);
+
+    const imageInput = document.getElementById('housing-reply-image');
+    const file = new window.File(
+        [new window.Uint8Array(180 * 1024)],
+        'room-large.png',
+        { type: 'image/png' }
+    );
+    Object.defineProperty(imageInput, 'files', {
+        configurable: true,
+        value: [file]
+    });
+    imageInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+
+    document.getElementById('housing-reply-message').value = 'Ảnh sau khi fallback.';
+    document.getElementById('housing-reply-form').dispatchEvent(new window.Event('submit', {
+        bubbles: true,
+        cancelable: true
+    }));
+
+    await flushAsync(window, 10);
+
+    assert.deepEqual(compressionCalls, [100 * 1024, 300 * 1024]);
+    const presignRequest = dom.requests.find((entry) => String(entry.url).endsWith('/api/upload/post-image'));
+    assert.ok(presignRequest);
+    assert.match(String(presignRequest.options.body || ''), /room-fallback\.jpg/);
+
+    const uploadRequest = dom.requests.find((entry) => String(entry.url) === 'https://upload.svp.test/housing/comment-image');
+    assert.ok(uploadRequest);
+    assert.equal(String(uploadRequest.options?.method || '').toUpperCase(), 'PUT');
+    assert.ok(Number(uploadRequest.options?.body?.size || 0) <= 300 * 1024);
 });
 
 test('housing detail shows owner displayName without rendering nickname', async () => {

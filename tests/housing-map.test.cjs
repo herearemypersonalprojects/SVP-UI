@@ -101,7 +101,7 @@ async function loadHousingMapPage(fetch, options = {}) {
         fetch
     });
     const { window } = dom;
-    installHousingMapLeafletStub(window);
+    const leaflet = installHousingMapLeafletStub(window);
     window.SVP_API_BASE_URL = 'https://api.svp.test';
     window.SVPAuth = {
         getValidAccessToken: async () => options.accessToken || ''
@@ -110,6 +110,7 @@ async function loadHousingMapPage(fetch, options = {}) {
     runScript(dom, 'housing-shared.js');
     runScript(dom, 'housing-map.js');
     await flushAsync(window, 12);
+    dom.leaflet = leaflet;
     return dom;
 }
 
@@ -286,8 +287,8 @@ test('housing map shows result meta for SUPERADMIN only', async () => {
 test('housing map collapses filter controls after applying filters', async () => {
     const payload = {
         items: [
-            makeListing({ id: 'paris-1', title: 'Studio Paris', city: 'Paris' }),
-            makeListing({ id: 'lyon-1', title: 'Chambre Lyon', city: 'Lyon' })
+            makeListing({ id: 'paris-1', title: 'Studio Paris', city: 'Paris', latitude: 48.8566, longitude: 2.3522 }),
+            makeListing({ id: 'lyon-1', title: 'Chambre Lyon', city: 'Lyon', latitude: 45.764, longitude: 4.8357 })
         ],
         hasMore: false,
         limit: 1000
@@ -295,6 +296,7 @@ test('housing map collapses filter controls after applying filters', async () =>
 
     const dom = await loadHousingMapPage(async () => makeJsonResponse(payload));
     const { document, HTMLElement } = dom.window;
+    const { map } = dom.leaflet;
     const filterToggle = document.getElementById('housing-filter-toggle');
     const filterControls = document.getElementById('housing-filter-controls');
     const cityInput = document.getElementById('filter-city');
@@ -329,4 +331,7 @@ test('housing map collapses filter controls after applying filters', async () =>
     assert.equal(scrolledTargets[0].id, 'housing-list');
     assert.equal(scrolledTargets[0].options.block, 'start');
     assert.equal(scrolledTargets[0].options.behavior, 'smooth');
+    assert.equal(map._lastBounds.points.length, 1);
+    assert.equal(map._lastBounds.points[0].lat, 45.764);
+    assert.equal(map._lastBounds.points[0].lng, 4.8357);
 });

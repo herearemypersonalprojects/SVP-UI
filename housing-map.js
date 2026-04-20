@@ -382,6 +382,21 @@
         }, 0);
     };
 
+    const fitMapToFilteredPins = () => {
+        const bounds = buildItemsBounds(state.filteredItems);
+        if (!bounds) {
+            return;
+        }
+        state.isAutoFittingMap = true;
+        map.fitBounds(bounds, {
+            padding: [34, 34],
+            maxZoom: 14
+        });
+        window.setTimeout(() => {
+            state.isAutoFittingMap = false;
+        }, 0);
+    };
+
     const openListingDetail = (item) => {
         const value = String(item?.id || '').trim();
         if (!value) {
@@ -759,6 +774,7 @@
     applyBtn.addEventListener('click', () => {
         activateSearchQuery();
         applyClientFilters();
+        fitMapToFilteredPins();
         showResultsAfterFilterApply();
     });
 
@@ -768,11 +784,13 @@
         state.activeSearchQuery = '';
         statusInput.value = state.defaultStatusFilter;
         applyClientFilters();
+        fitMapToFilteredPins();
     });
 
     form.addEventListener('submit', (event) => {
         event.preventDefault();
         applyClientFilters();
+        fitMapToFilteredPins();
         showResultsAfterFilterApply();
     });
 
@@ -780,6 +798,7 @@
         event.preventDefault();
         activateSearchQuery();
         applyClientFilters();
+        fitMapToFilteredPins();
     });
 
     const initializePage = async () => {

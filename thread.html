@@ -531,6 +531,7 @@
         const THREAD_REPLIES_PAGE_SIZE = 10;
         const MAX_REPLY_IMAGE_SOURCE_BYTES = 10 * 1024 * 1024;
         const MAX_REPLY_IMAGE_UPLOAD_BYTES = 88 * 1024;
+        const FALLBACK_REPLY_IMAGE_UPLOAD_BYTES = 300 * 1024;
         const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
         const buildThreadHref = (threadId, title) => urlHelpers
             ? urlHelpers.buildDetailPath('thread', threadId, title)
@@ -2097,7 +2098,7 @@
             if (!(file instanceof File)) {
                 throw new Error('File ảnh không hợp lệ.');
             }
-            if (file.size < maxBytes) {
+            if (file.size <= maxBytes) {
                 return file;
             }
 
@@ -2142,7 +2143,7 @@
                             bestBlob = blob;
                             bestMime = mimeType;
                         }
-                        if (blob.size < maxBytes) {
+                        if (blob.size <= maxBytes) {
                             const extension = imageExtensionForMime(mimeType);
                             const outputName = replaceFileExtension(file.name, extension);
                             return new File([blob], outputName, { type: mimeType });
@@ -2160,10 +2161,39 @@
             const extension = imageExtensionForMime(mimeType);
             const outputName = replaceFileExtension(file.name, extension);
             const smallestFile = new File([bestBlob], outputName, { type: mimeType });
-            if (smallestFile.size < maxBytes) {
+            if (smallestFile.size <= maxBytes) {
                 return smallestFile;
             }
             throw new Error(`Không thể nén ảnh xuống dưới ${limitText}. Kích thước nhỏ nhất đạt được là ${bestSizeText}.`);
+        };
+
+        const compressReplyImageForUpload = async (file) => {
+            try {
+                const compressedFile = await compressReplyImageBelowLimit(file, MAX_REPLY_IMAGE_UPLOAD_BYTES);
+                if (compressedFile.size >= MAX_REPLY_IMAGE_UPLOAD_BYTES) {
+                    throw new Error(`Ảnh sau nén phải nhỏ hơn ${formatSize(MAX_REPLY_IMAGE_UPLOAD_BYTES)}.`);
+                }
+                return {
+                    file: compressedFile,
+                    limitBytes: MAX_REPLY_IMAGE_UPLOAD_BYTES,
+                    fallbackUsed: false
+                };
+            } catch (primaryError) {
+                setReplyImageStatus(
+                    `Không thể nén ảnh xuống ${formatSize(MAX_REPLY_IMAGE_UPLOAD_BYTES)}. Thử lại với giới hạn ${formatSize(FALLBACK_REPLY_IMAGE_UPLOAD_BYTES)}...`,
+                    'info'
+                );
+                const compressedFile = await compressReplyImageBelowLimit(file, FALLBACK_REPLY_IMAGE_UPLOAD_BYTES);
+                if (compressedFile.size > FALLBACK_REPLY_IMAGE_UPLOAD_BYTES) {
+                    throw new Error(`Ảnh sau nén phải tối đa ${formatSize(FALLBACK_REPLY_IMAGE_UPLOAD_BYTES)}.`);
+                }
+                return {
+                    file: compressedFile,
+                    limitBytes: FALLBACK_REPLY_IMAGE_UPLOAD_BYTES,
+                    fallbackUsed: true,
+                    primaryError
+                };
+            }
         };
 
         const revokeReplyImagePreview = () => {
@@ -2221,17 +2251,23 @@
             }
 
             setReplyImageStatus('Đang nén ảnh trước khi upload...', 'info');
-            const compressedFile = await compressReplyImageBelowLimit(file, MAX_REPLY_IMAGE_UPLOAD_BYTES);
-            if (compressedFile.size >= MAX_REPLY_IMAGE_UPLOAD_BYTES) {
-                throw new Error(`Ảnh sau nén phải nhỏ hơn ${formatSize(MAX_REPLY_IMAGE_UPLOAD_BYTES)}.`);
-            }
-            if (compressedFile.size !== file.size) {
+            const compressionResult = await compressReplyImageForUpload(file);
+            const compressedFile = compressionResult.file;
+            const limitLabel = compressionResult.fallbackUsed
+                ? `tối đa ${formatSize(compressionResult.limitBytes)}`
+                : `< ${formatSize(compressionResult.limitBytes)}`;
+            if (compressionResult.fallbackUsed) {
+                const fallbackMessage = compressedFile.size !== file.size
+                    ? `Đã dùng giới hạn ${formatSize(compressionResult.limitBytes)} và nén ảnh từ ${formatSize(file.size)} xuống ${formatSize(compressedFile.size)}. Đang chuẩn bị upload...`
+                    : `Đã dùng giới hạn ${formatSize(compressionResult.limitBytes)}; ảnh hiện tại ${formatSize(compressedFile.size)}. Đang chuẩn bị upload...`;
+                setReplyImageStatus(fallbackMessage, 'info');
+            } else if (compressedFile.size !== file.size) {
                 setReplyImageStatus(
                     `Đã nén ảnh từ ${formatSize(file.size)} xuống ${formatSize(compressedFile.size)}. Đang chuẩn bị upload...`,
                     'info'
                 );
             } else {
-                setReplyImageStatus(`Ảnh đã đạt mức ${formatSize(compressedFile.size)} (< ${formatSize(MAX_REPLY_IMAGE_UPLOAD_BYTES)}). Đang chuẩn bị upload...`, 'info');
+                setReplyImageStatus(`Ảnh đã đạt mức ${formatSize(compressedFile.size)} (${limitLabel}). Đang chuẩn bị upload...`, 'info');
             }
 
             const accessToken = window.SVPAuth && typeof window.SVPAuth.getValidAccessToken === 'function'
@@ -2378,7 +2414,7 @@
                 setReplyImagePreview(file);
                 replyImageClearBtn.classList.remove('d-none');
                 setReplyImageStatus(
-                    `Đã chọn: ${file.name} (${formatSize(file.size)}). Ảnh sẽ được nén xuống dưới ${formatSize(MAX_REPLY_IMAGE_UPLOAD_BYTES)} trước khi upload.`,
+                    `Đã chọn: ${file.name} (${formatSize(file.size)}). Ảnh sẽ ưu tiên nén dưới ${formatSize(MAX_REPLY_IMAGE_UPLOAD_BYTES)}; nếu không được sẽ dùng tối đa ${formatSize(FALLBACK_REPLY_IMAGE_UPLOAD_BYTES)}.`,
                     'info'
                 );
             });

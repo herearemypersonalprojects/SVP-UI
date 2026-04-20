@@ -41,12 +41,27 @@ function buildHousingPayload(overrides = {}) {
 async function loadHousingDetailPage(payload, options = {}) {
     const requests = [];
     const initialComments = Array.isArray(options.comments) ? options.comments : [];
+    const uploadedCommentImageUrl = options.uploadedCommentImageUrl || 'https://cdn.svp.test/housing/comment-upload.jpg';
     const dom = createDomFromHtml('housing_detail.html', {
         url: `https://svpforum.fr/housing_detail.html?listingId=${encodeURIComponent(payload.id)}`,
         fetch: async (targetUrl, requestOptions = {}) => {
             requests.push({ url: String(targetUrl), options: requestOptions || {} });
             const url = new URL(String(targetUrl));
             const method = String(requestOptions?.method || 'GET').toUpperCase();
+            if (url.pathname.endsWith('/api/upload/post-image') && method === 'POST') {
+                return makeJsonResponse({
+                    method: 'PUT',
+                    uploadUrl: 'https://upload.svp.test/housing/comment-image',
+                    publicUrl: uploadedCommentImageUrl,
+                    contentType: 'image/png'
+                });
+            }
+            if (url.href === 'https://upload.svp.test/housing/comment-image' && method === 'PUT') {
+                return makeJsonResponse({});
+            }
+            if (url.pathname.endsWith('/api/upload/post-image/delete') && method === 'POST') {
+                return makeJsonResponse({ status: 'deleted' });
+            }
             if (url.pathname.endsWith(`/api/housing/${payload.id}`)) {
                 return makeJsonResponse(payload);
             }
@@ -81,6 +96,8 @@ async function loadHousingDetailPage(payload, options = {}) {
     });
     const { window } = dom;
     installLeafletStub(window);
+    window.URL.createObjectURL = () => 'blob:housing-comment-image';
+    window.URL.revokeObjectURL = () => {};
     window.SVPCommentEditor = {
         sanitizeHtml: (value) => String(value || '').trim()
     };
@@ -88,6 +105,7 @@ async function loadHousingDetailPage(payload, options = {}) {
     runScript(dom, 'seo.js');
     runScript(dom, 'housing-shared.js');
     runScript(dom, 'svp-rich-content.js');
+    runScript(dom, 'remote-image-upload.js');
     runScript(dom, 'housing-detail.js');
     await flushAsync(window);
     dom.requests = requests;
@@ -226,6 +244,74 @@ test('housing detail submits a guest comment and updates the rendered view count
     assert.match(document.getElementById('housing-detail-meta').textContent, /121 lượt xem/);
     assert.match(document.getElementById('housing-comment-badge').textContent, /1 bình luận/);
     assert.ok(dom.requests.some((entry) => String(entry.url).includes(`/api/housing/${payload.id}/comments`) && String(entry.options?.method || 'GET').toUpperCase() === 'POST'));
+});
+
+test('housing detail uploads an authenticated comment image up to 300KB', async () => {
+    const payload = buildHousingPayload();
+    const uploadedUrl = 'https://cdn.svp.test/housing/comment-upload.jpg';
+    const dom = await loadHousingDetailPage(payload, {
+        comments: [],
+        uploadedCommentImageUrl: uploadedUrl,
+        createCommentResponse: {
+            commentId: 77,
+            listingId: payload.id,
+            userId: 'user-77',
+            contentHtml: `<p>Ảnh hiện trạng phòng.</p><figure class="image"><img src="${uploadedUrl}" alt="Ảnh đính kèm"></figure>`,
+            createdAt: '2026-04-01T12:34:56Z',
+            modifiedAt: '',
+            hidden: false,
+            viewCount: 83,
+            commentCount: 1,
+            author: {
+                userId: 'user-77',
+                nickname: 'lan',
+                displayName: 'Lan Anh',
+                avatarUrl: '',
+                authUserId: '77'
+            }
+        }
+    });
+    const { window } = dom;
+    const document = window.document;
+    window.localStorage.setItem('accessToken', [
+        'header',
+        window.btoa(JSON.stringify({
+            userId: 'user-77',
+            nickname: 'lan',
+            displayName: 'Lan Anh',
+            role: 'USER'
+        })).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''),
+        'sig'
+    ].join('.'));
+
+    window.dispatchEvent(new window.Event('storage'));
+    await flushAsync(window);
+
+    const imageInput = document.getElementById('housing-reply-image');
+    const file = new window.File(['image-bytes'], 'room.png', { type: 'image/png' });
+    Object.defineProperty(imageInput, 'files', {
+        configurable: true,
+        value: [file]
+    });
+    imageInput.dispatchEvent(new window.Event('change', { bubbles: true }));
+
+    document.getElementById('housing-reply-message').value = 'Ảnh hiện trạng phòng.';
+    document.getElementById('housing-reply-form').dispatchEvent(new window.Event('submit', {
+        bubbles: true,
+        cancelable: true
+    }));
+
+    await flushAsync(window, 10);
+
+    const presignRequest = dom.requests.find((entry) => String(entry.url).endsWith('/api/upload/post-image'));
+    assert.ok(presignRequest);
+    assert.match(String(presignRequest.options.body || ''), /room\.png/);
+    assert.ok(dom.requests.some((entry) => String(entry.url) === 'https://upload.svp.test/housing/comment-image' && String(entry.options?.method || '').toUpperCase() === 'PUT'));
+
+    const commentPost = dom.requests.find((entry) => String(entry.url).includes(`/api/housing/${payload.id}/comments`) && String(entry.options?.method || 'GET').toUpperCase() === 'POST');
+    const submittedPayload = JSON.parse(String(commentPost.options.body || '{}'));
+    assert.match(submittedPayload.contentHtml, new RegExp(uploadedUrl.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')));
+    assert.ok(document.getElementById('housing-comments-list').querySelector(`img[src="${uploadedUrl}"]`));
 });
 
 test('housing detail shows owner displayName without rendering nickname', async () => {

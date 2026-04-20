@@ -190,6 +190,14 @@
                         <div id="housing-reply-char-count" class="sv-char-count">0/2000 ký tự</div>
                     </div>
 
+                    <div id="housing-reply-image-fields" class="mt-3 d-none">
+                        <label for="housing-reply-image" class="form-label">Ảnh đính kèm <span class="sv-housing-note">(tối đa 300KB)</span></label>
+                        <input id="housing-reply-image" class="form-control" type="file" accept="image/*" disabled>
+                        <div id="housing-reply-image-status" class="sv-housing-note mt-2" aria-live="polite"></div>
+                        <img id="housing-reply-image-preview" class="sv-housing-comment-image-preview" alt="Xem trước ảnh đính kèm">
+                        <button id="housing-reply-image-clear" class="btn btn-sm btn-outline-secondary mt-2 d-none" type="button" disabled>Xóa ảnh đã chọn</button>
+                    </div>
+
                     <div class="mt-3 d-flex flex-wrap gap-2">
                         <button id="housing-reply-submit" class="btn btn-primary" type="submit">
                             <i class="fa-solid fa-paper-plane me-2"></i>Đăng bình luận
@@ -248,6 +256,7 @@
 <script src="housing-shared.js"></script>
 <script src="svp-rich-content.js"></script>
 <script src="comment-editor.js"></script>
+<script src="remote-image-upload.js"></script>
 <script src="housing-detail.js"></script>
 <script src="avatar-utils.js"></script>
 <script src="auth-topbar.js"></script>`n<script src="mobile-nav.js"></script>

@@ -916,6 +916,21 @@
     color: var(--housing-ink);
 }
 
+.sv-housing-comment-image-preview {
+    display: none;
+    width: min(100%, 360px);
+    max-height: 240px;
+    object-fit: contain;
+    margin-top: .65rem;
+    border-radius: 12px;
+    border: 1px solid #dbe7ff;
+    background: #f8fafc;
+}
+
+.sv-housing-comment-image-preview.is-visible {
+    display: block;
+}
+
 @media (max-width: 991px) {
     .sv-housing-shell,
     .sv-housing-form-grid {

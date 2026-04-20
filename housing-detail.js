@@ -54,6 +54,11 @@
     const replyCaptchaAnswerEl = document.getElementById('housing-reply-captcha-a');
     const replyMessageEl = document.getElementById('housing-reply-message');
     const replyCharCountEl = document.getElementById('housing-reply-char-count');
+    const replyImageFieldsEl = document.getElementById('housing-reply-image-fields');
+    const replyImageEl = document.getElementById('housing-reply-image');
+    const replyImageStatusEl = document.getElementById('housing-reply-image-status');
+    const replyImagePreviewEl = document.getElementById('housing-reply-image-preview');
+    const replyImageClearBtn = document.getElementById('housing-reply-image-clear');
     const replyFeedbackEl = document.getElementById('housing-reply-feedback');
     const replySubmitBtn = document.getElementById('housing-reply-submit');
     const replyClearBtn = document.getElementById('housing-reply-clear');
@@ -89,6 +94,11 @@
         || !replyCaptchaAnswerEl
         || !replyMessageEl
         || !replyCharCountEl
+        || !replyImageFieldsEl
+        || !replyImageEl
+        || !replyImageStatusEl
+        || !replyImagePreviewEl
+        || !replyImageClearBtn
         || !replyFeedbackEl
         || !replySubmitBtn
         || !replyClearBtn
@@ -101,7 +111,10 @@
 
     const API_BASE_URL = shared.API_BASE_URL;
     const MAX_COMMENT_TEXT_LENGTH = 2000;
+    const MAX_REPLY_IMAGE_SOURCE_BYTES = 10 * 1024 * 1024;
+    const MAX_REPLY_IMAGE_UPLOAD_BYTES = 300 * 1024;
     const escapeHtml = shared.escapeHtml;
+    const imageUpload = window.SVPRemoteImageUpload || {};
     const AUTH_PROVIDERS_CACHE_KEY = 'svp.auth.providers.v1';
     const AUTH_PROVIDERS_CACHE_TTL_MS = 60 * 60 * 1000;
     const richContentSanitizeOptions = {
@@ -124,6 +137,7 @@
     let commentEditComposer = null;
     let commentEditModal = null;
     let editingCommentId = 0;
+    let replyImagePreviewObjectUrl = '';
 
     const map = window.L.map(mapEl, { scrollWheelZoom: false }).setView([48.8566, 2.3522], 13);
     window.L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -234,6 +248,30 @@
     };
 
     const formatViewCountLabel = (value) => `${(Number.isFinite(Number(value)) ? Number(value) : 0).toLocaleString('vi-VN')} lượt xem`;
+    const formatUploadSize = typeof imageUpload.formatSize === 'function'
+        ? imageUpload.formatSize
+        : ((bytes) => `${(Number(bytes || 0) / 1024).toFixed(1)}KB`);
+    const imageExtensionForMime = typeof imageUpload.imageExtensionForMime === 'function'
+        ? imageUpload.imageExtensionForMime
+        : ((mimeType) => {
+            const normalized = String(mimeType || '').toLowerCase();
+            if (normalized === 'image/png') return 'png';
+            if (normalized === 'image/webp') return 'webp';
+            if (normalized === 'image/gif') return 'gif';
+            if (normalized === 'image/avif') return 'avif';
+            return 'jpg';
+        });
+    const replaceFileExtension = typeof imageUpload.replaceFileExtension === 'function'
+        ? imageUpload.replaceFileExtension
+        : ((filename, extension) => `${(String(filename || 'housing-comment').replace(/\.[^/.]+$/, '') || 'housing-comment')}.${extension}`);
+    const compressImageBelowLimit = typeof imageUpload.compressImageBelowLimit === 'function'
+        ? imageUpload.compressImageBelowLimit
+        : (async (file, maxBytes) => {
+            if (file && Number(file.size || 0) <= Number(maxBytes || 0)) {
+                return file;
+            }
+            throw new Error('Trình duyệt không hỗ trợ nén ảnh trước khi upload.');
+        });
 
     const setFeedback = (element, message, type = 'info') => {
         element.textContent = message || '';
@@ -300,6 +338,43 @@
         replyCaptchaAnswerEl.value = '';
     };
 
+    const setReplyImageStatus = (message, type = 'info') => {
+        setFeedback(replyImageStatusEl, message, type);
+    };
+
+    const revokeReplyImagePreview = () => {
+        if (!replyImagePreviewObjectUrl || !window.URL || typeof window.URL.revokeObjectURL !== 'function') {
+            replyImagePreviewObjectUrl = '';
+            return;
+        }
+        window.URL.revokeObjectURL(replyImagePreviewObjectUrl);
+        replyImagePreviewObjectUrl = '';
+    };
+
+    const setReplyImagePreview = (file) => {
+        revokeReplyImagePreview();
+        if (!file || !window.URL || typeof window.URL.createObjectURL !== 'function') {
+            replyImagePreviewEl.classList.remove('is-visible');
+            replyImagePreviewEl.removeAttribute('src');
+            return;
+        }
+        replyImagePreviewObjectUrl = window.URL.createObjectURL(file);
+        replyImagePreviewEl.src = replyImagePreviewObjectUrl;
+        replyImagePreviewEl.classList.add('is-visible');
+    };
+
+    const clearReplyImageInput = (options = {}) => {
+        const clearStatus = options.clearStatus !== false;
+        replyImageEl.value = '';
+        setReplyImagePreview(null);
+        replyImageClearBtn.classList.add('d-none');
+        if (clearStatus) {
+            setReplyImageStatus('', 'info');
+        }
+    };
+
+    const getSelectedReplyImageFile = () => replyImageEl.files && replyImageEl.files[0] ? replyImageEl.files[0] : null;
+
     const syncReplyIdentityUi = () => {
         const identity = peekAuthenticatedReplyIdentity();
         if (identity.isAuthenticated) {
@@ -310,6 +385,9 @@
             replyCaptchaAnswerEl.disabled = true;
             replySessionHintEl.classList.remove('d-none');
             replySessionHintEl.innerHTML = `<i class="fa-solid fa-circle-check me-1 text-success"></i>Đang bình luận với <strong>${escapeHtml(identity.label)}</strong>.`;
+            replyImageFieldsEl.classList.remove('d-none');
+            replyImageEl.disabled = false;
+            replyImageClearBtn.disabled = false;
             return identity;
         }
         replyGuestFieldsEl.classList.remove('d-none');
@@ -319,6 +397,10 @@
         replyCaptchaAnswerEl.disabled = false;
         replySessionHintEl.classList.add('d-none');
         replySessionHintEl.textContent = '';
+        clearReplyImageInput({ clearStatus: true });
+        replyImageFieldsEl.classList.add('d-none');
+        replyImageEl.disabled = true;
+        replyImageClearBtn.disabled = true;
         if (replyCaptchaAnswer === null || !String(replyCaptchaQuestionEl.textContent || '').trim()) {
             generateReplyCaptcha();
         }
@@ -415,6 +497,83 @@
             replyMessageEl.value = `> ${lines.join(' ')}\n${replyMessageEl.value || ''}`.trim();
             updateReplyCharCount();
         }
+    };
+
+    const inferReplyImageFilename = (file) => {
+        const mimeType = String(file?.type || '').trim().toLowerCase() || 'image/jpeg';
+        const extension = imageExtensionForMime(mimeType);
+        const original = String(file?.name || '').trim() || `housing-comment-${Date.now()}.${extension}`;
+        return replaceFileExtension(original, extension);
+    };
+
+    const uploadReplyImage = async (file) => {
+        const mimeType = String(file?.type || '').toLowerCase();
+        if (!mimeType.startsWith('image/')) {
+            throw new Error('Chỉ hỗ trợ file ảnh.');
+        }
+        if (Number(file?.size || 0) > MAX_REPLY_IMAGE_SOURCE_BYTES) {
+            throw new Error(`Ảnh gốc vượt quá giới hạn ${formatUploadSize(MAX_REPLY_IMAGE_SOURCE_BYTES)}.`);
+        }
+
+        setReplyImageStatus('Đang nén ảnh...', 'info');
+        const compressedFile = await compressImageBelowLimit(file, MAX_REPLY_IMAGE_UPLOAD_BYTES);
+        if (Number(compressedFile?.size || 0) > MAX_REPLY_IMAGE_UPLOAD_BYTES) {
+            throw new Error(`Ảnh sau nén phải tối đa ${formatUploadSize(MAX_REPLY_IMAGE_UPLOAD_BYTES)}.`);
+        }
+        setReplyImageStatus(`Đang upload ảnh (${formatUploadSize(compressedFile.size)})...`, 'info');
+
+        const presignPayload = await shared.requestWithAuth(`${API_BASE_URL}/api/upload/post-image`, {
+            method: 'POST',
+            body: JSON.stringify({
+                filename: inferReplyImageFilename(compressedFile),
+                contentType: compressedFile.type || mimeType
+            })
+        });
+        const uploadUrl = String(presignPayload?.uploadUrl || '').trim();
+        const publicUrl = String(presignPayload?.publicUrl || '').trim();
+        if (!uploadUrl || !publicUrl) {
+            throw new Error('Thiếu uploadUrl/publicUrl từ API.');
+        }
+
+        let uploadResponse = await fetch(uploadUrl, {
+            method: presignPayload.method || 'PUT',
+            headers: compressedFile.type ? { 'Content-Type': compressedFile.type } : undefined,
+            body: compressedFile
+        });
+        if (!uploadResponse.ok && compressedFile.type) {
+            uploadResponse = await fetch(uploadUrl, {
+                method: presignPayload.method || 'PUT',
+                body: compressedFile
+            });
+        }
+        if (!uploadResponse.ok) {
+            throw new Error(`Upload ảnh thất bại (${uploadResponse.status}).`);
+        }
+        return publicUrl;
+    };
+
+    const deleteUploadedReplyImage = async (publicUrl) => {
+        const normalizedUrl = normalizeHttpUrl(publicUrl);
+        if (!normalizedUrl) {
+            return;
+        }
+        await shared.requestWithAuth(`${API_BASE_URL}/api/upload/post-image/delete`, {
+            method: 'POST',
+            body: JSON.stringify({ publicUrl: normalizedUrl })
+        }).catch(() => {});
+    };
+
+    const appendImageToCommentHtml = (contentHtml, imageUrl) => {
+        const safeUrl = normalizeHttpUrl(imageUrl);
+        if (!safeUrl) {
+            return sanitizeCommentHtml(contentHtml);
+        }
+        const baseHtml = sanitizeCommentHtml(contentHtml);
+        const imageHtml = `<figure class="image"><img src="${escapeHtml(safeUrl)}" alt="Ảnh đính kèm"></figure>`;
+        const nextHtml = hasRenderableCommentContent(baseHtml)
+            ? `${baseHtml}${imageHtml}`
+            : `<p>Ảnh đính kèm.</p>${imageHtml}`;
+        return sanitizeCommentHtml(nextHtml);
     };
 
     const readProviderConfigCache = () => {
@@ -1189,8 +1348,9 @@
         const displayName = String(replyNameEl.value || '').trim();
         const contentHtml = getReplySubmissionHtml();
         const plainText = getReplyPlainText();
+        const selectedImageFile = getSelectedReplyImageFile();
 
-        if (!hasRenderableCommentContent(contentHtml)) {
+        if (!hasRenderableCommentContent(contentHtml) && !selectedImageFile) {
             setFeedback(replyFeedbackEl, 'Nội dung bình luận không được để trống.', 'error');
             focusReplyComposer();
             return;
@@ -1213,18 +1373,39 @@
                 return;
             }
         }
+        if (selectedImageFile && !identity.isAuthenticated) {
+            setFeedback(replyFeedbackEl, 'Vui lòng đăng nhập để upload ảnh.', 'error');
+            return;
+        }
+        if (selectedImageFile && !String(selectedImageFile.type || '').toLowerCase().startsWith('image/')) {
+            setReplyImageStatus('Chỉ hỗ trợ file ảnh.', 'error');
+            return;
+        }
+        if (selectedImageFile && Number(selectedImageFile.size || 0) > MAX_REPLY_IMAGE_SOURCE_BYTES) {
+            setReplyImageStatus(`Ảnh gốc vượt quá giới hạn ${formatUploadSize(MAX_REPLY_IMAGE_SOURCE_BYTES)}.`, 'error');
+            return;
+        }
 
         const originalLabel = replySubmitBtn.innerHTML;
         replySubmitBtn.disabled = true;
+        replyClearBtn.disabled = true;
+        replyImageEl.disabled = true;
+        replyImageClearBtn.disabled = true;
         replySubmitBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin me-2"></i>Đang gửi...';
+        let uploadedImageUrl = '';
+        let persisted = false;
         try {
+            const submissionHtml = selectedImageFile
+                ? appendImageToCommentHtml(contentHtml, (uploadedImageUrl = await uploadReplyImage(selectedImageFile)))
+                : contentHtml;
             const payload = await shared.requestWithAuth(`${API_BASE_URL}/api/housing/${encodeURIComponent(listingId)}/comments`, {
                 method: 'POST',
                 body: JSON.stringify({
                     displayName: identity.isAuthenticated ? '' : displayName,
-                    contentHtml
+                    contentHtml: submissionHtml
                 })
             });
+            persisted = true;
             const createdComment = normalizeComment(payload);
             mergeComments([createdComment]);
             if (currentDetail) {
@@ -1234,6 +1415,7 @@
             renderCommentsList();
             renderCommentBadge(Math.max(currentComments.length, Number(payload?.commentCount || 0)));
             clearReplyComposer();
+            clearReplyImageInput();
             if (!identity.isAuthenticated) {
                 replyNameEl.value = '';
                 generateReplyCaptcha();
@@ -1247,10 +1429,15 @@
             if (!identity.isAuthenticated) {
                 generateReplyCaptcha();
             }
+            if (uploadedImageUrl && !persisted) {
+                await deleteUploadedReplyImage(uploadedImageUrl);
+            }
             setFeedback(replyFeedbackEl, String(error?.message || 'Không thể đăng bình luận.'), 'error');
         } finally {
             replySubmitBtn.disabled = false;
+            replyClearBtn.disabled = false;
             replySubmitBtn.innerHTML = originalLabel;
+            syncReplyIdentityUi();
         }
     };
 
@@ -1285,8 +1472,33 @@
 
     const bindEvents = () => {
         replyMessageEl.addEventListener('input', updateReplyCharCount);
+        replyImageEl.addEventListener('change', () => {
+            const file = getSelectedReplyImageFile();
+            if (!file) {
+                clearReplyImageInput({ clearStatus: true });
+                return;
+            }
+            if (!String(file.type || '').toLowerCase().startsWith('image/')) {
+                clearReplyImageInput({ clearStatus: false });
+                setReplyImageStatus('Chỉ hỗ trợ file ảnh.', 'error');
+                return;
+            }
+            if (Number(file.size || 0) > MAX_REPLY_IMAGE_SOURCE_BYTES) {
+                clearReplyImageInput({ clearStatus: false });
+                setReplyImageStatus(`Ảnh gốc vượt quá giới hạn ${formatUploadSize(MAX_REPLY_IMAGE_SOURCE_BYTES)}.`, 'error');
+                return;
+            }
+            setReplyImagePreview(file);
+            replyImageClearBtn.classList.remove('d-none');
+            setReplyImageStatus(`Đã chọn: ${file.name} (${formatUploadSize(file.size)}).`, 'info');
+        });
+        replyImageClearBtn.addEventListener('click', () => {
+            clearReplyImageInput({ clearStatus: false });
+            setReplyImageStatus('Đã xoá ảnh.', 'info');
+        });
         replyClearBtn.addEventListener('click', () => {
             clearReplyComposer();
+            clearReplyImageInput();
             setFeedback(replyFeedbackEl, '', 'info');
             if (!peekAuthenticatedReplyIdentity().isAuthenticated) {
                 generateReplyCaptcha();

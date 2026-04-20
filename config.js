@@ -25,6 +25,22 @@
             '/ban-do-thue-nha.html',
             '/post_detail.html',
             '/event_detail.html',
+            '/housing_detail.html',
+            '/thread.html',
+            '/forum.html',
+            '/contact.html',
+            '/about.html',
+            '/privacy.html',
+            '/terms.html',
+            '/support.html',
+            '/faq.html',
+            '/sitemap.html',
+            '/rss.xml',
+            '/robots.txt',
+            '/404.html',
+            '/500.html',
+            '/profile.html',
+
             '/share.html',
             '/11qyalh10yucjx9dvsey1u2ihsk4xf.html'
         ]);

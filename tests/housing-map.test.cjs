@@ -294,6 +294,25 @@ test('housing map puts featured listings first and renders featured pins larger'
     assert.match(String(featuredIcon.html || ''), /fa-star/);
 });
 
+test('housing map shows featured styling to public visitors without admin controls', async () => {
+    const payload = {
+        items: [
+            makeListing({ id: 'public-normal', title: 'Studio public', createdAt: '2026-04-03T10:00:00Z', featured: false }),
+            makeListing({ id: 'public-featured', title: 'Studio public nổi bật', createdAt: '2026-04-01T10:00:00Z', featured: true })
+        ],
+        hasMore: false,
+        limit: 1000
+    };
+
+    const dom = await loadHousingMapPage(async () => makeJsonResponse(payload));
+    const { document } = dom.window;
+
+    assert.deepEqual(readListIds(document), ['public-featured', 'public-normal']);
+    assert.ok(document.querySelector('#housing-list [data-listing-id="public-featured"].sv-housing-card--featured'));
+    assert.match(document.getElementById('housing-list').textContent, /Nổi bật/);
+    assert.equal(document.querySelector('[data-feature-toggle-id="public-featured"]'), null);
+});
+
 test('housing map lets SUPERADMIN toggle featured listings from cards', async () => {
     const payload = {
         items: [

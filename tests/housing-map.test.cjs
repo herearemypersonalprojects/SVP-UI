@@ -60,8 +60,10 @@ function installHousingMapLeafletStub(window) {
         markerClusterGroup() {
             return clusterGroup;
         },
-        marker() {
+        marker(coords, options = {}) {
             return {
+                coords,
+                options,
                 on() {
                     return this;
                 }
@@ -132,6 +134,7 @@ function makeListing(overrides = {}) {
         tags: overrides.tags || [],
         cafEligible: overrides.cafEligible ?? true,
         status: overrides.status || 'AVAILABLE',
+        featured: Boolean(overrides.featured ?? false),
         viewCount: overrides.viewCount ?? 10,
         createdAt: overrides.createdAt || '2026-04-01T10:00:00Z',
         primaryImageUrl: overrides.primaryImageUrl || 'https://cdn.svp.test/housing/cover.jpg',
@@ -176,6 +179,11 @@ function readCardFormatSignatures(document) {
                 content && content.querySelector('.sv-housing-tags') ? 'tags' : ''
             ].join('|');
         });
+}
+
+function readListIds(document) {
+    return Array.from(document.querySelectorAll('#housing-list [data-listing-id]'))
+        .map((element) => element.getAttribute('data-listing-id'));
 }
 
 test('housing map applies explicit keyword search and ranks matches by field priority', async () => {
@@ -258,6 +266,78 @@ test('housing map applies explicit keyword search and ranks matches by field pri
     assert.equal(resultsMeta.textContent, '');
     assert.equal(document.getElementById('housing-map-status').textContent, '');
     assert.equal(document.getElementById('housing-map-status').hidden, true);
+});
+
+test('housing map puts featured listings first and renders featured pins larger', async () => {
+    const payload = {
+        items: [
+            makeListing({ id: 'new-normal', title: 'Studio mới', createdAt: '2026-04-03T10:00:00Z', featured: false }),
+            makeListing({ id: 'old-featured', title: 'Studio nổi bật', createdAt: '2026-04-01T10:00:00Z', featured: true }),
+            makeListing({ id: 'older-normal', title: 'Studio thường', createdAt: '2026-03-30T10:00:00Z', featured: false })
+        ],
+        hasMore: false,
+        limit: 1000
+    };
+
+    const dom = await loadHousingMapPage(async () => makeJsonResponse(payload));
+    const { document } = dom.window;
+    const { clusterGroup } = dom.leaflet;
+
+    assert.deepEqual(readListIds(document), ['old-featured', 'new-normal', 'older-normal']);
+    assert.ok(document.querySelector('#housing-list [data-listing-id="old-featured"].sv-housing-card--featured'));
+
+    const featuredIcon = clusterGroup._layers
+        .map((layer) => layer.options.icon)
+        .find((icon) => String(icon.html || '').includes('housing-price-pin--featured'));
+    assert.ok(featuredIcon);
+    assert.deepEqual(Array.from(featuredIcon.iconSize), [88, 44]);
+    assert.match(String(featuredIcon.html || ''), /fa-star/);
+});
+
+test('housing map lets SUPERADMIN toggle featured listings from cards', async () => {
+    const payload = {
+        items: [
+            makeListing({ id: 'normal-first', title: 'Studio thường mới', createdAt: '2026-04-03T10:00:00Z', featured: false }),
+            makeListing({ id: 'normal-second', title: 'Studio thường cũ', createdAt: '2026-04-01T10:00:00Z', featured: false })
+        ],
+        hasMore: false,
+        limit: 1000
+    };
+    const updates = [];
+    const superadminToken = makeJwt({ role: 'SUPERADMIN' });
+
+    const dom = await loadHousingMapPage(async (targetUrl, options = {}) => {
+        const url = new URL(String(targetUrl));
+        const method = String(options?.method || 'GET').toUpperCase();
+        if (url.pathname === '/api/housing' && method === 'GET') {
+            return makeJsonResponse(payload);
+        }
+        if (url.pathname.endsWith('/api/housing/normal-second/featured') && method === 'PUT') {
+            updates.push({
+                authorization: options.headers.get('Authorization'),
+                body: JSON.parse(String(options.body || '{}'))
+            });
+            return makeJsonResponse({ listingId: 'normal-second', featured: true });
+        }
+        throw new Error(`Unexpected fetch: ${targetUrl}`);
+    }, {
+        accessToken: superadminToken
+    });
+    const { document } = dom.window;
+
+    assert.deepEqual(readListIds(document), ['normal-first', 'normal-second']);
+    const toggle = document.querySelector('[data-feature-toggle-id="normal-second"]');
+    assert.ok(toggle);
+    toggle.click();
+    await flushAsync(dom.window, 8);
+
+    assert.deepEqual(updates, [{
+        authorization: `Bearer ${superadminToken}`,
+        body: { featured: true }
+    }]);
+    assert.deepEqual(readListIds(document), ['normal-second', 'normal-first']);
+    assert.equal(document.querySelector('[data-feature-toggle-id="normal-second"]').getAttribute('aria-pressed'), 'true');
+    assert.match(document.getElementById('housing-map-status').textContent, /Đã đặt tin nổi bật/);
 });
 
 test('housing map shows result meta for SUPERADMIN only', async () => {

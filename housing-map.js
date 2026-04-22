@@ -26,7 +26,7 @@
     const INITIAL_VISIBLE_COUNT = 10;
     const LOAD_MORE_STEP = 5;
     const DATASET_LIMIT = 1000;
-    const SESSION_CACHE_KEY_PREFIX = 'svp-housing-map-dataset-v3';
+    const SESSION_CACHE_KEY_PREFIX = 'svp-housing-map-dataset-v4';
     const SESSION_CACHE_TTL_MS = 5 * 60 * 1000;
     const SEARCH_FIELD_WEIGHTS = Object.freeze({
         title: 700,
@@ -94,6 +94,8 @@
     };
 
     const hasValidCoordinates = (item) => Number.isFinite(Number(item.latitude)) && Number.isFinite(Number(item.longitude));
+
+    const isFeaturedListing = (item) => Boolean(item?.featured ?? item?.isFeatured ?? item?.is_featured);
 
     const normalizeText = (value) => String(value || '')
         .trim()
@@ -182,8 +184,9 @@
         };
     };
 
-    const buildSearchableItems = (items) => (Array.isArray(items) ? items : []).map((item) => ({
+    const buildSearchableItems = (items) => (Array.isArray(items) ? items : []).map((item, index) => ({
         ...item,
+        __originalIndex: index,
         __searchIndex: buildSearchIndex(item)
     }));
 
@@ -264,12 +267,20 @@
     };
 
     const compareRankedResults = (left, right) => {
+        const featuredDiff = Number(isFeaturedListing(right.item)) - Number(isFeaturedListing(left.item));
+        if (featuredDiff !== 0) {
+            return featuredDiff;
+        }
         if (right.searchScore !== left.searchScore) {
             return right.searchScore - left.searchScore;
         }
         const statusDiff = statusPriority(left.item.status) - statusPriority(right.item.status);
         if (statusDiff !== 0) {
             return statusDiff;
+        }
+        const indexDiff = Number(left.item.__originalIndex) - Number(right.item.__originalIndex);
+        if (Number.isFinite(indexDiff) && indexDiff !== 0) {
+            return indexDiff;
         }
         const createdDiff = String(right.item.createdAt || '').localeCompare(String(left.item.createdAt || ''));
         if (createdDiff !== 0) {
@@ -408,13 +419,17 @@
     const createPriceIcon = (item) => {
         const priceLabel = shared.escapeHtml(item.priceLabel || shared.formatPrice(item.price));
         const status = String(item.status || 'AVAILABLE').toUpperCase();
-        const className = `housing-price-pin housing-price-pin--${status}`;
+        const featured = isFeaturedListing(item);
+        const className = `housing-price-pin housing-price-pin--${status}${featured ? ' housing-price-pin--featured' : ''}`;
+        const iconHtml = featured
+            ? '<i class="fa-solid fa-star housing-price-pin__icon" aria-hidden="true"></i>'
+            : '';
         return L.divIcon({
-            className: 'housing-price-pin-wrap',
-            html: `<div class="${className}">${priceLabel}</div>`,
-            iconSize: [64, 34],
-            iconAnchor: [32, 17],
-            popupAnchor: [0, -18]
+            className: `housing-price-pin-wrap${featured ? ' housing-price-pin-wrap--featured' : ''}`,
+            html: `<div class="${className}">${iconHtml}<span>${priceLabel}</span></div>`,
+            iconSize: featured ? [88, 44] : [64, 34],
+            iconAnchor: featured ? [44, 22] : [32, 17],
+            popupAnchor: featured ? [0, -24] : [0, -18]
         });
     };
 
@@ -478,28 +493,52 @@
             const tags = Array.isArray(item.tags) ? item.tags.slice(0, 4) : [];
             const image = item.primaryImageUrl || 'assets/img/forum_svp_background.png';
             const href = shared.buildHousingDetailHref(item.id, item.title || '');
+            const featured = isFeaturedListing(item);
+            const cardClass = `sv-housing-card${featured ? ' sv-housing-card--featured' : ''}`;
+            const featuredBadge = featured
+                ? '<span class="sv-housing-feature-badge"><i class="fa-solid fa-star" aria-hidden="true"></i>Nổi bật</span>'
+                : '';
+            const featureToggle = state.isSuperadmin
+                ? `
+                    <button
+                        class="sv-housing-feature-toggle${featured ? ' is-featured' : ''}"
+                        type="button"
+                        data-feature-toggle-id="${shared.escapeHtml(item.id)}"
+                        aria-pressed="${featured ? 'true' : 'false'}"
+                        aria-label="${featured ? 'Bỏ nổi bật tin này' : 'Đặt tin này nổi bật'}"
+                        title="${featured ? 'Bỏ nổi bật' : 'Đặt nổi bật'}">
+                        <i class="fa-solid fa-star" aria-hidden="true"></i>
+                    </button>
+                `
+                : '';
             return `
-                <a class="sv-housing-card" href="${shared.escapeHtml(href)}" data-listing-id="${shared.escapeHtml(item.id)}">
-                    <div class="sv-housing-card__media">
-                        <img class="sv-housing-card__image" src="${shared.escapeHtml(image)}" alt="${shared.escapeHtml(item.title || 'Housing image')}">
-                    </div>
-                    <div class="sv-housing-card__content">
-                        <div class="d-flex justify-content-between align-items-start gap-2">
-                            <div class="sv-housing-price">${shared.escapeHtml(item.priceLabel || shared.formatPrice(item.price))}</div>
-                            <span class="sv-housing-badge ${statusMeta.className}">${shared.escapeHtml(statusMeta.label)}</span>
+                <div class="sv-housing-card-wrap${featured ? ' sv-housing-card-wrap--featured' : ''}">
+                    <a class="${cardClass}" href="${shared.escapeHtml(href)}" data-listing-id="${shared.escapeHtml(item.id)}">
+                        <div class="sv-housing-card__media">
+                            <img class="sv-housing-card__image" src="${shared.escapeHtml(image)}" alt="${shared.escapeHtml(item.title || 'Housing image')}">
                         </div>
-                        <div>
-                            <strong>${shared.escapeHtml(item.title || 'Tin thuê nhà')}</strong>
-                            <div class="sv-housing-meta mt-1">${shared.escapeHtml(item.city || '')}${item.arrondissement ? ` • ${shared.escapeHtml(item.arrondissement)}` : ''}${item.areaM2 ? ` • ${shared.escapeHtml(String(item.areaM2))}m²` : ''} • ${shared.escapeHtml(formatViewCountLabel(item.viewCount))}</div>
+                        <div class="sv-housing-card__content">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <div class="sv-housing-price">${shared.escapeHtml(item.priceLabel || shared.formatPrice(item.price))}</div>
+                                <div class="sv-housing-card__badges">
+                                    ${featuredBadge}
+                                    <span class="sv-housing-badge ${statusMeta.className}">${shared.escapeHtml(statusMeta.label)}</span>
+                                </div>
+                            </div>
+                            <div>
+                                <strong>${shared.escapeHtml(item.title || 'Tin thuê nhà')}</strong>
+                                <div class="sv-housing-meta mt-1">${shared.escapeHtml(item.city || '')}${item.arrondissement ? ` • ${shared.escapeHtml(item.arrondissement)}` : ''}${item.areaM2 ? ` • ${shared.escapeHtml(String(item.areaM2))}m²` : ''} • ${shared.escapeHtml(formatViewCountLabel(item.viewCount))}</div>
+                            </div>
+                            <div class="sv-housing-meta">${shared.escapeHtml(buildTransitText(item.primaryTransit))}</div>
+                            <div class="sv-housing-tags">
+                                <span class="sv-housing-tag">${shared.escapeHtml(item.propertyTypeLabel || shared.propertyTypeLabel(item.propertyType))}</span>
+                                ${item.cafEligible ? '<span class="sv-housing-tag">CAF</span>' : ''}
+                                ${tags.map((tag) => `<span class="sv-housing-tag">${shared.escapeHtml(tag)}</span>`).join('')}
+                            </div>
                         </div>
-                        <div class="sv-housing-meta">${shared.escapeHtml(buildTransitText(item.primaryTransit))}</div>
-                        <div class="sv-housing-tags">
-                            <span class="sv-housing-tag">${shared.escapeHtml(item.propertyTypeLabel || shared.propertyTypeLabel(item.propertyType))}</span>
-                            ${item.cafEligible ? '<span class="sv-housing-tag">CAF</span>' : ''}
-                            ${tags.map((tag) => `<span class="sv-housing-tag">${shared.escapeHtml(tag)}</span>`).join('')}
-                        </div>
-                    </div>
-                </a>
+                    </a>
+                    ${featureToggle}
+                </div>
             `;
         }).join('');
         updateLoadMoreButton();
@@ -508,12 +547,14 @@
 
     const renderMarkers = () => {
         clusterGroup.clearLayers();
-        state.filteredItems.forEach((item) => {
+        const markerItems = [...state.filteredItems].sort((left, right) => Number(isFeaturedListing(left)) - Number(isFeaturedListing(right)));
+        markerItems.forEach((item) => {
             if (!hasValidCoordinates(item)) {
                 return;
             }
             const marker = L.marker([item.latitude, item.longitude], {
-                icon: createPriceIcon(item)
+                icon: createPriceIcon(item),
+                zIndexOffset: isFeaturedListing(item) ? 1000 : 0
             });
             marker.on('click', () => openListingDetail(item));
             clusterGroup.addLayer(marker);
@@ -641,9 +682,7 @@
             }
             rankedItems.push({ item, searchScore });
         });
-        if (searchDescriptor.terms.length) {
-            rankedItems.sort(compareRankedResults);
-        }
+        rankedItems.sort(compareRankedResults);
         state.filteredItems = rankedItems.map((entry) => entry.item);
         if (resetVisibleCount) {
             state.visibleCount = INITIAL_VISIBLE_COUNT;
@@ -686,6 +725,14 @@
             }));
         } catch (_) {
             // Ignore cache write failures: frontend should still work without sessionStorage.
+        }
+    };
+
+    const clearCachedDataset = () => {
+        try {
+            window.sessionStorage.removeItem(getSessionCacheKey());
+        } catch (_) {
+            // Ignore cache invalidation failures.
         }
     };
 
@@ -754,6 +801,44 @@
         }
     };
 
+    const findListingById = (listingId) => {
+        const targetId = String(listingId || '').trim();
+        if (!targetId) {
+            return null;
+        }
+        return state.items.find((item) => String(item.id || '').trim() === targetId) || null;
+    };
+
+    const updateListingFeatured = async (item, nextFeatured, triggerBtn) => {
+        if (!state.isSuperadmin || !item) {
+            return;
+        }
+        const originalTitle = triggerBtn ? triggerBtn.getAttribute('title') : '';
+        if (triggerBtn) {
+            triggerBtn.disabled = true;
+            triggerBtn.classList.add('is-loading');
+            triggerBtn.setAttribute('title', 'Đang cập nhật');
+        }
+        try {
+            const payload = await shared.requestWithAuth(`${shared.API_BASE_URL}/api/housing/${encodeURIComponent(item.id)}/featured`, {
+                method: 'PUT',
+                body: JSON.stringify({ featured: Boolean(nextFeatured) })
+            });
+            item.featured = Boolean(payload?.featured ?? nextFeatured);
+            clearCachedDataset();
+            applyClientFilters({ resetVisibleCount: false });
+            setMapStatus(item.featured ? 'Đã đặt tin nổi bật.' : 'Đã bỏ nổi bật tin này.');
+        } catch (error) {
+            console.error('Cannot update housing featured flag:', error);
+            setMapStatus(error && error.message ? error.message : 'Không thể cập nhật nổi bật.');
+            if (triggerBtn) {
+                triggerBtn.disabled = false;
+                triggerBtn.classList.remove('is-loading');
+                triggerBtn.setAttribute('title', originalTitle || '');
+            }
+        }
+    };
+
     ['dragstart', 'zoomstart'].forEach((eventName) => {
         map.on(eventName, () => {
             if (!state.isAutoFittingMap) {
@@ -769,6 +854,20 @@
     loadMoreBtn.addEventListener('click', () => {
         state.visibleCount += LOAD_MORE_STEP;
         renderList();
+    });
+
+    listEl.addEventListener('click', (event) => {
+        const triggerBtn = event.target.closest('[data-feature-toggle-id]');
+        if (!triggerBtn) {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        const item = findListingById(triggerBtn.getAttribute('data-feature-toggle-id'));
+        if (!item) {
+            return;
+        }
+        void updateListingFeatured(item, !isFeaturedListing(item), triggerBtn);
     });
 
     applyBtn.addEventListener('click', () => {

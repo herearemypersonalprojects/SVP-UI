@@ -445,6 +445,41 @@
             return Number.isFinite(time) ? time : 0;
         };
 
+        const latestMillis = (...values) => values.reduce((max, value) => Math.max(max, toMillis(value)), 0);
+
+        const latestTimestamp = (...values) => {
+            let bestValue = '';
+            let bestTime = 0;
+            values.forEach((value) => {
+                const time = toMillis(value);
+                if (time > bestTime) {
+                    bestTime = time;
+                    bestValue = String(value || '');
+                }
+            });
+            return bestValue;
+        };
+
+        const isFeaturedThread = (thread) => Boolean(
+            thread?.featured
+            ?? thread?.isFeatured
+            ?? thread?.is_featured
+            ?? thread?.pinned
+            ?? thread?.isPinned
+            ?? thread?.is_pinned
+        );
+
+        const threadActivityMillis = (thread) => [
+            thread?.lastActivityAt,
+            thread?.last_activity_at,
+            thread?.lastCommentAt,
+            thread?.last_comment_at,
+            thread?.updatedAt,
+            thread?.updated_at,
+            thread?.createdAt,
+            thread?.created_at
+        ].reduce((latest, value) => Math.max(latest, toMillis(value)), 0);
+
         const normalizeCount = (value) => {
             const count = Number(value);
             return Number.isFinite(count) && count >= 0 ? Math.floor(count) : 0;
@@ -495,7 +530,7 @@
             );
             const lastCommentAt = raw.lastCommentAt
                 ? String(raw.lastCommentAt)
-                : String(thread?.lastActivityAt || '');
+                : String(thread?.lastCommentAt || thread?.last_comment_at || thread?.lastActivityAt || '');
             return {
                 replies,
                 views,
@@ -505,7 +540,8 @@
 
         const popularScore = (thread) => {
             const metrics = getMetrics(thread);
-            const recency = toMillis(thread.createdAt) ? Math.max(0, (Date.now() - toMillis(thread.createdAt)) / 3600000) : 999;
+            const activityTime = threadActivityMillis(thread);
+            const recency = activityTime ? Math.max(0, (Date.now() - activityTime) / 3600000) : 999;
             const freshnessBoost = recency < 72 ? (72 - recency) / 6 : 0;
             return metrics.replies * 5 + metrics.views + freshnessBoost;
         };
@@ -527,7 +563,10 @@
                 viewCount: normalizeCount(thread?.viewCount ?? thread?.view_count ?? thread?.views),
                 replyCount: normalizeCount(thread?.replyCount ?? thread?.commentCount ?? thread?.comment_count),
                 createdAt: String(thread?.createdAt || ''),
-                lastActivityAt: String(thread?.lastActivityAt || thread?.updatedAt || thread?.updated_at || thread?.createdAt || ''),
+                updatedAt: String(thread?.updatedAt || thread?.updated_at || ''),
+                lastCommentAt: String(thread?.lastCommentAt || thread?.last_comment_at || ''),
+                lastActivityAt: latestTimestamp(thread?.lastActivityAt, thread?.last_activity_at, thread?.updatedAt, thread?.updated_at, thread?.lastCommentAt, thread?.last_comment_at, thread?.createdAt),
+                featured: isFeaturedThread(thread),
                 excerpt: decodeHtmlEntities(thread?.excerpt || excerptFromHtml(thread?.contentHtml || '', 180))
             };
         };
@@ -540,7 +579,10 @@
             viewCount: post?.viewCount ?? post?.view_count,
             replyCount: post?.commentCount ?? post?.comment_count,
             createdAt: post?.createdAt,
-            lastActivityAt: post?.updatedAt || post?.updated_at || post?.createdAt,
+            updatedAt: post?.updatedAt || post?.updated_at,
+            lastCommentAt: post?.lastCommentAt || post?.last_comment_at,
+            lastActivityAt: latestTimestamp(post?.lastActivityAt, post?.last_activity_at, post?.updatedAt, post?.updated_at, post?.lastCommentAt, post?.last_comment_at, post?.createdAt),
+            featured: post?.featured ?? post?.isPinned ?? post?.is_pinned,
             contentHtml: post?.contentHtml
         });
 
@@ -570,23 +612,25 @@
         };
 
         const FORUM_FETCH_LIMIT = 20;
-        const FORUM_CACHE_KEY = 'svp.forum.latest-discussions.cache.v3';
+        const FORUM_CACHE_KEY = 'svp.forum.latest-discussions.cache.v4';
         const FORUM_CACHE_TTL_MS = 2 * 60 * 1000;
         const urlHelpers = window.SVPSeo && window.SVPSeo.urls ? window.SVPSeo.urls : null;
         const buildThreadHref = (threadId, title) => urlHelpers
             ? urlHelpers.buildDetailPath('thread', threadId, title)
             : `thread.html?postId=${encodeURIComponent(threadId)}`;
         let hasMoreFromApi = true;
-        let lastFetchedCreatedAt = null;
+        let lastFetchedActivityAt = null;
         let lastFetchedPostId = null;
+        let lastFetchedFeatured = false;
 
         const hasActiveFilters = () => Boolean(state.query.trim()) || state.category !== 'all';
 
         const fetchThreads = async (append) => {
             const params = new URLSearchParams({ limit: String(FORUM_FETCH_LIMIT) });
-            if (append && lastFetchedCreatedAt) {
-                params.set('beforeCreatedAt', lastFetchedCreatedAt);
+            if (append && lastFetchedActivityAt) {
+                params.set('beforeActivityAt', lastFetchedActivityAt);
                 if (lastFetchedPostId) params.set('beforePostId', String(lastFetchedPostId));
+                params.set('beforeFeatured', lastFetchedFeatured ? 'true' : 'false');
             }
             const response = await fetch(`${API_BASE_URL}/posts/latest-discussions?${params.toString()}`, {
                 method: 'GET',
@@ -600,8 +644,9 @@
             hasMoreFromApi = items.length >= FORUM_FETCH_LIMIT;
             if (items.length > 0) {
                 const last = items[items.length - 1];
-                lastFetchedCreatedAt = last.createdAt || last.created_at || null;
+                lastFetchedActivityAt = latestTimestamp(last.lastActivityAt, last.last_activity_at, last.updatedAt, last.updated_at, last.lastCommentAt, last.last_comment_at, last.createdAt, last.created_at) || null;
                 lastFetchedPostId = last.postId || last.post_id || null;
+                lastFetchedFeatured = isFeaturedThread(last);
             }
             const normalized = items.map(normalizeApiThread).filter((item) => item.threadId > 0);
             return normalized;
@@ -630,8 +675,9 @@
                     payload: {
                         threads: state.threads,
                         hasMoreFromApi,
-                        lastFetchedCreatedAt,
-                        lastFetchedPostId
+                        lastFetchedActivityAt,
+                        lastFetchedPostId,
+                        lastFetchedFeatured
                     }
                 }));
             } catch (_) {
@@ -652,13 +698,14 @@
             hasMoreFromApi = typeof payload?.hasMoreFromApi === 'boolean'
                 ? payload.hasMoreFromApi
                 : cachedThreads.length >= FORUM_FETCH_LIMIT;
-            lastFetchedCreatedAt = payload?.lastFetchedCreatedAt
-                ? String(payload.lastFetchedCreatedAt)
-                : (lastCachedThread?.createdAt || null);
+            lastFetchedActivityAt = payload?.lastFetchedActivityAt
+                ? String(payload.lastFetchedActivityAt)
+                : (latestTimestamp(lastCachedThread?.lastActivityAt, lastCachedThread?.updatedAt, lastCachedThread?.lastCommentAt, lastCachedThread?.createdAt) || null);
             const cachedPostId = Number(payload?.lastFetchedPostId);
             lastFetchedPostId = Number.isFinite(cachedPostId) && cachedPostId > 0
                 ? cachedPostId
                 : (Number.isFinite(lastCachedThread?.threadId) ? lastCachedThread.threadId : null);
+            lastFetchedFeatured = Boolean(payload?.lastFetchedFeatured ?? isFeaturedThread(lastCachedThread));
             return true;
         };
 
@@ -691,19 +738,20 @@
 
         const sortThreads = (threads) => {
             const sorted = [...threads];
+            const featuredFirst = (a, b) => Number(isFeaturedThread(b)) - Number(isFeaturedThread(a));
             switch (state.sort) {
                 case 'oldest':
-                    sorted.sort((a, b) => toMillis(a.createdAt) - toMillis(b.createdAt));
+                    sorted.sort((a, b) => featuredFirst(a, b) || threadActivityMillis(a) - threadActivityMillis(b));
                     break;
                 case 'popular':
-                    sorted.sort((a, b) => popularScore(b) - popularScore(a));
+                    sorted.sort((a, b) => featuredFirst(a, b) || popularScore(b) - popularScore(a) || threadActivityMillis(b) - threadActivityMillis(a));
                     break;
                 case 'title':
-                    sorted.sort((a, b) => a.title.localeCompare(b.title, 'vi'));
+                    sorted.sort((a, b) => featuredFirst(a, b) || a.title.localeCompare(b.title, 'vi') || threadActivityMillis(b) - threadActivityMillis(a));
                     break;
                 case 'newest':
                 default:
-                    sorted.sort((a, b) => toMillis(b.createdAt) - toMillis(a.createdAt));
+                    sorted.sort((a, b) => featuredFirst(a, b) || threadActivityMillis(b) - threadActivityMillis(a));
                     break;
             }
             return sorted;
@@ -743,7 +791,7 @@
 
             listEl.innerHTML = items.map((thread) => {
                 const metrics = getMetrics(thread);
-                const lastActive = metrics.lastCommentAt || thread.lastActivityAt || thread.createdAt;
+                const lastActive = latestTimestamp(metrics.lastCommentAt, thread.lastActivityAt, thread.updatedAt, thread.createdAt);
                 const profileHref = buildProfileHref(thread.authorNickname, thread.authorUserId, thread.authorAuthUserId);
                 const authorNode = profileHref
                     ? `<strong class="sv-forum-author" data-profile="${escapeHtml(profileHref)}" role="link" tabindex="0">${escapeHtml(thread.authorName)}</strong>`
@@ -802,7 +850,7 @@
             const totalThreads = threads.length;
             const totalReplies = threads.reduce((sum, thread) => sum + getMetrics(thread).replies, 0);
             const totalViews = threads.reduce((sum, thread) => sum + getMetrics(thread).views, 0);
-            const latestTime = threads.reduce((max, thread) => Math.max(max, toMillis(thread.createdAt)), 0);
+            const latestTime = threads.reduce((max, thread) => Math.max(max, threadActivityMillis(thread)), 0);
 
             kpisEl.innerHTML = `
                 <div class="sv-kpi"><div class="sv-kpi__label">Nguồn dữ liệu</div><div class="sv-kpi__value">${escapeHtml(state.sourceLabel)}</div></div>
@@ -1207,8 +1255,9 @@
                     state.sourceLabel = 'Lỗi kết nối';
                     state.loadError = 'Không thể kết nối backend để tải danh sách chủ đề.';
                     hasMoreFromApi = false;
-                    lastFetchedCreatedAt = null;
+                    lastFetchedActivityAt = null;
                     lastFetchedPostId = null;
+                    lastFetchedFeatured = false;
                 }
             }
             render();

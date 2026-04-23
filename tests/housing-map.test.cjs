@@ -137,6 +137,9 @@ function makeListing(overrides = {}) {
         featured: Boolean(overrides.featured ?? false),
         viewCount: overrides.viewCount ?? 10,
         createdAt: overrides.createdAt || '2026-04-01T10:00:00Z',
+        updatedAt: overrides.updatedAt || overrides.createdAt || '2026-04-01T10:00:00Z',
+        lastCommentAt: overrides.lastCommentAt || '',
+        lastActivityAt: overrides.lastActivityAt || overrides.lastCommentAt || overrides.updatedAt || overrides.createdAt || '2026-04-01T10:00:00Z',
         primaryImageUrl: overrides.primaryImageUrl || 'https://cdn.svp.test/housing/cover.jpg',
         primaryTransit: overrides.primaryTransit || {
             stationName: 'Tolbiac',
@@ -292,6 +295,98 @@ test('housing map puts featured listings first and renders featured pins larger'
     assert.ok(featuredIcon);
     assert.deepEqual(Array.from(featuredIcon.iconSize), [88, 44]);
     assert.match(String(featuredIcon.html || ''), /fa-star/);
+});
+
+test('housing map sorts non-featured listings by latest edit or comment activity', async () => {
+    const payload = {
+        items: [
+            makeListing({
+                id: 'new-created',
+                title: 'Tin mới tạo',
+                createdAt: '2026-04-03T10:00:00Z',
+                updatedAt: '2026-04-03T10:00:00Z'
+            }),
+            makeListing({
+                id: 'old-edited',
+                title: 'Tin cũ vừa sửa',
+                createdAt: '2026-03-20T10:00:00Z',
+                updatedAt: '2026-04-05T10:00:00Z'
+            }),
+            makeListing({
+                id: 'old-commented',
+                title: 'Tin cũ có comment mới',
+                createdAt: '2026-03-18T10:00:00Z',
+                updatedAt: '2026-03-18T10:00:00Z',
+                lastCommentAt: '2026-04-06T10:00:00Z',
+                lastActivityAt: '2026-04-06T10:00:00Z'
+            }),
+            makeListing({
+                id: 'featured-old',
+                title: 'Tin nổi bật cũ',
+                createdAt: '2026-03-01T10:00:00Z',
+                updatedAt: '2026-03-01T10:00:00Z',
+                featured: true
+            })
+        ],
+        hasMore: false,
+        limit: 1000
+    };
+
+    const dom = await loadHousingMapPage(async () => makeJsonResponse(payload));
+
+    assert.deepEqual(readListIds(dom.window.document), [
+        'featured-old',
+        'old-commented',
+        'old-edited',
+        'new-created'
+    ]);
+});
+
+test('housing map ignores null activity fields and falls back to createdAt', async () => {
+    const withNullActivity = makeListing({
+        id: 'null-activity-new-created',
+        title: 'Tin chỉ có ngày tạo mới',
+        createdAt: '2026-04-07T10:00:00Z'
+    });
+    withNullActivity.lastActivityAt = null;
+    withNullActivity.lastCommentAt = null;
+    withNullActivity.updatedAt = null;
+
+    const olderWithNullActivity = makeListing({
+        id: 'null-activity-old-created',
+        title: 'Tin chỉ có ngày tạo cũ',
+        createdAt: '2026-04-01T10:00:00Z'
+    });
+    olderWithNullActivity.lastActivityAt = null;
+    olderWithNullActivity.lastCommentAt = null;
+    olderWithNullActivity.updatedAt = null;
+
+    const editedListing = makeListing({
+        id: 'edited-activity',
+        title: 'Tin có ngày sửa mới nhất',
+        createdAt: '2026-03-20T10:00:00Z',
+        updatedAt: '2026-04-08T10:00:00Z'
+    });
+    editedListing.lastActivityAt = null;
+    editedListing.lastCommentAt = null;
+
+    const payload = {
+        items: [
+            olderWithNullActivity,
+            withNullActivity,
+            editedListing
+        ],
+        hasMore: false,
+        limit: 1000
+    };
+
+    const dom = await loadHousingMapPage(async () => makeJsonResponse(payload));
+
+    assert.deepEqual(readListIds(dom.window.document), [
+        'edited-activity',
+        'null-activity-new-created',
+        'null-activity-old-created'
+    ]);
 });
 
 test('housing map shows featured styling to public visitors without admin controls', async () => {

@@ -97,6 +97,22 @@
 
     const isFeaturedListing = (item) => Boolean(item?.featured ?? item?.isFeatured ?? item?.is_featured);
 
+    const toMillis = (value) => {
+        const time = Date.parse(String(value || ''));
+        return Number.isFinite(time) ? time : 0;
+    };
+
+    const listingActivityMillis = (item) => [
+        item?.lastActivityAt,
+        item?.last_activity_at,
+        item?.lastCommentAt,
+        item?.last_comment_at,
+        item?.updatedAt,
+        item?.updated_at,
+        item?.createdAt,
+        item?.created_at
+    ].reduce((latest, value) => Math.max(latest, toMillis(value)), 0);
+
     const normalizeText = (value) => String(value || '')
         .trim()
         .toLowerCase();
@@ -274,6 +290,10 @@
         if (right.searchScore !== left.searchScore) {
             return right.searchScore - left.searchScore;
         }
+        const activityDiff = listingActivityMillis(right.item) - listingActivityMillis(left.item);
+        if (activityDiff !== 0) {
+            return activityDiff;
+        }
         const statusDiff = statusPriority(left.item.status) - statusPriority(right.item.status);
         if (statusDiff !== 0) {
             return statusDiff;
@@ -281,10 +301,6 @@
         const indexDiff = Number(left.item.__originalIndex) - Number(right.item.__originalIndex);
         if (Number.isFinite(indexDiff) && indexDiff !== 0) {
             return indexDiff;
-        }
-        const createdDiff = String(right.item.createdAt || '').localeCompare(String(left.item.createdAt || ''));
-        if (createdDiff !== 0) {
-            return createdDiff;
         }
         return String(left.item.id || '').localeCompare(String(right.item.id || ''));
     };

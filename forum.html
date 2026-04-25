@@ -44,7 +44,7 @@
         .sv-forum-grid-head,
         .sv-forum-row {
             display: grid;
-            grid-template-columns: minmax(280px, 1.8fr) minmax(130px, .9fr) minmax(110px, .7fr) minmax(120px, .8fr);
+            grid-template-columns: minmax(320px, 2fr) minmax(140px, .9fr) minmax(120px, .7fr);
             gap: .75rem;
             align-items: center;
         }
@@ -92,13 +92,6 @@
             font-size: .85rem;
             line-height: 1.35;
         }
-        .sv-forum-last {
-            color: #334155;
-            font-size: .86rem;
-        }
-        .sv-forum-last .sv-meta {
-            font-size: .8rem;
-        }
         .sv-forum-pagination {
             display: flex;
             gap: .55rem;
@@ -121,29 +114,6 @@
             padding: 1.4rem 1rem;
             text-align: center;
             color: #64748b;
-        }
-        .sv-kpi-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: .6rem;
-        }
-        .sv-kpi {
-            border: 1px solid #e2e8f0;
-            border-radius: 10px;
-            padding: .65rem .7rem;
-            background: #f8fafc;
-        }
-        .sv-kpi__label {
-            color: #64748b;
-            font-size: .78rem;
-            text-transform: uppercase;
-            letter-spacing: .05em;
-            margin-bottom: .15rem;
-        }
-        .sv-kpi__value {
-            color: #0f172a;
-            font-weight: 800;
-            font-size: 1rem;
         }
         .sv-page-hero--compact {
             padding: .9rem 1rem;
@@ -249,7 +219,6 @@
                     <div>Chủ đề</div>
                     <div>Chuyên mục</div>
                     <div>Phản hồi / Xem</div>
-                    <div>Hoạt động cuối</div>
                 </div>
                 <div id="forum-thread-list"></div>
                 <div id="forum-pagination" class="sv-forum-pagination"></div>
@@ -257,7 +226,17 @@
         </div>
 
         <div class="col-lg-4">
-            <section class="sv-card mb-3 sv-newsletter">
+            <section class="sv-card mb-3">
+                <div class="sv-card__hd"><i class="fa-solid fa-fire-flame-curved me-2 text-primary"></i>Chủ đề nổi bật</div>
+                <ul id="forum-trending" class="sv-list mb-0"></ul>
+            </section>
+
+            <section class="sv-card mb-3">
+                <div class="sv-card__hd"><i class="fa-solid fa-layer-group me-2 text-primary"></i>Phân bố chuyên mục</div>
+                <ul id="forum-category-stats" class="sv-list mb-0"></ul>
+            </section>
+
+            <section class="sv-card sv-newsletter">
                 <div class="sv-card__hd">
                     <i class="fa-solid fa-bell text-primary"></i>
                     Nhận Tin Thảo Luận
@@ -282,23 +261,6 @@
                     <div id="forum-subscribe-status" class="small mt-2" aria-live="polite"></div>
                     <div class="sv-newsletter__note">Để trống chuyên mục nếu bạn muốn nhận tất cả thảo luận trên diễn đàn.</div>
                 </div>
-            </section>
-
-            <section class="sv-card mb-3">
-                <div class="sv-card__hd"><i class="fa-solid fa-chart-simple me-2 text-primary"></i>Tổng quan diễn đàn</div>
-                <div class="p-3">
-                    <div id="forum-kpis" class="sv-kpi-grid"></div>
-                </div>
-            </section>
-
-            <section class="sv-card mb-3">
-                <div class="sv-card__hd"><i class="fa-solid fa-fire-flame-curved me-2 text-primary"></i>Chủ đề nổi bật</div>
-                <ul id="forum-trending" class="sv-list mb-0"></ul>
-            </section>
-
-            <section class="sv-card">
-                <div class="sv-card__hd"><i class="fa-solid fa-layer-group me-2 text-primary"></i>Phân bố chuyên mục</div>
-                <ul id="forum-category-stats" class="sv-list mb-0"></ul>
             </section>
         </div>
     </div>
@@ -355,7 +317,6 @@
         const searchEl = document.getElementById('forum-search');
         const categoryEl = document.getElementById('forum-category');
         const sortEl = document.getElementById('forum-sort');
-        const kpisEl = document.getElementById('forum-kpis');
         const trendingEl = document.getElementById('forum-trending');
         const categoryStatsEl = document.getElementById('forum-category-stats');
         const subscribeEmailEl = document.getElementById('forum-subscribe-email');
@@ -367,7 +328,7 @@
         const subscribeSubmitBtn = document.getElementById('forum-subscribe-submit');
         const subscribeStatusEl = document.getElementById('forum-subscribe-status');
 
-        if (!listEl || !paginationEl || !countEl || !searchEl || !categoryEl || !sortEl || !kpisEl || !trendingEl || !categoryStatsEl) {
+        if (!listEl || !paginationEl || !countEl || !searchEl || !categoryEl || !sortEl || !trendingEl || !categoryStatsEl) {
             return;
         }
 
@@ -376,7 +337,6 @@
         const NEWSLETTER_STORAGE_KEY = 'svp.newsletter.subscription';
         const state = {
             threads: [],
-            sourceLabel: 'API',
             loadError: '',
             query: params.get('q') || '',
             category: params.get('category') || 'all',
@@ -495,18 +455,6 @@
                 dateStyle: 'short',
                 timeStyle: 'short'
             }).format(new Date(time));
-        };
-
-        const timeAgo = (value) => {
-            const time = toMillis(value);
-            if (!time) return 'Không rõ';
-            const diffMinutes = Math.max(0, Math.floor((Date.now() - time) / 60000));
-            if (diffMinutes < 1) return 'Vừa xong';
-            if (diffMinutes < 60) return `${diffMinutes} phút trước`;
-            const diffHours = Math.floor(diffMinutes / 60);
-            if (diffHours < 24) return `${diffHours} giờ trước`;
-            const diffDays = Math.floor(diffHours / 24);
-            return `${diffDays} ngày trước`;
         };
 
         const loadMetricStore = () => {
@@ -696,7 +644,6 @@
             }
             const lastCachedThread = cachedThreads[cachedThreads.length - 1] || null;
             state.threads = cachedThreads;
-            state.sourceLabel = 'Cache local';
             state.loadError = '';
             hasMoreFromApi = typeof payload?.hasMoreFromApi === 'boolean'
                 ? payload.hasMoreFromApi
@@ -794,7 +741,6 @@
 
             listEl.innerHTML = items.map((thread) => {
                 const metrics = getMetrics(thread);
-                const lastActive = latestTimestamp(metrics.lastCommentAt, thread.lastActivityAt, thread.updatedAt, thread.createdAt);
                 const profileHref = buildProfileHref(thread.authorNickname, thread.authorUserId, thread.authorAuthUserId);
                 const authorNode = profileHref
                     ? `<strong class="sv-forum-author" data-profile="${escapeHtml(profileHref)}" role="link" tabindex="0">${escapeHtml(thread.authorName)}</strong>`
@@ -809,10 +755,6 @@
                         </div>
                         <div><span class="sv-tag">${escapeHtml(thread.categoryName)}</span></div>
                         <div class="sv-forum-count"><strong>${metrics.replies}</strong> phản hồi<br><strong>${metrics.views}</strong> lượt xem</div>
-                        <div class="sv-forum-last">
-                            <div>${escapeHtml(timeAgo(lastActive))}</div>
-                            <div class="sv-meta">${escapeHtml(formatDateTime(lastActive))}</div>
-                        </div>
                     </a>
                 `;
             }).join('');
@@ -850,19 +792,6 @@
         };
 
         const renderRightPanels = (threads) => {
-            const totalThreads = threads.length;
-            const totalReplies = threads.reduce((sum, thread) => sum + getMetrics(thread).replies, 0);
-            const totalViews = threads.reduce((sum, thread) => sum + getMetrics(thread).views, 0);
-            const latestTime = threads.reduce((max, thread) => Math.max(max, threadActivityMillis(thread)), 0);
-
-            kpisEl.innerHTML = `
-                <div class="sv-kpi"><div class="sv-kpi__label">Nguồn dữ liệu</div><div class="sv-kpi__value">${escapeHtml(state.sourceLabel)}</div></div>
-                <div class="sv-kpi"><div class="sv-kpi__label">Tổng chủ đề</div><div class="sv-kpi__value">${totalThreads}</div></div>
-                <div class="sv-kpi"><div class="sv-kpi__label">Tổng phản hồi</div><div class="sv-kpi__value">${totalReplies}</div></div>
-                <div class="sv-kpi"><div class="sv-kpi__label">Tổng lượt xem</div><div class="sv-kpi__value">${totalViews}</div></div>
-                <div class="sv-kpi" style="grid-column:1 / -1;"><div class="sv-kpi__label">Hoạt động gần nhất</div><div class="sv-kpi__value" style="font-size:.95rem;">${escapeHtml(latestTime ? formatDateTime(latestTime) : 'Chưa có dữ liệu')}</div></div>
-            `;
-
             if (state.loadError && threads.length === 0) {
                 trendingEl.innerHTML = `<li><div class="sv-meta">${escapeHtml(state.loadError)}</div></li>`;
                 categoryStatsEl.innerHTML = '<li><div class="sv-meta">Chưa có dữ liệu chuyên mục vì không tải được backend.</div></li>';
@@ -1245,17 +1174,14 @@
             try {
                 const apiThreads = await fetchThreads(false);
                 state.threads = apiThreads;
-                state.sourceLabel = 'API';
                 state.loadError = '';
                 saveForumCache();
             } catch (error) {
                 console.error('Cannot load forum threads:', error);
                 if (hasCachedThreads) {
-                    state.sourceLabel = 'Cache local';
                     state.loadError = '';
                 } else {
                     state.threads = [];
-                    state.sourceLabel = 'Lỗi kết nối';
                     state.loadError = 'Không thể kết nối backend để tải danh sách chủ đề.';
                     hasMoreFromApi = false;
                     lastFetchedActivityAt = null;
